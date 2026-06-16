@@ -1,0 +1,307 @@
+- name: QMCPy
+  url: https://qmcpy.org
+  related:
+    - name: QMCToolsCL
+      url: https://github.com/QMCSoftware/QMCToolsCL
+  description: >
+    Multi-purpose library featuring various LDS
+    and data-driven error estimation
+  language: Python
+  status: Active, Collaboration welcome
+  contact:
+    - Sou-Cheng Choi
+    - name: Fred Hickernell
+      url: https://github.com/fjhickernell
+    - name: Aleksei Sorokin
+      url: https://alegresor.github.io
+
+# - name: QMC.jl
+#   url: https://github.com/QMCSoftware/QMC.jl
+#   description: >
+#     Translation of QMCPy to Julia
+#   language: Julia
+#   status: Active, Pre-mature, Collaboration welcome
+#   contact:
+#     - Sou-Cheng Choi
+#     - name: Fred Hickernell
+#       url: https://github.com/fjhickernell
+#     - name: Aleksei Sorokin
+#       url: https://alegresor.github.io
+
+- name: BoTorch
+  url: https://botorch.org/docs/samplers
+  description: >
+    Bayesian optimization library that leverages PyTorch's (Q)MC samplers
+  language: Python
+  status: Active
+  contact:
+    - Meta / BoTorch developers
+
+- name: Chaospy
+  url: https://chaospy.readthedocs.io/en/master/user_guide/fundamentals/quasi_random_samples.html
+  description: >
+    Python library for uncertainty quantification with quasi-random sampling rules including Halton, Hammersley, Korobov, and Sobol sequences
+  language: Python
+  status: Active
+  contact:
+    - Chaospy developers
+
+- name: GNU Scientific Library
+  url: https://www.gnu.org/software/gsl/doc/html/qrng.html
+  description: >
+    C library providing quasi-random sequence generators including Niederreiter, Sobol, Halton, and reverse Halton sequences
+  language: C
+  status: Mature
+  contact:
+    - GSL Team
+
+- name: Intel oneMKL
+  url: https://oneapi-spec.uxlfoundation.org/specifications/oneapi/v1.1-rev-1/elements/onemkl/source/domains/rng/engines-basic-random-number-generators
+  description: >
+    High-performance math library whose RNG domain includes Sobol and Niederreiter quasi-random number generators
+  language: C++ / Data Parallel C++
+  status: Mature
+  contact:
+    - Intel / oneAPI developers
+
+- name: OpenTURNS
+  url: https://openturns.github.io/openturns/latest/user_manual/_generated/openturns.LowDiscrepancySequence.html
+  description: >
+    Open-source uncertainty quantification platform with LDS including Faure, Halton, reverse Halton, Haselgrove, and Sobol sequences
+  language: Python / C++
+  status: Active
+  contact:
+    - Michaël Baudin
+    - Anne Dutfoy
+    - Bertrand Iooss
+    - Anne-Laure Popelin
+
+- name: PyDOE3
+  url: https://pydoe3.readthedocs.io/en/latest/reference/low_discrepancy_sequences/
+  description: >
+    Python design-of-experiments package with LD designs including Sukharev grids, Sobol, Halton, rank-1 lattices, Korobov sequences, and Cranley-Patterson randomization
+  language: Python
+  status: Active
+  contact:
+    - PyDOE3 developers
+
+- name: randtoolbox
+  url: https://cran.r-project.org/web/packages/randtoolbox/index.html
+  description: >
+    R package providing pseudo-random and quasi-random generators, including Torus, Sobol, Halton, and Van der Corput sequences
+  language: R
+  status: Active
+  contact:
+    - Christophe Dutang
+
+- name: TensorFlow Probability
+  url: https://www.tensorflow.org/probability/api_docs/python/tfp/mcmc/sample_halton_sequence
+  description: >
+    TensorFlow function for generating deterministic or randomized Halton LDS
+  language: Python
+  status: Active
+  contact:
+    - TensorFlow Probability developers
+
+- name: LatNet Builder
+  url: https://github.com/umontreal-simul/latnetbuilder
+  description: >
+    Library for constructing LD lattice rules and digital nets
+  language: C++ / Python
+  status: Active, Collaboration welcome
+  contact:
+    - Pierre L’Ecuyer
+
+- name: MATLAB Statistics & Machine Learning Toolbox
+  url: https://www.mathworks.com/help/stats/generating-quasi-random-numbers.html
+  description: "Produces quasi-random samples in the unit hypercube, including Sobol and Halton sequences"
+  language: MATLAB
+  status: Mature
+  contact:
+    - name: Liam Walsh
+      url: mailto:lwalsh@mathworks.com
+
+- name: NVIDIA cuRAND
+  url: https://docs.nvidia.com/cuda/curand/index.html
+  description: >
+    NVIDIA's library for generating random and quasi-random numbers on GPUs
+  language: C++ / CUDA
+  status: "Mature"
+  contact: []
+
+- name: Boost Random Number Library
+  url: https://www.boost.org/doc/libs/latest/doc/html/boost_random/reference.html#boost_random.reference.concepts.quasi_random_number_generator
+  description: >
+    Part of the Boost C++ Libraries, offering a wide range of random number generators, including some LDS
+  language: C++
+  status: "Mature"
+  contact: []
+
+- name: PyTorch Sobol Engine
+  url: https://pytorch.org/docs/stable/generated/torch.quasirandom.SobolEngine.html
+  description: >
+    PyTorch's implementation of the Sobol sequence for generating LD samples in machine learning applications
+  language: Python
+  status: "Active"
+  contact: []
+
+- name: Dakota
+  url: https://snl-dakota.github.io/docs/6.19.0/users/usingdakota/reference/method-sampling-sample_type-low_discrepancy.html
+  description: >
+    Software toolkit for optimization and uncertainty quantification, including support for lattices and digital nets
+  language: C++
+  status: "Mature"
+  contact: 
+    - Pieterjan Robbe
+
+- name: GAIL
+  url: https://www.mathworks.com/matlabcentral/fileexchange/64375-guaranteed-automatic-integration-library
+  description: >
+    Guaranteed Automatic Integration Library for one-, multi-, and infinite-dimensional integration with rigorous error guarantees
+  language: MATLAB
+  status: Mature
+  contact:
+    - Sou-Cheng Choi
+    - Fred Hickernell
+    - Yuhan Ding
+
+- name: Fast CBC constructions
+  url: https://people.cs.kuleuven.be/~dirk.nuyens/fast-cbc/
+  description: >
+    Matlab/Octave routines for fast component-by-component construction of rank-1 lattice rules, lattice sequences, and polynomial lattice sequences
+  language: MATLAB / Octave
+  status: Mature
+  contact:
+    - Dirk Nuyens
+
+- name: scipy.stats.qmc
+  url: https://docs.scipy.org/doc/scipy/reference/stats.qmc.html
+  description: >
+    Part of the SciPy library, providing LDS generators and sampling methods for scientific computing in Python
+  language: Python
+  status: "Active"
+  contact: 
+    - Pamphile Roy
+
+- name: qrng
+  url: https://cran.r-project.org/web/packages/qrng/index.html
+  description: >
+    R package for generating LDS, including Sobol and Halton sequences, for statistical computing and data analysis
+  language: R
+  status: "Active"
+  contact: 
+    - name: Marius Hofert
+      url: mailto:mhofert@hku.hk
+    - Christiane Lemieux
+
+- name: QuasiMonteCarlo.jl
+  url:  https://docs.sciml.ai/QuasiMonteCarlo/stable/
+  description: >
+    Julia package for generating LDS and performing QMC integration, designed for high-performance scientific computing
+  language: Julia
+  status: "Active"
+  contact: 
+    - name: Chris Rackauckas
+      url: https://julialang.org/slack/
+
+- name: BRODA
+  url: https://www.broda.co.uk
+  description: >
+    Commercial software offering a range of QMC methods for financial modeling and risk analysis
+  language: C++ / Fortran
+  status: "Mature"
+  contact: 
+    - name: Sergei Kucherenko
+      url: mailto:info@broda.co.uk
+
+- name: NAG Quasi-Random Number Generators
+  url: https://support.nag.com/numeric/nl/nagdoc_latest/clhtml/g05/g05intro.html
+  description: >
+    NAG's implementation of quasi-random number generators for use in Monte Carlo simulations
+  language: Fortran, C, C++
+  status: "Mature"
+  contact: []
+
+- name: LDData
+  url: https://github.com/QMCSoftware/LDData
+  description: >
+    Database of LD generators
+  language: plain text
+  status: "Active, Collaboration welcome"
+  contact: 
+    - name: Aleksei Sorokin
+      url: https://alegresor.github.io
+
+- name: Owen's Scrambled Points
+  url: https://artowen.su.domains/code/
+  description: >
+    Nested uniform scrambling of Sobol' sequences and pointer to randomized Halton sequences
+  language: R
+  status: Mature
+  contact: 
+    - Art Owen
+
+- name: Halton
+  url: https://github.com/llxu2017/halton
+  description: >
+    Random-start randomly permuted Halton sequences
+  language: C++
+  status: Mature
+
+- name: 
+    - label: Lattice
+      url: https://web.maths.unsw.edu.au/~fkuo/lattice/index.html
+    - label: Sobol'
+      url: https://web.maths.unsw.edu.au/~fkuo/sobol/index.html
+  description: >
+    Generating vectors for Sobol' sequences and lattice rules
+  language: plain text
+  status: Mature
+  contact:
+    - Frances Kuo
+    - Stephen Joe
+
+- name: Magic Point Shop
+  url: https://people.cs.kuleuven.be/~dirk.nuyens/qmc-generators/
+  description: >
+    QMC point generators and generating vectors for digital sequences and lattice sequences
+  language: C++, MATLAB, Python, plain text
+  status: Mature
+  contact:
+    - Dirk Nuyens
+
+- name: QMC4PDE
+  url: https://people.cs.kuleuven.be/~dirk.nuyens/qmc4pde/
+  description: >
+    Software for constructing randomly shifted lattice rules and interlaced polynomial lattice rules for elliptic PDEs with random diffusion coefficients
+  language: Python / MATLAB / C++
+  status: Active
+  contact:
+    - Frances Y. Kuo; Dirk Nuyens
+
+- name: QMC Algorithms for Graphics Software
+  url: https://arxiv.org/abs/2307.15584
+  description: >
+    Reference with compact copy-and-paste algorithms for LDS
+  language: C++ / CUDA-style pseudocode
+  status: Reference
+  contact:
+    - Alexander Keller; Carsten Wächter; Nikolaus Binder
+
+- name: Stochastic Simulation in Java (SSJ)
+  url: https://github.com/umontreal-simul/ssj
+  description: >
+    Java library for stochastic simulation, including LDS generators and sampling methods
+  language: Java
+  status: "Active"
+  contact:
+    - name: Pierre L’Ecuyer
+
+- name: UM-Bridge
+  url: https://github.com/UM-Bridge/umbridge
+  description: >
+    Software framework for uncertainty quantification and modeling software packages
+  language: Multiple
+  status: "Active"
+  contact:
+    - name: UM-Bridge team

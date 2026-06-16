@@ -132,7 +132,7 @@ class CubMLQMC(AbstractCubMLQMC):
         try:
             self._validate_level_replay_cache(data)
         except ValueError as exc:
-            raise ParameterError(str(exc))
+            raise ParameterError(str(exc)) from exc
 
     def _restore_resume_state(self, data):
         # eval_level is all-False at end of a converged run; the loop's first

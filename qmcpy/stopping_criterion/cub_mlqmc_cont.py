@@ -156,7 +156,7 @@ class CubMLQMCCont(AbstractCubMLQMC):
         try:
             self._validate_level_replay_cache(data)
         except ValueError as exc:
-            raise ParameterError(str(exc))
+            raise ParameterError(str(exc)) from exc
 
     def _restore_resume_state(self, data):
         # No data.levels adjustment needed for MLQMC (no final += 1 in this variant).

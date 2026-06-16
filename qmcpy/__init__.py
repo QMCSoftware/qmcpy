@@ -38,4 +38,4 @@ from .fast_transform import (
 from .util import plot_proj, mlmc_test
 
 name = "qmcpy"
-__version__ = "2.2.1a"
+__version__ = "2.3"

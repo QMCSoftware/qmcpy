@@ -89,6 +89,7 @@ class AbstractTrueMeasure(object):
 
     def _jacobian_transform_r(self, x, return_weights):
         r"""Recursive Jacobian transform."""
+        jac = None
         if self.sub_compatibility_error:
             raise ParameterError(
                 "The transform domain must match the sub-transform range."

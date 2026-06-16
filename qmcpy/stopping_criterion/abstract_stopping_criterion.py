@@ -21,10 +21,6 @@ if TYPE_CHECKING:
     import pandas
 
 
-# Optional diagnostic hook for resume-aware stopping criteria.
-IS_PRINT_DIAGNOSTIC = False
-
-
 class AbstractStoppingCriterion(object):
     _RESUME_FORMAT_VERSION = 1  # Increment when checkpoint format changes in a non-backwards-compatible way
     _ITERATION_LOG_VIEWS = ("all", "current", "without_resume", "stage_last")
@@ -426,7 +422,7 @@ class AbstractStoppingCriterion(object):
             return str(current) == str(saved)
         try:
             is_equal = current == saved
-        except Exception:
+        except (TypeError, ValueError, NotImplementedError):
             is_equal = str(current) == str(saved)
         if isinstance(is_equal, np.ndarray):
             return bool(np.all(is_equal))
@@ -506,8 +502,8 @@ class AbstractStoppingCriterion(object):
         )
         try:
             resume_format_version = int(resume_format_version)
-        except (TypeError, ValueError):
-            raise ParameterError("resume data has invalid _resume_format_version.")
+        except (TypeError, ValueError) as exc:
+            raise ParameterError("resume data has invalid _resume_format_version.") from exc
         if resume_format_version != self._RESUME_FORMAT_VERSION:
             raise ParameterError(
                 "resume data uses checkpoint format version %d; expected %d."

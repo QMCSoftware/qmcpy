@@ -304,7 +304,7 @@ class AbstractIntegrand(object):
                 """
                 Set bound_fun explicitly. 
                 The default bound_fun is the identity map. 
-                Since the individual solution dimensions d_indv = %s does not equal the combined solution dimensions d_comb = %d, 
+                Since the individual solution dimensions d_indv = %s does not equal the combined solution dimensions d_comb = %s, 
                 QMCPy cannot infer a reasonable bound function."""
                 % (str(self.d_indv), str(self.d_comb))
             )

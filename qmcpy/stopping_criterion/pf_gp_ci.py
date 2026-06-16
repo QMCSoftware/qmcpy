@@ -67,7 +67,7 @@ class SuggesterSimple(Suggester):
         assert d == self.sampler.d
         try:
             x = self.sampler(n_min=self.n_min, n_max=n_max)
-        except Exception:
+        except TypeError:
             x = self.sampler(n)
         self.n_min = n_max
         return x
@@ -452,7 +452,7 @@ class PFGPCIData(Data):
             try:
                 self.gpyt_model = self.gpyt_model.add_data(xdraw, ydrawtf)
                 torch.cuda.empty_cache()
-            except Exception as e:
+            except RuntimeError as e:
                 # If adding data fails (e.g., NotPSDError), refit the entire model
                 if self.verbose:
                     print(f"\tFalling back to full refit due to: {type(e).__name__}")

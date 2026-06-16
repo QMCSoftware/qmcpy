@@ -1,5 +1,6 @@
 # Emit pytest-xdist argument if available; can be overridden on the make command line
 PYTEST_XDIST ?= $(shell python scripts/pytest_xdist.py 2>/dev/null)
+PYTEST ?=
 
 # set environment variable for documentation
 export JUPYTER_PLATFORM_DIRS=1
@@ -159,7 +160,7 @@ booktests_parallel_pytest: check_booktests generate_booktests clean_local_only_f
 	cd test/booktests/ && \
 	PYTHONWARNINGS="ignore::UserWarning,ignore::DeprecationWarning,ignore::FutureWarning,ignore::ImportWarning" \
 	COVERAGE_FILE=../../$(BOOKTEST_COV_DIR)/.coverage \
-	python -W ignore -m pytest $(PYTEST_XDIST) -v tb_*.py \
+	python -W ignore -m pytest $(PYTEST_XDIST) $(PYTEST) -v tb_*.py \
 		--cov=qmcpy \
 		--cov-append \
 		--cov-report=term \
@@ -267,15 +268,20 @@ uml:
 # run ` mkdocs build -v` to debug
 ##########################################################
 copydocs:  # mkdocs only looks for content in the docs/ folder, so we have to copy it there
-	@cp -r paper docs/paper
+	@rm -rf docs/paper docs/demos
 	@cp README.md docs/README.md 
 	@perl -0pi -e 's!\(docs/assets/pep8-badge\.svg\)!\(assets/pep8-badge.svg\)!g' docs/README.md
+	@perl -0pi -e 's!\(docs/qmc-software\.md\)!\(qmc-software.md\)!g' docs/README.md
 	@cp CONTRIBUTING.md docs/CONTRIBUTING.md 
 	@cp community.md docs/community.md 
 	@cp -r demos docs
+	@find docs/demos -mindepth 2 -name README.md -delete
 	@cp -r paper docs
+	@rm -f docs/paper/README.md
+	@./scripts/render_paper_for_mkdocs.sh
 	@cp test/booktests/README.md docs/booktests.md
 	@cp test/README.md docs/tests.md
+	@python scripts/make_qmc_software_page.py
 	@mkdir -p docs/stats
 	@cp stats/pypi_downloads.md docs/stats/pypi_downloads.md
 	@cp docs/assets/logos/qmcpy_logo.png docs/apple-touch-icon.png
@@ -288,7 +294,7 @@ runmkdocserve:
 		PORT=$$((PORT+1)); \
 	done; \
 	echo "Starting mkdocs on http://127.0.0.1:$$PORT"; \
-	JUPYTER_PLATFORM_DIRS=1 mkdocs serve -a 127.0.0.1:$$PORT
+	NO_MKDOCS_2_WARNING=1 JUPYTER_PLATFORM_DIRS=1 mkdocs serve -a 127.0.0.1:$$PORT
 	
 doc: uml copydocs runmkdocserve
 

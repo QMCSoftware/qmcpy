@@ -1,17 +1,65 @@
 name: All Tests
-on: [push]
+
+on:
+  push:
+  pull_request:
+    branches:
+      - develop
+      - master
+  workflow_dispatch:
+
+concurrency:
+  # Keep push and pull_request runs separate so same-SHA PR updates do not inherit cancelled push checks.
+  group: alltests-${{ github.event_name }}-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
   #============================================================
-  # 3 Test Jobs on 3 OSes: Windows, macOS, Ubuntu
+  # Feature branches: Linux only
+  # Protected branches / PRs into develop or master: full 3-OS sweep
   #============================================================
+  select-matrix:
+    name: Select CI scope
+    runs-on: ubuntu-latest
+    outputs:
+      os-matrix: ${{ steps.scope.outputs.os-matrix }}
+      run-booktests: ${{ steps.scope.outputs.run-booktests }}
+    steps:
+      - name: Decide runner matrix and booktest scope
+        id: scope
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          full_sweep=false
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            full_sweep=true
+          elif [[ "$EVENT_NAME" == "pull_request" && ( "$BASE_REF" == "develop" || "$BASE_REF" == "master" ) ]]; then
+            full_sweep=true
+          elif [[ "$REF_NAME" == "develop" || "$REF_NAME" == "master" ]]; then
+            full_sweep=true
+          fi
+
+          if [[ "$full_sweep" == "true" ]]; then
+            echo 'os-matrix=["windows-latest","macos-latest","ubuntu-latest"]' >> "$GITHUB_OUTPUT"
+            echo 'run-booktests=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'os-matrix=["ubuntu-latest"]' >> "$GITHUB_OUTPUT"
+            echo 'run-booktests=false' >> "$GITHUB_OUTPUT"
+          fi
+
   tests:
-    name: All Tests on ${{ matrix.os }}
+    needs: select-matrix
+    name: All Tests on ${{ matrix.os }} (Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
+    env:
+      RUN_BOOKTESTS: ${{ needs.select-matrix.outputs.run-booktests }}
     strategy:
-        matrix:  # https://docs.github.com/en/actions/reference/runners/github-hosted-runners
-            os: ["windows-latest", "macos-latest", "ubuntu-latest"] 
-            python-version: ['3.10']
+        matrix:
+            os: ${{ fromJSON(needs.select-matrix.outputs.os-matrix) }}
+            python-version: ['3.13']
     steps:
       - uses: actions/checkout@v4
       - uses: conda-incubator/setup-miniconda@v3
@@ -20,6 +68,18 @@ jobs:
           auto-activate-base: true
           conda-remove-defaults: true
           use-only-tar-bz2: true
+      - name: Pin Miniconda base Python (Unix)
+        if: runner.os != 'Windows'
+        shell: bash -el {0}
+        run: |
+          conda install -n base -y -c conda-forge python=${{ matrix.python-version }}
+          python --version
+      - name: Pin Miniconda base Python (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          conda install -n base -y -c conda-forge python=${{ matrix.python-version }}
+          python --version
       
       # -----------------------------------------------------------
       # Clean old coverage files
@@ -199,19 +259,19 @@ jobs:
       # Install minimal LaTeX required by Jupyter notebooks (OS-specific)
       # -----------------------------------------------------------
       - name: Install minimal LaTeX (Linux)
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && env.RUN_BOOKTESTS == 'true'
         run: |
           sudo apt update
           sudo apt install -y texlive-latex-base texlive-latex-extra texlive-latex-recommended latexmk dvipng cm-super
       - name: Install minimal LaTeX (macOS)
-        if: runner.os == 'macOS'
+        if: runner.os == 'macOS' && env.RUN_BOOKTESTS == 'true'
         run: |
           brew install --cask basictex
           eval "$(/usr/libexec/path_helper)"
           sudo tlmgr update --self
           sudo tlmgr install latexmk dvipng collection-fontsrecommended type1cm
       - name: Cache MiKTeX (Windows)
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && env.RUN_BOOKTESTS == 'true'
         uses: actions/cache@v4
         with:
           path: C:\Program Files\MiKTeX
@@ -220,7 +280,7 @@ jobs:
             ${{ runner.os }}-miktex-
           
       - name: Install minimal LaTeX (Windows)
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && env.RUN_BOOKTESTS == 'true'
         shell: pwsh
         run: |
           $ErrorActionPreference = "Continue"
@@ -265,13 +325,17 @@ jobs:
       - run: make doctests_gpytorch
       - run: make doctests_botorch
       - run: make doctests_markdown
-      - name: run umbridge doctests on Linux only
+      - name: Run umbridge doctests on Linux full sweeps when Docker is available
         shell: bash -l {0}
         run: |
-          if [ "$RUNNER_OS" == "Linux" ]; then
+          if [ "$RUNNER_OS" == "Linux" ] && [ "$RUN_BOOKTESTS" == "true" ] && command -v docker >/dev/null 2>&1; then
             make doctests_umbridge
-          else
+          elif [ "$RUNNER_OS" != "Linux" ]; then
             echo "umbridge doctests only run on Linux"
+          elif [ "$RUN_BOOKTESTS" != "true" ]; then
+            echo "Skipping umbridge doctests outside full sweeps"
+          else
+            echo "Skipping umbridge doctests because Docker is not available on this runner"
           fi
       # -----------------------------------------------------------
       # Run unittests for Python source files
@@ -300,7 +364,7 @@ jobs:
       # Free disk + conda cache before booktests (OS-specific)
       # -----------------------------------------------------------
       - name: Free space (Linux)
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && env.RUN_BOOKTESTS == 'true'
         run: |
           sudo apt-get clean
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
@@ -308,13 +372,13 @@ jobs:
           pip cache purge || true
           df -h
       - name: Free space (macOS)
-        if: runner.os == 'macOS'
+        if: runner.os == 'macOS' && env.RUN_BOOKTESTS == 'true'
         run: |
           conda clean --all --yes
           pip cache purge || true
           df -h
       - name: Free space (Windows)
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && env.RUN_BOOKTESTS == 'true'
         run: |
           conda clean --all --yes || true
           pip cache purge || true
@@ -323,12 +387,12 @@ jobs:
       # Run unittests for Jupyter notebooks (OS-specific)
       # ----------------------------------------------------------- 
       - name: Run booktests (parallel) on Linux
-        if: runner.os != 'Windows'
+        if: runner.os != 'Windows' && env.RUN_BOOKTESTS == 'true'
         shell: bash -l {0}
         run: |
           make booktests_parallel_no_docker    # Parsl not supported on Windows
       - name: Run booktests (parallel) on Windows
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && env.RUN_BOOKTESTS == 'true'
         shell: pwsh
         run: |
           make booktests_parallel_pytest PYTEST_XDIST="-n 4" PYTEST="-m 'not slow'"
@@ -337,7 +401,7 @@ jobs:
       # Upload coverage to Codecov
       # -----------------------------------------------------------
       - name: Upload coverage to Codecov
-        if: always()
+        if: always() && env.RUN_BOOKTESTS == 'true'
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

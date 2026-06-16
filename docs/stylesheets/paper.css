@@ -1,0 +1,94 @@
+.paper-render {
+  font-size: 0.95rem;
+  line-height: 1.75;
+}
+
+.paper-render h2 {
+  margin-top: 2.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--md-default-fg-color--lightest);
+}
+
+.paper-render p,
+.paper-render li {
+  max-width: 78ch;
+}
+
+.paper-render figure {
+  margin: 2rem auto;
+  text-align: center;
+}
+
+.paper-render figcaption {
+  margin-top: 0.75rem;
+  color: var(--md-default-fg-color--light);
+  font-size: 0.85rem;
+}
+
+.paper-render math[display="block"] {
+  display: block;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+}
+
+.paper-render .citation {
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+.paper-render #refs {
+  margin-top: 1rem;
+  max-width: 78ch;
+  font-size: 0.92rem;
+}
+
+.paper-render .csl-entry {
+  margin-bottom: 1rem;
+}
+
+.paper-render #refs.hanging-indent .csl-entry {
+  padding-left: 2rem;
+  text-indent: -2rem;
+}
+
+.paper-render #refs a {
+  overflow-wrap: anywhere;
+}
+
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.qmc-software-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.qmc-software-table th {
+  background-color: #222;
+  color: white;
+  text-align: left;
+  padding: 0.6rem;
+}
+
+.qmc-software-table td {
+  vertical-align: top;
+  padding: 0.6rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.qmc-software-table tbody tr:nth-child(even) {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.software-desc,
+.software-related {
+  font-size: 0.9em;
+  color: var(--md-default-fg-color--light);
+}
+
+.status-nowrap {
+  white-space: normal;
+}

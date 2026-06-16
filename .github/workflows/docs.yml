@@ -2,8 +2,7 @@ name: Docs
 on:
   push:
     branches:
-      - master 
-      - main
+      - master
       # - develop
 permissions:
   contents: write
@@ -18,7 +17,11 @@ jobs:
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.x
+          python-version: '3.13'
+      - name: Set up Pandoc
+        uses: pandoc/actions/setup@v1
+        with:
+          version: 3.1.11
       - run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV 
       - uses: actions/cache@v4
         with:
@@ -31,3 +34,5 @@ jobs:
       - run: make uml
       - run: make copydocs
       - run: mkdocs gh-deploy --force
+        env:
+          NO_MKDOCS_2_WARNING: "1"

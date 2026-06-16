@@ -2,9 +2,15 @@
 
 Thank you for your interest in contributing to the QMCPy package!
 
-Please submit **pull requests** to the `develop` branch and **issues** using a template from `.github/ISSUE_TEMPLATE/`
+Please submit **pull requests (PRs)** to the `develop` branch and **issues** using a template from `.github/ISSUE_TEMPLATE/`
 
-If you develop a new component please consider writing a blog for [qmcpy.org](https://qmcpy.org)
+After a feature branch has been successfully merged, it is best practice to delete it. This action keeps the repository tidy and prevents the accumulation of stale branches.
+
+For planned releases, open related PRs with enough lead time so review can begin at least one week before the release date.
+
+For complex or mathematical contributions, schedule at least one PR review meeting before merging. 
+
+If you develop a new component, please consider writing a blog for the[qmcpy documentation](https://qmcsoftware.github.io/QMCSoftware/) including a brief summary of the mathematical rationale, key assumptions,  validation evidence (tests, benchmarks, or references), and examples.
 
 Join team communications by reaching out to us at [qmc-software@googlegroups.com](mailto:qmc-software@googlegroups.com)
 
@@ -16,7 +22,7 @@ In a git enabled terminal (e.g. [bash](https://gitforwindows.org/) for Windows) 
 git clone https://github.com/QMCSoftware/QMCSoftware.git
 cd QMCSoftware
 git checkout develop
-conda create --name qmcpy python=3.12
+conda create --name qmcpy python=3.13
 conda activate qmcpy
 pip install -e .[dev]
 ~~~
@@ -50,6 +56,7 @@ pip install -e ".[class,dev]"
 Doctests and unittests take a few minute to run with
 
 ~~~bash
+pip install -e ".[dev,docs,test]"
 make tests_no_docker
 ~~~
 
@@ -62,12 +69,6 @@ make tests
 Please see the targets in the makefile for more granular control over tests.
 
 ## Documentation
-
-~~~bash
-pip install -e ".[docs]"
-~~~
-
-This installs the documentation extras, including `pylint`.
 
 ### Ensure `pyreverse` is on your PATH
 

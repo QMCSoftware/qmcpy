@@ -1,5 +1,11 @@
 # Highly Efficient Geometric Brownian Motion Modeling with QMCPy
 
+--8<-- "snippets/blog-authors/gbm-qmcpy.md"
+
+October 22, 2025
+
+This post demonstrates how QMCPy can generate and analyze Geometric Brownian Motion paths efficiently for simulation and finance workflows.
+
 !!! example "Example implementation of GBM using QMCPy"
     Install the required Python packages:
 

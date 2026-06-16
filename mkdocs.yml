@@ -1,6 +1,9 @@
 site_name: "QMCPy"
 nav:
   - Quasi Monte Carlo Software: README.md
+  - Community Resources:
+    - QMC Software Packages: qmc-software.md
+    - PyPI Download Statistics: stats/pypi_downloads.md
   - Components: components.md
   - Contributing: CONTRIBUTING.md
   - Community: community.md
@@ -64,16 +67,35 @@ nav:
       - Importance Sampling with True Measures:
         - Some True Measures: demos/some_true_measures.ipynb
         - SciPyWrapper dependence and Custom distributions: demos/scipywrapper_dependence_custom/scipywrapper_demo.ipynb
+        - Acceptance-Rejection Sampling: demos/acceptance_rejection.ipynb
   - Blogs: 
     - Iteration Log: demos/demo_resume_data/Iteration_Log_Tolerance_Demo.ipynb
     - Resume Feature: demos/demo_resume_data/accuracy_and_resume.ipynb
     - SciPyWrapper: blogs/scipywrapper/index.md
+    - Visualizing the Generated Samples Helps: blogs/visualizing-the-generated-samples-helps/index.md
+    - "CubMCCLTVec: Vectorizing the CubMCCLT Algorithm": blogs/cubmccltvec-vectorizing-the-cubmcclt-algorithm/index.md
+    - Accelerating QMCPy Notebook Tests with Parsl: blogs/accelerating-qmcpy-notebook-tests-with-parsl/index.md
     - GBM with QMCPy: blogs/gbm-qmcpy/index.md
+    - Linear Matrix Scrambling and Digital Shift for Halton: blogs/linear-matrix-scrambling-and-digital-shift-for-halton/index.md
+    - QMC Efficiency for Asian Option Pricing: blogs/analysis-of-qmc-efficiency-for-asian-option-pricing/index.md
+    - Random Lattice Generators are Not Bad: blogs/random-lattice-generators-are-not-bad/index.md
+    - Accelerating Rare-event Reliability Simulations for CERN's Large Hadron Collider using QMCPy: blogs/accelerating-rare-event-reliability-simulations-for-cerns-large-hadron-collider-using-qmcpy/index.md
+    - Bayesian Stopping Criteria: blogs/bayesian-stopping-criteria/index.md
+    - Digital Sequences, the Niederreiter Construction: blogs/digital-sequences-the-niederreiter-construction/index.md
+    - Speeding up QMCPy with Distributable C Code: blogs/speeding-up-qmcpy-with-distributable-c-code/index.md
+    - Visualizing the Internals of Object Classes in QMCPy: blogs/visualizing-the-internals-of-object-classes-in-qmcpy/index.md
+    - Safe Handling of QMC Points: blogs/safe-handling-of-qmc-points/index.md
+    - qEI with QMCPy: blogs/qei-with-qmcpy/index.md
+    - What Makes a Sequence Low Discrepancy?: blogs/what-makes-a-sequence-low-discrepancy/index.md
+    - A QMCPy Quick Start: blogs/a-qmcpy-quick-start/index.md
+    - Why Add Q to MC?: blogs/why-add-q-to-mc/index.md
   - For Developers:
     - Release Manual: RELEASE.md
     - Testing Guidelines: 
-      - Doc tests and unit tests on `qmcpy`: tests.md
+      - Local doc tests and unit tests on `qmcpy`: tests.md
+      - CI testing and cost control: ci-testing.md
       - Unit tests on Jupyter Notebooks: booktests.md
+    - JOSS 2026 Paper: paper/paper.md
   
 
 plugins:
@@ -203,4 +225,5 @@ extra_javascript:
   - https://unpkg.com/katex@0/dist/contrib/auto-render.min.js
 
 extra_css:
+  - stylesheets/paper.css
   - https://unpkg.com/katex@0/dist/katex.min.css

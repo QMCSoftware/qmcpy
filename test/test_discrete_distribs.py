@@ -344,8 +344,6 @@ class TestDigitalNetB2(unittest.TestCase):
                     self.assertTrue((x_full[:,8:16,:]==dnb2(8,16)).all())
                     self.assertTrue((x_full[:,4:16,:]==dnb2(4,16)).all())
 
-
-
 class TestHalton(unittest.TestCase):
     """Unit test for Halton DiscreteDistribution."""
 

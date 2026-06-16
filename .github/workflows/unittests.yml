@@ -1,65 +1,67 @@
 name: Unit Tests
+
 on:
   push:
     branches:
       - develop
       - master
+  pull_request:
+    branches:
+      - develop
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: unittests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  #======================================================================
-  # 3 Test Jobs on 3 OSes: Windows, macOS, Ubuntu with Python 3.5 to 3.14
-  #======================================================================
   tests:
     name: Unit Tests on ${{ matrix.os }} (Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
     strategy:
-        matrix:
-            include:
-              - os: macos-latest
-                python-version: '3.5'
-              - os: macos-latest
-                python-version: '3.8'
-              - os: macos-latest
-                python-version: '3.11'
-              - os: macos-latest
-                python-version: '3.14'
-              - os: ubuntu-latest
-                python-version: '3.6'
-              - os: ubuntu-latest
-                python-version: '3.9'
-              - os: ubuntu-latest
-                python-version: '3.12'
-              - os: windows-latest
-                python-version: '3.7'
-              - os: windows-latest
-                python-version: '3.10'
-              - os: windows-latest
-                python-version: '3.13'
+      matrix:
+        include:  # exclude default Python v3.13
+          - os: macos-latest
+            python-version: "3.5"
+          - os: macos-latest
+            python-version: "3.8"
+          - os: macos-latest
+            python-version: "3.11"
+          - os: ubuntu-latest
+            python-version: "3.6"
+          - os: ubuntu-latest
+            python-version: "3.9"
+          - os: ubuntu-latest
+            python-version: "3.12"
+          - os: windows-latest
+            python-version: "3.7"
+          - os: windows-latest
+            python-version: "3.10"
+          - os: windows-latest
+            python-version: "3.14"
     steps:
       - uses: actions/checkout@v4
+
       - uses: conda-incubator/setup-miniconda@v3
         with:
           miniconda-version: "latest"
           auto-activate-base: true
           conda-remove-defaults: true
           use-only-tar-bz2: true
-      
-      # -----------------------------------------------------------
-      # Clean old coverage files
-      # -----------------------------------------------------------
+
       - name: Remove old coverage data (Unix)
         if: runner.os != 'Windows'
         run: |
           rm -f .coverage* coverage.json || true
+
       - name: Remove old coverage data (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           Remove-Item -Path .coverage* -Force -ErrorAction SilentlyContinue -Confirm:$false
           Remove-Item -Path coverage.json -Force -ErrorAction SilentlyContinue -Confirm:$false
-      # -----------------------------------------------------------
-      # Add 12GB swap, i.e., virtual memory (OS-specific)
-      # -----------------------------------------------------------
+
       - name: Add 12GB swap (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -89,13 +91,13 @@ jobs:
           echo "=== Swap after setup ==="
           swapon --show
           free -h
-          
+
       - name: Add 12GB swap (macOS)
         if: runner.os == 'macOS'
         run: |
-          # Create and mount a temporary swapfile
           sudo mkfile 12g /private/var/vm/tempswapfile
           sudo chmod 600 /private/var/vm/tempswapfile
+
       - name: Configure pagefile (Windows) via CIM (12GB)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -106,12 +108,10 @@ jobs:
           $maxMB     = 12288
           $pagefile  = "$drive\pagefile.sys"
           Write-Host "Configuring pagefile: $pagefile (Initial=${initialMB}MB, Max=${maxMB}MB)"
-          # Disable automatic management
           $cs = Get-CimInstance Win32_ComputerSystem
           if ($cs.AutomaticManagedPagefile) {
             Set-CimInstance -InputObject $cs -Property @{ AutomaticManagedPagefile = $false } | Out-Null
           }
-          # Create or update the pagefile setting
           $escaped = $pagefile.Replace('\','\\')
           $pfs = Get-CimInstance Win32_PageFileSetting -Filter "Name='$escaped'" -ErrorAction SilentlyContinue
           if ($null -eq $pfs) {
@@ -128,9 +128,7 @@ jobs:
           }
           "=== Pagefile settings ==="
           Get-CimInstance Win32_PageFileSetting | Format-Table Name,InitialSize,MaximumSize -Auto
-      # -----------------------------------------------------------
-      # Free disk + conda cache early (OS-specific)
-      # -----------------------------------------------------------
+
       - name: Free space (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -139,37 +137,34 @@ jobs:
           conda clean --all --yes
           pip cache purge || true
           df -h
+
       - name: Free space (macOS)
         if: runner.os == 'macOS'
         run: |
           conda clean --all --yes
           pip cache purge || true
           df -h
+
       - name: Free space (Windows)
         if: runner.os == 'Windows'
         run: |
           conda clean --all --yes || true
           pip cache purge || true
           Get-Volume | Select-Object DriveLetter, Size, SizeRemaining | Format-Table
-      # -----------------------------------------------------------
-      # Show resources (OS-specific)
-      # -----------------------------------------------------------
+
       - name: Show runner resources
         if: runner.os != 'Windows'
         run: |
           echo "CPUs: $(nproc || sysctl -n hw.ncpu)"
           free -h || vm_stat
           df -h
+
       - name: Show runner resources
         if: runner.os == 'Windows'
         run: |
-          # Check current pagefile settings
           Get-WmiObject Win32_PageFileUsage | Select-Object Name, AllocatedBaseSize
-          # Display system memory info
           Get-ComputerInfo -Property CsTotalPhysicalMemory
-      # -----------------------------------------------------------
-      # Install Python dependencies
-      # -----------------------------------------------------------
+
       - name: Cache pip packages
         uses: actions/cache@v4
         with:
@@ -183,6 +178,7 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-pip-
+
       - name: Cache wheel files
         uses: actions/cache@v4
         with:
@@ -190,37 +186,43 @@ jobs:
           key: ${{ runner.os }}-wheels-${{ hashFiles('pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-wheels-
-          
+
       - name: Build and cache wheels (Linux)
         if: runner.os == 'Linux'
         run: |
           python -m pip wheel -w ./.wheels .[test,test_torch,test_gpytorch,test_botorch,test_umbridge] || true
+
       - name: Install Python dependencies (Linux)
         if: runner.os == 'Linux'
         run: |
           pip install --find-links ./.wheels -e ".[test,test_torch,test_gpytorch,test_botorch,test_umbridge]"
+
       - name: Build and cache wheels (macOS)
         if: runner.os == 'macOS'
         run: |
           python -m pip wheel -w ./.wheels .[test,test_torch,test_gpytorch,test_botorch] || true
+
       - name: Install Python dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
           pip install --find-links ./.wheels -e ".[test,test_torch,test_gpytorch,test_botorch]"
+
       - name: Build and cache wheels (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           python -m pip wheel -w ./.wheels .[test,test_torch,test_gpytorch,test_botorch] || Write-Host 'wheel build step completed'
+
       - name: Install Python dependencies (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           pip install --find-links ./.wheels -e '.[test,test_torch,test_gpytorch,test_botorch]'
-      
-      # -----------------------------------------------------------
-      # Run unittests for Python source files
-      # -----------------------------------------------------------   
+
+      - name: Show Python version
+        run: |
+          python --version
+          python -m pip --version
+
       - name: Run unittests (parallel)
         run: make unittests
-      

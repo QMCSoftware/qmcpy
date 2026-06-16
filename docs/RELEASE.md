@@ -57,7 +57,7 @@ When prompted for a username put `__token__`, and when prompted for a password p
 To actually test our TestPyPI release, it is a good idea to pretend you are a new user and create a fresh environment in which you try some basic QMCPy commands. Here are some commands to run to create a fresh environment and run some basic tests 
 
 ```bash 
-conda create --name tmp python=3.12 
+conda create --name tmp python=3.13
 conda activate tmp 
 pip install -i https://test.pypi.org/simple/ qmcpy==???
 python

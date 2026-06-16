@@ -5,9 +5,11 @@ on:
     branches:
       - master
       - develop
-      - main
-      - doc_choi  # temporary
   workflow_dispatch:
+
+concurrency:
+  group: pep8-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -15,15 +17,14 @@ permissions:
 
 jobs:
   update-badge:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: conda-incubator/setup-miniconda@v3
+
+      - uses: actions/setup-python@v5
         with:
-          miniconda-version: "latest"
-          auto-activate-base: true
-          conda-remove-defaults: true
-          use-only-tar-bz2: true
+          python-version: "3.13"
+
       - name: Install project with lint dependencies
         run: |
           python -m pip install -e ".[docs]"
