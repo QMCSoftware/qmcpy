@@ -24,7 +24,7 @@ nav:
       - Lebesgue Integration: demos/lebesgue_integration.ipynb
     - Resume Feature: demos/demo_resume_data/resume_examples.ipynb
     - Publication Notebooks:
-      - 2026 JSC Paper: demos/talk_paper_demos/JSC_Sorokin_2026/JSC_Sorokin_2026.ipynb
+      - 2026 Random LD Seq., QMC, and Fast Kernel Methods: demos/talk_paper_demos/Sorokin_random_LD_seq_QMC_fast_kernel_methods_2026/Sorokin_random_LD_seq_QMC_fast_kernel_methods_2026.ipynb
       - 2026 JOSS Paper: demos/talk_paper_demos/JOSS2026/joss2026.ipynb
       - 2025 Sorokin Thesis: demos/talk_paper_demos/SorokinThesis2025/sorokin_thesis_2025.ipynb
       - 2025 ParslFest:
@@ -69,6 +69,7 @@ nav:
       - Importance Sampling with True Measures:
         - Some True Measures: demos/some_true_measures.ipynb
         - SciPyWrapper dependence and Custom distributions: demos/scipywrapper_dependence_custom/scipywrapper_demo.ipynb
+        - ProductMeasure: demos/product_measure.ipynb
         - Acceptance-Rejection Sampling: demos/acceptance_rejection.ipynb
         - Copula TrueMeasure Examples: demos/copula_examples.ipynb
   - Blogs: 

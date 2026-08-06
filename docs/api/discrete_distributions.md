@@ -40,6 +40,10 @@ jupyter:
 
 ::: qmcpy.discrete_distribution.kronecker.Kronecker
 
+## `DummySampler`
+
+::: qmcpy.discrete_distribution.dummy_sampler.DummySampler
+
 ## `IIDStdUniform`
 
 ::: qmcpy.discrete_distribution.iid_std_uniform.IIDStdUniform

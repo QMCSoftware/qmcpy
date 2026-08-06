@@ -10,10 +10,10 @@
 
 ## Overview
 
-To execute an individual testbook file, e.g., `tb_JSC_Sorokin_2026.py`, run the following command in a terminal:
+To execute an individual testbook file, e.g., `tb_Sorokin_random_LD_seq_QMC_fast_kernel_methods_2026.py`, run the following command in a terminal:
 
 ```{bash}
-    cd test/booktests && python -m pytest tb_JSC_Sorokin_2026.py -v
+    cd test/booktests && python -m pytest tb_Sorokin_random_LD_seq_QMC_fast_kernel_methods_2026.py -v
 ```
 
 To execute all testbook files sequentially, run the following command in a terminal:

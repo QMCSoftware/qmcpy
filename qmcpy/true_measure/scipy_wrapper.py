@@ -337,12 +337,6 @@ class SciPyWrapper(AbstractTrueMeasure):
                 raise ParameterError(
                     "Custom univariate distributions must implement a 'ppf' method."
                 )
-            if not (hasattr(sd, "pdf") or hasattr(sd, "logpdf")):
-                warnings.warn(
-                    "Custom univariate distribution has no 'pdf' or 'logpdf'. "
-                    "Weights will be treated as 1 for this marginal.",
-                    UserWarning,
-                )
 
             issues = _custom_univariate_sanity_issues(sd)
             if issues:
@@ -496,9 +490,10 @@ class SciPyWrapper(AbstractTrueMeasure):
             else:
                 if not self._warned_missing_pdf:
                     warnings.warn(
-                        "SciPyWrapper saw a marginal without pdf/logpdf. "
-                        "Weights are treated as 1 for that marginal.",
+                        "Custom univariate distribution has no 'pdf' or 'logpdf'. "
+                        "Weights will be treated as 1 for this marginal.",
                         UserWarning,
+                        stacklevel=2,
                     )
                     self._warned_missing_pdf = True
                 # rho stays unchanged for this marginal.
