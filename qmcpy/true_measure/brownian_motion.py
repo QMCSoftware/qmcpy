@@ -3,7 +3,7 @@ from ..discrete_distribution import DigitalNetB2
 from ..util import ParameterError, ParameterWarning
 import warnings
 import numpy as np
-from scipy.stats import norm
+from scipy.special import ndtri
 
 
 class BrownianMotion(Gaussian):
@@ -252,7 +252,7 @@ class BrownianMotion(Gaussian):
 
     def _transform(self, x):
         if self.decomp_type == "BROWNIANBRIDGE":
-            z = norm.ppf(x)
+            z = ndtri(x)
             w = self._bridge_transform(z)
             paths = self.drift_time_vec_plus_init + np.sqrt(self.diffusion) * w
             return paths[..., self._output_order]

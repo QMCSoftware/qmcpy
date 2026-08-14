@@ -7,6 +7,7 @@ from ..discrete_distribution import DigitalNetB2
 
 import numpy as np
 import scipy.stats
+from scipy.special import ndtri
 import warnings
 
 
@@ -111,7 +112,7 @@ class _MVNAdapter:
         u_clip = np.clip(u, eps, 1.0 - eps)
 
         # Map to i.i.d. standard normals.
-        z = scipy.stats.norm.ppf(u_clip)
+        z = ndtri(u_clip)
 
         # Flatten, apply Cholesky, then reshape back to original shape.
         z_flat = z.reshape(-1, self.dim)
