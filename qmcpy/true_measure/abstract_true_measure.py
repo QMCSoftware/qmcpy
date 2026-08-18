@@ -30,6 +30,29 @@ class AbstractTrueMeasure(object):
         array.setflags(write=False)
         return array
 
+    @staticmethod
+    def _range_in_domain(transform_range, domain):
+        """Return whether a transform range is contained within a domain."""
+        transform_range = np.asarray(transform_range)
+        domain = np.asarray(domain)
+
+        if (
+            transform_range.ndim != 2
+            or domain.ndim != 2
+            or transform_range.shape[1] != 2
+            or domain.shape[1] != 2
+        ):
+            return False
+
+        try:
+            transform_range, domain = np.broadcast_arrays(transform_range, domain)
+        except ValueError:
+            return False
+
+        lower_bounds_valid = np.all(domain[:, 0] <= transform_range[:, 0])
+        upper_bounds_valid = np.all(transform_range[:, 1] <= domain[:, 1])
+        return bool(lower_bounds_valid and upper_bounds_valid)
+
     def _set_moments(self, mean, variance, standard_deviation, covariance):
         self._mean = self._read_only_array(mean)
         self._variance = self._read_only_array(variance)
@@ -100,11 +123,11 @@ class AbstractTrueMeasure(object):
                 sampler.d
             )  # take the dimension from the sub-sampler (composed transform)
             self.discrete_distrib = self.transform.discrete_distrib
-            if (self.domain != self.transform.range).any():
+            if not self._range_in_domain(self.transform.range, self.domain):
                 self.sub_compatibility_error = True
             if self.transform.sub_compatibility_error:
                 raise ParameterError(
-                    "The sub-transform domain must match the sub-sub-transform range."
+                    "The sub-sub-transform range must be contained within the sub-transform domain."
                 )
         else:
             raise ParameterError(
@@ -147,7 +170,7 @@ class AbstractTrueMeasure(object):
         jac = None
         if self.sub_compatibility_error:
             raise ParameterError(
-                "The transform domain must match the sub-transform range."
+                "The sub-transform range must be contained within the transform domain."
             )
         if self.transform == self:  # is \Psi_0
             if return_weights:

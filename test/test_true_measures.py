@@ -20,6 +20,7 @@ from scipy.sparse import issparse
 import unittest
 import warnings
 from qmcpy.true_measure.uniform_triangle import UniformTriangle, _UniformTriangleAdapter
+from qmcpy.true_measure.abstract_true_measure import AbstractTrueMeasure
 from qmcpy import SciPyWrapper
 
 
@@ -41,6 +42,104 @@ def assert_sample_mean_and_covariance(measure):
 
 class TestTrueMeasure(unittest.TestCase):
     """General tests for TrueMeasures"""
+
+    def test_range_in_domain(self):
+        cases = [
+            ("exact equality", [[0, 1]], [[0, 1]], True),
+            ("strict finite inclusion", [[0.25, 0.75]], [[0, 1]], True),
+            ("infinite domain", [[-5, 5]], [[-np.inf, np.inf]], True),
+            ("positive half-line", [[1, 3]], [[0, np.inf]], True),
+            ("lower-bound failure", [[-0.1, 0.75]], [[0, 1]], False),
+            ("upper-bound failure", [[0.25, 1.1]], [[0, 1]], False),
+            (
+                "multidimensional box",
+                [[0.1, 0.8], [0.2, 0.9]],
+                [[0, 1], [0, 1]],
+                True,
+            ),
+            (
+                "failure in one coordinate",
+                [[0.1, 0.8], [0.2, 1.1]],
+                [[0, 1], [0, 1]],
+                False,
+            ),
+            (
+                "broadcast domain",
+                [[0.1, 0.8], [0.2, 0.9]],
+                [[0, 1]],
+                True,
+            ),
+            (
+                "non-broadcastable rows",
+                [[0.1, 0.8], [0.2, 0.9]],
+                [[0, 1], [0, 1], [0, 1]],
+                False,
+            ),
+        ]
+
+        for name, transform_range, domain, expected in cases:
+            with self.subTest(name=name):
+                self.assertIs(
+                    AbstractTrueMeasure._range_in_domain(transform_range, domain),
+                    expected,
+                )
+
+    def test_range_in_domain_rejects_invalid_bound_shapes(self):
+        invalid_cases = [
+            ([0, 1], [[0, 1]]),
+            ([[0, 0.5, 1]], [[0, 1]]),
+            ([[0, 1]], [0, 1]),
+            ([[0, 1]], [[0, 0.5, 1]]),
+        ]
+
+        for transform_range, domain in invalid_cases:
+            with self.subTest(transform_range=transform_range, domain=domain):
+                self.assertFalse(
+                    AbstractTrueMeasure._range_in_domain(transform_range, domain)
+                )
+
+    def test_strict_range_in_domain_chain(self):
+        inner = Uniform(
+            DigitalNetB2(1, seed=7), lower_bound=0.25, upper_bound=0.75
+        )
+        outer = Kumaraswamy(inner)
+
+        self.assertFalse(outer.sub_compatibility_error)
+        samples = outer.gen_samples(8)
+        self.assertEqual(samples.shape, (8, 1))
+        self.assertTrue(np.isfinite(samples).all())
+
+    def test_multidimensional_range_in_domain_chain_broadcasts(self):
+        inner = Uniform(
+            DigitalNetB2(2, seed=7),
+            lower_bound=[0.1, 0.2],
+            upper_bound=[0.8, 0.9],
+        )
+        outer = Kumaraswamy(inner)
+
+        self.assertFalse(outer.sub_compatibility_error)
+        samples = outer.gen_samples(8)
+        self.assertEqual(samples.shape, (8, 2))
+        self.assertTrue(np.isfinite(samples).all())
+
+    def test_out_of_domain_chain_preserves_deferred_errors(self):
+        inner = Uniform(
+            DigitalNetB2(1, seed=7), lower_bound=-0.1, upper_bound=0.75
+        )
+        incompatible = Kumaraswamy(inner)
+
+        self.assertTrue(incompatible.sub_compatibility_error)
+        with self.assertRaisesRegex(
+            ParameterError,
+            "The sub-transform range must be contained within the transform domain.",
+        ):
+            incompatible.gen_samples(8)
+
+        with self.assertRaisesRegex(
+            ParameterError,
+            "The sub-sub-transform range must be contained within the sub-transform domain.",
+        ):
+            Kumaraswamy(incompatible)
 
     def test_abstract_methods(self):
         d = 2
