@@ -49,6 +49,11 @@ class AbstractTrueMeasure(object):
         except ValueError:
             return False
 
+        if np.any(transform_range[:, 0] > transform_range[:, 1]):
+            return False
+        if np.any(domain[:, 0] > domain[:, 1]):
+            return False
+
         lower_bounds_valid = np.all(domain[:, 0] <= transform_range[:, 0])
         upper_bounds_valid = np.all(transform_range[:, 1] <= domain[:, 1])
         return bool(lower_bounds_valid and upper_bounds_valid)
