@@ -1,4 +1,5 @@
 from qmcpy import (
+    AbstractTrueMeasure,
     BernoulliCont,
     BrownianMotion,
     DigitalNetB2,
@@ -10,6 +11,7 @@ from qmcpy import (
     Lattice,
     Lebesgue,
     MaternGP,
+    SciPyWrapper,
     Uniform,
     ZeroInflatedExpUniform,
 )
@@ -20,8 +22,6 @@ from scipy.sparse import issparse
 import unittest
 import warnings
 from qmcpy.true_measure.uniform_triangle import UniformTriangle, _UniformTriangleAdapter
-from qmcpy.true_measure.abstract_true_measure import AbstractTrueMeasure
-from qmcpy import SciPyWrapper
 
 
 def dense_covariance(covariance):
@@ -84,22 +84,52 @@ class TestTrueMeasure(unittest.TestCase):
                     expected,
                 )
 
-    def test_range_in_domain_rejects_invalid_bound_shapes(self):
+    def test_range_in_domain_rejects_invalid_bounds(self):
         invalid_cases = [
-            ([0, 1], [[0, 1]]),
-            ([[0, 0.5, 1]], [[0, 1]]),
-            ([[0, 1]], [0, 1]),
-            ([[0, 1]], [[0, 0.5, 1]]),
-            ([[0.8, 0.2]], [[0, 1]]),
-            ([[0, 1]], [[0.8, 0.2]]),
-            ([[0.1, 0.8], [0.9, 0.2]], [[0, 1], [0, 1]]),
-            ([[0.1, 0.8], [0.2, 0.9]], [[0, 1], [0.9, 0.2]]),
+            ("one-dimensional range", [0, 1], [[0, 1]]),
+            ("three-column range", [[0, 0.5, 1]], [[0, 1]]),
+            ("ragged range", [[0, 1], [0, 0.5, 1]], [[0, 1]]),
+            ("one-dimensional domain", [[0, 1]], [0, 1]),
+            ("three-column domain", [[0, 1]], [[0, 0.5, 1]]),
+            (
+                "reversed transform range",
+                np.array([[0.8, 0.2]]),
+                np.array([[0.0, 1.0]]),
+            ),
+            ("reversed domain", [[0, 1]], [[0.8, 0.2]]),
+            (
+                "reversed multidimensional transform range",
+                [[0.1, 0.8], [0.9, 0.2]],
+                [[0, 1], [0, 1]],
+            ),
+            (
+                "reversed multidimensional domain",
+                [[0.1, 0.8], [0.2, 0.9]],
+                [[0, 1], [0.9, 0.2]],
+            ),
+            ("empty transform range", np.empty((0, 2)), [[0, 1]]),
+            ("empty domain", [[0, 1]], np.empty((0, 2))),
+            (
+                "string bounds",
+                np.array([["a", "z"]]),
+                np.array([["a", "z"]]),
+            ),
+            (
+                "object bounds",
+                np.array([[0, 1]], dtype=object),
+                np.array([[0, 1]], dtype=object),
+            ),
+            ("complex bounds", [[0 + 0j, 1 + 0j]], [[0 + 0j, 1 + 0j]]),
+            ("boolean bounds", [[False, True]], [[False, True]]),
+            ("NaN transform range", [[np.nan, 1]], [[0, 1]]),
+            ("NaN domain", [[0, 1]], [[np.nan, 1]]),
         ]
 
-        for transform_range, domain in invalid_cases:
-            with self.subTest(transform_range=transform_range, domain=domain):
-                self.assertFalse(
-                    AbstractTrueMeasure._range_in_domain(transform_range, domain)
+        for name, transform_range, domain in invalid_cases:
+            with self.subTest(name=name):
+                self.assertIs(
+                    AbstractTrueMeasure._range_in_domain(transform_range, domain),
+                    False,
                 )
 
     def test_strict_range_in_domain_chain(self):
