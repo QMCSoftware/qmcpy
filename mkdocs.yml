@@ -75,6 +75,7 @@ nav:
       - Importance Sampling with True Measures:
         - Statistics for True Measures: demos/statistics_for_TrueMeasure.ipynb
         - Some True Measures: demos/some_true_measures.ipynb
+        - TrueMeasure Domain Inclusion: demos/true_measure_domain_inclusion.ipynb
         - SciPyWrapper dependence and Custom distributions: demos/scipywrapper_dependence_custom/scipywrapper_demo.ipynb
         - ProductMeasure: demos/product_measure.ipynb
         - Acceptance-Rejection Sampling: demos/acceptance_rejection.ipynb

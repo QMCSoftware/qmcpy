@@ -33,25 +33,43 @@ class AbstractTrueMeasure(object):
     @staticmethod
     def _range_in_domain(transform_range, domain):
         """Return whether a transform range is contained within a domain."""
-        transform_range = np.asarray(transform_range)
-        domain = np.asarray(domain)
+        try:
+            transform_range = np.asarray(transform_range)
+            domain = np.asarray(domain)
+        except (TypeError, ValueError):
+            return False
 
         if (
             transform_range.ndim != 2
             or domain.ndim != 2
             or transform_range.shape[1] != 2
             or domain.shape[1] != 2
+            or transform_range.shape[0] == 0
+            or domain.shape[0] == 0
+        ):
+            return False
+
+        if not (
+            np.issubdtype(transform_range.dtype, np.number)
+            and np.issubdtype(domain.dtype, np.number)
+            and np.isrealobj(transform_range)
+            and np.isrealobj(domain)
+            and transform_range.dtype != np.bool_
+            and domain.dtype != np.bool_
+        ):
+            return False
+
+        if np.isnan(transform_range).any() or np.isnan(domain).any():
+            return False
+
+        if np.any(transform_range[:, 0] > transform_range[:, 1]) or np.any(
+            domain[:, 0] > domain[:, 1]
         ):
             return False
 
         try:
             transform_range, domain = np.broadcast_arrays(transform_range, domain)
         except ValueError:
-            return False
-
-        if np.any(transform_range[:, 0] > transform_range[:, 1]):
-            return False
-        if np.any(domain[:, 0] > domain[:, 1]):
             return False
 
         lower_bounds_valid = np.all(domain[:, 0] <= transform_range[:, 0])
