@@ -46,6 +46,8 @@ def kronecker_vector_search_mobius_transform(n_max, d_max, searchsize, kernel=No
     # define coordinate weights if not provided, default to j^(-2)
     if coord_weights is None:
         coord_weights = np.array([j**(-2) for j in range(1, d_max + 1)], dtype=np.float64)
+    else:
+        coord_weights = np.asarray(coord_weights, dtype=np.float64)
 
     # search over the first n primes, n = searchsize
     searchspace = np.array(list(sympy.primerange(1, sympy.prime(searchsize)+1)), dtype=np.float64)

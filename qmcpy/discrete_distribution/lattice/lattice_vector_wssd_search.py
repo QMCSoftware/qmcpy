@@ -119,7 +119,7 @@ def lattice_vector_wssd_search(n_max, d_max, coord_weights=None, kernel=None):
 
     # Initial 1D case
     rowV = rowVects / 2**m
-    rowV = 1 + kernel(rowV)
+    rowV = 1 + coord_weights[0] * kernel(rowV)
     prodV = prodV * rowV[:, None]
 
     # Set up k0
@@ -134,8 +134,7 @@ def lattice_vector_wssd_search(n_max, d_max, coord_weights=None, kernel=None):
         wssd = np.zeros(2**(m - 2))
 
         gamma = coord_weights[hComp - 1]
-        omega = lambda x: 1 + gamma * (x * (x - 1) + 1 / 6)
-
+        omega = lambda x: 1 + gamma * kernel(x)
         k0 = k0 * (1 + gamma * kernel(0))
 
         curIdx2 = 0

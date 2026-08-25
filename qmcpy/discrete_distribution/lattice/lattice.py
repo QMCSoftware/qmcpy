@@ -446,9 +446,9 @@ class Lattice(AbstractLDDiscreteDistribution):
 
 
     def wssd(self, n_max, coord_weights=None, sample_weights=None):
-        """Returns the weighted sum of the expected squared periodic discrepancies for the first n points of the lattice sequence.
+        """Returns the weighted sum of the expected squared periodic discrepancies for the first n_max points of the lattice sequence.
         Args:
-            n (int): Number of points to calculate the weighted squared periodic discrepancy for.
+            n_max (int): Number of points to calculate the weighted squared periodic discrepancy for.
             coord_weights (Union[None, np.ndarray]): Coordinate weights for the discrepancy calculation. If None, uses weights gamma_j = j^(-2).
             sample_weights (Union[None, np.ndarray]): Sample weights for the weighted squared periodic discrepancy calculation. If None, uses weights w_n = n. Note that the time cost may be higher for other sample weights.
         Returns:
