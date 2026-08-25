@@ -440,16 +440,19 @@ class Lattice(AbstractLDDiscreteDistribution):
         for i in range(k_sum.size):
             k_sum[i] = np.sum(k_vector[2**i:(2**(i+1))])
 
-        # get the frequency matrix for how often each kernel evaluation appears (this is always the same and can be precomputed, not done here to avoid adding >1GB txt file to git)
-        freq_mtx = np.zeros((k_sum.size, n_max), dtype=np.float64)
-        for i in range(1,n_max):
-            for j in range(k_sum.size):
-                if np.floor(i / 2**j) % 2 == 1:
-                    freq_mtx[j, i] = freq_mtx[j, i-1] + 2
-                else:
-                    freq_mtx[j, i] = freq_mtx[j, i-1]         
-        for i in range(n_max):
-            freq_mtx[:,i] = freq_mtx[:,i] * (i + 1)**(-2)
+        # get the frequency matrix for how often each kernel evaluation appears
+        # this is always the same and can be precomputed, but for values of n_max large enough to matter (~ 2^25)
+        # the precomputed file is >1GB and would take longer to load than to compute
+        i = np.arange(2**k_sum.size)
+        pattern = np.zeros((k_sum.size, 2**k_sum.size), dtype=np.float64) # start with the pattern for the full power of two
+        for l in range(k_sum.size):
+            pattern[l] = ((i >> (l)) & 1) * 2
+
+        # truncate the matrix to the correct size, get the cumsum and divide by the square of the index
+        pattern = pattern[:, :n_max]
+        freq_mtx = np.cumsum(pattern, axis=1)
+        divisor = np.arange(1, n_max + 1) ** 2
+        freq_mtx /= divisor
 
         # multiply by the frequency matrix and add the constant vector
         discs = k_const + (k_sum @ freq_mtx)
