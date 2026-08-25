@@ -187,6 +187,17 @@ class Lattice(AbstractLDDiscreteDistribution):
             )[None, :]
             d_limit = 9125
             n_limit = 1048576
+        elif (
+            isinstance(generating_vector, str)
+            and generating_vector == "kuo.lattice-39102-1024-1048576.3600.txt"
+        ):
+            self.gen_vec_source = generating_vector
+            gen_vec = np.load(
+                dirname(abspath(__file__))
+                + "/generating_vectors/kuo.lattice-39102-1024-1048576.3600.npy"
+            )[None, :]
+            d_limit = 3600
+            n_limit = 1048576
         elif isinstance(generating_vector, str):
             self.gen_vec_source = generating_vector
             assert generating_vector[-4:] == ".txt"

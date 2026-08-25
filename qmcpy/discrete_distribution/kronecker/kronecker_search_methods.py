@@ -1,9 +1,10 @@
 import numpy as np
-import sympy
 
 def kronecker_vector_search_mobius_transform(n_max, d_max, searchsize, kernel=None, coord_weights=None, gen_vec_init=None):
     """
-    CBC search method for finding a generating vector for a Kronecker sequence, minimizing the weighted sum of squared discrepancies (WSSD).
+    Note that the sympy package is highly recommended for this search method, though not required.
+
+    A deterministic CBC search method for finding a generating vector for a Kronecker sequence, minimizing the weighted sum of squared discrepancies (WSSD).
         - The first component is gen_vec_init, defaults to the golden ratio.
         - We use a modified mobius transformation f(x) = (a*x + b)/(c*x + d) where a, c are distinct primes and b, d are the two pairs of the smallest positive integers such that |a*d - b*c| = 1.
         - Each subsequent component is found by performing the mobius transformation on the previous component, searching over all pairs of distinct primes from the first searchsize many primes.
@@ -23,7 +24,7 @@ def kronecker_vector_search_mobius_transform(n_max, d_max, searchsize, kernel=No
     Time cost:
         The time cost of the search is O(searchsize^2 * d_max * n_max).
     Approach:
-        Uses the quadratic Bernoulli polynomial kernel to conduct a CBC search for a generating vector, minimizing the weighted sum of squared discrepancies (wssd) with sample weights w_n = n.
+        Conducts a deterministic CBC search for a generating vector, minimizing the weighted sum of squared discrepancies (wssd) with sample weights w_n = n.
     Details on coeff array:
         The coeff array is a (d_max-1) x 4 array where each row corresponds to a dimension from 2 to d_max. The columns correspond to the coefficients of the linear transformation used to compute the gen_vec component for that dimension. Specifically,
         - gen_vec[dim+1] = (coeff[dim, 0] * gen_vec[dim] + coeff[dim, 1]) / (coeff[dim, 2] * gen_vec[dim] + coeff[dim, 3])
@@ -49,9 +50,52 @@ def kronecker_vector_search_mobius_transform(n_max, d_max, searchsize, kernel=No
     else:
         coord_weights = np.asarray(coord_weights, dtype=np.float64)
 
-    # search over the first n primes, n = searchsize
-    searchspace = np.array(list(sympy.primerange(1, sympy.prime(searchsize)+1)), dtype=np.float64)
+    # use sympy if it's already installed, otherwise uses slower and recursive direct implementation
+    try:
+        import sympy
+    except ImportError:
+        print("While not required, installing the sympy package is recommended for this search method. It is used to compute the Bezout coefficients for the linear transformation used in the search. If sympy is not installed, the search will use a recursive and likely slower implementation of the Euclidean algorithm instead.")
+        response = input("Do you want to continue without sympy? (y/n): ")
+        if response.lower() != 'y':
+            raise ImportError("Please install sympy and try again.")
+        else:
+            has_sympy = False
+            print("Continuing without sympy. This may take longer.")
+    else:
+        has_sympy = True
 
+    if has_sympy:
+        # search over the first n primes, n = searchsize
+        searchspace = np.array(list(sympy.primerange(1, sympy.prime(searchsize)+1)), dtype=np.float64)
+    else:
+        def get_primes(n):
+            primes = []
+            num = 2
+            while len(primes) < n:
+                is_prime = True
+                for p in primes:
+                    if p * p > num:
+                        break
+                    if num % p == 0:
+                        is_prime = False
+                        break
+                if is_prime:
+                    primes.append(num)
+                num += 1
+            return primes
+        
+        # search over the first n primes, n = searchsize
+        searchspace = np.array(get_primes(searchsize), dtype=np.float64)
+
+        # we define this method here for convenience, to use in computing Bezout coefficients if necessary
+        def recursive_euclidean_algorithm(a, b):
+            if b == 0:
+                return 1, 0, a
+            x1, y1, gcd = recursive_euclidean_algorithm(b, a % b)
+            x = y1
+            y = x1 - (a // b) * y1
+            return x, y, gcd
+    
     # gen_vec is our generating vector, will be found cbc
     gen_vec = np.zeros(d_max, dtype=np.float64)
 
@@ -73,14 +117,25 @@ def kronecker_vector_search_mobius_transform(n_max, d_max, searchsize, kernel=No
 
     # precompute Bezout coefficients for all pairs of primes in the search space
     bezoutCoeffs = np.zeros((searchsize, searchsize))
-    for i in range(searchsize - 1):
-        a = searchspace[i]
-        for j in range(i + 1, searchsize):
-            c = searchspace[j]
-            # Use sympy.gcdex to get Bezout coefficients
-            d_coeff, b_coeff, _ = sympy.gcdex(int(a), int(c))
-            bezoutCoeffs[i, j] = np.float64(b_coeff)
-            bezoutCoeffs[j, i] = np.float64(d_coeff)
+    if has_sympy:
+        from sympy.core.intfunc import igcdex
+        for i in range(searchsize - 1):
+            a = searchspace[i]
+            for j in range(i + 1, searchsize):
+                c = searchspace[j]
+                # Use sympy.igcdex to get Bezout coefficients
+                d_coeff, b_coeff, _ = igcdex(int(a), int(c))
+                bezoutCoeffs[i, j] = np.float64(b_coeff)
+                bezoutCoeffs[j, i] = np.float64(d_coeff)
+    else:
+        for i in range(searchsize - 1):
+            a = searchspace[i]
+            for j in range(i + 1, searchsize):
+                c = searchspace[j]
+                # Use the recursive Euclidean algorithm to get Bezout coefficients
+                d_coeff, b_coeff, _ = recursive_euclidean_algorithm(int(a), int(c))
+                bezoutCoeffs[i, j] = np.float64(b_coeff)
+                bezoutCoeffs[j, i] = np.float64(d_coeff)
 
 
     # setting up some useful variables for the search
