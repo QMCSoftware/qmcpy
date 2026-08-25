@@ -441,7 +441,7 @@ class Lattice(AbstractLDDiscreteDistribution):
             freq_mtx[:,i] = freq_mtx[:,i] * (i + 1)**(-2)
 
         # multiply by the frequency matrix and add the constant vector
-        discs = k_const + np.vecmat(k_sum, freq_mtx)
+        discs = k_const + (k_sum @ freq_mtx)
         return discs
 
 
@@ -457,7 +457,7 @@ class Lattice(AbstractLDDiscreteDistribution):
         if coord_weights is not None and len(coord_weights) < self.d:
             raise ValueError("Length of coord_weights must be greater than or equal to the dimension of the lattice")
         if sample_weights is not None and len(sample_weights) < n_max:
-            raise ValueError("Length of sample_weights must be equal to n_max")
+            raise ValueError("Length of sample_weights must be at least n_max")
         if sample_weights is None:
             sample_weights = np.arange(1, n_max + 1, dtype=np.float64)
 
