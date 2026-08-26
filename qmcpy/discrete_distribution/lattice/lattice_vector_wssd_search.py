@@ -158,13 +158,19 @@ def lattice_vector_wssd_search(n_max, d_max, coord_weights=None, kernel=None):
         wssd = wssd + omega(1 / 2) * prodV[-1, 0]
         wssd = wssd + n_max * k0 - n_max * (n_max + 1) / 2
 
-        bestIdx = int(np.argmin(wssd))
+        # Choose the best candidate, using the smallest index in case of ties to avoid different platforms providing different outputs
+        min_wssd = np.min(wssd)
+        rtol = 1e-15
+        best_indices = np.where(np.abs(wssd - min_wssd) <= rtol * np.abs(min_wssd))[0]
+        bestIdx = int(best_indices[0])
         newH = int(gR[bestIdx])
 
         # Avoid duplicates
         while newH in gen_vec:
             wssd[bestIdx] = np.inf
-            bestIdx = int(np.argmin(wssd))
+            min_wssd = np.min(wssd)
+            best_indices = np.where(np.abs(wssd - min_wssd) <= rtol * np.abs(min_wssd))[0]
+            bestIdx = int(best_indices[0])
             newH = int(gR[bestIdx])
 
         gen_vec[hComp - 1] = newH
