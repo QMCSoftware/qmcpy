@@ -2,7 +2,7 @@ import warnings
 
 import numpy as np
 
-from .abstract_true_measure import AbstractTrueMeasure
+from .abstract_true_measure import AbstractTrueMeasure, _clip_unit_interval
 from ..util import DimensionError, MethodImplementationError, ParameterError
 
 
@@ -95,11 +95,6 @@ class AbstractCopula(AbstractTrueMeasure):
             warnings.warn(message, UserWarning)
             self._warned_missing_weight = True
         return np.ones(x.shape[:-1], dtype=float)
-
-
-def _clip_unit_interval(u):
-    eps = np.finfo(float).eps
-    return np.clip(u, eps, 1.0 - eps)
 
 
 def _validate_marginals(marginals):
