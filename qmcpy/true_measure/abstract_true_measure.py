@@ -6,6 +6,12 @@ import numpy as np
 from scipy import sparse
 
 
+def _clip_unit_interval(u):
+    """Clip unit-interval values away from endpoints for stable quantiles."""
+    eps = np.finfo(float).eps
+    return np.clip(u, eps, 1.0 - eps)
+
+
 class AbstractTrueMeasure(object):
 
     def __init__(self):

@@ -156,6 +156,59 @@ class TestTrueMeasure(unittest.TestCase):
         self.assertEqual(samples.shape, (8, 2))
         self.assertTrue(np.isfinite(samples).all())
 
+    def test_recursive_transform_applies_each_layer(self):
+        points = np.array([[0.1], [0.25], [0.5], [0.75], [0.9]])
+
+        uniform_inner = Uniform(
+            DigitalNetB2(1, seed=7), lower_bound=0.25, upper_bound=0.75
+        )
+        uniform_outer = Uniform(
+            uniform_inner, lower_bound=0.25, upper_bound=0.75
+        )
+
+        kumaraswamy_inner = Uniform(
+            DigitalNetB2(1, seed=7), lower_bound=0.25, upper_bound=0.75
+        )
+        kumaraswamy_outer = Kumaraswamy(kumaraswamy_inner)
+
+        gaussian_inner = Uniform(
+            DigitalNetB2(1, seed=7), lower_bound=0.25, upper_bound=0.75
+        )
+        gaussian_outer = Gaussian(gaussian_inner)
+
+        bernoulli_inner = BernoulliCont(DigitalNetB2(1, seed=7), lam=0.9)
+        bernoulli_outer = Kumaraswamy(bernoulli_inner, a=2.0, b=2.0)
+
+        cases = [
+            ("1(a) Uniform -> Uniform", uniform_inner, uniform_outer),
+            (
+                "1(b)/1(c) Uniform -> Kumaraswamy",
+                kumaraswamy_inner,
+                kumaraswamy_outer,
+            ),
+            ("1(c) Uniform -> Gaussian", gaussian_inner, gaussian_outer),
+            (
+                "1(d) BernoulliCont -> Kumaraswamy",
+                bernoulli_inner,
+                bernoulli_outer,
+            ),
+        ]
+
+        for name, inner, outer in cases:
+            with self.subTest(name=name):
+                transformed = outer._jacobian_transform_r(
+                    points, return_weights=False
+                )
+                expected = outer._transform(inner._transform(points))
+                np.testing.assert_allclose(transformed, expected)
+
+                if name.startswith("1(a)"):
+                    np.testing.assert_allclose(
+                        transformed, 0.375 + 0.25 * points
+                    )
+                if name.startswith("1(d)"):
+                    np.testing.assert_array_equal(inner.range, outer.domain)
+
     def test_out_of_domain_chain_preserves_deferred_errors(self):
         inner = Uniform(
             DigitalNetB2(1, seed=7), lower_bound=-0.1, upper_bound=0.75
@@ -514,6 +567,34 @@ class TestUniform(unittest.TestCase):
         )
         np.testing.assert_allclose(dense_covariance(spawn.covariance), 3.0 * np.eye(4))
 
+    def test_weight_is_zero_outside_support(self):
+        uniform = Uniform(DigitalNetB2(1, seed=7), 0.25, 0.75)
+        points = np.array([[0.1], [0.25], [0.3], [0.5], [0.75], [0.9]])
+
+        np.testing.assert_allclose(
+            uniform._weight(points),
+            [0.0, 2.0, 2.0, 2.0, 2.0, 0.0],
+        )
+
+    def test_weight_support_mask_handles_dimensions_and_batches(self):
+        uniform = Uniform(
+            DigitalNetB2(2, seed=7),
+            lower_bound=[0.0, -1.0],
+            upper_bound=[1.0, 1.0],
+        )
+        points = np.array(
+            [
+                [[0.0, -1.0], [0.5, 0.0], [1.0, 1.0]],
+                [[-0.1, 0.0], [0.5, 1.1], [0.5, 0.0]],
+            ]
+        )
+
+        weights = uniform._weight(points)
+
+        self.assertEqual(weights.shape, (2, 3))
+        np.testing.assert_allclose(weights, [[0.5, 0.5, 0.5], [0.0, 0.0, 0.5]])
+        self.assertTrue(np.all(weights >= 0))
+
 
 class TestKumaraswamy(unittest.TestCase):
     def test_sample_mean_and_covariance(self):
@@ -569,6 +650,36 @@ class TestKumaraswamy(unittest.TestCase):
         np.testing.assert_allclose(
             dense_covariance(kumaraswamy.covariance), np.diag(expected_variance)
         )
+
+    def test_weight_is_zero_outside_support(self):
+        kumaraswamy = Kumaraswamy(DigitalNetB2(1, seed=7), a=2, b=2)
+        points = np.array([[-0.5], [0.0], [0.5], [1.0], [1.5]])
+
+        weights = kumaraswamy._weight(points)
+
+        np.testing.assert_allclose(weights, [0.0, 0.0, 1.5, 0.0, 0.0])
+        self.assertTrue(np.all(weights >= 0))
+
+        singular_boundaries = Kumaraswamy(
+            DigitalNetB2(1, seed=7), a=0.5, b=0.5
+        )._weight(np.array([[0.0], [1.0]]))
+        self.assertTrue(np.isposinf(singular_boundaries).all())
+
+    def test_weight_support_mask_handles_dimensions_and_batches(self):
+        kumaraswamy = Kumaraswamy(DigitalNetB2(2, seed=7), a=2, b=2)
+        points = np.array(
+            [
+                [[0.5, 0.5], [0.25, 0.75]],
+                [[-0.1, 0.5], [0.5, 1.1]],
+            ]
+        )
+
+        weights = kumaraswamy._weight(points)
+
+        self.assertEqual(weights.shape, (2, 2))
+        np.testing.assert_allclose(weights[0], [2.25, 1.23046875])
+        np.testing.assert_allclose(weights[1], [0.0, 0.0])
+        self.assertTrue(np.all(weights >= 0))
 
     def test_spawn_recomputes_moment_attributes(self):
         kumaraswamy = Kumaraswamy(
@@ -769,6 +880,25 @@ class TestZeroInflatedExpUniform(unittest.TestCase):
             self.assertNotIn(parameter, tm.parameters)
 
 
+class TestBernoulliCont(unittest.TestCase):
+    def test_weight_is_zero_outside_support(self):
+        lam = 0.9
+        bernoulli = BernoulliCont(DigitalNetB2(1, seed=7), lam=lam)
+        points = np.array([[-0.1], [0.0], [0.5], [1.0], [1.1]])
+
+        weights = bernoulli._weight(points)
+        normalizer = 2 * np.arctanh(1 - 2 * lam) / (1 - 2 * lam)
+        expected_in_support = (
+            normalizer
+            * lam ** points[1:4, 0]
+            * (1 - lam) ** (1 - points[1:4, 0])
+        )
+
+        np.testing.assert_allclose(weights[[0, 4]], 0.0)
+        np.testing.assert_allclose(weights[1:4], expected_in_support)
+        self.assertTrue(np.all(weights >= 0))
+
+
 class TestUniformTriangle(unittest.TestCase):
     """Tests for UniformTriangle and _UniformTriangleAdapter."""
 
@@ -834,6 +964,36 @@ class TestGaussian(unittest.TestCase):
         )
 
         assert_sample_mean_and_covariance(gaussian)
+
+    def test_transform_clips_unit_interval_endpoints(self):
+        gaussian = Gaussian(DigitalNetB2(1, seed=7))
+        endpoints = gaussian._transform(np.array([[0.0], [1.0]]))
+        interior = np.array([[0.25], [0.5], [0.75]])
+
+        self.assertTrue(np.isfinite(endpoints).all())
+        np.testing.assert_allclose(
+            gaussian._transform(interior),
+            scipy.stats.norm.ppf(interior),
+            rtol=0,
+            atol=0,
+        )
+
+    def test_unrandomized_direct_and_composed_samples_are_finite(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            direct = Gaussian(
+                DigitalNetB2(1, randomize="FALSE")
+            ).gen_samples(2)
+            composed = Gaussian(
+                Uniform(
+                    DigitalNetB2(1, randomize="FALSE"),
+                    0.0,
+                    0.75,
+                )
+            ).gen_samples(2)
+
+        self.assertTrue(np.isfinite(direct).all())
+        self.assertTrue(np.isfinite(composed).all())
 
     def test_gaussian_basic_output_reproducibility(self):
         """Test that basic Gaussian sample generation produces expected values with fixed seed."""
