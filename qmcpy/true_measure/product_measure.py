@@ -5,7 +5,7 @@ from .abstract_true_measure import AbstractTrueMeasure
 from ..discrete_distribution.abstract_discrete_distribution import (
     AbstractDiscreteDistribution,
 )
-from ..util import DimensionError, ParameterError
+from ..util import DimensionError, ParameterError, _univ_repr
 
 
 class ProductMeasure(AbstractTrueMeasure):
@@ -181,6 +181,11 @@ class ProductMeasure(AbstractTrueMeasure):
 
         super(ProductMeasure, self).__init__()
 
+        self._mean_cache = None
+        self._variance_cache = None
+        self._standard_deviation_cache = None
+        self._covariance_cache = None
+
         for statistic in (
             "mean",
             "variance",
@@ -221,18 +226,26 @@ class ProductMeasure(AbstractTrueMeasure):
 
     @property
     def mean(self):
-        return self._concatenate_marginal_statistic("mean")
+        if self._mean_cache is None:
+            self._mean_cache = self._concatenate_marginal_statistic("mean")
+        return self._mean_cache
 
     @property
     def variance(self):
-        return self._concatenate_marginal_statistic("variance")
+        if self._variance_cache is None:
+            self._variance_cache = self._concatenate_marginal_statistic("variance")
+        return self._variance_cache
 
     @property
     def standard_deviation(self):
-        return self._concatenate_marginal_statistic("standard_deviation")
+        if self._standard_deviation_cache is None:
+            self._standard_deviation_cache = self._concatenate_marginal_statistic(
+                "standard_deviation"
+            )
+        return self._standard_deviation_cache
 
-    @property
-    def covariance(self):
+    def _compute_covariance(self):
+        """Build and protect the block-diagonal marginal covariance."""
         blocks = []
         for marginal_index, marginal in enumerate(self.marginals):
             block = self._marginal_statistic(
@@ -250,11 +263,14 @@ class ProductMeasure(AbstractTrueMeasure):
             blocks.append(block)
 
         if any(sparse.issparse(block) for block in blocks):
-            covariance = sparse.block_diag(blocks, format="dia")
-            data = covariance.data
-            data.setflags(write=False)
-            covariance.data = self._read_only_view(data)
-            return covariance
+            covariance = sparse.block_diag(blocks, format="csr")
+            # Rebuild from a read-only base so writes cannot be re-enabled.
+            data = self._read_only_array(covariance.data)
+            return sparse.csr_matrix(
+                (data, covariance.indices, covariance.indptr),
+                shape=covariance.shape,
+                copy=False,
+            )
 
         covariance = np.zeros(
             (self.d, self.d),
@@ -267,6 +283,34 @@ class ProductMeasure(AbstractTrueMeasure):
             start = stop
         covariance.setflags(write=False)
         return self._read_only_view(covariance)
+
+    @property
+    def covariance(self):
+        if self._covariance_cache is None:
+            self._covariance_cache = self._compute_covariance()
+        return self._covariance_cache
+
+    def __repr__(self):
+        """Represent ProductMeasure without expanding marginal sparse matrices."""
+        lines = [f"{type(self).__name__} (AbstractTrueMeasure)"]
+        for parameter in dict.fromkeys(self.parameters):
+            if parameter == "marginals":
+                marginals = ", ".join(
+                    f"{type(marginal).__name__}(d={marginal.d})"
+                    for marginal in self.marginals
+                )
+                lines.append(f"    {parameter:<15} [{marginals}]")
+            elif parameter == "covariance" and sparse.issparse(self.covariance):
+                covariance = self.covariance
+                summary = (
+                    f"sparse {covariance.format.upper()}, "
+                    f"shape={covariance.shape}, nnz={covariance.nnz}"
+                )
+                lines.append(f"    {parameter:<15} {summary}")
+            else:
+                formatted = _univ_repr(self, "AbstractTrueMeasure", [parameter])
+                lines.extend(formatted.splitlines()[1:])
+        return "\n".join(lines)
 
     @staticmethod
     def _expand_bounds(bounds, dimension, name):

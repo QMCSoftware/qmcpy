@@ -151,11 +151,11 @@ def test_product_measure_mixed_covariance_blocks_remain_sparse():
 
     covariance = tm.covariance
     expected = sp.block_diag(
-        [marginal.covariance for marginal in tm.marginals], format="dia"
+        [marginal.covariance for marginal in tm.marginals], format="csr"
     )
 
     assert sp.issparse(covariance)
-    assert covariance.format == "dia"
+    assert covariance.format == "csr"
     assert covariance.shape == (d + 2, d + 2)
     difference = (covariance - expected).tocsr()
     difference.eliminate_zeros()
@@ -169,6 +169,71 @@ def test_product_measure_mixed_covariance_blocks_remain_sparse():
     assert not covariance.data.flags.writeable
     with pytest.raises(ValueError):
         covariance.data.setflags(write=True)
+
+
+def test_product_measure_sparse_covariance_repr_is_compact():
+    d = 128
+    tm = ProductMeasure(
+        DummySampler(d + 2),
+        [
+            Uniform(DummySampler(d)),
+            Gaussian(
+                DummySampler(2),
+                covariance=np.array([[1.0, 0.5], [0.5, 1.0]]),
+            ),
+        ],
+    )
+
+    representation = repr(tm)
+
+    assert "sparse CSR" in representation
+    assert "shape=(130, 130)" in representation
+    assert "nnz=132" in representation
+    assert "Coords" not in representation
+    assert "(127, 127)" not in representation
+
+
+def test_product_measure_statistics_are_lazily_cached():
+    tm = ProductMeasure(
+        DummySampler(3),
+        [
+            Uniform(DummySampler(1), lower_bound=8.0, upper_bound=12.0),
+            Gaussian(
+                DummySampler(2),
+                mean=[2.0, 5.0],
+                covariance=[[2.0, 0.5], [0.5, 3.0]],
+            ),
+        ],
+    )
+
+    cache = vars(tm)
+    assert cache["_mean_cache"] is None
+    assert cache["_variance_cache"] is None
+    assert cache["_standard_deviation_cache"] is None
+    assert cache["_covariance_cache"] is None
+
+    mean = tm.mean
+    np.testing.assert_allclose(mean, [10.0, 2.0, 5.0])
+    assert tm.mean is mean
+    assert cache["_variance_cache"] is None
+    assert cache["_standard_deviation_cache"] is None
+    assert cache["_covariance_cache"] is None
+
+    variance = tm.variance
+    standard_deviation = tm.standard_deviation
+    covariance = tm.covariance
+    np.testing.assert_allclose(variance, [4.0 / 3.0, 2.0, 3.0])
+    np.testing.assert_allclose(
+        standard_deviation,
+        [np.sqrt(4.0 / 3.0), np.sqrt(2.0), np.sqrt(3.0)],
+    )
+    np.testing.assert_allclose(
+        covariance.toarray(),
+        [[4.0 / 3.0, 0.0, 0.0], [0.0, 2.0, 0.5], [0.0, 0.5, 3.0]],
+    )
+    assert tm.variance is variance
+    assert tm.standard_deviation is standard_deviation
+    assert tm.covariance is covariance
 
 
 def test_product_measure_dense_covariance_cannot_be_made_writeable():
