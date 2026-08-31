@@ -36,17 +36,14 @@ This gives one place to enforce modern MPMC compatibility without forcing the en
 
 ## Local Developer Commands
 
-Install the usual test and MPMC extras first, then add the platform-specific
-PyG runtime with QMCPy's installed helper command:
+Install the usual test and MPMC extras first, then add the platform-specific PyG runtime with QMCPy's installed helper command:
 
 ```bash
 python -m pip install -e ".[test,test_torch,test_gpytorch,test_botorch,mpmc]"
 qmcpy-install-mpmc
 ```
 
-The `mpmc` extra contains dependencies available from PyPI. The helper handles
-`pyg_lib` separately because its wheel page depends on the installed PyTorch
-version and accelerator build, which standard project metadata cannot select.
+The `mpmc` extra contains dependencies available from PyPI. The helper handles `pyg_lib` separately because its wheel page depends on the installed PyTorch version and accelerator build, which standard project metadata cannot select.
 
 Then run the MPMC-specific checks:
 

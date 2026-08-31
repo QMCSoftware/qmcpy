@@ -40,6 +40,16 @@ clean_local_only_files:
 clean_coverage:
 	rm -fr artifacts/coverage/ .coverage* test/booktests/.coverage*
 
+TEST_STYLE_PATH ?= test
+# Check test/test_*.py against two suite conventions: (1) written as a
+# unittest.TestCase subclass ("object class"), not bare pytest functions;
+# (2) named test_<area>_*.py where <area> is the qmcpy subpackage under test
+# (dd ft ig kn sc tm ut) or a cross-cutting bucket (ee sr).
+# Informational by default; pass --strict to make it fail
+# (e.g. STRICT=--strict make check_test_style).
+check_test_style:
+	@$(PYTHON) scripts/check_test_style.py $(TEST_STYLE_PATH) $(STRICT)
+
 ##########################################################
 # Doctests
 ##########################################################
@@ -406,8 +416,13 @@ MARKDOWN_UNWRAP_PATH ?= $(FORMAT_PATH)
 
 format:
 	$(MAKE) flatten_qmcpy_imports
+	@echo ""
 	$(MAKE) markdown-unwrap MARKDOWN_UNWRAP_PATH="$(MARKDOWN_UNWRAP_PATH)"
+	@echo ""
 	$(MAKE) rm_trailing_whitespace FORMAT_PATH="$(FORMAT_PATH)"
+	@echo ""
+	$(MAKE) check_test_style
+	@echo ""
 
 flatten_qmcpy_imports:
 	$(PYTHON) scripts/flatten_qmcpy_imports.py

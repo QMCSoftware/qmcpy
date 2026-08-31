@@ -60,10 +60,7 @@ While `dev` contains the most complete set of install dependencies, a number of 
 pip install -e ".[dev]"
 ~~~
 
-The `dev` extra includes QMCPy's PyPI-hosted MPMC dependencies. MPMC additionally
-requires a platform-specific `pyg_lib` wheel that is not available from PyPI.
-After installing `dev`, let the QMCPy installer select the wheel page matching
-the installed PyTorch build:
+The `dev` extra includes QMCPy's PyPI-hosted MPMC dependencies. MPMC additionally requires a platform-specific `pyg_lib` wheel that is not available from PyPI. After installing `dev`, let the QMCPy installer select the wheel page matching the installed PyTorch build:
 
 ~~~bash
 qmcpy-install-mpmc
@@ -144,6 +141,10 @@ make tests
 ~~~
 
 Please see the targets in the makefile for more granular control over tests.
+
+### Test file layout
+
+Unit tests live flat in `test/`, named `test_<area>_<topic>.py` where `<area>` is a short code for the `qmcpy` subpackage under test (`tm` true_measure, `dd` discrete_distribution, `sc` stopping_criterion, `ig` integrand, ...) or a cross-cutting bucket (`ee`, `sr`). So `pytest test/ -k test_tm_` runs every true-measure test. New files should also be written as a `unittest.TestCase` subclass rather than bare `def test_*` functions. `make check_test_style` lists any file that breaks either convention (informational; also runs inside `make format`; `STRICT=--strict` makes it fail). The full area table is in [`test/README.md`](test/README.md#test-file-organization).
 
 ## Documentation
 
