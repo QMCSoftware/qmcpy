@@ -6,8 +6,7 @@ from unittest.mock import patch
 
 import numpy as np
 
-import qmcpy
-from qmcpy import plot_proj
+from qmcpy import AbstractDiscreteDistribution, plot_proj
 from qmcpy.util import stop_notebook
 
 
@@ -82,7 +81,7 @@ def make_fake_matplotlib(nrows, ncols):
     return plt
 
 
-class DummySampler(qmcpy.AbstractDiscreteDistribution):
+class DummySampler(AbstractDiscreteDistribution):
     def __init__(self, d=2):
         super().__init__(dimension=d, replications=1, seed=1, d_limit=10, n_limit=100)
 

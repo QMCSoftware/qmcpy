@@ -2,11 +2,10 @@ import unittest
 
 import numpy as np
 
-from qmcpy import FinancialOption
-import qmcpy
+from qmcpy import AbstractDiscreteDistribution, FinancialOption
 
 
-class SmallSampler(qmcpy.AbstractDiscreteDistribution):
+class SmallSampler(AbstractDiscreteDistribution):
     def __init__(self, d=3):
         super().__init__(
             dimension=d, replications=1, seed=123, d_limit=100, n_limit=1024
