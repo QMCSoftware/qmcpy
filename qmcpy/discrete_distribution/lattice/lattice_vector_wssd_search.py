@@ -32,9 +32,10 @@ def lattice_vector_wssd_search(n_max, d_max, coord_weights=None, kernel=None):
 
         Custom kernels
 
-        >>> bernoulli6 = lambda x: x**6 - 3 * x**5 + 5 / 2 * x**4 - 1 / 2 * x**2 + 1 / 42
+        >>> bernoulli6 = lambda x: x * (x * (-1/2 + x * (x * (5/2 + x * (-3 + x))))) + 1/42
         >>> lattice_vector_wssd_search(n_max=2**15, d_max=10, coord_weights=None, kernel=bernoulli6) # doctest: +NORMALIZE_WHITESPACE
-        array([    1, 12589, 15515,  3957,  1879,  8985, 15139, 13625,  7363,  6089])
+        array([    1, 12589, 15515,  3957,  1879,  8985, 15139,  9529,  7363,
+               6089])
     """
 
     if kernel is None:
