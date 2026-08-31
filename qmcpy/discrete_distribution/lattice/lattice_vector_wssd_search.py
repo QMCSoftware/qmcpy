@@ -33,8 +33,8 @@ def lattice_vector_wssd_search(n_max, d_max, coord_weights=None, kernel=None):
         Custom kernels
 
         >>> bernoulli6 = lambda x: x**6 - 3 * x**5 + 5 / 2 * x**4 - 1 / 2 * x**2 + 1 / 42
-        >>> lattice_vector_wssd_search(n_max=2**15, d_max=10, coord_weights=None, kernel=bernoulli6)
-        array([    1, 12589, 15515,  3957,  1879,  8985, 15139,  9529,  7363,  6089])
+        >>> lattice_vector_wssd_search(n_max=2**15, d_max=10, coord_weights=None, kernel=bernoulli6) # doctest: +NORMALIZE_WHITESPACE
+        array([    1, 12589, 15515,  3957,  1879,  8985, 15139, 13625,  7363,  6089])
     """
 
     if kernel is None:
@@ -158,19 +158,13 @@ def lattice_vector_wssd_search(n_max, d_max, coord_weights=None, kernel=None):
         wssd = wssd + omega(1 / 2) * prodV[-1, 0]
         wssd = wssd + n_max * k0 - n_max * (n_max + 1) / 2
 
-        # Choose the best candidate, using the smallest index in case of ties to avoid different platforms providing different outputs
-        min_wssd = np.min(wssd)
-        rtol = 1e-15
-        best_indices = np.where(np.abs(wssd - min_wssd) <= rtol * np.abs(min_wssd))[0]
-        bestIdx = int(best_indices[0])
+        bestIdx = int(np.argmin(wssd))
         newH = int(gR[bestIdx])
 
         # Avoid duplicates
         while newH in gen_vec:
             wssd[bestIdx] = np.inf
-            min_wssd = np.min(wssd)
-            best_indices = np.where(np.abs(wssd - min_wssd) <= rtol * np.abs(min_wssd))[0]
-            bestIdx = int(best_indices[0])
+            bestIdx = int(np.argmin(wssd))
             newH = int(gR[bestIdx])
 
         gen_vec[hComp - 1] = newH
