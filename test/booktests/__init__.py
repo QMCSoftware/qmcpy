@@ -143,7 +143,7 @@ class BaseNotebookTest(unittest.TestCase):
             temp_path = os.path.join(notebook_dir, f".tmp_test_{uuid.uuid4().hex[:8]}.ipynb")
             try:
                 nbformat.write(nb, temp_path)
-                # Run the cells until the specified stop pattern is reached. 
+                # Run the cells until the specified stop pattern is reached.
                 # Execute from the notebook's directory to guarantee import functionality.
                 original_cwd = os.getcwd()
                 try:

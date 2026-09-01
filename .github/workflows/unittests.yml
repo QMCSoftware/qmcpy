@@ -51,7 +51,7 @@ jobs:
           auto-activate-base: true
           conda-remove-defaults: true
           use-only-tar-bz2: true
-      
+
       # -----------------------------------------------------------
       # Clean old coverage files
       # -----------------------------------------------------------
@@ -223,9 +223,9 @@ jobs:
         shell: pwsh
         run: |
           pip install --find-links ./.wheels -e '.[test,test_torch,test_gpytorch,test_botorch]'
-      
+
       # -----------------------------------------------------------
       # Run unittests for Python source files
-      # -----------------------------------------------------------   
+      # -----------------------------------------------------------
       - name: Run unittests (parallel)
         run: make unittests

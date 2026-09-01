@@ -10,9 +10,7 @@ torch = pytest.importorskip("torch")
 pytest.importorskip("pyg_lib")
 pytest.importorskip("torch_geometric")
 
-from qmcpy.discrete_distribution.mpmc import utils as mpmc_utils
-from qmcpy.discrete_distribution.mpmc.models import MPMC_net
-from qmcpy.discrete_distribution.mpmc.mpmc import MPMC
+from qmcpy import MPMC, MPMC_net, mpmc_utils
 from qmcpy.util import ParameterError
 
 

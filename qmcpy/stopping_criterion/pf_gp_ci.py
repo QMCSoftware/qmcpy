@@ -103,7 +103,7 @@ class PFGPCI(AbstractStoppingCriterion):
         ...     n_ref_approx = 2**22,
         ...     seed_ref_approx = 11)
         >>> solution,data = pfgpci.integrate(seed=7,refit=True)
-        >>> data
+        >>> data  # doctest: +NORMALIZE_WHITESPACE
         PFGPCIData (Data)
             solution        0.158
             error_bound     0.022
@@ -120,6 +120,15 @@ class PFGPCI(AbstractStoppingCriterion):
         Uniform (AbstractTrueMeasure)
             lower_bound     -3.142
             upper_bound     3.142
+            mean            [0. 0. 0.]
+            variance        [3.29 3.29 3.29]
+            standard_deviation [1.814 1.814 1.814]
+            covariance      <DIAgonal sparse matrix of dtype 'float64'
+                             with 3 stored elements (1 diagonals) and shape (3, 3)>
+                              Coords Values
+                              (0, 0) 3.289868133696453
+                              (1, 1) 3.289868133696453
+                              (2, 2) 3.289868133696453
         DigitalNetB2 (AbstractLDDiscreteDistribution)
             d               3
             replications    1
@@ -629,7 +638,7 @@ class PFGPCIData(Data):
         return fig, gs
 
     def plot_2d(self, meshticks=257, clevels=32, **kwargs):
-        from matplotlib import pyplot, gridspec, cm
+        from matplotlib import pyplot, gridspec, colormaps
 
         n_batches = len(self.n_batch)
         fig = pyplot.figure(constrained_layout=False, figsize=(5 * n_batches, 5 * 5))
@@ -652,7 +661,7 @@ class PFGPCIData(Data):
                     x0mesh,
                     x1mesh,
                     ymeshtf,
-                    cmap=cm.Greys,
+                    cmap=colormaps["Greys"],
                     vmin=ymeshtf.min(),
                     vmax=ymeshtf.max(),
                     levels=clevels,
@@ -674,7 +683,7 @@ class PFGPCIData(Data):
             ax1j = fig.add_subplot(gs[row_idx, j])
             udens_mr = _error_udens(gpyt_model, xquery).reshape(x0mesh.shape)
             ax1j.contourf(
-                x0mesh, x1mesh, udens_mr, cmap=cm.Greys, levels=clevels, vmin=0, vmax=1
+                x0mesh, x1mesh, udens_mr, cmap=colormaps["Greys"], levels=clevels, vmin=0, vmax=1
             )
             ax1j.scatter(self.x[i0:i1, 0], self.x[i0:i1, 1], color="r")
             # ax1j.set_title(r'$2\mathrm{ERR}_n(\boldsymbol{u})$')
@@ -699,7 +708,7 @@ class PFGPCIData(Data):
                 x0mesh,
                 x1mesh,
                 gp_mean_mesh,
-                cmap=cm.Greys,
+                cmap=colormaps["Greys"],
                 vmin=gp_mean.min(),
                 vmax=gp_mean.max(),
                 levels=clevels,
@@ -714,7 +723,7 @@ class PFGPCIData(Data):
                 ax2j.set_ylabel(r"$M_n(\boldsymbol{u})$")
             row_idx += 1
             ax3j = fig.add_subplot(gs[row_idx, j])
-            ax3j.contourf(x0mesh, x1mesh, gp_std_mesh, cmap=cm.Greys, levels=clevels)
+            ax3j.contourf(x0mesh, x1mesh, gp_std_mesh, cmap=colormaps["Greys"], levels=clevels)
             # ax3j.set_title(r'$\sigma_n(\boldsymbol{u})$')
             if j == 0:
                 ax3j.set_ylabel(r"$\sigma_n(\boldsymbol{u})$")

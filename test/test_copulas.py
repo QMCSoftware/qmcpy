@@ -5,14 +5,15 @@ import pytest
 import scipy.stats as stats
 
 from qmcpy import (
-    DigitalNetB2,
     AbstractCopula,
     ClaytonCopula,
+    DigitalNetB2,
     FrankCopula,
     GaussianCopula,
     GumbelCopula,
     StudentTCopula,
 )
+
 from qmcpy.true_measure.copula import (
     AbstractCopula as ModuleAbstractCopula,
     _apply_marginal_ppfs,
@@ -23,6 +24,7 @@ from qmcpy.true_measure.copula import (
     _validate_dimension,
     _validate_marginals,
 )
+
 from qmcpy.util import DimensionError, MethodImplementationError, ParameterError
 
 

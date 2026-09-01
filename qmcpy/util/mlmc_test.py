@@ -1,4 +1,4 @@
-import qmcpy as qp 
+import qmcpy as qp
 import numpy as np
 
 def mlmc_test(
@@ -94,7 +94,7 @@ def mlmc_test(
         if ll == 0:
             kurt = 0.
         else:
-            kurt = ( sums[3] - 4*sums[2]*sums[0] + 6*sums[1]*sums[0]**2 - 
+            kurt = ( sums[3] - 4*sums[2]*sums[0] + 6*sums[1]*sums[0]**2 -
                      3*sums[0]*sums[0]**3 ) /  (sums[1]-sums[0]**2)**2.
         cost = np.hstack((cost, cst))
         del1 = np.hstack((del1, sums[0]))

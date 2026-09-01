@@ -5,6 +5,7 @@ import numpy as np
 import scipy.stats as stats
 
 from qmcpy import DigitalNetB2, SciPyWrapper, StudentT, ZeroInflatedExpUniform
+
 from qmcpy.true_measure.triangular import TriangularDistribution
 from qmcpy.util import DimensionError, ParameterError
 

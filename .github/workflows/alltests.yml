@@ -37,7 +37,7 @@ jobs:
           full_sweep=false
           if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
             full_sweep=true
-          elif [[ "$REF_NAME" == *choi ]]; then   
+          elif [[ "$REF_NAME" == *choi ]]; then
             full_sweep=true
           elif [[ "$EVENT_NAME" == "pull_request" && ( "$BASE_REF" == "develop" || "$BASE_REF" == "master" ) ]]; then
             full_sweep=true
@@ -71,7 +71,7 @@ jobs:
           auto-activate-base: true
           conda-remove-defaults: true
           use-only-tar-bz2: true
-      
+
       # -----------------------------------------------------------
       # Clean old coverage files
       # -----------------------------------------------------------
@@ -219,7 +219,7 @@ jobs:
           key: ${{ runner.os }}-wheels-${{ hashFiles('pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-wheels-
-          
+
       - name: Build and cache wheels (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -248,7 +248,7 @@ jobs:
           pip install --find-links ./.wheels -e '.[test,test_torch,test_gpytorch,test_botorch]'
       - name: Install MPMC dependencies
         run: |
-          python scripts/install_mpmc_pyg.py
+          qmcpy-install-mpmc
       - name: Validate MPMC dependencies
         run: |
           python -c "import torch, pyg_lib, torch_geometric; print(f'torch={torch.__version__}'); print('MPMC dependencies ready')"
@@ -260,7 +260,7 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y texlive-latex-base texlive-latex-extra texlive-latex-recommended latexmk dvipng cm-super
-          
+
       - name: Install minimal LaTeX (macOS)
         if: runner.os == 'macOS' && env.RUN_BOOKTESTS == 'true'
         run: |
@@ -298,7 +298,7 @@ jobs:
           key: ${{ runner.os }}-miktex-v2-${{ hashFiles('.github/workflows/alltests.yml') }}
           restore-keys: |
             ${{ runner.os }}-miktex-v2-
-          
+
       - name: Install minimal LaTeX (Windows)
         if: runner.os == 'Windows' && env.RUN_BOOKTESTS == 'true'
         shell: pwsh
@@ -389,10 +389,10 @@ jobs:
           latex --version
           latexmk -v
           dvipng --version
-      
+
       # -----------------------------------------------------------
       # Run doctests (OS-specific)
-      # -----------------------------------------------------------      
+      # -----------------------------------------------------------
       - run: pip freeze
       - run: make doctests_minimal
       - run: make doctests_torch
@@ -415,7 +415,7 @@ jobs:
         run: make doctests_mpmc
       # -----------------------------------------------------------
       # Run unittests for Python source files
-      # -----------------------------------------------------------   
+      # -----------------------------------------------------------
       - name: Run unittests (parallel)
         run: make unittests
 
@@ -462,7 +462,7 @@ jobs:
           Get-Volume | Select-Object DriveLetter, Size, SizeRemaining | Format-Table
       # -----------------------------------------------------------
       # Run unittests for Jupyter notebooks (OS-specific)
-      # ----------------------------------------------------------- 
+      # -----------------------------------------------------------
       - name: Run booktests (parallel) on Linux
         if: runner.os != 'Windows' && env.RUN_BOOKTESTS == 'true'
         shell: bash -l {0}
@@ -486,5 +486,5 @@ jobs:
           flags: alltests
           fail_ci_if_error: false
           files: ./artifacts/coverage/booktests/coverage.json
-  
+
 # For success reports, see https://github.com/QMCSoftware/QMCSoftware/actions?query=is%3Asuccess+workflow%3AAll+Tests

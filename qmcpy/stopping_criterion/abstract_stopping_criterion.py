@@ -398,6 +398,15 @@ class AbstractStoppingCriterion(object):
         Returns:
             bool: True when the two values are considered equal.
         """
+        if self._is_sparse(current) or self._is_sparse(saved):
+            if self._is_sparse(current) != self._is_sparse(saved):
+                return False
+            try:
+                if current.shape != saved.shape:
+                    return False
+                return (current != saved).nnz == 0
+            except (TypeError, ValueError, NotImplementedError):
+                return str(current) == str(saved)
         if isinstance(current, np.ndarray) or isinstance(saved, np.ndarray):
             try:
                 return np.array_equal(
@@ -427,6 +436,10 @@ class AbstractStoppingCriterion(object):
         if isinstance(is_equal, np.ndarray):
             return bool(np.all(is_equal))
         return bool(is_equal)
+
+    @staticmethod
+    def _is_sparse(value):
+        return hasattr(value, "nnz") and hasattr(value, "shape")
 
     def _require_resume_attrs(self, data, attrs):
         """Raise ParameterError if any attribute in *attrs* is absent from *data*.

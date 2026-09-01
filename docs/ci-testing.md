@@ -8,7 +8,7 @@ This page summarizes QMCPy's current GitHub Actions CI layout.
 |---|---|---|---|
 | `alltests.yml` | Feature-branch `push` | `ubuntu`, Python `3.13` | <ul><li>Non-Docker doctests</li><li>`unittests`</li><li>Coverage upload</li></ul> |
 | `alltests.yml` | `push` to `develop` or `master`; PR into `develop` or `master`; `workflow_dispatch` | `ubuntu`, `macos`, `windows`; Python `3.13` | <ul><li>Doctests</li><li>`unittests`</li><li>Coverage upload</li><li>Booktests</li><li>Linux-only UMBridge doctests when Docker is available</li></ul> |
-| `unittests.yml` | `push` to `develop` or `master`; PR into `develop` or `master`; `workflow_dispatch` | `ubuntu`, `macos`,  `windows`; Python `3.5` to `3.14` except for `3.13` | <ul><li>Install test and optional extras</li><li>Run `unittests`</li></ul> |
+| `unittests.yml` | `push` to `develop` or `master`; PR into `develop` or `master`; `workflow_dispatch` | `ubuntu`, `macos`, `windows`; Python `3.5` to `3.14` | <ul><li>Install test and optional extras</li><li>Run `unittests`</li></ul> |
 | `docs.yml` | `push` to `master` | `ubuntu`, Python `3.13` | <ul><li>`uml`</li><li>`copydocs`</li><li>`mkdocs gh-deploy --force`</li></ul> |
 | `pep8.yml` | `push` to `develop` or `master`; `workflow_dispatch` | `ubuntu`, Python `3.13` | <ul><li>`check_pep8`</li><li>Open a badge-update pull request if badge assets change</li></ul> |
 | `pypi-stats.yml` | Weekly schedule; `workflow_dispatch` | `ubuntu`, Python `3.13` | <ul><li>Regenerate PyPI download statistics</li><li>Publish updated files</li></ul> |

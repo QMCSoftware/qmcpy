@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from qmcpy.discrete_distribution import DummySampler
+from qmcpy import DummySampler
 from qmcpy.util import ParameterError
 
 

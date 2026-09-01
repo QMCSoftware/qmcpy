@@ -136,6 +136,23 @@ class ZeroInflatedExpUniform(SciPyWrapper):
     (8, 1)
     >>> bool((x >= 0).all())
     True
+    >>> tm
+    ZeroInflatedExpUniform (AbstractTrueMeasure)
+        p_zero          0.400
+        lam             1.500
+        mean            0.400
+        variance        0.373
+        standard_deviation 0.611
+
+    Covariance is omitted because the measure is one dimensional (a 1x1
+    covariance would simply repeat the variance):
+
+    >>> tm.mean
+    0.39999999999999997
+    >>> tm.variance
+    0.3733333333333333
+    >>> tm.standard_deviation
+    0.6110100926607787
 
     With independent replications:
 
@@ -222,6 +239,68 @@ class ZeroInflatedExpUniform(SciPyWrapper):
         if self._deprecated_2d_y_split:
             self.parameters.append("y_split")
             self.range = np.array([[0.0, np.inf], [0.0, 1.0]])
+        else:
+            # Moments are only defined for the (non-deprecated) 1D
+            # zero-inflated exponential. Covariance is intentionally omitted:
+            # for a one-dimensional measure it would be a 1x1 matrix whose only
+            # entry equals the variance.
+            mean, variance = self._compute_moments()
+            self._mean = self._read_only_array(mean)
+            self._variance = self._read_only_array(variance)
+            self._standard_deviation = self._read_only_array(np.sqrt(variance))
+            self.parameters += [
+                "mean",
+                "variance",
+                "standard_deviation",
+            ]
+
+    def _compute_moments(self):
+        r"""
+        Closed-form mean and variance of the zero-inflated exponential.
+
+        The distribution is a two component mixture that places probability
+        mass $p = $ ``p_zero`` at $X = 0$ and, with probability $1 - p$, draws
+        $X$ from an exponential distribution with rate $\lambda = $ ``lam``.
+        The exponential component has mean $1/\lambda$ and second raw moment
+        $2/\lambda^2$ [1].
+
+        A mixture's raw moments are the mixture weighted averages of the
+        component raw moments [2]. Because the point mass sits exactly at zero,
+        that component adds nothing to either moment, leaving
+
+        $$\mathbb{E}[X] = (1 - p)\,\frac{1}{\lambda}, \qquad
+          \mathbb{E}[X^2] = (1 - p)\,\frac{2}{\lambda^2}.$$
+
+        The variance then follows from $\operatorname{Var}[X] = \mathbb{E}[X^2]
+        - \mathbb{E}[X]^2$ (equivalently, the law of total variance [3]):
+
+        $$\operatorname{Var}[X]
+          = \frac{(1 - p)(1 + p)}{\lambda^2}
+          = \frac{1 - p^2}{\lambda^2}.$$
+
+        The measure is one dimensional, so ``mean`` and ``variance`` are
+        returned as length-1 arrays for consistency with the other true
+        measures.
+
+        **References:**
+
+        1.  Exponential distribution. Wikipedia.
+            [https://en.wikipedia.org/wiki/Exponential_distribution](https://en.wikipedia.org/wiki/Exponential_distribution).
+
+        2.  Mixture distribution. Wikipedia.
+            [https://en.wikipedia.org/wiki/Mixture_distribution](https://en.wikipedia.org/wiki/Mixture_distribution).
+
+        3.  Law of total variance. Wikipedia.
+            [https://en.wikipedia.org/wiki/Law_of_total_variance](https://en.wikipedia.org/wiki/Law_of_total_variance).
+
+        Returns:
+            tuple: Length ``1`` arrays ``(mean, variance)``.
+        """
+        p = self.p_zero
+        lam = self.lam
+        mean = np.array([(1.0 - p) / lam])
+        variance = np.array([(1.0 - p**2) / (lam**2)])
+        return mean, variance
 
     def _spawn(self, sampler, dimension):
         if self._deprecated_2d_y_split:
@@ -236,4 +315,11 @@ class ZeroInflatedExpUniform(SciPyWrapper):
                 y_split=self.y_split,
             )
 
-        return super()._spawn(sampler, dimension)
+        # Reconstruct a ZeroInflatedExpUniform (rather than a bare
+        # SciPyWrapper) so the spawned measure keeps its type and moment
+        # attributes.
+        return ZeroInflatedExpUniform(
+            sampler=sampler,
+            p_zero=self.p_zero,
+            lam=self.lam,
+        )

@@ -70,7 +70,21 @@ def _is_structural_line(line: str) -> bool:
 def _unwrap_paragraph(lines: list[str]) -> str:
     if len(lines) <= 1:
         return lines[0]
-    return " ".join(line.strip() for line in lines)
+    return " ".join([lines[0].rstrip(), *(line.strip() for line in lines[1:])])
+
+
+def _relative_to_list_item(line: str, paragraph: list[str]) -> str:
+    """Return a continuation line relative to its active list-item marker."""
+    if not paragraph:
+        return line
+    list_match = LIST_RE.match(paragraph[0])
+    if list_match is None:
+        return line
+    content_indent = list_match.end()
+    leading_whitespace = len(line) - len(line.lstrip())
+    if leading_whitespace < content_indent:
+        return line
+    return line[content_indent:]
 
 
 def _paragraph_has_latex(lines: list[str]) -> bool:
@@ -180,7 +194,18 @@ def unwrap_markdown_text(text: str, *, preserve_latex: bool = False) -> str:
             out.append(line)
             continue
 
-        if _is_structural_line(line):
+        list_match = LIST_RE.match(line)
+        active_list_item = bool(paragraph and LIST_RE.match(paragraph[0]))
+        indented_as_code = line.startswith("    ") or line.startswith("\t")
+        if list_match and not HR_RE.match(line) and (
+            active_list_item or not indented_as_code
+        ):
+            flush_paragraph()
+            paragraph.append(line)
+            continue
+
+        structural_line = _relative_to_list_item(line, paragraph)
+        if _is_structural_line(structural_line):
             flush_paragraph()
             out.append(line)
             if stripped.startswith("<!--") and "-->" not in stripped:

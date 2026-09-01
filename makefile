@@ -1,6 +1,7 @@
 # Emit pytest-xdist argument if available; can be overridden on the make command line
 PYTEST_XDIST ?= $(shell python scripts/pytest_xdist.py 2>/dev/null)
 PYTEST ?=
+PYTHON ?= python3
 WITH_MPMC ?= 0
 HAS_MPMC ?= $(shell python -c "import importlib.util; mods=('torch','pyg_lib','torch_geometric'); print(int(all(importlib.util.find_spec(m) is not None for m in mods)))" 2>/dev/null || echo 0)
 
@@ -27,17 +28,17 @@ ensure_artifacts:
 # This helps locate generated or local-only folders like build, .pytest_cache, etc.
 find_local_only_files:
 	chmod +x scripts/find_local_only_folders.sh
-	./scripts/find_local_only_folders.sh 
+	./scripts/find_local_only_folders.sh
 
 clean_local_only_files:
-	rm -fr test/booktests/.ipynb_checkpoints/ .pytest_cache/ .ruff_cache/ __pycache__/ */__pycache__/ */*/__pycache__/ raw.githubusercontent.com/ */raw.githubusercontent.com/ */*/raw.githubusercontent.com/ site/ build/ .pdm-build/ artifacts/logs/ artifacts/booktests/ */*/logs/ */*/runinfo/ 
+	rm -fr test/booktests/.ipynb_checkpoints/ .pytest_cache/ .ruff_cache/ __pycache__/ */__pycache__/ */*/__pycache__/ raw.githubusercontent.com/ */raw.githubusercontent.com/ */*/raw.githubusercontent.com/ site/ build/ .pdm-build/ artifacts/logs/ artifacts/booktests/ */*/logs/ */*/runinfo/
 	chmod +x scripts/find_local_only_folders.sh > /dev/null 2>&1
 	for f in $(shell ./scripts/find_local_only_folders.sh > /dev/null 2>&1); do \
 		rm -f "$$f"; > /dev/null 2>&1; \
 	done
 
 clean_coverage:
-	rm -fr artifacts/coverage/ .coverage* test/booktests/.coverage* 
+	rm -fr artifacts/coverage/ .coverage* test/booktests/.coverage*
 
 ##########################################################
 # Doctests
@@ -170,8 +171,8 @@ booktests_parallel_no_docker: check_booktests generate_booktests clean_local_onl
 	rm -fr *.eps *.jpg *.pdf *.png *.part *.txt *.log && rm -fr logs && rm -fr runinfo prob_failure_gp_ci_plots && \
 	PYTHONWARNINGS="ignore::UserWarning,ignore::DeprecationWarning,ignore::FutureWarning,ignore::ImportWarning" \
 	python parsl_test_runner.py $(TESTS) -v --failfast && \
-	cd ../.. 
-	
+	cd ../..
+
 # Windows-compatible parallel booktests using pytest-xdist instead of Parsl
 booktests_parallel_pytest: check_booktests generate_booktests clean_local_only_files ensure_artifacts
 	@mkdir -p $(BOOKTEST_COV_DIR)
@@ -183,7 +184,7 @@ booktests_parallel_pytest: check_booktests generate_booktests clean_local_only_f
 		--cov-append \
 		--cov-report=term \
 		--cov-report=json:../../$(BOOKTEST_COV_DIR)/coverage.json && \
-	cd ../.. 
+	cd ../..
 
 ##########################################################
 # Combinations of Above Tests
@@ -191,7 +192,7 @@ booktests_parallel_pytest: check_booktests generate_booktests clean_local_only_f
 tests:
 	set -e && $(MAKE) doctests && $(MAKE) unittests && $(MAKE) coverage
 
-tests_no_docker: 
+tests_no_docker:
 	@echo "Running environment cleanup for invalid distributions (dry-run will be skipped, applying changes)..."
 	@if [ "$(WITH_MPMC)" = "1" ] || [ "$(HAS_MPMC)" = "1" ]; then \
 		DOCTESTS_TARGET=doctests_no_docker; \
@@ -298,22 +299,26 @@ uml:
 ##########################################################
 # Documentation with `mkdocs`
 #
-# Run ` mkdocs build -v` to debug. It generates HTML in site/ folder. 
-# You can enter `open site.index.html` to open the local pages in  browser. 
+# Run `mkdocs build -v` to debug. It generates HTML in the site/ folder.
+# You can enter `open site/index.html` to open the local pages in a browser.
 # (However, the search function may be slow.)
 #
 # Use `mkdocs serve` to run a local server. The webpages are stored in a temporary folder and will be deleted when the server is stopped.
 ##########################################################
 copydocs:  # mkdocs only looks for content in the docs/ folder, so we have to copy it there
 	@rm -rf docs/paper docs/demos
-	@cp README.md docs/README.md 
+	@cp README.md docs/README.md
+	@cp AGENTS.md docs/AGENTS.md
+	@perl -0pi -e 's!\(docs/good_practices\.md\)!\(good_practices.md\)!g' docs/AGENTS.md
+	@perl -0pi -e 's!\(docs/ai-assisted-contributions\.md\)!\(ai-assisted-contributions.md\)!g' docs/AGENTS.md
+	@perl -0pi -e 's!\(docs/RELEASE\.md\)!\(RELEASE.md\)!g' docs/AGENTS.md
 	@perl -0pi -e 's!\(docs/assets/pep8-badge\.svg\)!\(assets/pep8-badge.svg\)!g' docs/README.md
 	@perl -0pi -e 's!\(docs/qmc-software\.md\)!\(qmc-software.md\)!g' docs/README.md
-	@cp CONTRIBUTING.md docs/CONTRIBUTING.md 
+	@cp CONTRIBUTING.md docs/CONTRIBUTING.md
 	@# Rewrite repo-root-relative link for the copied MkDocs page.
 	@perl -0pi -e 's!\(docs/good_practices\.md\)!\(good_practices.md\)!g' docs/CONTRIBUTING.md
 	@perl -0pi -e 's!\(docs/ai-assisted-contributions\.md\)!\(ai-assisted-contributions.md\)!g' docs/CONTRIBUTING.md
-	@cp community.md docs/community.md 
+	@cp community.md docs/community.md
 	@cp -r demos docs
 	@find docs/demos -mindepth 2 -name README.md -delete
 	@cp -r paper docs
@@ -337,16 +342,52 @@ runmkdocserve:
 	echo "Starting mkdocs on http://127.0.0.1:$$PORT"; \
 	NO_MKDOCS_2_WARNING=1 JUPYTER_PLATFORM_DIRS=1 mkdocs serve -a 127.0.0.1:$$PORT
 	NO_MKDOCS_2_WARNING=1 JUPYTER_PLATFORM_DIRS=1 mkdocs serve -a 127.0.0.1:$$PORT
-	
+
 doc: uml copydocs runmkdocserve
 
 docnouml: copydocs runmkdocserve
 
+check_links: copydocs  # internal links + anchors only; fast, no network, safe for CI
+	@NO_MKDOCS_2_WARNING=1 mkdocs build -q -d site
+	@python scripts/check_links.py site
+
+check_links_external: copydocs  # also checks http/https links; slow and network-flaky, run locally
+	@NO_MKDOCS_2_WARNING=1 mkdocs build -q -d site
+	@python scripts/check_links.py site --external
+
+# The targets above check links inside the new site; these check the other
+# direction -- already-published URLs that would 404 after the next deploy.
+check_removed_urls: copydocs  # fetches the deployed sitemap.xml; needs network
+	@python scripts/check_removed_urls.py
+
+check_removed_urls_verify: copydocs  # also HTTP-checks every redirect target
+	@python scripts/check_removed_urls.py --verify-redirects
+
 ##########################################################
 # PEP8
 ##########################################################
+PYLINT ?= pylint
+PYLINT_BASE ?= develop
+
 check_pep8:
-	@pylint qmcpy --exit-zero --disable=R,C,E0401 --ignored-modules=qmctoolscl
+	@$(PYLINT) qmcpy --exit-zero --disable=R,C,E0401 --ignored-modules=qmctoolscl
+
+check_pep8_changed:
+	@set -e; \
+	changed_files="$$( \
+		{ \
+			git diff --name-only --diff-filter=ACMR "$(PYLINT_BASE)...HEAD" -- '*.py'; \
+			git diff --name-only --diff-filter=ACMR HEAD -- '*.py'; \
+			git ls-files --others --exclude-standard -- '*.py'; \
+		} | sort -u \
+	)"; \
+	if [ -z "$$changed_files" ]; then \
+		echo "No changed Python files relative to $(PYLINT_BASE)."; \
+	else \
+		echo "Running pylint on changed Python files relative to $(PYLINT_BASE):"; \
+		printf '%s\n' "$$changed_files"; \
+		$(PYLINT) --disable=R,C,E0401 --ignored-modules=qmctoolscl $$changed_files; \
+	fi
 
 pep8: update_pep8_badge
 
@@ -360,5 +401,19 @@ update_pep8_badge:
 # Formatting
 ##########################################################
 
+FORMAT_PATH ?= .
+MARKDOWN_UNWRAP_PATH ?= $(FORMAT_PATH)
+
+format:
+	$(MAKE) flatten_qmcpy_imports
+	$(MAKE) markdown-unwrap MARKDOWN_UNWRAP_PATH="$(MARKDOWN_UNWRAP_PATH)"
+	$(MAKE) rm_trailing_whitespace FORMAT_PATH="$(FORMAT_PATH)"
+
+flatten_qmcpy_imports:
+	$(PYTHON) scripts/flatten_qmcpy_imports.py
+
 markdown-unwrap:
 	$(PYTHON) scripts/unwrap_markdown.py "$(MARKDOWN_UNWRAP_PATH)"
+
+rm_trailing_whitespace:
+	$(PYTHON) scripts/remove_trailing_whitespace.py "$(FORMAT_PATH)"

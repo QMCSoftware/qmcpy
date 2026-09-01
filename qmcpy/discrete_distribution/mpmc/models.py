@@ -50,7 +50,7 @@ class MPMC_net(nn.Module):
         super(MPMC_net, self).__init__()
         self.enc = nn.Linear(dim,nhid)
         self.convs = nn.ModuleList()
-        for i in range(nlayers):
+        for _ in range(nlayers):
             self.convs.append(MPNN_layer(nhid,nhid))
         self.dec = nn.Linear(nhid,dim)
         self.nlayers = nlayers
@@ -63,7 +63,7 @@ class MPMC_net(nn.Module):
 
         ## random input points for transformation:
         self.x = torch.rand(nsamples * nbatch, dim).to(self.torch_device)
-        
+
         self.weights = weights
 
         batch = torch.arange(nbatch).unsqueeze(-1).to(self.torch_device)
@@ -71,13 +71,13 @@ class MPMC_net(nn.Module):
         self.batch = batch
         self.edge_index = radius_graph(self.x, r=radius, loop=True, batch=batch).to(self.torch_device)
 
-        all_losses = {'L2star', 'L2ctr', 'L2ext', 'L2per', 'L2sym', 'L2mix', 'L2star_weighted', 
+        all_losses = {'L2star', 'L2ctr', 'L2ext', 'L2per', 'L2sym', 'L2mix', 'L2star_weighted',
                       'L2ctr_weighted', 'L2ext_weighted', 'L2per_weighted', 'L2sym_weighted', 'L2mix_weighted'}
         if loss_fn in all_losses:
             self.loss_fn = globals()[loss_fn]
         else:
             raise ValueError(f"Loss function DNE: {loss_fn}")
-    
+
     def forward(self):
         X = self.x
         edge_index = self.edge_index

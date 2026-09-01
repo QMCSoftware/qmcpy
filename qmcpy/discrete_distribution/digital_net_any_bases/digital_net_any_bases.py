@@ -150,13 +150,13 @@ class DigitalNetAnyBases(AbstractLDDiscreteDistribution):
         "QMCPy: A Python Software for Randomized Low-Discrepancy Sequences, Quasi-Monte Carlo, and Fast Kernel Methods"  
         arXiv preprint arXiv:2502.14256 (2025).
     """
-    
-    DEFAULT_GENERATING_MATRICES = None 
-    
+
+    DEFAULT_GENERATING_MATRICES = None
+
     def __init__(self,
                  dimension = 1,
                  replications = None,
-                 seed = None, 
+                 seed = None,
                  randomize = 'LMS DP',
                  bases_generating_matrices = None,
                  t = None,
@@ -216,14 +216,14 @@ class DigitalNetAnyBases(AbstractLDDiscreteDistribution):
             assert len(bases_generating_matrices)==2
             bases,generating_matrices = bases_generating_matrices
             assert isinstance(generating_matrices,np.ndarray)
-            assert generating_matrices.ndim==3 or generating_matrices.ndim==4 
+            assert generating_matrices.ndim==3 or generating_matrices.ndim==4
             d_limit = generating_matrices.shape[1]
             if np.isscalar(bases):
                 assert bases>0
-                assert bases%1==0 
+                assert bases%1==0
                 bases = int(bases)*np.ones(d_limit,dtype=int)
             assert bases.ndim==1 or bases.ndim==2
-        self.input_t = deepcopy(t) 
+        self.input_t = deepcopy(t)
         self.input_bases_generating_matrices = deepcopy(bases_generating_matrices)
         super(DigitalNetAnyBases,self).__init__(dimension,replications,seed,d_limit,n_lim)
         self.randomize = str(randomize).upper().strip().replace("_"," ")
@@ -243,7 +243,7 @@ class DigitalNetAnyBases(AbstractLDDiscreteDistribution):
         assert self.alpha%1==0
         if self.alpha>1:
             assert (self.dvec==np.arange(self.d)).all(), "digital interlacing requires dimension is an int"
-        self.dtalpha = self.alpha*self.d 
+        self.dtalpha = self.alpha*self.d
         if self.type_bases_generating_matrices=="HALTON":
             self.bases = self.all_primes[self.dvec][None,:]
             self.m_max = int(np.ceil(np.log(self.n_limit)/np.log(self.bases.min())))
@@ -291,7 +291,7 @@ class DigitalNetAnyBases(AbstractLDDiscreteDistribution):
             self.t = self.m_max if self.m_max>t else t
             assert (0<=self.C).all()
             assert (self.C<self.bases[:,:,None,None]).all()
-            self.C = np.ascontiguousarray(self.C) 
+            self.C = np.ascontiguousarray(self.C)
             self.bases = np.ascontiguousarray(self.bases)
         if self.alpha>1:
             assert (self.bases==self.bases[0,0]).all(), "alpha>1 performs digital interlacing which requires the same base across dimensions and replications."
@@ -378,8 +378,8 @@ class DigitalNetAnyBases(AbstractLDDiscreteDistribution):
             qmctoolscl.gdn_integer_to_float(r_C,n,d,r_b,_t_curr,self.bases,xdig,x,backend="c")
             return x
         if self.randomize=="QRNG": # no replications
-            x = np.zeros((self.d,n),dtype=np.double)                        
-            qmctoolscl.util.halton_qrng_c(n,self.d,int(n_min),True,x,self.randu_d_32,np.int32(self.dvec)) 
+            x = np.zeros((self.d,n),dtype=np.double)
+            qmctoolscl.util.halton_qrng_c(n,self.d,int(n_min),True,x,self.randu_d_32,np.int32(self.dvec))
             return x.T[None,:,:]
         r = np.uint64(self.replications)
         xdig_new = np.empty((r,n,d,t),dtype=np.uint64)
@@ -397,13 +397,13 @@ class DigitalNetAnyBases(AbstractLDDiscreteDistribution):
                 t_alpha = np.uint64(max(_t_curr,np.ceil(t/self.alpha)))
                 xdig_new = np.empty((r,n,dtalpha,t_alpha),dtype=np.uint64)
                 qmctoolscl.gdn_nested_uniform_scramble(r,n,dtalpha,r_C,r_b,_t_curr,t_alpha,self.rngs,self.root_nodes,self.bases,xdig,xdig_new)
-                xdig_new_reord = np.moveaxis(xdig_new,[1,2],[2,1]).copy() 
+                xdig_new_reord = np.moveaxis(xdig_new,[1,2],[2,1]).copy()
                 xdig_new_new_reord = np.empty((r,d,n,t),dtype=np.uint64)
                 qmctoolscl.gdn_interlace(np.uint64(self.replications),d,np.uint64(n),dtalpha,t_alpha,t,alpha,xdig_new_reord,xdig_new_new_reord)
                 xdig_new = np.moveaxis(xdig_new_new_reord,[1,2],[2,1]).copy()
         x = np.empty((r,n,d),dtype=np.float64)
         qmctoolscl.gdn_integer_to_float(r,n,d,r_b,t,self.bases,xdig_new,x,backend="c")
-        return x         
+        return x
 
     def _spawn(self, child_seed, dimension):
         return type(self)(

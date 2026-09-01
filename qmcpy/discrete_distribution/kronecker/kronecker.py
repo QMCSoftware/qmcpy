@@ -214,13 +214,13 @@ class Kronecker(AbstractLDDiscreteDistribution):
     
     2.  Niederreiter, H. (1992). *Random Number Generation and Quasi-Monte Carlo Methods*.
     """
-        
+
     def __init__(self,
-        dimension=1, 
-        replications=None, 
-        seed=None, 
-        randomize="SHIFT", 
-        generating_vector="CBC", 
+        dimension=1,
+        replications=None,
+        seed=None,
+        randomize="SHIFT",
+        generating_vector="CBC",
         shift=None,
         warn=True,
     ):
@@ -254,7 +254,7 @@ class Kronecker(AbstractLDDiscreteDistribution):
         self.input_shift = shift
         self.mimics = "StdUniform"
         self.randomize = randomize
-        super(Kronecker, self).__init__(dimension, replications, seed, d_limit=np.inf, n_limit=np.inf) 
+        super(Kronecker, self).__init__(dimension, replications, seed, d_limit=np.inf, n_limit=np.inf)
         if isinstance(generating_vector, str) and generating_vector.lower() == 'cbc':
             self.gen_vec_source = "CBC"
             CBC = np.array([
@@ -279,7 +279,7 @@ class Kronecker(AbstractLDDiscreteDistribution):
                         RuntimeWarning,
                     )
                 self.gen_vec_source = "RICHTMYER"
-                gen_vec = _richtmyer_generating_vector(self.dvec.max()+1)        
+                gen_vec = _richtmyer_generating_vector(self.dvec.max()+1)
         elif isinstance(generating_vector, str) and generating_vector.lower() == 'richtmyer':
             self.gen_vec_source = "RICHTMYER"
             gen_vec = _richtmyer_generating_vector(self.dvec.max()+1)
@@ -416,7 +416,7 @@ class Kronecker(AbstractLDDiscreteDistribution):
         if self.randomize == "NO":
             self.randomize = "FALSE"
         assert self.randomize in ["SHIFT", "FALSE"]
-        if shift is not None: assert self.randomize=="SHIFT", "require randomize='SHIFT' when shift is not None" 
+        if shift is not None: assert self.randomize=="SHIFT", "require randomize='SHIFT' when shift is not None"
         if self.randomize=="SHIFT":
             if shift is not None:
                 self.shift = np.atleast_2d(shift).astype(float)
@@ -425,7 +425,7 @@ class Kronecker(AbstractLDDiscreteDistribution):
         else: # self.randomize=="FALSE":
             self.shift = np.zeros((self.replications, self.d))
         assert self.shift.ndim==2
-        assert self.shift.shape[1]==self.d 
+        assert self.shift.shape[1]==self.d
         assert (self.shift.shape[0] == 1 or self.shift.shape[0] == self.replications)
 
     def _gen_samples(self, n_min, n_max, return_binary, warn):
@@ -446,8 +446,8 @@ class Kronecker(AbstractLDDiscreteDistribution):
         #     gamma (np.ndarray): shape (1xd)
 
         # Returns:
-        #     discrep (np.ndarray): discrepancy 
-        
+        #     discrep (np.ndarray): discrepancy
+
         # Notes:
         #     - If k_tilde is not specified, the second Bernoulli polynomial is used.
         #     - If gamma is not specified, the coordinate weights will be just all ones.
@@ -487,15 +487,15 @@ class Kronecker(AbstractLDDiscreteDistribution):
         summation = np.zeros_like(k_tilde_terms)
         summation[...,1:] = left_sum - right_sum
         return (k_tilde_zero_terms + 2 * summation) / (n_array ** 2) - k_tilde[1]
-    
-    
+
+
     def _spawn(self, child_seed, dimension):
         assert self.input_shift is None, "spawn requires shift=None"
         return Kronecker(
-            dimension=dimension, 
+            dimension=dimension,
             replications=None if self.no_replications else self.replications,
-            seed=child_seed, 
-            randomize=self.randomize, 
-            generating_vector=self.input_generating_vector, 
+            seed=child_seed,
+            randomize=self.randomize,
+            generating_vector=self.input_generating_vector,
             shift=None,
         )

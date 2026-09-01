@@ -2,7 +2,7 @@
 # brew install pdm
 # https://pdm-project.org/latest/usage/publish/
 # pdm publish --repository testpypi
-# pdm publish 
+# pdm publish
 
 [build-system]
 requires = ["pdm-backend","setuptools","wheel"]
@@ -26,8 +26,8 @@ authors = [
 classifiers= [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
-    "Programming Language :: Python :: 3", 
-    "Topic :: Scientific/Engineering :: Mathematics", 
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Mathematics",
     ]
 readme = "README.md"
 keywords=[
@@ -52,6 +52,9 @@ dependencies = [
     "qmctoolscl >= 1.2.1",
     ]
 
+[project.scripts]
+qmcpy-install-mpmc = "qmcpy.util.install_mpmc_pyg:main"
+
 [project.optional-dependencies]
 torch = [
     "torch >= 2.2.0",
@@ -66,8 +69,7 @@ umbridge = [
     "umbridge >= 1.2.1",
     ]
 mpmc = [
-    "torch >= 2.2.0, < 2.13", # PyG publishes pyg_lib wheels only through torch 2.12 (https://data.pyg.org/whl/); raise when 2.13+ wheels ship
-    "pyg_lib >= 0.6.0",
+    "torch >= 2.10.0, < 2.13", # PyG publishes pyg_lib >= 0.6 wheels for torch 2.10-2.12 (https://data.pyg.org/whl/)
     "torch-geometric >= 2.6.1",
 ]
 test = [
@@ -103,12 +105,11 @@ test_umbridge = [
     "umbridge >= 1.2.4",
     ]
 test_mpmc = [
-    "torch >= 2.2.0, < 2.13", # PyG publishes pyg_lib wheels only through torch 2.12 (https://data.pyg.org/whl/); raise when 2.13+ wheels ship
-    "pyg_lib >= 0.6.0",
+    "torch >= 2.10.0, < 2.13", # kept in sync with the mpmc extra
     "torch-geometric >= 2.6.1",
     ]
 docs = [  # brew install weasyprint
-    "qmcpy[test,test_torch,test_gpytorch,test_botorch,test_umbridge,test_mpmc]",
+    "qmcpy[test,test_torch,test_gpytorch,test_botorch,test_umbridge]",
     "nbval >= 0.10.0",
     "attrs >= 21.0.0",
     "pyyaml >= 6.0",
@@ -118,6 +119,9 @@ docs = [  # brew install weasyprint
     "mkdocstrings-python >= 1.16.0",
     "mkdocs-with-pdf >= 0.9.3",
     "mkdocs-glightbox >= 0.4.0",
+    # Ceiling: 1.2.3 moved to the ProperDocs fork, adding a `properdocs` dependency
+    # (a second full MkDocs engine) and capping `mkdocs <= 1.6.1`.
+    # "mkdocs-redirects >= 1.2.2, < 1.2.3",
     "graphviz >= 0.20.0",
     "phmutest >= 1.0.1",
     "mkpdfs-mkdocs >= 1.0.1",
@@ -126,7 +130,7 @@ docs = [  # brew install weasyprint
     "pylint >= 4.0.5",
 ]
 dev = [ # brew install weasyprint
-    "qmcpy[docs,test,torch,gpytorch,botorch,umbridge]",
+    "qmcpy[docs,test,torch,gpytorch,botorch,umbridge,mpmc]",
     "jupyterlab >= 4.0.0",
     "jupyterlab_execute_time >= 3.2.0",
     "ipynbname >= 2025.8.0.0",
@@ -158,10 +162,21 @@ class = [
     "networkx >= 3.0",
 ]
 
+[tool.pylint.typecheck]
+# Members that live on compiled/C-extension objects (numpy, scipy, matplotlib)
+# which pylint's static inference cannot see, so they should not trigger
+# no-member (E1101) false positives.
+generated-members = [
+    "numpy.*",
+    "scipy.*",
+    "matplotlib.cm.*",
+]
+
 [tool.pdm.build]
 run-setuptools = true
 includes = [
     "qmcpy",
+    "qmcpy/discrete_distribution/generating_params/korobov_p2_table.npz",
     "qmcpy/discrete_distribution/digital_net_b2/generating_matrices/*.npy",
     "qmcpy/discrete_distribution/lattice/generating_vectors/*.npy",
     "qmcpy/discrete_distribution/kronecker/generating_vectors/*.txt",

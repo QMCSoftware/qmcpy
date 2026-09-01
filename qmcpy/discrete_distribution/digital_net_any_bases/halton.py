@@ -165,5 +165,5 @@ class Halton(DigitalNetAnyBases):
         Gain coefficients for scrambled Halton points.  
         [arXiv:2308.08035](https://arxiv.org/abs/2308.08035) [stat.CO]. 2023. 
     """
-    
+
     DEFAULT_GENERATING_MATRICES = "HALTON"

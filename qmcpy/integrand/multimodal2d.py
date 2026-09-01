@@ -15,10 +15,18 @@ class Multimodal2d(AbstractIntegrand):
         >>> y = integrand(2**10)
         >>> print("%.4f"%y.mean())
         -0.7365
-        >>> integrand.true_measure
+        >>> integrand.true_measure  # doctest: +NORMALIZE_WHITESPACE
         Uniform (AbstractTrueMeasure)
             lower_bound     [-4 -3]
             upper_bound     [7 8]
+            mean            [1.5 2.5]
+            variance        [10.083 10.083]
+            standard_deviation [3.175 3.175]
+            covariance      <DIAgonal sparse matrix of dtype 'float64'
+                             with 2 stored elements (1 diagonals) and shape (2, 2)>
+                              Coords Values
+                              (0, 0) 10.083333333333334
+                              (1, 1) 10.083333333333334
 
         With independent replications
 

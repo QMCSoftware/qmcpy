@@ -1,6 +1,6 @@
 import numpy as np
 
-from qmcpy.integrand.financial_option import FinancialOption
+from qmcpy import FinancialOption
 import qmcpy
 
 

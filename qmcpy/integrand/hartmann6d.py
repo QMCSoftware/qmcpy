@@ -13,11 +13,23 @@ class Hartmann6d(AbstractIntegrand):
         >>> y = integrand(2**10)
         >>> print("%.4f"%y.mean())
         -0.2644
-        >>> integrand.true_measure
+        >>> integrand.true_measure  # doctest: +NORMALIZE_WHITESPACE
         Uniform (AbstractTrueMeasure)
             lower_bound     0
             upper_bound     1
-
+            mean            [0.5 0.5 0.5 0.5 0.5 0.5]
+            variance        [0.083 0.083 0.083 0.083 0.083 0.083]
+            standard_deviation [0.289 0.289 0.289 0.289 0.289 0.289]
+            covariance      <DIAgonal sparse matrix of dtype 'float64'
+                             with 6 stored elements (1 diagonals) and shape (6, 6)>
+                              Coords Values
+                              (0, 0) 0.08333333333333333
+                              (1, 1) 0.08333333333333333
+                              (2, 2) 0.08333333333333333
+                              (3, 3) 0.08333333333333333
+                              (4, 4) 0.08333333333333333
+                              (5, 5) 0.08333333333333333
+                             
         With independent replications
 
         >>> integrand = Hartmann6d(DigitalNetB2(6,seed=7,replications=2**4))

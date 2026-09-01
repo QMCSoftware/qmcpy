@@ -1,20 +1,15 @@
 from .abstract_stopping_criterion import AbstractStoppingCriterion
 from ..util.data import Data
-from ..discrete_distribution.abstract_discrete_distribution import (
-    AbstractDiscreteDistribution,
-)
-from ..discrete_distribution import Lattice, DigitalNetB2, Halton
+from ..discrete_distribution import DigitalNetB2
 from ..discrete_distribution.abstract_discrete_distribution import (
     AbstractLDDiscreteDistribution,
 )
-from ..true_measure import Gaussian, Uniform
 from ..integrand.keister import Keister
 from ..integrand.box_integral import BoxIntegral
 from ..integrand.sensitivity_indices import SensitivityIndices
 from ..integrand.genz import Genz
 from ..util import (
     MaxSamplesWarning,
-    NotYetImplemented,
     ParameterWarning,
     ParameterError,
 )
@@ -57,6 +52,8 @@ class CubQMCRepStudentT(AbstractStoppingCriterion):
         Keister (AbstractIntegrand)
         Gaussian (AbstractTrueMeasure)
             mean            0
+            variance        2^(-1)
+            standard_deviation 0.707
             covariance      2^(-1)
             decomp_type     PCA
         DigitalNetB2 (AbstractLDDiscreteDistribution)
@@ -78,7 +75,7 @@ class CubQMCRepStudentT(AbstractStoppingCriterion):
         >>> solution,data = sc.integrate()
         >>> solution
         array([1.19025707, 0.96062762])
-        >>> data
+        >>> data  # doctest: +NORMALIZE_WHITESPACE
         Data (Data)
             solution        [1.19  0.961]
             comb_bound_low  [1.19  0.961]
@@ -101,6 +98,15 @@ class CubQMCRepStudentT(AbstractStoppingCriterion):
         Uniform (AbstractTrueMeasure)
             lower_bound     0
             upper_bound     1
+            mean            [0.5 0.5 0.5]
+            variance        [0.083 0.083 0.083]
+            standard_deviation [0.289 0.289 0.289]
+            covariance      <DIAgonal sparse matrix of dtype 'float64'
+                             with 3 stored elements (1 diagonals) and shape (3, 3)>
+                              Coords Values
+                              (0, 0) 0.08333333333333333
+                              (1, 1) 0.08333333333333333
+                              (2, 2) 0.08333333333333333
         DigitalNetB2 (AbstractLDDiscreteDistribution)
             d               3
             replications    25
@@ -122,7 +128,7 @@ class CubQMCRepStudentT(AbstractStoppingCriterion):
         >>> integrand = SensitivityIndices(function)
         >>> sc = CubQMCRepStudentT(integrand,abs_tol=5e-4,rel_tol=0)
         >>> solution,data = sc.integrate()
-        >>> data
+        >>> data  # doctest: +NORMALIZE_WHITESPACE
         Data (Data)
             solution        [[0.02  0.196 0.667]
                              [0.036 0.303 0.782]]
@@ -164,6 +170,15 @@ class CubQMCRepStudentT(AbstractStoppingCriterion):
         Uniform (AbstractTrueMeasure)
             lower_bound     0
             upper_bound     1
+            mean            [0.5 0.5 0.5]
+            variance        [0.083 0.083 0.083]
+            standard_deviation [0.289 0.289 0.289]
+            covariance      <DIAgonal sparse matrix of dtype 'float64'
+                             with 3 stored elements (1 diagonals) and shape (3, 3)>
+                              Coords Values
+                              (0, 0) 0.08333333333333333
+                              (1, 1) 0.08333333333333333
+                              (2, 2) 0.08333333333333333
         DigitalNetB2 (AbstractLDDiscreteDistribution)
             d               3
             replications    25
@@ -266,7 +281,7 @@ class CubQMCRepStudentT(AbstractStoppingCriterion):
         assert (
             self.integrand.discrete_distrib.randomize != "FALSE"
         ), "Require discrete distribution is randomized"
-        self.alphas_indv, identity_dependency = self._compute_indv_alphas(
+        self.alphas_indv, _ = self._compute_indv_alphas(
             np.full(self.integrand.d_comb, self.alpha)
         )
         self.set_tolerance(abs_tol, rel_tol)

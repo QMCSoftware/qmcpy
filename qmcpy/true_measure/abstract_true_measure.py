@@ -3,6 +3,7 @@ from ..discrete_distribution.abstract_discrete_distribution import (
     AbstractDiscreteDistribution,
 )
 import numpy as np
+from scipy import sparse
 
 
 class AbstractTrueMeasure(object):
@@ -21,6 +22,60 @@ class AbstractTrueMeasure(object):
             )
         if not hasattr(self, "parameters"):
             self.parameters = []
+
+    @staticmethod
+    def _read_only_array(value):
+        """Return an owned, read only array containing ``value``."""
+        array = np.array(value, copy=True)
+        array.setflags(write=False)
+        return array
+
+    def _set_moments(self, mean, variance, standard_deviation, covariance):
+        self._mean = self._read_only_array(mean)
+        self._variance = self._read_only_array(variance)
+        self._standard_deviation = self._read_only_array(standard_deviation)
+        if sparse.issparse(covariance):
+            covariance.data.setflags(write=False)
+            self._covariance = covariance
+        else:
+            self._covariance = self._read_only_array(covariance)
+
+    @staticmethod
+    def _read_only_view(value):
+        """Return a view which cannot be made writeable while its base is read only."""
+        view = value.view()
+        view.setflags(write=False)
+        return view
+
+    def _scalar_if_univariate(self, value):
+        """For univariate (``d == 1``) measures, return a Python ``float`` scalar
+        (via :func:`numpy.squeeze`); otherwise return a read only array view."""
+        if getattr(self, "d", None) == 1:
+            return float(np.squeeze(value))
+        return self._read_only_view(value)
+
+    # store mean, variance, standard deviation, and covariance as read only array.
+    # For univariate measures the mean, variance, and standard deviation are
+    # returned as Python float scalars rather than length-1 arrays.
+
+    @property
+    def mean(self):
+        return self._scalar_if_univariate(self._mean)
+
+    @property
+    def variance(self):
+        return self._scalar_if_univariate(self._variance)
+
+    @property
+    def standard_deviation(self):
+        return self._scalar_if_univariate(self._standard_deviation)
+
+    @property
+    def covariance(self):
+        covariance = self._covariance
+        if sparse.issparse(covariance):
+            return covariance
+        return self._read_only_view(covariance)
 
     def _parse_sampler(self, sampler):
         self.sub_compatibility_error = False

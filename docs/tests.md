@@ -107,6 +107,18 @@ Validates embedded Python code in markdown files under `docs/`.
 - **Time**: ~3–5 seconds
 - **Note**: Usually called via `doctests`; rarely used standalone
 
+#### Running doctests for a single file
+Call pytest's `--doctest-modules` flag directly on the file, for example,
+  ```bash
+  python -m pytest --doctest-modules qmcpy/discrete_distribution/lattice/lattice.py
+  ```
+
+#### Suppressing an expected doctest warning (`conftest.py`)
+
+For warnings intentionally triggered by a doctest, add a file-specific filter to `DOCTEST_WARNING_FILTERS` in the root-level `conftest.py`. This avoids hiding the warning globally or importing the test-only `pytest` dependency in library code.
+
+Only filter expected, documented warnings. Fix unexpected warnings at their source.
+
 ---
 
 ### Unit & Notebook Test Targets
@@ -270,7 +282,7 @@ make tests_no_docker        # Sequential, safe (60–120s)
 ## Coverage Report Strategy
 
 ### Overview
-QMCSoftware uses a **multi-platform unified coverage report** approach in GitHub Actions CI. Coverage data from all test types (doctests, unittests, booktests) running on all platforms (Ubuntu, macOS, Windows) is combined into a single  coverage percentage.
+QMCSoftware uses a **multi-platform unified coverage report** approach in GitHub Actions CI. Coverage data from all test types (doctests, unittests, booktests) running on all platforms (Ubuntu, macOS, Windows) is combined into a single coverage percentage.
 
 ### Official Coverage Metric (Unit Tests Only)
 
@@ -359,7 +371,7 @@ All test targets use `--cov-append` (pytest) or `coverage run --append` to accum
 
 ## CI & Coverage (summary)
 
-- **GitHub Actions:** The main CI workflow is `.github/workflows/alltests.yml` (referred to in this document as `alltests.yml`). It runs a matrix across OSes, and calls Makefile targets 
+- **GitHub Actions:** The main CI workflow is `.github/workflows/alltests.yml` (referred to in this document as `alltests.yml`). It runs a matrix across OSes, and calls Makefile targets.
 
     _Note_: The project CI is configured to upload coverage to Codecov.
 
