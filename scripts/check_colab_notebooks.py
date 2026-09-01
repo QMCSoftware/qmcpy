@@ -40,6 +40,7 @@ EARLY_EXTRA_DEPENDENCY_CODE_CELLS = 3
 REPO_FETCH_FRAGMENTS = ("git clone", "raw.githubusercontent.com", "wget ", "curl ")
 PATH_SETUP_FRAGMENTS = ("sys.path.insert", "os.chdir(", "%cd ", "cd ")
 IGNORED_NOTEBOOK_NAME_PREFIXES = (".tmp", "._tmp")
+EXTRA_DEPS_MARKER = "# colab-deps:"
 
 
 def load_json(path: Path) -> dict:
@@ -147,6 +148,24 @@ def installs_packages(source: str, package_names: tuple[str, ...]) -> bool:
         for line in install_lines
         for package in package_names
     )
+
+
+def declared_extra_pip_packages(cells: list[dict]) -> list[str]:
+    """Escape hatch for deps outside EXTRA_PIP_DEPENDENCIES/EXTRA_IMPORT_DEPENDENCIES:
+    a `# colab-deps: pkg-a, pkg-b` comment anywhere in a code cell."""
+    packages: list[str] = []
+    for cell in cells:
+        if cell.get("cell_type") != "code":
+            continue
+        for line in cell_source_text(cell).splitlines():
+            stripped = line.strip()
+            if not stripped.startswith(EXTRA_DEPS_MARKER):
+                continue
+            for name in stripped[len(EXTRA_DEPS_MARKER):].split(","):
+                name = name.strip()
+                if name and name not in packages:
+                    packages.append(name)
+    return packages
 
 
 def is_bootstrap_cell(cell: dict) -> bool:

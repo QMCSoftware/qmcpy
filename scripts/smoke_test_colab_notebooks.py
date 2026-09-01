@@ -313,6 +313,29 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def smoke_test_batch(
+    notebook_rels: list[str], cells_after_bootstrap: int, timeout: int
+) -> tuple[list[str], list[tuple[str, str]]]:
+    passed: list[str] = []
+    failed: list[tuple[str, str]] = []
+    for notebook_rel in notebook_rels:
+        notebook_path = (REPO_ROOT / notebook_rel).resolve()
+        print(f"Smoke testing {notebook_rel}")
+        try:
+            smoke_nb, source_indices = build_smoke_notebook(
+                notebook_path, cells_after_bootstrap
+            )
+            execute_smoke_notebook(
+                notebook_path, smoke_nb, source_indices, timeout=timeout
+            )
+        except Exception as exc:  # noqa: BLE001
+            reason = str(exc).splitlines()[0] if str(exc) else "unknown error"
+            failed.append((notebook_rel, reason))
+        else:
+            passed.append(notebook_rel)
+    return passed, failed
+
+
 def main() -> int:
     args = parse_args()
     manifest_path = Path(args.manifest).resolve()
@@ -326,21 +349,27 @@ def main() -> int:
         print("No enabled notebooks selected for Colab smoke tests.")
         return 0
 
-    for notebook_rel in enabled:
-        notebook_path = (REPO_ROOT / notebook_rel).resolve()
-        print(f"Smoke testing {notebook_rel}")
-        smoke_nb, source_indices = build_smoke_notebook(
-            notebook_path, args.cells_after_bootstrap
+    try:
+        import testbook  # noqa: F401
+    except ImportError:
+        print(
+            "testbook is required for Colab smoke tests. "
+            "Install test dependencies, e.g. `pip install -e .[test]`."
         )
-        execute_smoke_notebook(
-            notebook_path,
-            smoke_nb,
-            source_indices,
-            timeout=args.timeout,
-        )
+        return 1
 
-    print(f"Colab smoke tests passed: {len(enabled)} notebook(s).")
-    return 0
+    passed, failed = smoke_test_batch(enabled, args.cells_after_bootstrap, args.timeout)
+
+    if failed:
+        print("")
+        print("Failed:")
+        for notebook_rel, reason in failed:
+            print(f"- {notebook_rel}: {reason}")
+    print("")
+    print(
+        f"Colab smoke tests: {len(passed)} passed, {len(failed)} failed, {len(enabled)} total."
+    )
+    return 0 if not failed else 1
 
 
 if __name__ == "__main__":

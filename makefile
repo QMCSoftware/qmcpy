@@ -128,17 +128,17 @@ tests_no_docker_no_mpmc: doctests_no_docker_no_mpmc unittests coverage
 ##########################################################
 # Unit Tests for `*.ipynb` in `demos/` folder
 ##########################################################
-generate_booktests:
+generate_booktests: 
 	@echo "\nGenerating missing booktest files..."
 	cd test/booktests/ && python generate_test.py --check-missing
 
-check_colab_notebooks:
+check_colab_notebooks:  # faster
 	$(PYTHON) -m scripts.check_colab_notebooks --strict
 
-check_colab_notebooks_smoke:
+check_colab_notebooks_smoke:  # slower
 	$(PYTHON) -m scripts.smoke_test_colab_notebooks --cells-after-bootstrap $(SMOKE_CODE_CELLS)
 
-harden_colab_notebook:
+harden_colab_notebook:  # Add Colab button if necessary
 	@if [ -n "$(NOTEBOOK)" ]; then \
 		if [ -n "$(FORCE)" ]; then \
 			$(PYTHON) -m scripts.harden_colab_notebook --notebook "$(NOTEBOOK)" --force; \
@@ -151,7 +151,7 @@ harden_colab_notebook:
 		$(PYTHON) -m scripts.harden_colab_notebook --all-unclassified; \
 	fi
 
-report_colab_notebook_patterns:
+report_colab_notebook_patterns:  
 	$(PYTHON) -m scripts.report_colab_notebook_patterns
 
 check_booktests:

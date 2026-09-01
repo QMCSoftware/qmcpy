@@ -179,12 +179,14 @@ Runs the strict static Colab-readiness checks.
 Runs a lightweight execution smoke test for each Colab-enabled notebook.
 - **Execution scope**: Simulates a Colab runtime, rewrites shell install commands to no-ops, then executes the bootstrap cell plus up to `$(SMOKE_CODE_CELLS)` smoke-safe import/setup code cells
 - **Purpose**: Catch runtime regressions in early import/setup logic that static checks miss
+- **Failure handling**: A failing notebook does not stop the batch; failures are collected and reported in a pass/fail summary at the end, and the command exits non-zero only if at least one notebook failed
 - **CI usage**: Invoked in Linux CI after test dependencies are installed
 - **Default depth**: `SMOKE_CODE_CELLS=2`
 
 #### `make harden_colab_notebook [NOTEBOOK=... FORCE=1]`
 Hardens one notebook, or if `NOTEBOOK` is omitted, scans `demos/` for notebooks that are not yet listed in either `enabled` or `disabled`.
 - **What it does**: Inserts the badge, adds a generated Colab bootstrap cell, infers common extra pip dependencies, and adds repo-local `sys.path` setup when needed
+- **Extra dependencies escape hatch**: Packages outside the built-in allowlist can be added to the generated bootstrap cell with a `# colab-deps: pkg-a, pkg-b` comment anywhere in a code cell
 - **Classification rule**: Existing `disabled` entries are left untouched; unclassified notebooks are added to `enabled` only after hardening validates. Failures remain unclassified for manual review
 - **Force mode**: `make harden_colab_notebook FORCE=1` regenerates the Open in Colab badge and the `# @title Execute this cell to install dependencies` cell for every notebook already listed in `enabled`; `make harden_colab_notebook NOTEBOOK=... FORCE=1` does the same for one notebook
 - **Cell order**: The generated `import google.colab` bootstrap cell is always inserted after the Open in Colab badge

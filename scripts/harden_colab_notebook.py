@@ -26,6 +26,7 @@ from scripts.check_colab_notebooks import (
     as_source_list,
     badge_markup,
     cell_source_text,
+    declared_extra_pip_packages,
     discovered_notebooks,
     early_non_install_code_cells,
     imported_modules,
@@ -141,6 +142,9 @@ def extra_pip_packages(cells: list[dict]) -> list[str]:
         if package in packages:
             continue
         if any(name.lower() in line for name in names for line in all_install_lines):
+            packages.append(package)
+    for package in declared_extra_pip_packages(cells):
+        if package not in packages:
             packages.append(package)
     return packages
 

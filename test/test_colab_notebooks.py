@@ -138,6 +138,18 @@ def test_extra_pip_packages_preserves_later_explicit_installs():
     assert harden.extra_pip_packages(cells) == ["ipywidgets", "QuantLib"]
 
 
+def test_extra_pip_packages_honors_colab_deps_marker():
+    cells = [
+        code_cell("import qmcpy as qp\n"),
+        code_cell(
+            "# colab-deps: plotly, some-package\n"
+            "import plotly\n"
+        ),
+    ]
+
+    assert harden.extra_pip_packages(cells) == ["plotly", "some-package"]
+
+
 def test_dump_notebook_preserves_existing_json_indent(tmp_path: Path):
     notebook_path = tmp_path / "example.ipynb"
     notebook = {
@@ -228,3 +240,22 @@ def test_harden_failure_does_not_disable_notebook(
     assert successes == []
     assert failures == [("demos/example.ipynb", "failure")]
     assert manifest_path.read_text(encoding="utf-8") == original_manifest
+
+
+def test_smoke_batch_continues_after_a_notebook_failure(monkeypatch: pytest.MonkeyPatch):
+    def fake_build(notebook_path: Path, cells_after_bootstrap: int):
+        return {"cells": []}, []
+
+    def fake_execute(notebook_path: Path, smoke_nb, source_indices, timeout):
+        if "broken" in notebook_path.as_posix():
+            raise RuntimeError("boom")
+
+    monkeypatch.setattr(smoke, "build_smoke_notebook", fake_build)
+    monkeypatch.setattr(smoke, "execute_smoke_notebook", fake_execute)
+
+    passed, failed = smoke.smoke_test_batch(
+        ["demos/broken.ipynb", "demos/ok.ipynb"], cells_after_bootstrap=1, timeout=60
+    )
+
+    assert passed == ["demos/ok.ipynb"]
+    assert failed == [("demos/broken.ipynb", "boom")]
