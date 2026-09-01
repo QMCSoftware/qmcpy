@@ -60,6 +60,7 @@ LATEX_MARKERS = (
     "dvipng",
     "latexmk",
     "computer modern",
+    "tueplots",  # tueplots bundles typically set text.usetex=True internally
 )
 COLAB_BADGE_IMAGE_FRAGMENT = "colab.research.google.com/assets/colab-badge.svg"
 

@@ -153,6 +153,18 @@ def test_extra_pip_packages_preserves_later_explicit_installs():
     assert harden.extra_pip_packages(cells) == ["QuantLib", "ipywidgets", "seaborn"]
 
 
+def test_needs_latex_setup_detects_tueplots():
+    cells = [
+        code_cell("import qmcpy as qp\n"),
+        code_cell(
+            "from tueplots import bundles\n"
+            "pyplot.rcParams.update(bundles.probnum2025())\n"
+        ),
+    ]
+
+    assert harden.needs_latex_setup(cells)
+
+
 def test_imported_modules_survives_magic_only_block_body():
     # A shell-magic line as the *only* statement in a block used to leave an
     # empty `if:`/`try:` body, making ast.parse raise and silently hiding
