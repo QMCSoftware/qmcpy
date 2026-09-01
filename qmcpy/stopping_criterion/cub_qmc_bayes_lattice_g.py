@@ -38,8 +38,11 @@ class CubQMCBayesLatticeG(AbstractCubBayesLDG):
             order           2^(1)
         Keister (AbstractIntegrand)
         Gaussian (AbstractTrueMeasure)
-            mean            0
-            covariance      2^(-1)
+            mean            [0. 0.]
+            variance        [0.5 0.5]
+            standard_deviation [0.707 0.707]
+            covariance      [[0.5 0. ]
+                             [0.  0.5]]
             decomp_type     PCA
         Lattice (AbstractLDDiscreteDistribution)
             d               2^(1)
@@ -58,7 +61,7 @@ class CubQMCBayesLatticeG(AbstractCubBayesLDG):
         >>> solution,data = sc.integrate()
         >>> solution
         array([1.18837601, 0.95984299])
-        >>> data
+        >>> data  # doctest: +NORMALIZE_WHITESPACE
         Data (Data)
             solution        [1.188 0.96 ]
             comb_bound_low  [1.183 0.95 ]
@@ -79,6 +82,15 @@ class CubQMCBayesLatticeG(AbstractCubBayesLDG):
         Uniform (AbstractTrueMeasure)
             lower_bound     0
             upper_bound     1
+            mean            [0.5 0.5 0.5]
+            variance        [0.083 0.083 0.083]
+            standard_deviation [0.289 0.289 0.289]
+            covariance      <DIAgonal sparse matrix of dtype 'float64'
+                with 3 stored elements (1 diagonals) and shape (3, 3)>
+                 Coords Values
+                 (0, 0) 0.08333333333333333
+                 (1, 1) 0.08333333333333333
+                 (2, 2) 0.08333333333333333
         Lattice (AbstractLDDiscreteDistribution)
             d               3
             replications    1
@@ -98,7 +110,7 @@ class CubQMCBayesLatticeG(AbstractCubBayesLDG):
         >>> integrand = SensitivityIndices(function)
         >>> sc = CubQMCBayesLatticeG(integrand,abs_tol=5e-2,rel_tol=0)
         >>> solution,data = sc.integrate()
-        >>> data
+        >>> data  # doctest: +NORMALIZE_WHITESPACE
         Data (Data)
             solution        [[0.057 0.131 0.269]
                              [0.386 0.523 0.741]]
@@ -132,6 +144,15 @@ class CubQMCBayesLatticeG(AbstractCubBayesLDG):
         Uniform (AbstractTrueMeasure)
             lower_bound     0
             upper_bound     1
+            mean            [0.5 0.5 0.5]
+            variance        [0.083 0.083 0.083]
+            standard_deviation [0.289 0.289 0.289]
+            covariance      <DIAgonal sparse matrix of dtype 'float64'
+                with 3 stored elements (1 diagonals) and shape (3, 3)>
+                 Coords Values
+                 (0, 0) 0.08333333333333333
+                 (1, 1) 0.08333333333333333
+                 (2, 2) 0.08333333333333333
         Lattice (AbstractLDDiscreteDistribution)
             d               3
             replications    1

@@ -214,13 +214,13 @@ class Kronecker(AbstractLDDiscreteDistribution):
     
     2.  Niederreiter, H. (1992). *Random Number Generation and Quasi-Monte Carlo Methods*.
     """
-        
+
     def __init__(self,
-        dimension=1, 
-        replications=None, 
-        seed=None, 
-        randomize="SHIFT", 
-        generating_vector="CBC", 
+        dimension=1,
+        replications=None,
+        seed=None,
+        randomize="SHIFT",
+        generating_vector="CBC",
         shift=None,
         warn=True,
     ):
@@ -253,7 +253,7 @@ class Kronecker(AbstractLDDiscreteDistribution):
         self.input_shift = shift
         self.mimics = "StdUniform"
         self.randomize = randomize
-        super(Kronecker, self).__init__(dimension, replications, seed, d_limit=np.inf, n_limit=np.inf) 
+        super(Kronecker, self).__init__(dimension, replications, seed, d_limit=np.inf, n_limit=np.inf)
         if isinstance(generating_vector, str) and generating_vector.lower() == 'cbc':
             self.gen_vec_source = "CBC"
             CBC = np.array([
@@ -278,13 +278,13 @@ class Kronecker(AbstractLDDiscreteDistribution):
                         RuntimeWarning,
                     )
                 self.gen_vec_source = "RICHTMYER"
-                gen_vec = _richtmyer_generating_vector(self.dvec.max()+1)        
+                gen_vec = _richtmyer_generating_vector(self.dvec.max()+1)
         elif isinstance(generating_vector, str) and generating_vector.lower() == 'richtmyer':
             self.gen_vec_source = "RICHTMYER"
             gen_vec = _richtmyer_generating_vector(self.dvec.max()+1)
         elif isinstance(generating_vector, str) and generating_vector.lower() == "suzuki":
             self.gen_vec_source = "SUZUKI"
-            gen_vec = _suzuki_generating_vector(self.dvec.max()+1)        
+            gen_vec = _suzuki_generating_vector(self.dvec.max()+1)
         else:
             self.gen_vec_source = "CUSTOM"
             gen_vec = np.asarray(generating_vector, dtype=float)
@@ -304,7 +304,7 @@ class Kronecker(AbstractLDDiscreteDistribution):
         if self.randomize == "NO":
             self.randomize = "FALSE"
         assert self.randomize in ["SHIFT", "FALSE"]
-        if shift is not None: assert self.randomize=="SHIFT", "require randomize='SHIFT' when shift is not None" 
+        if shift is not None: assert self.randomize=="SHIFT", "require randomize='SHIFT' when shift is not None"
         if self.randomize=="SHIFT":
             if shift is not None:
                 self.shift = np.atleast_2d(shift).astype(float)
@@ -313,7 +313,7 @@ class Kronecker(AbstractLDDiscreteDistribution):
         else: # self.randomize=="FALSE":
             self.shift = np.zeros((self.replications, self.d))
         assert self.shift.ndim==2
-        assert self.shift.shape[1]==self.d 
+        assert self.shift.shape[1]==self.d
         assert (self.shift.shape[0] == 1 or self.shift.shape[0] == self.replications)
 
     def _gen_samples(self, n_min, n_max, return_binary, warn):
@@ -334,8 +334,8 @@ class Kronecker(AbstractLDDiscreteDistribution):
         #     gamma (np.ndarray): shape (1xd)
 
         # Returns:
-        #     discrep (np.ndarray): discrepancy 
-        
+        #     discrep (np.ndarray): discrepancy
+
         # Notes:
         #     - If k_tilde is not specified, the second Bernoulli polynomial is used.
         #     - If gamma is not specified, the coordinate weights will be just all ones.
@@ -347,7 +347,7 @@ class Kronecker(AbstractLDDiscreteDistribution):
             k_tilde = (lambda x, gamma: np.prod(1 + (x * (x - 1) + 1/6) * gamma, axis=-1), 1)
 
         return np.sqrt(self._square_periodic_discrepancies(n, k_tilde, gamma))
-        
+
 
     def wssd_discrepancy(self, n, weights, k_tilde = None, gamma = None):
         # calculates the weighted sum of square discrepancy
@@ -360,7 +360,7 @@ class Kronecker(AbstractLDDiscreteDistribution):
         discrepancies = self._square_periodic_discrepancies(n, k_tilde, gamma)
         return np.sum(weights * discrepancies, axis=-1)
 
-    
+
     def _square_periodic_discrepancies(self, n, k_tilde, gamma):
         n_array = np.arange(1, n + 1)
         k_tilde_terms = k_tilde[0](self.gen_samples(n=n), gamma)
@@ -372,15 +372,15 @@ class Kronecker(AbstractLDDiscreteDistribution):
         summation = np.zeros_like(k_tilde_terms)
         summation[...,1:] = left_sum - right_sum
         return (k_tilde_zero_terms + 2 * summation) / (n_array ** 2) - k_tilde[1]
-    
-    
+
+
     def _spawn(self, child_seed, dimension):
         assert self.input_shift is None, "spawn requires shift=None"
         return Kronecker(
-            dimension=dimension, 
+            dimension=dimension,
             replications=None if self.no_replications else self.replications,
-            seed=child_seed, 
-            randomize=self.randomize, 
-            generating_vector=self.input_generating_vector, 
+            seed=child_seed,
+            randomize=self.randomize,
+            generating_vector=self.input_generating_vector,
             shift=None,
         )

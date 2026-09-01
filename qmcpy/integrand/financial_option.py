@@ -237,8 +237,9 @@ class FinancialOption(AbstractIntegrand):
             t_final (float): $\tau_d$.
             decomp_type (str): Method for decomposition for covariance matrix. Options include
 
-                - `'PCA'` for principal component analysis, or
-                - `'Cholesky'` for cholesky decomposition.
+                - `'PCA'` for principal component analysis,
+                - `'Cholesky'` for cholesky decomposition, or
+                - `'BrownianBridge'` or `'Bridge'` for brownian bridge construction.
             level (Union[None, int]): Level for multilevel problems
             d_coarsest (Union[None, int]): Dimension of the problem on the coarsest level.
             asian_mean (str): Either `'ARITHMETIC'` or `'GEOMETRIC'`.

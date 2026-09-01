@@ -18,10 +18,19 @@ class Ishigami(AbstractIntegrand):
         (1024,)
         >>> print("%.4f"%y.mean())
         3.5000
-        >>> integrand.true_measure
+        >>> integrand.true_measure  # doctest: +NORMALIZE_WHITESPACE
         Uniform (AbstractTrueMeasure)
             lower_bound     -3.142
             upper_bound     3.142
+            mean            [0. 0. 0.]
+            variance        [3.29 3.29 3.29]
+            standard_deviation [1.814 1.814 1.814]
+            covariance      <DIAgonal sparse matrix of dtype 'float64'
+                             with 3 stored elements (1 diagonals) and shape (3, 3)>
+                              Coords Values
+                              (0, 0) 3.289868133696453
+                              (1, 1) 3.289868133696453
+                              (2, 2) 3.289868133696453
 
         With independent replications
 

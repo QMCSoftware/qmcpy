@@ -1,10 +1,11 @@
-name: Docs 
+name: Docs
 on:
   push:
     branches:
-      - master 
-      - main
+      - master
       # - develop
+  workflow_dispatch:
+
 permissions:
   contents: write
 jobs:
@@ -18,20 +19,20 @@ jobs:
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.x
+          python-version: '3.13'
       - name: Set up Pandoc
         uses: pandoc/actions/setup@v1
         with:
           version: 3.1.11
-      - run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV 
+      - run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV
       - uses: actions/cache@v4
         with:
           key: mkdocs-material-${{ env.cache_id }}
-          path: .cache 
+          path: .cache
           restore-keys: |
             mkdocs-material-
       - uses: ts-graphviz/setup-graphviz@v2
-      - run: pip install -e .[docs]
+      - run: pip install -e ".[docs]"
       - run: make uml
       - run: make copydocs
       - run: mkdocs gh-deploy --force

@@ -422,5 +422,5 @@ class Faure(DigitalNetAnyBases):
                 [0.87752263, 0.7029967 , 0.35134227],
                 [0.64185819, 0.55907117, 0.19929854]]])
     """
-    
+
     DEFAULT_GENERATING_MATRICES = "FAURE"

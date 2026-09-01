@@ -20,6 +20,50 @@ jupyter:
 
 ::: qmcpy.true_measure.scipy_wrapper.SciPyWrapper
 
+## `ProductMeasure`
+
+::: qmcpy.true_measure.product_measure.ProductMeasure
+
+## `StudentT`
+
+::: qmcpy.true_measure.student_t.StudentT
+
+## `Triangular`
+
+::: qmcpy.true_measure.triangular.Triangular
+
+## `UniformTriangle`
+
+::: qmcpy.true_measure.uniform_triangle.UniformTriangle
+
+## `ZeroInflatedExpUniform`
+
+::: qmcpy.true_measure.zero_inflated_exp_uniform.ZeroInflatedExpUniform
+
+## `AbstractCopula`
+
+::: qmcpy.true_measure.copula.AbstractCopula
+
+## `GaussianCopula`
+
+::: qmcpy.true_measure.gaussian_copula.GaussianCopula
+
+## `StudentTCopula`
+
+::: qmcpy.true_measure.student_t_copula.StudentTCopula
+
+## `ClaytonCopula`
+
+::: qmcpy.true_measure.clayton_copula.ClaytonCopula
+
+## `GumbelCopula`
+
+::: qmcpy.true_measure.gumbel_copula.GumbelCopula
+
+## `FrankCopula`
+
+::: qmcpy.true_measure.frank_copula.FrankCopula
+
 ## `Uniform`
 
 ::: qmcpy.true_measure.uniform.Uniform

@@ -1,6 +1,7 @@
 from .abstract_true_measure import AbstractTrueMeasure
-from ..util import DimensionError
+from ..util import DimensionError, ParameterError
 from ..discrete_distribution import DigitalNetB2
+from scipy.sparse import diags
 import numpy as np
 
 
@@ -15,10 +16,21 @@ class Uniform(AbstractTrueMeasure):
                [0.32691107, 1.5741214 ],
                [1.97352511, 0.58590959],
                [0.8591331 , 1.89690854]])
-        >>> true_measure
+
+        The covariance is diagonal, so it is stored and shown in sparse form.
+
+        >>> true_measure  # doctest: +NORMALIZE_WHITESPACE
         Uniform (AbstractTrueMeasure)
             lower_bound     [0.  0.5]
             upper_bound     [2 3]
+            mean            [1.   1.75]
+            variance        [0.333 0.521]
+            standard_deviation [0.577 0.722]
+            covariance      <DIAgonal sparse matrix of dtype 'float64'
+                with 2 stored elements (1 diagonals) and shape (2, 2)>
+                Coords Values
+                (0, 0) 0.3333333333333333
+                (1, 1) 0.5208333333333334
 
         With independent replications
 
@@ -47,7 +59,7 @@ class Uniform(AbstractTrueMeasure):
             lower_bound (Union[float, np.ndarray]): Lower bound.
             upper_bound (Union[float, np.ndarray]): Upper bound.
         """
-        self.parameters = ["lower_bound", "upper_bound"]
+        self.parameters = ["lower_bound", "upper_bound", "mean", "variance", "standard_deviation", "covariance"]
         self.domain = np.array([[0, 1]])
         self._parse_sampler(sampler)
         self.lower_bound = lower_bound
@@ -56,13 +68,27 @@ class Uniform(AbstractTrueMeasure):
             lower_bound = np.tile(self.lower_bound, self.d)
         if np.isscalar(self.upper_bound):
             upper_bound = np.tile(self.upper_bound, self.d)
-        self.a = np.array(lower_bound)
-        self.b = np.array(upper_bound)
+        self.a = np.array(lower_bound, dtype=np.float64)
+        self.b = np.array(upper_bound, dtype=np.float64)
         if len(self.a) != self.d or len(self.b) != self.d:
             raise DimensionError(
                 "upper bound and lower bound must be of length dimension"
             )
+        if not (np.all(np.isfinite(self.a)) and np.all(np.isfinite(self.b))):
+            raise ParameterError("upper bound and lower bound must be finite")
         self.delta = self.b - self.a
+        if np.any(self.delta <= 0):
+            raise ParameterError(
+                "upper bound must be strictly greater than lower bound"
+            )
+        mean = (self.a + self.b) / 2
+        variance = self.delta**2 / 12
+        self._set_moments(
+            mean=mean,
+            variance=variance,
+            standard_deviation=self.delta / np.sqrt(12),
+            covariance=diags(variance, format="dia"),
+        )
         self.inv_delta_prod = 1 / self.delta.prod()
         self.range = np.hstack(
             (self.a.reshape((self.d, 1)), self.b.reshape((self.d, 1)))

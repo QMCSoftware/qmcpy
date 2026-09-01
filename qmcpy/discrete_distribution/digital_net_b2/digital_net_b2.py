@@ -209,7 +209,7 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
     8.  Paul Bratley and Bennett L. Fox.
         Algorithm 659: Implementing Sobol's quasirandom sequence generator.
         ACM Trans. Math. Softw. 14, 1 (March 1988), 88-100. 1988.
-        [https://doi.org/10.1145/42288.214372](https://doi.org/10.1145/42288.2143720).
+        [https://doi.org/10.1145/42288.214372](https://doi.org/10.1145/42288.214372).
     """
 
     def __init__(

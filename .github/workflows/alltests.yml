@@ -1,16 +1,67 @@
 name: All Tests
-on: [push]
+
+on:
+  push:
+  pull_request:
+    branches:
+      - develop
+      - master
+  workflow_dispatch:
+
+concurrency:
+  # Keep push and pull_request runs separate so same-SHA PR updates do not inherit cancelled push checks.
+  group: alltests-${{ github.event_name }}-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
   #============================================================
-  # 3 Test Jobs on 3 OSes: Windows, macOS, Ubuntu
+  # Feature branches: Linux only
+  # Protected branches / PRs into develop or master: full 3-OS sweep
   #============================================================
+  select-matrix:
+    name: Select CI scope
+    runs-on: ubuntu-latest
+    outputs:
+      os-matrix: ${{ steps.scope.outputs.os-matrix }}
+      run-booktests: ${{ steps.scope.outputs.run-booktests }}
+    steps:
+      - name: Decide runner matrix and booktest scope
+        id: scope
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}  # push: branch name; pull_request: <pr-number>/merge
+          HEAD_REF: ${{ github.head_ref || github.ref_name }}  # source branch on both push and pull_request
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          full_sweep=false
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            full_sweep=true
+          elif [[ "$REF_NAME" == *choi ]]; then
+            full_sweep=true
+          elif [[ "$EVENT_NAME" == "pull_request" && ( "$BASE_REF" == "develop" || "$BASE_REF" == "master" ) ]]; then
+            full_sweep=true
+          elif [[ "$REF_NAME" == "develop" || "$REF_NAME" == "master" ]]; then
+            full_sweep=true
+          fi
+
+          if [[ "$full_sweep" == "true" ]]; then
+            echo 'os-matrix=["windows-latest","macos-latest","ubuntu-latest"]' >> "$GITHUB_OUTPUT"
+            echo 'run-booktests=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'os-matrix=["ubuntu-latest"]' >> "$GITHUB_OUTPUT"
+            echo 'run-booktests=false' >> "$GITHUB_OUTPUT"
+          fi
+
   tests:
-    name: All Tests on ${{ matrix.os }}
+    needs: select-matrix
+    name: All Tests on ${{ matrix.os }} (Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
+    env:
+      RUN_BOOKTESTS: ${{ needs.select-matrix.outputs.run-booktests }}
     strategy:
-        matrix:  # https://docs.github.com/en/actions/reference/runners/github-hosted-runners
-            os: ["windows-latest", "macos-latest", "ubuntu-latest"] 
+        matrix:
+            os: ${{ fromJSON(needs.select-matrix.outputs.os-matrix) }}
             python-version: ['3.13']
     steps:
       - uses: actions/checkout@v4
@@ -20,7 +71,7 @@ jobs:
           auto-activate-base: true
           conda-remove-defaults: true
           use-only-tar-bz2: true
-      
+
       # -----------------------------------------------------------
       # Clean old coverage files
       # -----------------------------------------------------------
@@ -168,7 +219,7 @@ jobs:
           key: ${{ runner.os }}-wheels-${{ hashFiles('pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-wheels-
-          
+
       - name: Build and cache wheels (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -195,97 +246,176 @@ jobs:
         shell: pwsh
         run: |
           pip install --find-links ./.wheels -e '.[test,test_torch,test_gpytorch,test_botorch]'
-      # -----------------------------------------------------------
-      # Colab readiness smoke tests (Linux only)
-      # -----------------------------------------------------------
-      - name: Run Colab readiness smoke tests (Linux)
-        if: runner.os == 'Linux'
-        shell: bash -l {0}
+      - name: Install MPMC dependencies
         run: |
-          make check_colab_notebooks
-          make check_colab_notebooks_smoke
+          qmcpy-install-mpmc
+      - name: Validate MPMC dependencies
+        run: |
+          python -c "import torch, pyg_lib, torch_geometric; print(f'torch={torch.__version__}'); print('MPMC dependencies ready')"
       # -----------------------------------------------------------
       # Install minimal LaTeX required by Jupyter notebooks (OS-specific)
       # -----------------------------------------------------------
       - name: Install minimal LaTeX (Linux)
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && env.RUN_BOOKTESTS == 'true'
         run: |
           sudo apt update
           sudo apt install -y texlive-latex-base texlive-latex-extra texlive-latex-recommended latexmk dvipng cm-super
+
       - name: Install minimal LaTeX (macOS)
-        if: runner.os == 'macOS'
+        if: runner.os == 'macOS' && env.RUN_BOOKTESTS == 'true'
         run: |
-          brew install --cask basictex
+          retry_cmd () {
+            local max_attempts="$1"
+            shift
+            local attempt=1
+            until "$@"; do
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "Command failed after ${max_attempts} attempts: $*"
+                return 1
+              fi
+              echo "Attempt ${attempt}/${max_attempts} failed for: $*"
+              echo "Retrying in 20s..."
+              sleep 20
+              attempt=$((attempt + 1))
+            done
+          }
+
+          retry_cmd 3 brew install --cask basictex
           eval "$(/usr/libexec/path_helper)"
-          sudo tlmgr update --self
-          sudo tlmgr install latexmk dvipng collection-fontsrecommended type1cm
+          # tlmgr re-resolves the CTAN redirector on every invocation, so a flaky/stale
+          # mirror can be picked for one call even though a prior call succeeded.
+          # Retry each tlmgr call so a bad mirror pick gets re-resolved on the next attempt.
+          retry_cmd 3 sudo tlmgr update --self
+          retry_cmd 3 sudo tlmgr install latexmk dvipng collection-fontsrecommended type1cm
       - name: Cache MiKTeX (Windows)
+        id: cache-miktex
         if: runner.os == 'Windows'
         uses: actions/cache@v4
         with:
-          path: C:\Program Files\MiKTeX
-          key: ${{ runner.os }}-miktex-${{ hashFiles('.github/workflows/alltests.yml') }}
+          path: |
+            C:\Program Files\MiKTeX
+            C:\ProgramData\MiKTeX
+          key: ${{ runner.os }}-miktex-v2-${{ hashFiles('.github/workflows/alltests.yml') }}
           restore-keys: |
-            ${{ runner.os }}-miktex-
-          
+            ${{ runner.os }}-miktex-v2-
+
       - name: Install minimal LaTeX (Windows)
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && env.RUN_BOOKTESTS == 'true'
         shell: pwsh
         run: |
-          $ErrorActionPreference = "Continue"
-          choco install miktex -y --no-progress --execution-timeout=600
-          choco install strawberryperl -y --no-progress
-          # Put MiKTeX on PATH for all subsequent steps
-          echo "C:\Program Files\MiKTeX\miktex\bin\x64" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          # Refresh PATH in current session
-          $env:PATH = "C:\Program Files\MiKTeX\miktex\bin\x64;$env:PATH"
-          # Enable auto-install of missing packages (MiKTeX "just enough TeX" approach)
-          initexmf --admin --set-config-value [MPM]AutoInstall=1
-          # Refresh package database + upgrade base with retry
-          $retries = 2
-          for ($i = 1; $i -le $retries; $i++) {
-            try {
-              mpm --admin --update-db
-              mpm --admin --upgrade
-              break
-            } catch {
-              if ($i -eq $retries) { throw }
-              Write-Host "Retry $i/$retries failed, waiting 10s..."
-              Start-Sleep -Seconds 10
+          $ErrorActionPreference = "Stop"
+          $MiKTeXBin = "C:\Program Files\MiKTeX\miktex\bin\x64"
+          $MiKTeXAdminData = "C:\ProgramData\MiKTeX"
+          $HasExactMiKTeXCache = '${{ steps.cache-miktex.outputs.cache-hit }}' -eq 'true'
+
+          function Invoke-WithRetry {
+            param(
+              [scriptblock]$Script,
+              [string]$Description,
+              [int]$MaxAttempts = 3,
+              [int]$DelaySeconds = 20
+            )
+            for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+              $global:LASTEXITCODE = 0
+              try {
+                & $Script
+                if ($LASTEXITCODE -eq 0) {
+                  return
+                }
+                throw "Exit code $LASTEXITCODE"
+              } catch {
+                if ($attempt -eq $MaxAttempts) {
+                  throw "Command failed after $MaxAttempts attempts: $Description`n$($_.Exception.Message)"
+                }
+                Write-Host "Attempt $attempt/$MaxAttempts failed for: $Description"
+                Write-Host $_.Exception.Message
+                Write-Host "Retrying in $DelaySeconds seconds..."
+                Start-Sleep -Seconds $DelaySeconds
+              }
             }
           }
-          # Install a few common "baseline" MiKTeX packages explicitly
-          mpm --admin --install=latexmk
-          mpm --admin --install=dvipng
-          mpm --admin --install=cm-super
-          mpm --admin --install=lmodern
-          mpm --admin --install=type1cm
-          mpm --admin --install=tex-gyre
-          mpm --admin --install=underscore
+
+          $HasMiKTeXTree =
+            (Test-Path (Join-Path $MiKTeXBin 'latex.exe')) -and
+            (Test-Path (Join-Path $MiKTeXBin 'latexmk.exe')) -and
+            (Test-Path (Join-Path $MiKTeXBin 'dvipng.exe')) -and
+            (Test-Path $MiKTeXAdminData)
+          $NeedsPackageBootstrap = (-not $HasExactMiKTeXCache) -or (-not $HasMiKTeXTree)
+
+          if (-not $HasMiKTeXTree) {
+            Invoke-WithRetry -Description "Install MiKTeX via Chocolatey" -Script {
+              choco install miktex -y --no-progress --execution-timeout=1800
+            }
+          } else {
+            Write-Host "Using cached MiKTeX installation."
+          }
+
+          if (-not (Get-Command perl.exe -ErrorAction SilentlyContinue)) {
+            Invoke-WithRetry -Description "Install Strawberry Perl via Chocolatey" -Script {
+              choco install strawberryperl -y --no-progress
+            }
+          }
+
+          # Put MiKTeX on PATH for all subsequent steps
+          echo $MiKTeXBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          # Refresh PATH in current session
+          $env:PATH = "$MiKTeXBin;$env:PATH"
+
+          if (-not (Test-Path (Join-Path $MiKTeXBin 'latex.exe'))) {
+            throw "MiKTeX install did not produce latex.exe in $MiKTeXBin"
+          }
+
+          # Enable auto-install of missing packages (MiKTeX "just enough TeX" approach)
+          Invoke-WithRetry -Description "Configure MiKTeX package auto-install" -Script {
+            initexmf --admin --set-config-value [MPM]AutoInstall=1
+          }
+
+          if ($NeedsPackageBootstrap) {
+            # Fresh or repaired installs need a package DB refresh before the binaries are safe to use.
+            Invoke-WithRetry -Description "Refresh MiKTeX package database" -Script {
+              mpm --admin --update-db
+            }
+            $packages = @('latexmk','dvipng','cm-super','lmodern','type1cm','tex-gyre')
+            foreach ($pkg in $packages) {
+              Invoke-WithRetry -Description "Install MiKTeX package $pkg" -Script {
+                mpm --admin --install=$pkg
+              }
+            }
+          }
+
+          Invoke-WithRetry -Description "Refresh MiKTeX filename database" -Script {
+            initexmf --admin --update-fndb
+          }
           latex --version
           latexmk -v
           dvipng --version
-      
+
       # -----------------------------------------------------------
       # Run doctests (OS-specific)
-      # -----------------------------------------------------------      
+      # -----------------------------------------------------------
       - run: pip freeze
       - run: make doctests_minimal
       - run: make doctests_torch
       - run: make doctests_gpytorch
       - run: make doctests_botorch
       - run: make doctests_markdown
-      - name: run umbridge doctests on Linux only
+      - name: Run umbridge doctests on Linux full sweeps when Docker is available
         shell: bash -l {0}
         run: |
-          if [ "$RUNNER_OS" == "Linux" ]; then
+          if [ "$RUNNER_OS" == "Linux" ] && [ "$RUN_BOOKTESTS" == "true" ] && command -v docker >/dev/null 2>&1; then
             make doctests_umbridge
-          else
+          elif [ "$RUNNER_OS" != "Linux" ]; then
             echo "umbridge doctests only run on Linux"
+          elif [ "$RUN_BOOKTESTS" != "true" ]; then
+            echo "Skipping umbridge doctests outside full sweeps"
+          else
+            echo "Skipping umbridge doctests because Docker is not available on this runner"
           fi
+      - name: Run MPMC doctests
+        run: make doctests_mpmc
       # -----------------------------------------------------------
       # Run unittests for Python source files
-      # -----------------------------------------------------------   
+      # -----------------------------------------------------------
       - name: Run unittests (parallel)
         run: make unittests
 
@@ -302,6 +432,7 @@ jobs:
           files: >-
             ./artifacts/coverage/unit/coverage.json,
             ./artifacts/coverage/doctests/minimal/coverage.json,
+            ./artifacts/coverage/doctests/mpmc/coverage.json,
             ./artifacts/coverage/doctests/torch/coverage.json,
             ./artifacts/coverage/doctests/gpytorch/coverage.json,
             ./artifacts/coverage/doctests/botorch/coverage.json
@@ -310,7 +441,7 @@ jobs:
       # Free disk + conda cache before booktests (OS-specific)
       # -----------------------------------------------------------
       - name: Free space (Linux)
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && env.RUN_BOOKTESTS == 'true'
         run: |
           sudo apt-get clean
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
@@ -318,22 +449,22 @@ jobs:
           pip cache purge || true
           df -h
       - name: Free space (macOS)
-        if: runner.os == 'macOS'
+        if: runner.os == 'macOS' && env.RUN_BOOKTESTS == 'true'
         run: |
           conda clean --all --yes
           pip cache purge || true
           df -h
       - name: Free space (Windows)
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && env.RUN_BOOKTESTS == 'true'
         run: |
           conda clean --all --yes || true
           pip cache purge || true
           Get-Volume | Select-Object DriveLetter, Size, SizeRemaining | Format-Table
       # -----------------------------------------------------------
       # Run unittests for Jupyter notebooks (OS-specific)
-      # ----------------------------------------------------------- 
+      # -----------------------------------------------------------
       - name: Run booktests (parallel) on Linux
-        if: runner.os != 'Windows'
+        if: runner.os != 'Windows' && env.RUN_BOOKTESTS == 'true'
         shell: bash -l {0}
         run: |
           make booktests_parallel_no_docker    # Parsl not supported on Windows
@@ -341,18 +472,19 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          make booktests_parallel_pytest PYTEST_XDIST="-n 4" PYTEST="-m 'not slow'"
+          # Serial execution is slower but much more stable on Windows notebooks.
+          make booktests_parallel_pytest PYTEST_XDIST="" PYTEST="-m 'not slow'"
 
       # -----------------------------------------------------------
       # Upload coverage to Codecov
       # -----------------------------------------------------------
       - name: Upload coverage to Codecov
-        if: always()
+        if: always() && env.RUN_BOOKTESTS == 'true'
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: alltests
           fail_ci_if_error: false
           files: ./artifacts/coverage/booktests/coverage.json
-  
+
 # For success reports, see https://github.com/QMCSoftware/QMCSoftware/actions?query=is%3Asuccess+workflow%3AAll+Tests

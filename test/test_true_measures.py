@@ -1,10 +1,42 @@
-from qmcpy import *
-from qmcpy.util import *
+from qmcpy import (
+    BernoulliCont,
+    BrownianMotion,
+    DigitalNetB2,
+    Gaussian,
+    GeometricBrownianMotion,
+    IIDStdUniform,
+    JohnsonsSU,
+    Kumaraswamy,
+    Lattice,
+    Lebesgue,
+    MaternGP,
+    Uniform,
+    ZeroInflatedExpUniform,
+)
+from qmcpy.util import DimensionError, ParameterError
 import numpy as np
 import scipy.stats
+from scipy.sparse import issparse
 import unittest
+import warnings
 from qmcpy.true_measure.uniform_triangle import UniformTriangle, _UniformTriangleAdapter
-from qmcpy.true_measure.scipy_wrapper import SciPyWrapper
+from qmcpy import SciPyWrapper
+
+
+def dense_covariance(covariance):
+    return covariance.toarray() if issparse(covariance) else np.asarray(covariance)
+
+
+def assert_sample_mean_and_covariance(measure):
+    samples = measure.gen_samples(2**15)
+    sample_mean = samples.mean(axis=0)
+    centered_samples = samples - sample_mean
+    sample_covariance = centered_samples.T @ centered_samples / len(samples)
+
+    np.testing.assert_allclose(sample_mean, measure.mean, rtol=0, atol=1e-5)
+    np.testing.assert_allclose(
+        sample_covariance, dense_covariance(measure.covariance), rtol=0, atol=1e-5
+    )
 
 
 class TestTrueMeasure(unittest.TestCase):
@@ -37,6 +69,7 @@ class TestTrueMeasure(unittest.TestCase):
             BrownianMotion(
                 DigitalNetB2(d, seed=7), t_final=2, drift=3, decomp_type="Cholesky"
             ),
+            BrownianMotion(DigitalNetB2(d, seed=7), decomp_type="BrownianBridge"),
             BernoulliCont(DigitalNetB2(d, seed=7)),
             BernoulliCont(DigitalNetB2(d, seed=7), lam=[0.25, 0.75]),
             SciPyWrapper(
@@ -113,8 +146,131 @@ class TestTrueMeasure(unittest.TestCase):
                     all(spawn.transform != tm.transform for spawn in spawns)
                 )
 
+    def test_moment_attributes_are_public_and_consistent(self):
+        measures = [
+            Uniform(
+                DigitalNetB2(2, seed=7),
+                lower_bound=[-1, 2],
+                upper_bound=[3, 8],
+            ),
+            Kumaraswamy(
+                DigitalNetB2(2, seed=7), a=[1, 2], b=[3, 4]
+            ),
+            Gaussian(
+                DigitalNetB2(2, seed=7),
+                mean=[1, -1],
+                covariance=[[4, 1], [1, 9]],
+            ),
+            BrownianMotion(
+                DigitalNetB2(2, seed=7),
+                t_final=2,
+                diffusion=3,
+            ),
+        ]
+        moment_parameters = [
+            "mean",
+            "variance",
+            "standard_deviation",
+            "covariance",
+        ]
+
+        for measure in measures:
+            with self.subTest(measure=type(measure).__name__):
+                for parameter in moment_parameters:
+                    self.assertIn(parameter, measure.parameters)
+                    self.assertIn(parameter, str(measure))
+                self.assertEqual(measure.mean.shape, (measure.d,))
+                self.assertEqual(measure.variance.shape, (measure.d,))
+                self.assertEqual(
+                    measure.standard_deviation.shape, (measure.d,)
+                )
+                self.assertEqual(
+                    measure.covariance.shape, (measure.d, measure.d)
+                )
+                np.testing.assert_allclose(
+                    measure.standard_deviation**2, measure.variance
+                )
+                np.testing.assert_allclose(
+                    np.diag(dense_covariance(measure.covariance)), measure.variance
+                )
+
+    def test_moment_attributes_are_read_only(self):
+        measures = [
+            Uniform(DigitalNetB2(2, seed=7)),
+            Kumaraswamy(DigitalNetB2(2, seed=7)),
+            Gaussian(DigitalNetB2(2, seed=7), covariance=np.eye(2)),
+            BrownianMotion(DigitalNetB2(2, seed=7)),
+        ]
+
+        for measure in measures:
+            with self.subTest(measure=type(measure).__name__):
+                for parameter in (
+                    "mean",
+                    "variance",
+                    "standard_deviation",
+                    "covariance",
+                ):
+                    value = getattr(measure, parameter)
+                    if issparse(value):
+                        # Diagonal covariances are stored sparsely; their
+                        # backing data must still be read only.
+                        self.assertFalse(value.data.flags.writeable)
+                        with self.assertRaises(ValueError):
+                            value.data[0] = 9
+                    else:
+                        self.assertFalse(value.flags.writeable)
+                        with self.assertRaises(ValueError):
+                            value.flat[0] = 9
+                        with self.assertRaises(ValueError):
+                            value.setflags(write=True)
+                    with self.assertRaises(AttributeError):
+                        setattr(measure, parameter, np.zeros_like(value))
+
+    def test_diagonal_covariance_is_sparse(self):
+        d = 500
+        for measure in (
+            Uniform(IIDStdUniform(d, seed=7)),
+            Kumaraswamy(IIDStdUniform(d, seed=7)),
+        ):
+            with self.subTest(measure=type(measure).__name__):
+                covariance = measure.covariance
+                self.assertTrue(issparse(covariance))
+                self.assertEqual(covariance.format, "dia")
+                self.assertEqual(covariance.shape, (d, d))
+                # Only the diagonal is stored: O(d), not O(d^2).
+                self.assertEqual(covariance.data.size, d)
+                np.testing.assert_allclose(
+                    covariance.diagonal(), measure.variance
+                )
+                # Off-diagonal entries are exactly zero.
+                dense = covariance.toarray()
+                np.testing.assert_array_equal(
+                    dense - np.diag(np.diag(dense)), np.zeros((d, d))
+                )
+
 
 class TestMatern(unittest.TestCase):
+    def test_spawn(self):
+        points = np.linspace(0, 1, 3)[:, None]
+        matern = MaternGP(
+            IIDStdUniform(3, seed=7),
+            points=points,
+            variance=0.01,
+            nugget=0.002,
+        )
+
+        direct_spawn = matern._spawn(IIDStdUniform(3, seed=8))
+        public_spawn = matern.spawn(1)[0]
+
+        for spawned in (direct_spawn, public_spawn):
+            self.assertIsInstance(spawned, MaternGP)
+            np.testing.assert_array_equal(spawned.points, points)
+            np.testing.assert_allclose(spawned.mean, matern.mean)
+            np.testing.assert_allclose(spawned.covariance, matern.covariance)
+
+        with self.assertRaises(DimensionError):
+            matern.spawn(1, dimensions=4)
+
     def test_sklearn_equivalence(self):
         points = np.array([[5, 4], [1, 2], [0, 0]])
         mean = np.full(3, 1.1)
@@ -133,6 +289,352 @@ class TestMatern(unittest.TestCase):
         kernel2 = gp.kernels.Matern(length_scale=4, nu=2.5)
         cov2 = 0.01 * kernel2.__call__(points) + 1e-6 * np.eye(m2.covariance.shape[-1])
         assert np.allclose(cov2, m2.covariance)
+
+
+class TestUniform(unittest.TestCase):
+    def test_sample_mean_and_covariance(self):
+        uniform = Uniform(
+            DigitalNetB2(2, seed=7),
+            lower_bound=[-2, 1],
+            upper_bound=[4, 10],
+        )
+
+        assert_sample_mean_and_covariance(uniform)
+
+    def test_upper_bound_must_exceed_lower_bound(self):
+        for lower_bound, upper_bound in [([1], [0]), ([1], [1])]:
+            with self.subTest(
+                lower_bound=lower_bound, upper_bound=upper_bound
+            ):
+                with self.assertRaisesRegex(
+                    ParameterError,
+                    "upper bound must be strictly greater than lower bound",
+                ):
+                    Uniform(
+                        IIDStdUniform(1, seed=7),
+                        lower_bound=lower_bound,
+                        upper_bound=upper_bound,
+                    )
+
+    def test_bounds_must_be_finite(self):
+        for lower_bound, upper_bound in [
+            (np.nan, 1),
+            (0, np.nan),
+            (-np.inf, 1),
+            (0, np.inf),
+        ]:
+            with self.subTest(
+                lower_bound=lower_bound, upper_bound=upper_bound
+            ):
+                with self.assertRaisesRegex(
+                    ParameterError,
+                    "upper bound and lower bound must be finite",
+                ):
+                    Uniform(
+                        IIDStdUniform(1, seed=7),
+                        lower_bound=lower_bound,
+                        upper_bound=upper_bound,
+                    )
+
+    def test_moment_attributes_with_scalar_bounds(self):
+        uniform = Uniform(
+            DigitalNetB2(3, seed=7), lower_bound=-2, upper_bound=4
+        )
+
+        np.testing.assert_allclose(uniform.mean, [1.0, 1.0, 1.0])
+        np.testing.assert_allclose(uniform.variance, [3.0, 3.0, 3.0])
+        np.testing.assert_allclose(
+            uniform.standard_deviation, np.sqrt([3.0, 3.0, 3.0])
+        )
+        np.testing.assert_allclose(
+            dense_covariance(uniform.covariance),
+            np.diag([3.0, 3.0, 3.0]),
+        )
+
+    def test_moment_attributes_with_vector_bounds(self):
+        uniform = Uniform(
+            DigitalNetB2(2, seed=7),
+            lower_bound=[-2, 1],
+            upper_bound=[4, 10],
+        )
+
+        np.testing.assert_allclose(uniform.mean, [1.0, 5.5])
+        np.testing.assert_allclose(uniform.variance, [3.0, 6.75])
+        np.testing.assert_allclose(
+            uniform.standard_deviation, np.sqrt([3.0, 6.75])
+        )
+        np.testing.assert_allclose(
+            dense_covariance(uniform.covariance),
+            np.diag([3.0, 6.75]),
+        )
+
+    def test_spawn_recomputes_moment_attributes(self):
+        uniform = Uniform(
+            DigitalNetB2(2, seed=7), lower_bound=-2, upper_bound=4
+        )
+        spawn = uniform.spawn(1, dimensions=4)[0]
+
+        np.testing.assert_allclose(spawn.mean, np.full(4, 1.0))
+        np.testing.assert_allclose(spawn.variance, np.full(4, 3.0))
+        np.testing.assert_allclose(
+            spawn.standard_deviation, np.full(4, np.sqrt(3.0))
+        )
+        np.testing.assert_allclose(dense_covariance(spawn.covariance), 3.0 * np.eye(4))
+
+
+class TestKumaraswamy(unittest.TestCase):
+    def test_sample_mean_and_covariance(self):
+        kumaraswamy = Kumaraswamy(
+            DigitalNetB2(2, seed=7), a=[1, 2], b=[3, 4]
+        )
+
+        assert_sample_mean_and_covariance(kumaraswamy)
+
+    def test_moment_attributes_with_scalar_parameters(self):
+        kumaraswamy = Kumaraswamy(DigitalNetB2(3, seed=7), a=1, b=3)
+        expected_mean = np.full(3, 0.25)
+        expected_variance = np.full(3, 0.0375)
+
+        np.testing.assert_allclose(kumaraswamy.mean, expected_mean)
+        np.testing.assert_allclose(kumaraswamy.variance, expected_variance)
+        np.testing.assert_allclose(
+            kumaraswamy.standard_deviation, np.sqrt(expected_variance)
+        )
+        np.testing.assert_allclose(
+            dense_covariance(kumaraswamy.covariance), np.diag(expected_variance)
+        )
+
+    def test_moment_attributes_with_vector_parameters(self):
+        kumaraswamy = Kumaraswamy(
+            DigitalNetB2(2, seed=7), a=[1, 2], b=[3, 4]
+        )
+        expected_mean = np.array([0.25, 128 / 315])
+        expected_variance = np.array(
+            [0.0375, 0.2 - (128 / 315) ** 2]
+        )
+
+        np.testing.assert_allclose(kumaraswamy.mean, expected_mean)
+        np.testing.assert_allclose(kumaraswamy.variance, expected_variance)
+        np.testing.assert_allclose(
+            kumaraswamy.standard_deviation, np.sqrt(expected_variance)
+        )
+        np.testing.assert_allclose(
+            dense_covariance(kumaraswamy.covariance), np.diag(expected_variance)
+        )
+
+    def test_uniform_special_case(self):
+        kumaraswamy = Kumaraswamy(
+            DigitalNetB2(2, seed=7), a=1, b=1
+        )
+        expected_variance = np.full(2, 1 / 12)
+
+        np.testing.assert_allclose(kumaraswamy.mean, np.full(2, 0.5))
+        np.testing.assert_allclose(kumaraswamy.variance, expected_variance)
+        np.testing.assert_allclose(
+            kumaraswamy.standard_deviation, np.sqrt(expected_variance)
+        )
+        np.testing.assert_allclose(
+            dense_covariance(kumaraswamy.covariance), np.diag(expected_variance)
+        )
+
+    def test_spawn_recomputes_moment_attributes(self):
+        kumaraswamy = Kumaraswamy(
+            DigitalNetB2(2, seed=7), a=1, b=3
+        )
+        spawn = kumaraswamy.spawn(1, dimensions=4)[0]
+        expected_variance = np.full(4, 0.0375)
+
+        np.testing.assert_allclose(spawn.mean, np.full(4, 0.25))
+        np.testing.assert_allclose(spawn.variance, expected_variance)
+        np.testing.assert_allclose(
+            spawn.standard_deviation, np.sqrt(expected_variance)
+        )
+        np.testing.assert_allclose(
+            dense_covariance(spawn.covariance), np.diag(expected_variance)
+        )
+
+    def test_variance_shape(self):
+        # Univariate (d==1) measures return scalar moments; multivariate
+        # measures return length-d arrays.
+        for d, a, b in [(1, 2, 3), (2, [1, 2], [3, 4]), (4, 3, 5)]:
+            with self.subTest(d=d):
+                kumaraswamy = Kumaraswamy(DigitalNetB2(d, seed=7), a=a, b=b)
+                variance = kumaraswamy.variance
+
+                if d == 1:
+                    self.assertIsInstance(variance, float)
+                    self.assertEqual(np.ndim(variance), 0)
+                else:
+                    self.assertEqual(variance.shape, (d,))
+                    self.assertEqual(variance.ndim, 1)
+                self.assertTrue(np.all(variance > 0))
+
+    def test_covariance_is_d_by_d_matrix(self):
+        for d, a, b in [(1, 2, 3), (2, [1, 2], [3, 4]), (4, 3, 5)]:
+            with self.subTest(d=d):
+                kumaraswamy = Kumaraswamy(DigitalNetB2(d, seed=7), a=a, b=b)
+                covariance = kumaraswamy.covariance
+
+                self.assertEqual(covariance.shape, (d, d))
+                self.assertEqual(covariance.ndim, 2)
+                # Independent marginals: covariance is diagonal with the
+                # per-dimension variances on the diagonal. It is stored sparsely.
+                dense = dense_covariance(covariance)
+                np.testing.assert_allclose(
+                    np.diag(dense), kumaraswamy.variance
+                )
+                np.testing.assert_allclose(
+                    dense, np.diag(np.diag(dense))
+                )
+
+    def test_variance_matches_closed_form(self):
+        # Kumaraswamy raw moments: M_n = b * B(1 + n/a, b), so
+        # variance = M_2 - M_1**2. Compare the quadrature-based variance
+        # against this closed form evaluated with scipy's beta function.
+        from scipy.special import beta as beta_function
+
+        a = np.array([0.01, 1.0, 2.0, 3.5])
+        b = np.array([1, 3.0, 4.0, 1.5])
+        kumaraswamy = Kumaraswamy(DigitalNetB2(4, seed=7), a=a, b=b)
+
+        m1 = b * beta_function(1 + 1 / a, b)
+        m2 = b * beta_function(1 + 2 / a, b)
+        expected_variance = m2 - m1**2
+
+        np.testing.assert_allclose(
+            kumaraswamy.variance, expected_variance, rtol=1e-10
+        )
+
+
+class TestZeroInflatedExpUniform(unittest.TestCase):
+    """Moment tests for the (1D) zero-inflated exponential true measure.
+
+    The distribution has probability mass ``p_zero`` at 0 and, otherwise,
+    an exponential with rate ``lam``. Its closed-form moments are
+    ``mean = (1 - p) / lam`` and ``variance = (1 - p**2) / lam**2``.
+    """
+
+    @staticmethod
+    def _closed_form(p_zero, lam):
+        mean = (1.0 - p_zero) / lam
+        variance = (1.0 - p_zero**2) / lam**2
+        return mean, variance
+
+    def test_moment_attributes_match_closed_form(self):
+        for p_zero, lam in [(0.4, 1.5), (0.1, 0.5), (0.75, 3.0)]:
+            with self.subTest(p_zero=p_zero, lam=lam):
+                tm = ZeroInflatedExpUniform(
+                    DigitalNetB2(1, seed=7), p_zero=p_zero, lam=lam
+                )
+                mean, variance = self._closed_form(p_zero, lam)
+
+                np.testing.assert_allclose(tm.mean, [mean])
+                np.testing.assert_allclose(tm.variance, [variance])
+                np.testing.assert_allclose(
+                    tm.standard_deviation, [np.sqrt(variance)]
+                )
+
+    def test_moment_attributes_are_scalars(self):
+        tm = ZeroInflatedExpUniform(
+            DigitalNetB2(1, seed=7), p_zero=0.4, lam=1.5
+        )
+        self.assertEqual(tm.d, 1)
+        # Univariate measures return scalar (0-d) moments rather than length-1 arrays.
+        for value in (tm.mean, tm.variance, tm.standard_deviation):
+            self.assertIsInstance(value, float)
+            self.assertEqual(np.ndim(value), 0)
+        np.testing.assert_allclose(
+            tm.standard_deviation**2, tm.variance
+        )
+
+    def test_covariance_is_not_exposed(self):
+        # Covariance is intentionally omitted for this 1D measure: it would
+        # be a 1x1 matrix equal to the variance, so it adds no information.
+        tm = ZeroInflatedExpUniform(
+            DigitalNetB2(1, seed=7), p_zero=0.4, lam=1.5
+        )
+        self.assertNotIn("covariance", tm.parameters)
+        self.assertNotIn("covariance", str(tm))
+        self.assertFalse(hasattr(tm, "covariance"))
+        with self.assertRaises(AttributeError):
+            tm.covariance
+
+    def test_moment_parameters_are_public_and_in_repr(self):
+        tm = ZeroInflatedExpUniform(
+            DigitalNetB2(1, seed=7), p_zero=0.4, lam=1.5
+        )
+        for parameter in (
+            "mean",
+            "variance",
+            "standard_deviation",
+        ):
+            self.assertIn(parameter, tm.parameters)
+            self.assertIn(parameter, str(tm))
+
+    def test_moment_attributes_are_read_only(self):
+        tm = ZeroInflatedExpUniform(
+            DigitalNetB2(1, seed=7), p_zero=0.4, lam=1.5
+        )
+        for parameter in (
+            "mean",
+            "variance",
+            "standard_deviation",
+        ):
+            with self.subTest(parameter=parameter):
+                value = getattr(tm, parameter)
+                # Univariate moments are returned as immutable Python floats,
+                # and the attribute has no setter.
+                self.assertIsInstance(value, float)
+                with self.assertRaises(AttributeError):
+                    setattr(tm, parameter, 0.0)
+
+    def test_sample_mean_and_variance(self):
+        tm = ZeroInflatedExpUniform(
+            DigitalNetB2(1, seed=7), p_zero=0.4, lam=1.5
+        )
+        samples = tm.gen_samples(2**18)
+        sample_mean = samples.mean(axis=0)
+        sample_variance = samples.var(axis=0)
+
+        np.testing.assert_allclose(
+            sample_mean, tm.mean, rtol=0, atol=1e-4
+        )
+        np.testing.assert_allclose(
+            sample_variance, tm.variance, rtol=0, atol=1e-3
+        )
+
+    def test_spawn_preserves_type_and_moments(self):
+        tm = ZeroInflatedExpUniform(
+            DigitalNetB2(1, seed=7), p_zero=0.4, lam=1.5
+        )
+        spawn = tm.spawn(1)[0]
+
+        self.assertIsInstance(spawn, ZeroInflatedExpUniform)
+        np.testing.assert_allclose(spawn.mean, tm.mean)
+        np.testing.assert_allclose(spawn.variance, tm.variance)
+        np.testing.assert_allclose(
+            spawn.standard_deviation, tm.standard_deviation
+        )
+        self.assertFalse(hasattr(spawn, "covariance"))
+
+    def test_deprecated_2d_construction_has_no_moment_parameters(self):
+        # The deprecated 2D y_split construction does not define moments.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            tm = ZeroInflatedExpUniform(
+                DigitalNetB2(2, seed=7),
+                p_zero=0.4,
+                lam=1.5,
+                y_split=0.5,
+            )
+        for parameter in (
+            "mean",
+            "variance",
+            "standard_deviation",
+            "covariance",
+        ):
+            self.assertNotIn(parameter, tm.parameters)
+
 
 class TestUniformTriangle(unittest.TestCase):
     """Tests for UniformTriangle and _UniformTriangleAdapter."""
@@ -190,6 +692,15 @@ class TestGaussian(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures with fixed seeds for reproducibility."""
         self.seed = 42
+
+    def test_sample_mean_and_covariance(self):
+        gaussian = Gaussian(
+            DigitalNetB2(2, seed=7),
+            mean=[1, 2],
+            covariance=[[0.09, 0.04], [0.04, 0.05]],
+        )
+
+        assert_sample_mean_and_covariance(gaussian)
 
     def test_gaussian_basic_output_reproducibility(self):
         """Test that basic Gaussian sample generation produces expected values with fixed seed."""
@@ -317,12 +828,20 @@ class TestGaussian(unittest.TestCase):
         """Test that Gaussian maintains correct mean and covariance properties."""
         custom_mean = np.array([1.0, -1.0, 2.0])
         custom_cov = np.array([[2.0, 0.5, 0.0], [0.5, 1.5, -0.3], [0.0, -0.3, 3.0]])
+        expected_variance = np.array([2.0, 1.5, 3.0])
 
         gaussian = Gaussian(
             Lattice(3, seed=self.seed), mean=custom_mean, covariance=custom_cov
         )
 
-        # Verify mean is stored correctly
+        np.testing.assert_allclose(gaussian.mean, custom_mean)
+        np.testing.assert_allclose(gaussian.variance, expected_variance)
+        np.testing.assert_allclose(
+            gaussian.standard_deviation, np.sqrt(expected_variance)
+        )
+        np.testing.assert_allclose(gaussian.covariance, custom_cov)
+
+        # Verify the internal mean and decomposition remain consistent.
         np.testing.assert_array_almost_equal(
             gaussian.mu,
             custom_mean,
@@ -343,6 +862,13 @@ class TestGaussian(unittest.TestCase):
         """Test Gaussian with scalar mean and covariance parameters."""
         gaussian = Gaussian(Lattice(3, seed=self.seed), mean=2.5, covariance=1.5)
 
+        np.testing.assert_allclose(gaussian.mean, np.full(3, 2.5))
+        np.testing.assert_allclose(gaussian.variance, np.full(3, 1.5))
+        np.testing.assert_allclose(
+            gaussian.standard_deviation, np.full(3, np.sqrt(1.5))
+        )
+        np.testing.assert_allclose(gaussian.covariance, 1.5 * np.eye(3))
+
         samples = gaussian.gen_samples(2)
 
         # Expected samples with scalar parameters
@@ -356,6 +882,35 @@ class TestGaussian(unittest.TestCase):
             decimal=6,
             err_msg="Gaussian with scalar parameters output changed unexpectedly",
         )
+
+    def test_moment_attributes_with_diagonal_covariance_vector(self):
+        gaussian = Gaussian(
+            Lattice(3, seed=self.seed),
+            mean=[-1, 0, 1],
+            covariance=[1, 4, 9],
+        )
+
+        np.testing.assert_allclose(gaussian.mean, [-1, 0, 1])
+        np.testing.assert_allclose(gaussian.variance, [1, 4, 9])
+        np.testing.assert_allclose(
+            gaussian.standard_deviation, [1, 2, 3]
+        )
+        np.testing.assert_allclose(
+            gaussian.covariance, np.diag([1, 4, 9])
+        )
+
+    def test_spawn_recomputes_moment_attributes(self):
+        gaussian = Gaussian(
+            Lattice(2, seed=self.seed), mean=2.5, covariance=1.5
+        )
+        spawn = gaussian.spawn(1, dimensions=4)[0]
+
+        np.testing.assert_allclose(spawn.mean, np.full(4, 2.5))
+        np.testing.assert_allclose(spawn.variance, np.full(4, 1.5))
+        np.testing.assert_allclose(
+            spawn.standard_deviation, np.full(4, np.sqrt(1.5))
+        )
+        np.testing.assert_allclose(spawn.covariance, 1.5 * np.eye(4))
 
 
 class TestBrownianMotion(unittest.TestCase):
@@ -391,6 +946,319 @@ class TestBrownianMotion(unittest.TestCase):
                 decimal=10,
                 err_msg="Parent BrownianMotion covariance changed unexpectedly",
             )
+
+    def test_brownian_bridge_output_reproducibility(self):
+        """Test that Brownian Bridge construction produces expected values with fixed seed."""
+        bb = BrownianMotion(DigitalNetB2(4, seed=self.seed), decomp_type="BrownianBridge")
+
+        samples = bb.gen_samples(2)
+
+        # Expected output based on fixed seed
+        expected_samples = np.array(
+            [
+                [-0.02048429,  0.41054648, -0.13899299,  0.3095377 ],
+                [-0.38732442, -1.19527027, -1.12175754, -1.58454187],
+            ]
+        )
+
+        np.testing.assert_array_almost_equal(
+            samples,
+            expected_samples,
+            decimal=6,
+            err_msg="Brownian Bridge sample generation output changed unexpectedly",
+        )
+
+    def test_brownian_bridge_decomp_type(self):
+        """Test BrownianBridge as a decomposition type for BrownianMotion."""
+        bm = BrownianMotion(
+            DigitalNetB2(4, seed=self.seed, replications=2),
+            decomp_type="BrownianBridge")
+        samples = bm.gen_samples(2)
+        self.assertEqual(samples.shape, (2, 2, 4))
+        self.assertEqual(samples.dtype, np.float64)
+
+    def test_brownian_bridge_no_matrix_decomp(self):
+        """BrownianBridge raises ParameterError when matrix decomposition is called."""
+        bm = BrownianMotion(DigitalNetB2(4, seed=self.seed), decomp_type="BrownianBridge")
+        with self.assertRaises(ParameterError):
+            bm._compute_decomposition()
+
+    def test_brownian_bridge_manual_replications_d4(self):
+        """Manually construct a d=4 BrownianBridge path and compare with the automated version."""
+        d, n, reps = 4, 4, 2
+        t = np.linspace(1 / d, 1.0, d)
+
+        # Automated result
+        automated = BrownianMotion(
+            DigitalNetB2(d, seed=self.seed, replications=reps),
+            decomp_type="BrownianBridge"
+        ).gen_samples(n)
+
+        # Manual construction
+        u = DigitalNetB2(d, seed=self.seed, replications=reps).gen_samples(n)
+        z = scipy.stats.norm.ppf(u)
+
+        w_0 = np.zeros((reps, n, 1))
+
+        z_1 = z[..., 0:1]
+        z_2 = z[..., 1:2]
+        z_3 = z[..., 2:3]
+        z_4 = z[..., 3:4]
+
+        w_4 = np.sqrt(t[3]) * z_1
+
+        mean = w_0 + (t[1] - 0.0) / (t[3] - 0.0) * (w_4 - w_0)
+        std = np.sqrt((t[1] - 0.0) * (t[3] - t[1]) / (t[3] - 0.0))
+        w_2 = mean + std * z_2
+
+        mean = w_0 + (t[0] - 0.0) / (t[1] - 0.0) * (w_2 - w_0)
+        std  = np.sqrt((t[0] - 0.0) * (t[1] - t[0]) / (t[1] - 0.0))
+        w_1  = mean + std * z_4
+
+        mean = w_2 + (t[2] - t[1]) / (t[3] - t[1]) * (w_4 - w_2)
+        std  = np.sqrt((t[2] - t[1]) * (t[3] - t[2]) / (t[3] - t[1]))
+        w_3  = mean + std * z_3
+
+        expected = np.concatenate([w_1, w_2, w_3, w_4], axis=-1)
+
+        # Check consistency
+        self.assertEqual(automated.shape, (reps, n, d))
+        np.testing.assert_array_almost_equal(
+            expected, automated, decimal=10,
+            err_msg="Manual d=4 BrownianBridge path with replications does not match automated version."
+        )
+
+    def test_brownian_bridge_manual_replications_d3(self):
+        """Manually construct a d=3 BrownianBridge path and compare with the automated version."""
+        d, n, reps = 3, 4, 2
+        # default sampling order is van der Corput [1, 1/2, 3/4]
+
+        # Automated result (suppress warning)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            automated = BrownianMotion(
+                DigitalNetB2(d, seed=self.seed, replications=reps),
+                decomp_type="BrownianBridge"
+            ).gen_samples(n)
+
+        # Manual construction
+        u = DigitalNetB2(d, seed=self.seed, replications=reps).gen_samples(n)
+        z = scipy.stats.norm.ppf(u)
+
+        w_0 = np.zeros((reps, n, 1))
+
+        z_1 = z[..., 0:1]
+        z_2 = z[..., 1:2]
+        z_3 = z[..., 2:3]
+
+        w_3 = np.sqrt(1.0) * z_1
+
+        mean = w_0 + (0.5 - 0.0) / (1.0 - 0.0) * (w_3 - w_0)
+        std = np.sqrt((0.5 - 0.0) * (1.0 - 0.5) / (1.0 - 0.0))
+        w_1 = mean + std * z_2
+
+        mean = w_1 + (0.75 - 0.5) / (1.0 - 0.5) * (w_3 - w_1)
+        std = np.sqrt((0.75 - 0.5) * (1.0 - 0.75) / (1.0 - 0.5))
+        w_2 = mean + std * z_3
+
+        expected = np.concatenate([w_1, w_2, w_3], axis=-1)
+
+        # Check consistency
+        self.assertEqual(automated.shape, (reps, n, d))
+        np.testing.assert_array_almost_equal(
+            expected, automated, decimal=10,
+            err_msg="Manual d=3 BrownianBridge path with replications does not match automated version."
+        )
+
+    def test_brownian_bridge_custom_monitoring_times(self):
+        """Manually construct a BrownianBridge path with custom monitoring times and compare with the automated version."""
+        d, n, reps = 4, 4, 2
+        # times in an order that hits all four anchor cases
+        times = [0.6, 1.0, 0.3, 0.8]
+
+        automated = BrownianMotion(
+            DigitalNetB2(d, seed=self.seed, replications=reps),
+            decomp_type="BrownianBridge", monitoring_times=times, bridge_vdc_gray_ordering=False
+        )
+        samples = automated.gen_samples(n)
+
+        np.testing.assert_array_almost_equal(
+            automated.time_vec, [0.3, 0.6, 0.8, 1.0],
+            err_msg="time_vec should be sorted into increasing order"
+        )
+
+        u = DigitalNetB2(d, seed=self.seed, replications=reps).gen_samples(n)
+        z = scipy.stats.norm.ppf(u)
+
+        w_0 = np.zeros((reps, n, 1))
+
+        z_1 = z[..., 0:1]
+        z_2 = z[..., 1:2]
+        z_3 = z[..., 2:3]
+        z_4 = z[..., 3:4]
+
+        w_2 = np.sqrt(0.6) * z_1
+
+        w_4 = w_2 + np.sqrt(1.0 - 0.6) * z_2
+
+        mean = w_0 + (0.3 - 0.0) / (0.6 - 0.0) * (w_2 - w_0)
+        std = np.sqrt((0.3 - 0.0) * (0.6 - 0.3) / (0.6 - 0.0))
+        w_1 = mean + std * z_3
+
+        mean = w_2 + (0.8 - 0.6) / (1.0 - 0.6) * (w_4 - w_2)
+        std = np.sqrt((0.8 - 0.6) * (1.0 - 0.8) / (1.0 - 0.6))
+        w_3 = mean + std * z_4
+
+        expected = np.concatenate([w_1, w_2, w_3, w_4], axis=-1)
+
+        self.assertEqual(samples.shape, (reps, n, d))
+        np.testing.assert_array_almost_equal(
+            expected, samples, decimal=10,
+            err_msg="Manual BrownianBridge path with custom monitoring times does not match automated version."
+        )
+
+    def test_brownian_bridge_vdc_ordering_matches_default(self):
+        """Use 4 evenly spaced custom times and compare to van der Corput ordering"""
+        d, n = 4, 4
+
+        default = BrownianMotion(
+            DigitalNetB2(d, seed=self.seed), decomp_type='BrownianBridge'
+        ).gen_samples(n)
+
+        reordered = BrownianMotion(
+            DigitalNetB2(d, seed=self.seed),
+            decomp_type='BrownianBridge', monitoring_times=np.linspace(1/d, 1.0, d)
+        ).gen_samples(n)
+
+        np.testing.assert_almost_equal(
+            default, reordered, decimal=10,
+            err_msg="4 evenly spaced custom times should match van der Corput ordering"
+        )
+
+    def test_brownian_bridge_output_order(self):
+        """Test that custom ordered output matches given input and contains same values as increasing output"""
+        times = [0.6, 1.0, 0.3, 0.8]
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            increasing_output = BrownianMotion(DigitalNetB2(4, seed=self.seed),
+                decomp_type="BrownianBridge", monitoring_times=times).gen_samples(8)
+            custom_output = BrownianMotion(DigitalNetB2(4, seed=self.seed),
+                decomp_type="BrownianBridge", monitoring_times=times,
+                bridge_output_order="input").gen_samples(8)
+
+        np.testing.assert_allclose(
+            custom_output[..., np.argsort(times)], increasing_output,
+            err_msg="custom ordered output should match given input and contain equivalent values to increasing output"
+        )
+
+    def test_brownian_bridge_warning_for_non_power_of_2(self):
+        """BrownianBridge issues ParameterWarning for suboptimal d but still produces valid output."""
+        from qmcpy.util import ParameterWarning
+        with self.assertWarns(ParameterWarning):
+            bm = BrownianMotion(DigitalNetB2(6, seed=self.seed), decomp_type='BrownianBridge')
+        samples = bm.gen_samples(4)
+        self.assertEqual(samples.shape, (4, 6))
+        self.assertEqual(samples.dtype, np.float64)
+
+    def test_brownian_bridge_lazy_decomp_false(self):
+        """BrownianBridge proceeds with lazy_decomp=False"""
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            bm = BrownianMotion(DigitalNetB2(6, seed=self.seed),
+                decomp_type="BrownianBridge", lazy_decomp=False
+            )
+            samples = bm.gen_samples(4)
+        self.assertEqual(samples.shape, (4,6))
+
+    def test_brownian_bridge_spawn_matches_parent(self):
+        """Spawn must match parent"""
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            bm = BrownianMotion(
+                DigitalNetB2(4, seed=self.seed),
+                decomp_type="BrownianBridge",
+                initial_value=2, drift=3, diffusion=4,
+                monitoring_times=[0.6, 1.0, 0.3, 0.8],
+                bridge_vdc_gray_ordering=True,
+                bridge_output_order="input",
+            )
+            child = bm._spawn(DigitalNetB2(4, seed=self.seed), 4)
+            parent_samples = bm.gen_samples(8)
+            child_samples = child.gen_samples(8)
+        np.testing.assert_array_equal(
+            parent_samples, child_samples,
+            err_msg="samples of a same dimension spawn should match parent samples"
+        )
+
+    def test_brownian_bridge_invalid_decomp_lazy_false(self):
+        with self.assertRaises(ParameterError) as context:
+            BrownianMotion(DigitalNetB2(4, seed=self.seed), decomp_type="invalid", lazy_decomp=False)
+        self.assertIn("BrownianBridge", str(context.exception))
+
+    def test_brownian_bridge_monitoring_times_exceed_t_final(self):
+        with self.assertRaises(ParameterError):
+            BrownianMotion(DigitalNetB2(4, seed=self.seed), t_final=1.0,
+                           decomp_type="BrownianBridge",
+                           monitoring_times=[0.1, 0.2, 0.3, 5.0])
+
+    def test_brownian_bridge_monitoring_times_nan(self):
+        with self.assertRaises(ParameterError):
+            BrownianMotion(DigitalNetB2(4, seed=self.seed), t_final=1.0,
+                           decomp_type="BrownianBridge",
+                           monitoring_times=[0.1, 0.2, np.nan, 1.0])
+
+    def test_brownian_motion_invalid_t_final(self):
+        with self.assertRaises(ParameterError):
+            BrownianMotion(DigitalNetB2(4, seed=self.seed), t_final=-8,
+                           decomp_type="BrownianBridge")
+        with self.assertRaises(ParameterError):
+            BrownianMotion(DigitalNetB2(4, seed=self.seed), t_final=np.nan,
+                           decomp_type="BrownianBridge")
+    def test_moment_attributes(self):
+        brownian_motion = BrownianMotion(
+            DigitalNetB2(4, seed=self.seed),
+            t_final=2,
+            initial_value=3,
+            drift=0.5,
+            diffusion=2,
+        )
+        expected_variance = np.array([1.0, 2.0, 3.0, 4.0])
+
+        np.testing.assert_allclose(
+            brownian_motion.variance, expected_variance
+        )
+        np.testing.assert_allclose(
+            brownian_motion.standard_deviation,
+            np.sqrt(expected_variance),
+        )
+        np.testing.assert_allclose(
+            np.diag(brownian_motion.covariance),
+            brownian_motion.variance,
+        )
+
+    def test_spawn_recomputes_moment_attributes(self):
+        brownian_motion = BrownianMotion(
+            DigitalNetB2(2, seed=self.seed),
+            t_final=2,
+            initial_value=3,
+            drift=0.5,
+            diffusion=2,
+        )
+        spawn = brownian_motion.spawn(1, dimensions=4)[0]
+        expected_variance = np.array([1.0, 2.0, 3.0, 4.0])
+
+        np.testing.assert_allclose(
+            spawn.mean, np.array([3.25, 3.5, 3.75, 4.0])
+        )
+        np.testing.assert_allclose(spawn.variance, expected_variance)
+        np.testing.assert_allclose(
+            spawn.standard_deviation, np.sqrt(expected_variance)
+        )
+        np.testing.assert_allclose(
+            spawn.covariance,
+            2 * np.minimum.outer(spawn.time_vec, spawn.time_vec),
+        )
 
 
 class TestGeometricBrownianMotion(unittest.TestCase):
@@ -606,7 +1474,7 @@ class TestAcceptanceRejection(unittest.TestCase):
     """Unit tests for AcceptanceRejection and AcceptanceRejectionReal."""
 
     def setUp(self):
-        from qmcpy.true_measure import AcceptanceRejection, AcceptanceRejectionReal
+        from qmcpy import AcceptanceRejection, AcceptanceRejectionReal
         from scipy.stats import norm
         self.AcceptanceRejection = AcceptanceRejection
         self.AcceptanceRejectionReal = AcceptanceRejectionReal

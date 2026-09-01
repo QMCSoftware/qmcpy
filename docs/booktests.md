@@ -10,10 +10,10 @@
 
 ## Overview
 
-To execute an individual testbook file, e.g., `tb_acm_toms_sorokin_2025.py`, run the following command in a terminal:
+To execute an individual testbook file, e.g., `tb_Sorokin_random_LD_seq_QMC_fast_kernel_methods_2026.py`, run the following command in a terminal:
 
 ```{bash}
-    cd test/booktests && python -m pytest tb_acm_toms_sorokin_2025.py -v
+    cd test/booktests && python -m pytest tb_Sorokin_random_LD_seq_QMC_fast_kernel_methods_2026.py -v
 ```
 
 To execute all testbook files sequentially, run the following command in a terminal:
@@ -45,7 +45,7 @@ For a demo, see the Jupyter notebook, `demos/talk_paper_demos/Parslfest_2025/`.
 
 ## Design Patterns: Using `setUp/helpers` vs. `@testbook` Decorator**
 
-*   Generated files such as `tb_iris.py` uses `@testbook` for a standalone notebook, requiring no special setup.
+*   Generated files such as `tb_iris.py` use `@testbook` for a standalone notebook, requiring no special setup.
 *   GBM notebooks such as `gbm_examples.py` rely on local modules and sometimes have broken symlinks, needing setup for correct imports.
 *   Running notebooks from their directory (via `setUp`) ensures consistent relative paths and imports, which the decorator doesn't reliably handle.
 *   `BaseNotebookTest`'s `setUp/tearDown` methods handle resource management, beneficial for long-running demos.

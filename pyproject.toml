@@ -2,7 +2,7 @@
 # brew install pdm
 # https://pdm-project.org/latest/usage/publish/
 # pdm publish --repository testpypi
-# pdm publish 
+# pdm publish
 
 [build-system]
 requires = ["pdm-backend","setuptools","wheel"]
@@ -26,8 +26,8 @@ authors = [
 classifiers= [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
-    "Programming Language :: Python :: 3", 
-    "Topic :: Scientific/Engineering :: Mathematics", 
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Mathematics",
     ]
 readme = "README.md"
 keywords=[
@@ -43,7 +43,7 @@ keywords=[
     "sobol",
     "lattice",
     ]
-license = "Apache-2.0"
+license = {file = "LICENSE"}
 dynamic = ["version"]
 requires-python = ">= 3.5"
 dependencies = [
@@ -51,6 +51,9 @@ dependencies = [
     "scipy >= 1.1.0",
     "qmctoolscl >= 1.2.1",
     ]
+
+[project.scripts]
+qmcpy-install-mpmc = "qmcpy.util.install_mpmc_pyg:main"
 
 [project.optional-dependencies]
 torch = [
@@ -65,15 +68,19 @@ botorch = [
 umbridge = [
     "umbridge >= 1.2.1",
     ]
+mpmc = [
+    "torch >= 2.10.0, < 2.13", # PyG publishes pyg_lib >= 0.6 wheels for torch 2.10-2.12 (https://data.pyg.org/whl/)
+    "torch-geometric >= 2.6.1",
+]
 test = [
-    "pytest >= 8.3.5",
+    "pytest >= 9.0.3",
     "pytest-cov >= 6.1.1",
     "phmutest >= 1.0.1",
     "pytest-accept >= 0.1.10",
     "testbook >= 0.4.2",
     "nbformat >= 5.1.4",
     "psutil >= 5.9.5",
-    "parsl >= 2025.7.28",
+    "parsl >= 2026.01.05",
     "seaborn >= 0.8",
     "scikit-learn >= 1.0.0",
     "scikit-optimize",
@@ -87,7 +94,7 @@ test = [
     "pytest-xdist >= 3.8.0",
     ]
 test_torch = [
-    "torch >= 2.7.0",
+    "torch >= 2.7.0, < 2.13", # kept in sync with the mpmc extra: PyG pyg_lib wheels stop at torch 2.12
     ]
 test_gpytorch = [
     "gpytorch >= 1.11, <= 1.15.1", # some issue with gpytorch == 1.15.2, see qmcpy/util/exact_gpytorch_regression_model.py, see # https://github.com/cornellius-gp/gpytorch/issues/2736
@@ -98,7 +105,12 @@ test_botorch = [
 test_umbridge = [
     "umbridge >= 1.2.4",
     ]
-docs = [
+test_mpmc = [
+    "torch >= 2.10.0, < 2.13", # kept in sync with the mpmc extra
+    "torch-geometric >= 2.6.1",
+    ]
+docs = [  # brew install weasyprint
+    "qmcpy[test,test_torch,test_gpytorch,test_botorch,test_umbridge]",
     "nbval >= 0.10.0",
     "attrs >= 21.0.0",
     "pyyaml >= 6.0",
@@ -108,6 +120,9 @@ docs = [
     "mkdocstrings-python >= 1.16.0",
     "mkdocs-with-pdf >= 0.9.3",
     "mkdocs-glightbox >= 0.4.0",
+    # Ceiling: 1.2.3 moved to the ProperDocs fork, adding a `properdocs` dependency
+    # (a second full MkDocs engine) and capping `mkdocs <= 1.6.1`.
+    # "mkdocs-redirects >= 1.2.2, < 1.2.3",
     "graphviz >= 0.20.0",
     "phmutest >= 1.0.1",
     "mkpdfs-mkdocs >= 1.0.1",
@@ -116,7 +131,7 @@ docs = [
     "pylint >= 4.0.5",
 ]
 dev = [ # brew install weasyprint
-    "qmcpy[docs,test,torch,gpytorch,botorch,umbridge]",
+    "qmcpy[docs,test,torch,gpytorch,botorch,umbridge,mpmc]",
     "jupyterlab >= 4.0.0",
     "jupyterlab_execute_time >= 3.2.0",
     "ipynbname >= 2025.8.0.0",
@@ -148,10 +163,21 @@ class = [
     "networkx >= 3.0",
 ]
 
+[tool.pylint.typecheck]
+# Members that live on compiled/C-extension objects (numpy, scipy, matplotlib)
+# which pylint's static inference cannot see, so they should not trigger
+# no-member (E1101) false positives.
+generated-members = [
+    "numpy.*",
+    "scipy.*",
+    "matplotlib.cm.*",
+]
+
 [tool.pdm.build]
 run-setuptools = true
 includes = [
     "qmcpy",
+    "qmcpy/discrete_distribution/generating_params/korobov_p2_table.npz",
     "qmcpy/discrete_distribution/digital_net_b2/generating_matrices/*.npy",
     "qmcpy/discrete_distribution/lattice/generating_vectors/*.npy",
     "qmcpy/util/qmcpy.mplstyle",

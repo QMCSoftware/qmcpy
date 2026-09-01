@@ -15,10 +15,17 @@ class Sin1d(AbstractIntegrand):
         >>> y = integrand(2**10)
         >>> print("%.4e"%y.mean())
         -1.3582e-10
-        >>> integrand.true_measure
+        >>> integrand.true_measure  # doctest: +NORMALIZE_WHITESPACE
         Uniform (AbstractTrueMeasure)
             lower_bound     0
             upper_bound     6.283
+            mean            3.142
+            variance        3.290
+            standard_deviation 1.814
+            covariance      <DIAgonal sparse matrix of dtype 'float64'
+                             with 1 stored elements (1 diagonals) and shape (1, 1)>
+                              Coords Values
+                              (0, 0) 3.289868133696453
 
         With independent replications
 

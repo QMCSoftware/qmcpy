@@ -20,7 +20,11 @@ If you prefer not to use GitHub pull requests, you may instead email updates to 
 
 ## Updating and previewing
 
-The table below is generated from [`data/qmc-software.yml`](https://github.com/QMCSoftware/QMCSoftware/blob/develop/data/qmc-software.yml).
+The table below is generated from [`data/qmc-software.yml`](https://github.com/QMCSoftware/QMCSoftware/blob/develop/data/qmc-software.yml). We have used the following abbreviations:
+
+- LD: low discrepancy
+- LDS: low-discrepancy sequence
+- QMC: quasi-Monte Carlo
 
 To preview changes locally:
 

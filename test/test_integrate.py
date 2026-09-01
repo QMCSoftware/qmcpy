@@ -1,6 +1,24 @@
 """Unit tests for integrate method in QMCPy"""
 
-from qmcpy import *
+from qmcpy import (
+    CubBayesLatticeG,
+    CubBayesNetG,
+    CubMCCLT,
+    CubMCG,
+    CubQMCCLT,
+    CubQMCLatticeG,
+    CubQMCSobolG,
+    CustomFun,
+    DigitalNetB2,
+    FinancialOption,
+    Gaussian,
+    IIDStdUniform,
+    Keister,
+    Lattice,
+    Lebesgue,
+    Linear0,
+    Uniform,
+)
 import numpy as np
 import unittest
 

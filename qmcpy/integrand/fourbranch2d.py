@@ -15,10 +15,18 @@ class FourBranch2d(AbstractIntegrand):
         >>> y = integrand(2**10)
         >>> print("%.4f"%y.mean())
         -2.4995
-        >>> integrand.true_measure
+        >>> integrand.true_measure  # doctest: +NORMALIZE_WHITESPACE
         Uniform (AbstractTrueMeasure)
             lower_bound     -8
             upper_bound     2^(3)
+            mean            [0. 0.]
+            variance        [21.333 21.333]
+            standard_deviation [4.619 4.619]
+            covariance      <DIAgonal sparse matrix of dtype 'float64'
+                             with 2 stored elements (1 diagonals) and shape (2, 2)>
+                              Coords Values
+                              (0, 0) 21.333333333333332
+                              (1, 1) 21.333333333333332
 
         With independent replications
 

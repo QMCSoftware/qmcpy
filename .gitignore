@@ -1,9 +1,13 @@
 # General Python
+.cache/
+PATH
 .pdm-python
 .pytest_cache/
+.venv_new/
 raw.githubusercontent.com/*
 packages.svg
 classes.svg
+*.dot
 .pypirc
 test_readme.py
 github.com/QMCSoftware/LDData/
@@ -11,6 +15,7 @@ api.github.com/
 coverage.json
 *.ckpt
 *.npz
+!qmcpy/discrete_distribution/generating_params/korobov_p2_table.npz
 *.csv
 *hparams.yaml
 *.ipynb_checkpoints/
@@ -35,6 +40,17 @@ demos/fgpr_figs/
 demos/GBM/images/*.png
 demos/GBM/outputs/*.*
 *.tmp_colab*
+
+# Generated notebook/demo images
+figures/
+*.png
+!docs/logos/qmcpy_logo.png
+!docs/logos/qmcpy_logo_net.png
+!docs/logos/qmcpy_logo_lattice.png
+!docs/logos/qmcpy_logo_det_net.png
+*.jpg
+*.jpeg
+*.svg
 
 # tests
 .coverage
@@ -84,7 +100,6 @@ sphinx/*.jpg
 
 # Jupyter Notebooks
 *checkpoint.ipynb
-*.png
 *.eps
 
 # release
@@ -103,6 +118,12 @@ jats/
 *_files/
 *_cache/
 *.ipynb_checkpoints/
+/qmc-software.html
+/qmc-software_files/
+/.quarto-watch-logs/
+
+# AI
+.claude/*
 
 ## --- User-specific  file exclusions ---
 # alegresor
@@ -117,8 +138,3 @@ _ags/*
 .vscode/settings.json
 /sc_*
 sc_*
-
-
-/qmc-software.html
-/qmc-software_files/
-/.quarto-watch-logs/

@@ -64,7 +64,7 @@ class GeometricBrownianMotion(BrownianMotion):
             initial_value (float): Positive initial value of the process, $S_0$.
             drift (float): Drift coefficient $\gamma$.
             diffusion (float): Positive diffusion coefficient $\sigma^2$, where $\sigma$ is volatility.
-            decomp_type (str): Method of decomposition, either "PCA" or "Cholesky".
+            decomp_type (str): Method of decomposition, either "PCA", "Cholesky", or "BrownianBridge".
             lazy_load (bool): If True, defer GBM-specific computations until needed.
             lazy_decomp (bool): If True, defer expensive matrix decomposition until needed.
         """
@@ -203,7 +203,7 @@ class GeometricBrownianMotion(BrownianMotion):
             ValueError: If the end time `t_final' is negative.
             ValueError: If the diffusion coefficient is less than or equal to zero.
             ValueError: If the initial value is less than or equal to zero.
-            ParameterError: If the decomposition type is not 'PCA' or 'Cholesky'.
+            ParameterError: If the decomposition type is not 'PCA', 'Cholesky', or 'BrownianBridge'.
         """
         if self.t < 0:
             raise ValueError(
@@ -217,9 +217,9 @@ class GeometricBrownianMotion(BrownianMotion):
             raise ValueError(
                 f"Initial value must be positive. It should not be {self.initial_value}."
             )
-        if self.decomp_type.upper() not in ["PCA", "CHOLESKY"]:
+        if self.decomp_type.upper() not in ["PCA", "CHOLESKY", "BROWNIANBRIDGE"]:
             raise ParameterError(
-                f"Decomposition type must be 'PCA' or 'Cholesky'. It should not be {self.decomp_type}."
+                f"Decomposition type must be 'PCA', 'Cholesky', or 'BrownianBridge'. It should not be {self.decomp_type}."
             )
 
     def _validate_samples(self, samples, strict=False):

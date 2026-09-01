@@ -1,5 +1,14 @@
-from qmcpy import *
-from qmcpy.util import *
+from qmcpy import (
+    DigitalNetB2,
+    Halton,
+    Hammersley,
+    IIDStdUniform,
+    KorobovLattice,
+    LatinHypercube,
+    Lattice,
+)
+
+from qmcpy.util import ParameterError, ParameterWarning
 import qmctoolscl
 import os
 import unittest
@@ -7,7 +16,6 @@ import numpy as np
 import numpy.testing as npt
 import tempfile
 import warnings
-
 
 class TestDiscreteDistribution(unittest.TestCase):
 
@@ -30,13 +38,16 @@ class TestDiscreteDistribution(unittest.TestCase):
                 DigitalNetB2(d, order="GRAY", seed=7),
                 Halton(d, randomize="QRNG", seed=7),
                 Halton(d, randomize="Owen", seed=7),
+                LatinHypercube(d, replications=None, seed=7),
+                LatinHypercube(d, replications=None, seed=7, randomize=False),
+                KorobovLattice(d, replications=None, seed=7),
             ]
             for dd in dds:
                 for _dd in [dd] + dd.spawn(1):
-                    x = _dd.gen_samples(4)
+                    x = _dd.gen_samples(4, warn=False)
                     if _dd.mimics == "StdUniform":
                         self.assertTrue((x > 0).all() and (x < 1).all())
-                    pdf = _dd.pdf(_dd.gen_samples(4))
+                    pdf = _dd.pdf(_dd.gen_samples(4, warn=False))
                     self.assertEqual(pdf.shape, (4,))
                     self.assertEqual(x.shape, (4, 3))
                     self.assertEqual(x.dtype, np.float64)
@@ -49,6 +60,10 @@ class TestDiscreteDistribution(unittest.TestCase):
             Lattice(d, seed=7),
             DigitalNetB2(d, seed=7),
             Halton(d, seed=7, warn=False),
+            LatinHypercube(d, replications=None, seed=7),
+            LatinHypercube(d, replications=None, seed=7, randomize=False),
+            Hammersley(d, seed=7, warn=False),
+            KorobovLattice(d, replications=None, seed=7),
         ]:
             s = 3
             for spawn_dim in [4, [1, 4, 6]]:
@@ -58,6 +73,96 @@ class TestDiscreteDistribution(unittest.TestCase):
                 self.assertTrue(
                     (np.array([spawn.d for spawn in spawns]) == spawn_dim).all()
                 )
+
+class TestKorobovLattice(unittest.TestCase):
+    """Unit tests for KorobovLattice discrete distribution."""
+
+    def test_gen_samples_shape(self):
+        d1 = KorobovLattice(dimension=3, replications=None, seed=7)
+        x1 = d1.gen_samples(8, warn=False)
+        self.assertEqual(x1.shape, (8, 3))
+
+        d2 = KorobovLattice(dimension=2, replications=5, seed=7)
+        x2 = d2.gen_samples(8, warn=False)
+        self.assertEqual(x2.shape, (5, 8, 2))
+
+    def test_values_in_unit_cube(self):
+        distribution = KorobovLattice(dimension=3, replications=4, seed=11)
+        x = distribution.gen_samples(16, warn=False)
+        self.assertTrue((x >= 0).all() and (x < 1).all())
+
+    def test_unrandomized_values_seed_7(self):
+        # Check the result using precomputed samples
+        true_sample = np.array([
+            [0.0,   0.0  ],
+            [0.125, 0.375],
+            [0.25,  0.75 ],
+            [0.375, 0.125],
+            [0.5,   0.5  ],
+            [0.625, 0.875],
+            [0.75,  0.25 ],
+            [0.875, 0.625],
+        ])
+        distribution = KorobovLattice(dimension=2, randomize="FALSE", seed=7)
+        x = distribution.gen_samples(8, warn=False)
+        self.assertTrue((x == true_sample).all())
+
+    def test_rank1_lattice_structure(self):
+        # general invariant of a rank-1 lattice: x_{k+1} - x_k = z/n (mod 1)
+        # is CONSTANT for every k -- checked without depending on the internal values of a
+        distribution = KorobovLattice(dimension=4, randomize="FALSE", seed=7)
+        x = distribution.gen_samples(16, warn=False)
+        diffs = (x[1:] - x[:-1]) % 1.0
+        self.assertTrue(np.allclose(diffs, diffs[0]))
+
+    def test_first_point_is_origin_unrandomized(self):
+        distribution = KorobovLattice(dimension=3, randomize="FALSE", seed=7)
+        x = distribution.gen_samples(8, warn=False)
+        self.assertTrue((x[0] == 0).all())
+
+    def test_n_not_tabulated_raises(self):
+        distribution = KorobovLattice(dimension=3, seed=7)
+        with self.assertRaises(ParameterError):
+            distribution.gen_samples(5, warn=False)   # 5 n'est pas dans la table
+
+    def test_n_min_nonzero_raises(self):
+        distribution = KorobovLattice(dimension=3, seed=7)
+        with self.assertRaises(ParameterError):
+            distribution.gen_samples(n_min=4, n_max=8, warn=False)
+
+    def test_return_binary_raises(self):
+        distribution = KorobovLattice(dimension=2, seed=7)
+        with self.assertRaises(ParameterError):
+            distribution.gen_samples(8, return_binary=True, warn=False)
+
+    def test_warns_by_default_without_randomization(self):
+        distribution = KorobovLattice(dimension=2, randomize="FALSE", seed=7)
+        with self.assertWarns(ParameterWarning):
+            distribution.gen_samples(8)
+
+    def test_no_warning_when_disabled(self):
+        distribution = KorobovLattice(dimension=2, randomize="FALSE", seed=7)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            distribution.gen_samples(8, warn=False)
+
+    def test_reproducibility_same_seed(self):
+        d1 = KorobovLattice(dimension=3, seed=123)
+        d2 = KorobovLattice(dimension=3, seed=123)
+        x1 = d1.gen_samples(8, warn=False)
+        x2 = d2.gen_samples(8, warn=False)
+        self.assertTrue((x1 == x2).all())
+
+    def test_spawn_dimension(self):
+        d = KorobovLattice(dimension=3, seed=7)
+        spawns = d.spawn(s=2, dimensions=[2, 4])
+        self.assertEqual(len(spawns), 2)
+        self.assertTrue(all(isinstance(s, KorobovLattice) for s in spawns))
+        self.assertEqual(spawns[0].d, 2)
+        self.assertEqual(spawns[1].d, 4)
+
+
+
 
 
 class TestLattice(unittest.TestCase):
@@ -330,19 +435,102 @@ class TestDigitalNetB2(unittest.TestCase):
         self.assertEqual(x.shape, (4, 2))
         self.assertTrue(np.isfinite(x).all())
         self.assertTrue(((x >= 0) & (x < 1)).all())
-    
+
     def test_repeated_sampling(self):
         for order in ["GRAY","NATURAL"]:
             for randomize in ["FALSE","LMS DS","LMS","DS","OWEN"]:
                 for alpha in [1,2]:
                     replications = 3 if randomize!="FALSE" else 1
                     dnb2 = DigitalNetB2(dimension=5,replications=replications,randomize=randomize,order=order,alpha=alpha)
-                    x_full = dnb2(16,warn=False) 
+                    x_full = dnb2(16,warn=False)
                     self.assertEqual(x_full.shape,(replications, 16, 5))
                     self.assertTrue((x_full[:,:4,:]==dnb2(0,4,warn=False)).all())
                     self.assertTrue((x_full[:,4:8,:]==dnb2(4,8)).all())
                     self.assertTrue((x_full[:,8:16,:]==dnb2(8,16)).all())
                     self.assertTrue((x_full[:,4:16,:]==dnb2(4,16)).all())
+
+
+
+class TestHammersley(unittest.TestCase):
+    """Unit tests for Hammersley discrete distribution."""
+
+    def test_gen_samples_shape(self):
+        distribution = Hammersley(dimension=3, seed=7)
+        x = distribution.gen_samples(8, warn=False)
+        self.assertEqual(x.shape, (8, 3))
+
+    def test_dimension_one(self):
+        distribution = Hammersley(dimension=1, seed=7)
+        x = distribution.gen_samples(4, warn=False)
+        true_sample = np.array([[0.0], [0.25], [0.5], [0.75]])
+        self.assertTrue((x == true_sample).all())
+
+    def test_values_in_unit_cube(self):
+        distribution = Hammersley(dimension=4, seed=7)
+        x = distribution.gen_samples(16, warn=False)
+        self.assertTrue((x >= 0).all() and (x < 1).all())
+
+    def test_first_point_is_origin(self):
+        distribution = Hammersley(dimension=3, seed=7)
+        x = distribution.gen_samples(8, warn=False)
+        self.assertTrue((x[0] == 0).all())
+
+    def test_matches_classical_definition(self):
+        # t_i = (i/n, phi_p1(i), ..., phi_p_{d-1}(i)) --
+        def van_der_corput(i, base):
+            f, r, idx = 1.0, 0.0, i
+            while idx > 0:
+                f /= base
+                r += f * (idx % base)
+                idx //= base
+            return r
+
+        primes = [2, 3, 5]
+        n, d = 8, 4
+        expected = np.array([
+            [i / n] + [van_der_corput(i, p) for p in primes]
+            for i in range(n)
+        ])
+        distribution = Hammersley(dimension=d, seed=7)
+        x = distribution.gen_samples(n, warn=False)
+        self.assertTrue(np.allclose(x, expected))
+
+    def test_array_dimension_raises(self):
+        with self.assertRaises(ParameterError):
+            Hammersley(dimension=[1, 3, 5], seed=7)
+
+    def test_dimension_less_than_one_raises(self):
+        with self.assertRaises(ParameterError):
+            Hammersley(dimension=0, seed=7)
+
+    def test_return_binary_raises(self):
+        distribution = Hammersley(dimension=2, seed=7)
+        with self.assertRaises(ParameterError):
+            distribution.gen_samples(4, return_binary=True, warn=False)
+
+    def test_n_min_nonzero_raises(self):
+        distribution = Hammersley(dimension=2, seed=7)
+        with self.assertRaises(ParameterError):
+            distribution.gen_samples(n_min=4, n_max=8, warn=False)
+
+    def test_warns_by_default(self):
+        distribution = Hammersley(dimension=2, seed=7)
+        with self.assertWarns(ParameterWarning):
+            distribution.gen_samples(8)
+
+    def test_no_warning_when_disabled(self):
+        distribution = Hammersley(dimension=2, seed=7)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            distribution.gen_samples(8, warn=False)
+
+    def test_spawn_dimension(self):
+        d = Hammersley(dimension=3, seed=7)
+        spawns = d.spawn(s=2, dimensions=[2, 4])
+        self.assertEqual(len(spawns), 2)
+        self.assertTrue(all(isinstance(s, Hammersley) for s in spawns))
+        self.assertEqual(spawns[0].d, 2)
+        self.assertEqual(spawns[1].d, 4)
 
 class TestHalton(unittest.TestCase):
     """Unit test for Halton DiscreteDistribution."""
@@ -360,6 +548,201 @@ class TestHalton(unittest.TestCase):
             [[0, 0], [1.0 / 2, 1.0 / 3], [1.0 / 4, 2.0 / 3], [3.0 / 4, 1.0 / 9]]
         )
         self.assertTrue((x_ur == x_true).all())
+
+
+class TestLatinHypercube(unittest.TestCase):
+    """Unit tests for LatinHypercube DiscreteDistribution."""
+
+    def test_gen_samples_shape(self):
+        # replications=None -> squeeze to 2D
+        d1 = LatinHypercube(dimension=4, replications=None, seed=7)
+        x1 = d1.gen_samples(4, warn=False)
+        self.assertEqual(x1.shape, (4, 4))
+
+        # replications=k -> stays 3D
+        d2 = LatinHypercube(dimension=2, replications=5, seed=7)
+        x2 = d2.gen_samples(3, warn=False)
+        self.assertEqual(x2.shape, (5, 3, 2))
+
+    def test_gen_samples_shape_not_randomized(self):
+        # Same shape checks as above, but with randomize=False -- this is the
+        # exact case that used to be broken: the centered branch previously
+        # hardcoded a leading axis of size 1 regardless of `replications`,
+        # so replications=5 silently returned shape (1, 3, 2) instead of
+        # (5, 3, 2). Regression test for that fix.
+        d1 = LatinHypercube(dimension=4, replications=None, seed=7, randomize="False")
+        x1 = d1.gen_samples(4, warn=False)
+        self.assertEqual(x1.shape, (4, 4))
+
+        d2 = LatinHypercube(dimension=2, replications=5, seed=7, randomize="False")
+        x2 = d2.gen_samples(3, warn=False)
+        self.assertEqual(x2.shape, (5, 3, 2))
+
+    def test_values_seed_7(self):
+        # Regression/reproducibility test: exact values for a fixed seed.
+        # SFC64 with a fixed SeedSequence is bit-reproducible, so these
+        # values should not change unless the generation algorithm changes.
+        true_sample = np.array(
+            [
+                [0.2379328690962694, 0.2988121617836623, 0.3540711883388259, 0.011804150087474569],
+                [0.5717283616874396, 0.8457204749453818, 0.5998019968276497, 0.8653851925864751],
+                [0.2975410791646444, 0.719019775383696, 0.9111095799461322, 0.35764889149581724],
+                [0.7865408130452101, 0.20797630306113987, 0.16828594953947298, 0.7065550077006459],
+            ]
+        )
+        distribution = LatinHypercube(dimension=4, replications=None, seed=7)
+        x = distribution.gen_samples(n_min=0, n_max=4, warn=False)
+        self.assertTrue((x == true_sample).all())
+
+    def test_values_seed_7_not_randomized(self):
+        # Same seed/shape as test_values_seed_7, but randomize=False: points
+        # sit exactly at stratum centers instead of a jittered position.
+        true_sample = np.array(
+            [
+                [0.125, 0.375, 0.375, 0.125],
+                [0.625, 0.875, 0.625, 0.875],
+                [0.375, 0.625, 0.875, 0.375],
+                [0.875, 0.125, 0.125, 0.625],
+            ]
+        )
+        distribution = LatinHypercube(dimension=4, replications=None, seed=7, randomize="False")
+        x = distribution.gen_samples(n_min=0, n_max=4, warn=False)
+        self.assertTrue((x == true_sample).all())
+
+    def test_values_seed_13_replications(self):
+        # We should get the same result if we use the same seed = 13
+        true_sample = np.array(
+            [
+                [[0.5749269005334164, 0.7367635418185489],
+                 [0.8027989348020131, 0.09642877089260105],
+                 [0.2028827909704837, 0.5170029561963858]],
+                [[0.36408554620435707, 0.1218666235293967],
+                 [0.8182985171529366, 0.8428148875176115],
+                 [0.08025760006653519, 0.5347078626517302]],
+            ]
+        )
+        distribution = LatinHypercube(dimension=2, replications=2, seed=13)
+        x = distribution.gen_samples(n_min=0, n_max=3, warn=False)
+        self.assertTrue((x == true_sample).all())
+
+    def test_values_seed_13_replications_not_randomized(self):
+        true_sample = np.array(
+            [
+                [[0.5, 0.8333333333333334],
+                 [0.8333333333333334, 0.16666666666666666],
+                 [0.16666666666666666, 0.5]],
+                [[0.5, 0.16666666666666666],
+                 [0.8333333333333334, 0.8333333333333334],
+                 [0.16666666666666666, 0.5]],
+            ]
+        )
+        distribution = LatinHypercube(dimension=2, replications=2, seed=13, randomize="False")
+        x = distribution.gen_samples(n_min=0, n_max=3, warn=False)
+        self.assertTrue((x == true_sample).all())
+
+    def test_not_randomized_points_are_stratum_centers(self):
+        # Every coordinate must be exactly (k - 0.5) / n for some integer k:
+        # the defining property of "centered" (non-jittered) LHS.
+        n, d = 20, 4
+        distribution = LatinHypercube(dimension=d, replications=3, seed=5, randomize="False")
+        x = distribution.gen_samples(n, warn=False)
+        centered = x * n + 0.5
+        npt.assert_allclose(centered, np.round(centered), atol=0)
+
+
+    def test_randomize_invalid_value_raises(self):
+        with self.assertRaises(ParameterError):
+            LatinHypercube(dimension=2, replications=None, seed=1, randomize="banana")
+
+    def test_spawn_preserves_randomize(self):
+        # Regression test: _spawn used to silently drop `randomize`, so a
+        # spawned child always reverted to the "TRUE" default regardless of
+        # the parent's setting.
+        parent = LatinHypercube(dimension=2, replications=None, seed=7, randomize="False")
+        children = parent.spawn(s=1, dimensions=3)
+        self.assertEqual(children[0].randomize, "FALSE")
+
+        parent_true = LatinHypercube(dimension=2, replications=None, seed=7, randomize="True")
+        children_true = parent_true.spawn(s=1, dimensions=3)
+        self.assertEqual(children_true[0].randomize, "TRUE")
+
+    def test_stratification_property(self):
+        # Core LHS invariant: in every dimension, splitting [0,1) into n
+        # equal strata must yield exactly one point per stratum.
+        n, d = 10, 5
+        distribution = LatinHypercube(dimension=d, replications=None, seed=42)
+        x = distribution.gen_samples(n, warn=False)
+        for j in range(d):
+            strata = np.floor(x[:, j] * n).astype(int)
+            self.assertEqual(sorted(strata), list(range(n)))
+
+    def test_stratification_property_not_randomized(self):
+        # Same invariant must hold when randomize=False: centering within a
+        # stratum does not affect which stratum a point falls into.
+        n, d = 10, 5
+        distribution = LatinHypercube(dimension=d, replications=None, seed=42, randomize="False")
+        x = distribution.gen_samples(n, warn=False)
+        for j in range(d):
+            strata = np.floor(x[:, j] * n).astype(int)
+            self.assertEqual(sorted(strata), list(range(n)))
+
+    def test_stratification_property_with_replications(self):
+        n, d, reps = 8, 3, 4
+        distribution = LatinHypercube(dimension=d, replications=reps, seed=42)
+        x = distribution.gen_samples(n, warn=False)
+        for r in range(reps):
+            for j in range(d):
+                strata = np.floor(x[r, :, j] * n).astype(int)
+                self.assertEqual(sorted(strata), list(range(n)))
+
+    def test_stratification_property_with_replications_not_randomized(self):
+        # This combination (replications > 1, randomize=False) is exactly
+        # the one that exposed the shape bug: verifying the stratification
+        # invariant here also implicitly re-checks the shape is correct,
+        # since a wrong shape would make this loop fail outright.
+        n, d, reps = 8, 3, 4
+        distribution = LatinHypercube(dimension=d, replications=reps, seed=42, randomize="False")
+        x = distribution.gen_samples(n, warn=False)
+        for r in range(reps):
+            for j in range(d):
+                strata = np.floor(x[r, :, j] * n).astype(int)
+                self.assertEqual(sorted(strata), list(range(n)))
+
+    def test_values_in_unit_cube(self):
+        distribution = LatinHypercube(dimension=4, replications=3, seed=11)
+        x = distribution.gen_samples(20, warn=False)
+        self.assertTrue((x >= 0).all() and (x < 1).all())
+
+    def test_values_in_unit_cube_not_randomized(self):
+        distribution = LatinHypercube(dimension=4, replications=3, seed=11, randomize="False")
+        x = distribution.gen_samples(20, warn=False)
+        self.assertTrue((x >= 0).all() and (x < 1).all())
+
+    def test_reproducibility_same_seed(self):
+        d1 = LatinHypercube(dimension=3, replications=None, seed=123)
+        d2 = LatinHypercube(dimension=3, replications=None, seed=123)
+        x1 = d1.gen_samples(6, warn=False)
+        x2 = d2.gen_samples(6, warn=False)
+        self.assertTrue((x1 == x2).all())
+
+    def test_reproducibility_same_seed_not_randomized(self):
+        d1 = LatinHypercube(dimension=3, replications=None, seed=123, randomize="False")
+        d2 = LatinHypercube(dimension=3, replications=None, seed=123, randomize="False")
+        x1 = d1.gen_samples(6, warn=False)
+        x2 = d2.gen_samples(6, warn=False)
+        self.assertTrue((x1 == x2).all())
+
+    def test_return_binary_raises(self):
+        distribution = LatinHypercube(dimension=2, replications=None, seed=7)
+        with self.assertRaises(ParameterError):
+            distribution.gen_samples(4, return_binary=True, warn=False)
+
+    def test_no_warning_when_disabled(self):
+        distribution = LatinHypercube(dimension=2, replications=None, seed=7)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            distribution.gen_samples(4, warn=False)
+
 
 
 if __name__ == "__main__":

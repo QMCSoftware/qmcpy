@@ -14,14 +14,49 @@ from contextlib import ExitStack, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
-from qmcpy import *
-from qmcpy.util import *
+from qmcpy import (
+    AbstractDiscreteDistribution,
+    AbstractIntegrand,
+    AbstractStoppingCriterion,
+    CubBayesLatticeG,
+    CubBayesNetG,
+    CubMCCLT,
+    CubMCCLTVec,
+    CubMCG,
+    CubMCML,
+    CubMCMLCont,
+    CubMLMC,
+    CubMLMCCont,
+    CubMLQMC,
+    CubMLQMCCont,
+    CubQMCBayesLatticeG,
+    CubQMCCLT,
+    CubQMCLatticeG,
+    CubQMCML,
+    CubQMCMLCont,
+    CubQMCNetG,
+    CubQMCRepStudentT,
+    DigitalNetB2,
+    FinancialOption,
+    Halton,
+    IIDStdUniform,
+    Ishigami,
+    Keister,
+    Lattice,
+    PFGPCI,
+    SensitivityIndices,
+    SobolIndices,
+)
+from qmcpy.util import (
+    DistributionCompatibilityError,
+    MaxLevelsWarning,
+    MaxSamplesWarning,
+    MethodImplementationError,
+    ParameterError,
+    ParameterWarning
+)
 from qmcpy.util.data import Data
-from qmcpy.discrete_distribution.abstract_discrete_distribution import AbstractDiscreteDistribution
-from qmcpy.integrand.abstract_integrand import AbstractIntegrand
-from qmcpy.stopping_criterion.abstract_stopping_criterion import AbstractStoppingCriterion
 from qmcpy.stopping_criterion.diagnostics import _IterationHistoryTable, _IterationTraceLogger, _print_diagnostic, _get_iteration_log_frame
-
 
 # Test functions and parameters
 keister_2d_exact = 1.808186429263620
@@ -444,6 +479,145 @@ class TestFallbacks(unittest.TestCase):
             with self.assertRaises(ModuleNotFoundError):
                 sc_mod.SuggesterSimple()
         importlib.reload(importlib.import_module("qmcpy.stopping_criterion"))
+
+
+########################################################################
+# CubMCCLTVec Tests
+########################################################################
+class TestCubMCCLTVec(unittest.TestCase):
+    """Branch-focused tests for CubMCCLTVec."""
+
+    def _make_integrand(self):
+        return Keister(IIDStdUniform(dimension=2, seed=7))
+
+    def test_constructor_normalizes_non_power_of_two_limits(self):
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            sc = CubMCCLTVec(
+                self._make_integrand(), n_init=30, n_limit=1000
+            )
+
+        parameter_warnings = [
+            warning
+            for warning in caught
+            if issubclass(warning.category, ParameterWarning)
+        ]
+        self.assertEqual(len(parameter_warnings), 2)
+        self.assertEqual(sc.n_init, 2**5)
+        self.assertEqual(sc.n_limit, 2**30)
+
+    def test_constructor_validation(self):
+        with self.assertRaises(DistributionCompatibilityError):
+            CubMCCLTVec(Keister(Lattice(dimension=2, seed=7)))
+        with self.assertRaises(AssertionError):
+            CubMCCLTVec(self._make_integrand(), inflate=0.99)
+
+    def test_set_tolerance(self):
+        sc = CubMCCLTVec(self._make_integrand())
+        sc.set_tolerance(abs_tol=0.25, rel_tol=0.1)
+
+        self.assertEqual(sc.abs_tol, 0.25)
+        self.assertEqual(sc.rel_tol, 0.1)
+        np.testing.assert_allclose(sc.abs_tols, 0.25)
+        np.testing.assert_allclose(sc.rel_tols, 0.1)
+        with self.assertRaises(AssertionError):
+            sc.set_tolerance(rmse_tol=0.1)
+
+    def test_integrate_warns_at_sample_limit(self):
+        sc = CubMCCLTVec(
+            self._make_integrand(),
+            abs_tol=1e-12,
+            n_init=2**5,
+            n_limit=2**5,
+        )
+
+        with self.assertWarns(MaxSamplesWarning):
+            solution, data = sc.integrate()
+        self.assertTrue(np.isfinite(solution))
+        self.assertEqual(data.n_total, 2**5)
+
+
+########################################################################
+# CubQMCBayesLatticeG Tests
+########################################################################
+class TestCubQMCBayesLatticeG(unittest.TestCase):
+    """Branch-focused tests for CubQMCBayesLatticeG."""
+
+    def _make_sc(self):
+        return CubQMCBayesLatticeG(
+            Keister(Lattice(dimension=2, seed=7)),
+            n_init=2**5,
+            n_limit=2**8,
+        )
+
+    def test_constructor_validation(self):
+        with self.assertRaises(DistributionCompatibilityError):
+            CubQMCBayesLatticeG(
+                Keister(DigitalNetB2(dimension=2, seed=7))
+            )
+        with self.assertRaises(ParameterError):
+            CubQMCBayesLatticeG(
+                Keister(
+                    Lattice(dimension=2, seed=7, order="LINEAR")
+                )
+            )
+
+    def test_shift_invariant_bernoulli_kernels(self):
+        sc = self._make_sc()
+        xun = np.array(
+            [[0, 0], [0.25, 0.5], [0.5, 0.25], [0.75, 0.75]],
+            dtype=float,
+        )
+
+        for order in (1, 2):
+            with self.subTest(order=order):
+                values = sc._shift_inv_kernel(
+                    xun,
+                    order=order,
+                    theta=0.5,
+                    avoid_cancel_error=True,
+                    kern_type=1,
+                    debug_enable=False,
+                )
+                eigenvalues, eigenvalues_ring, scale = values
+                self.assertEqual(eigenvalues.shape, (4,))
+                self.assertEqual(eigenvalues_ring.shape, (4,))
+                self.assertTrue(np.isfinite(eigenvalues).all())
+                self.assertTrue(np.isfinite(eigenvalues_ring).all())
+                self.assertGreater(scale, 0)
+
+        with self.assertRaisesRegex(
+            ParameterError, "Bernoulli order not implemented"
+        ):
+            sc._shift_inv_kernel(
+                xun,
+                order=3,
+                theta=0.5,
+                avoid_cancel_error=True,
+                kern_type=1,
+                debug_enable=False,
+            )
+
+    def test_shift_invariant_geometric_kernel(self):
+        sc = self._make_sc()
+        xun = np.array(
+            [[0, 0], [0.25, 0.5], [0.5, 0.25], [0.75, 0.75]],
+            dtype=float,
+        )
+        eigenvalues, eigenvalues_ring, scale = sc._shift_inv_kernel(
+            xun,
+            order=0.5,
+            theta=0.5,
+            avoid_cancel_error=True,
+            kern_type=2,
+            debug_enable=False,
+        )
+
+        self.assertEqual(eigenvalues.shape, (4,))
+        self.assertEqual(eigenvalues_ring.shape, (4,))
+        self.assertTrue(np.isfinite(eigenvalues).all())
+        self.assertTrue(np.isfinite(eigenvalues_ring).all())
+        self.assertGreater(scale, 0)
 
 
 ########################################################################

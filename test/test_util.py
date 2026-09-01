@@ -1,5 +1,10 @@
+from pathlib import Path
+from tempfile import TemporaryDirectory
 import unittest
+
 import numpy as np
+from scripts.remove_trailing_whitespace import remove_trailing_whitespace
+
 from qmcpy.util import (
     _univ_repr,
     NotYetImplemented,
@@ -188,7 +193,7 @@ class TestUnivRepr(unittest.TestCase):
     """Tests for _univ_repr utility function."""
 
     @staticmethod
-    def _make_mock(**attrs):  
+    def _make_mock(**attrs):
         """helper function to create a mock object with specified attributes."""
         obj = type("MockObject", (), {})()
         for key, value in attrs.items():
@@ -302,6 +307,31 @@ class TestExceptionsWarnings(unittest.TestCase):
         """MethodImplementationError should be raised and caught."""
         with self.assertRaises(MethodImplementationError):
             raise MethodImplementationError(self._TestClass(), "test")
+
+
+class TestRemoveTrailingWhitespace(unittest.TestCase):
+    def test_preserves_python_string_contents_and_line_endings(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "example.py"
+            original = b'"""expected output  \r\n"""\r\nx = "value"  \r\ny = 2\t\n'
+            expected = b'"""expected output  \r\n"""\r\nx = "value"\r\ny = 2\n'
+            path.write_bytes(original)
+
+            self.assertTrue(remove_trailing_whitespace(path, check=True))
+            self.assertEqual(path.read_bytes(), original)
+            self.assertTrue(remove_trailing_whitespace(path, check=False))
+            self.assertEqual(path.read_bytes(), expected)
+            self.assertFalse(remove_trailing_whitespace(path, check=True))
+
+    def test_preserves_multiline_f_string_trailing_spaces(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "example.py"
+            original = b'x = f"""hello  \nworld  \n"""\nvalue = 1  \n'
+            expected = b'x = f"""hello  \nworld  \n"""\nvalue = 1\n'
+            path.write_bytes(original)
+
+            self.assertTrue(remove_trailing_whitespace(path, check=False))
+            self.assertEqual(path.read_bytes(), expected)
 
 
 if __name__ == "__main__":

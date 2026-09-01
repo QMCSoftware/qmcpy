@@ -1,8 +1,30 @@
-from qmcpy import *
-from qmcpy.util import *
+from qmcpy import (
+    BayesianLRCoeffs,
+    BoxIntegral,
+    BrownianMotion,
+    CustomFun,
+    DigitalNetB2,
+    FinancialOption,
+    FourBranch2d,
+    Gaussian,
+    Genz,
+    Hartmann6d,
+    Ishigami,
+    Keister,
+    Kumaraswamy,
+    Linear0,
+    Multimodal2d,
+    SciPyWrapper,
+    Sin1d,
+    Uniform,
+)
+from qmcpy.util import ParameterError
 import numpy as np
+import sys
+import types
 import unittest
 import scipy.stats
+from unittest.mock import patch
 
 
 class TestIntegrand(unittest.TestCase):
@@ -139,40 +161,117 @@ class TestIntegrandExamples(unittest.TestCase):
         y = ig(64)
         self.assertEqual(y.shape, (64,))
         self.assertTrue(np.isfinite(y).all())
-        spawned = ig.spawn(levels=0)
-        self.assertEqual(len(spawned), 1)
+        points = np.array([[0], [np.pi / 2], [np.pi], [3 * np.pi / 2]])
+        np.testing.assert_allclose(ig.g(points), [0, 1, 0, -1], atol=1e-15)
+        np.testing.assert_allclose(ig.true_measure.a, [0])
+        np.testing.assert_allclose(ig.true_measure.b, [4 * np.pi])
+
+        spawned = ig.spawn(levels=0)[0]
+        self.assertEqual(spawned.k, 2)
+        np.testing.assert_allclose(spawned.true_measure.b, [4 * np.pi])
+        with self.assertRaises(AssertionError):
+            Sin1d(DigitalNetB2(2, seed=7))
 
     def test_ishigami_basic_and_dimension_error(self):
         ig = Ishigami(DigitalNetB2(3, seed=7), a=7, b=0.1)
         y = ig(64)
         self.assertEqual(y.shape, (64,))
         self.assertTrue(np.isfinite(y).all())
+        points = np.array(
+            [[0, 0, 0], [np.pi / 2, np.pi / 2, 1]], dtype=float
+        )
+        np.testing.assert_allclose(ig.g(points), [0, 8.1])
+
+        spawned = ig.spawn(levels=0)[0]
+        self.assertEqual(spawned.a, 7)
+        self.assertEqual(spawned.b, 0.1)
         self.assertRaises(ParameterError, Ishigami, DigitalNetB2(2, seed=7))
 
     def test_ishigami_exact_helpers(self):
         indices = np.array(
-            [[True, False, False], [False, True, False], [False, False, True]],
+            [
+                [True, False, False],
+                [False, True, False],
+                [False, False, True],
+                [True, True, False],
+                [True, False, True],
+                [False, True, True],
+            ],
             dtype=bool,
         )
         sens = Ishigami._exact_sensitivity_indices(indices, a=7, b=0.1)
-        self.assertEqual(sens.shape, (2, 3))
+        self.assertEqual(sens.shape, (2, 6))
         fu = Ishigami._exact_fu_functions(
             np.array([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]),
-            [[], [0], [1, 2]],
+            [[], [0], [1], [2], [0, 1], [0, 2], [1, 2], [0, 1, 2]],
             a=7,
             b=0.1,
         )
-        self.assertEqual(fu.shape, (2, 3))
+        self.assertEqual(fu.shape, (2, 8))
+        np.testing.assert_allclose(fu[:, 0], 3.5)
 
-    def test_hartmann6d_smoke(self):
-        try:
-            import botorch  # noqa: F401
-        except Exception:
-            self.skipTest("botorch not installed")
-        ig = Hartmann6d(DigitalNetB2(6, seed=7))
-        y = ig(32)
-        self.assertEqual(y.shape, (32,))
-        self.assertTrue(np.isfinite(y).all())
+    def test_keister_formula_exact_value_and_spawn(self):
+        ig = Keister(DigitalNetB2(2, seed=7))
+        points = np.array([[0, 0], [3, 4]], dtype=float)
+        np.testing.assert_allclose(
+            ig.g(points), np.pi * np.array([1, np.cos(5)])
+        )
+        expected_1d = np.sqrt(np.pi) * np.exp(-0.25)
+        self.assertAlmostEqual(Keister.get_exact_value(1), expected_1d)
+        self.assertAlmostEqual(ig.exact_integ(1), expected_1d)
+        expected_2d = 1.808186429263620
+        self.assertAlmostEqual(Keister.get_exact_value(2), expected_2d)
+        self.assertAlmostEqual(ig.exact_integ(2), expected_2d)
+
+        spawned = ig.spawn(levels=0)[0]
+        self.assertIsInstance(spawned, Keister)
+        self.assertEqual(spawned.d, 2)
+
+    def test_hartmann6d_without_optional_dependencies(self):
+        class FakeTensor:
+            def __init__(self, array):
+                self.array = np.asarray(array)
+
+            def numpy(self):
+                return self.array
+
+        class FakeAugmentedHartmann:
+            def __init__(self, negate=False):
+                self.negate = negate
+                self.last_input = None
+
+            def evaluate_true(self, tensor):
+                self.last_input = np.asarray(tensor)
+                return FakeTensor(self.last_input.sum(axis=-1))
+
+        botorch = types.ModuleType("botorch")
+        test_functions = types.ModuleType("botorch.test_functions")
+        multi_fidelity = types.ModuleType(
+            "botorch.test_functions.multi_fidelity"
+        )
+        multi_fidelity.AugmentedHartmann = FakeAugmentedHartmann
+        test_functions.multi_fidelity = multi_fidelity
+        botorch.test_functions = test_functions
+        torch = types.ModuleType("torch")
+        torch.tensor = np.asarray
+        fake_modules = {
+            "botorch": botorch,
+            "botorch.test_functions": test_functions,
+            "botorch.test_functions.multi_fidelity": multi_fidelity,
+            "torch": torch,
+        }
+
+        with patch.dict(sys.modules, fake_modules):
+            ig = Hartmann6d(DigitalNetB2(6, seed=7))
+            points = np.zeros((2, 6))
+            y = ig.g(points)
+
+        self.assertFalse(ig.ah.negate)
+        self.assertEqual(ig.ah.last_input.shape, (2, 7))
+        np.testing.assert_allclose(ig.ah.last_input[:, -1], 1)
+        np.testing.assert_allclose(y, [1, 1])
+        with self.assertRaises(AssertionError):
+            Hartmann6d(DigitalNetB2(5, seed=7))
 
     def test_financial_option_invalid_inputs(self):
         self.assertRaises(

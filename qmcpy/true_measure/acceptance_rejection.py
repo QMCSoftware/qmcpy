@@ -44,8 +44,8 @@ class AcceptanceRejection(AbstractTrueMeasure):
 
     Examples:
         >>> import numpy as np
-        >>> from qmcpy.discrete_distribution import DigitalNetB2
-        >>> from qmcpy.true_measure import AcceptanceRejection
+        >>> from qmcpy import DigitalNetB2
+        >>> from qmcpy import AcceptanceRejection
         >>> def psi(x): return 2 * x[:, 0]   # target density on [0,1]
         >>> sampler = DigitalNetB2(dimension=2, seed=7)
         >>> measure = AcceptanceRejection(sampler, psi, upper_bound=2., density_integral=1.)
@@ -257,8 +257,8 @@ class AcceptanceRejectionReal(AbstractTrueMeasure):
     Examples:
         >>> import numpy as np
         >>> from scipy.stats import norm
-        >>> from qmcpy.discrete_distribution import DigitalNetB2
-        >>> from qmcpy.true_measure import AcceptanceRejectionReal
+        >>> from qmcpy import DigitalNetB2
+        >>> from qmcpy import AcceptanceRejectionReal
         >>> def psi(z): return norm.pdf(z[:, 0], loc=0, scale=1)
         >>> def H(z):   return norm.pdf(z[:, 0], loc=0, scale=2)
         >>> sampler = DigitalNetB2(dimension=2, seed=7)
