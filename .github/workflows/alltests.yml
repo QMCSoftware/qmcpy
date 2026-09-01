@@ -260,8 +260,7 @@ jobs:
         shell: bash -l {0}
         run: |
           make check_colab_notebooks
-          # On a PR, scope the (slow) smoke run to notebooks the PR changed; on push, run all.
-          make check_colab_notebooks_smoke SMOKE_CHANGED_SINCE=${{ github.base_ref && format('origin/{0}', github.base_ref) || '' }}
+          make check_colab_notebooks_smoke
       # -----------------------------------------------------------
       # Install minimal LaTeX required by Jupyter notebooks (OS-specific)
       # -----------------------------------------------------------

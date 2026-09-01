@@ -18,6 +18,7 @@ import ast
 import copy
 import json
 import os
+import re
 import tempfile
 from pathlib import Path
 
@@ -198,7 +199,7 @@ def build_smoke_notebook(notebook_path: Path, cells_after_bootstrap: int) -> tup
         None,
     )
     if bootstrap_idx is None:
-        raise RuntimeError(f"{notebook_path.as_posix()}: missing Colab bootstrap cell")
+        raise RuntimeError("missing Colab bootstrap cell")
 
     stop_idx = bootstrap_idx
     safe_code_cells = 0
@@ -273,8 +274,10 @@ def execute_smoke_notebook(notebook_path: Path, smoke_nb: dict, source_indices: 
                             location = "prelude cell"
                         else:
                             location = f"notebook cell {source_idx + 1}"
+                        detail = (str(exc).strip().splitlines() or ["(no message)"])[-1]
+                        detail = re.sub(r"\x1b\[[0-9;]*m", "", detail)  # strip ANSI from tracebacks
                         raise RuntimeError(
-                            f"{notebook_path.relative_to(REPO_ROOT).as_posix()}: Colab smoke failed in {location}: {exc}"
+                            f"Colab smoke failed in {location}: {type(exc).__name__}: {detail}"
                         ) from exc
         finally:
             os.chdir(original_cwd)
@@ -310,27 +313,7 @@ def parse_args() -> argparse.Namespace:
         default=[],
         help="Optional manifest-relative notebook path to smoke test. May be passed multiple times.",
     )
-    parser.add_argument(
-        "--changed-since",
-        metavar="REF",
-        help="Only smoke test enabled notebooks changed since git REF (e.g. origin/develop). "
-        "If REF is unresolvable, fall back to all enabled notebooks.",
-    )
     return parser.parse_args()
-
-
-def _notebooks_changed_since(ref: str) -> set[str] | None:
-    """demos/*.ipynb changed since `ref`, repo-relative; None if `ref` can't be diffed."""
-    import subprocess
-
-    try:
-        out = subprocess.run(
-            ["git", "-C", str(REPO_ROOT), "diff", "--name-only", ref, "--", "demos/"],
-            capture_output=True, text=True, check=True,
-        ).stdout
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return None
-    return {ln for ln in out.split() if ln.endswith(".ipynb")}
 
 
 def smoke_test_batch(
@@ -349,7 +332,7 @@ def smoke_test_batch(
                 notebook_path, smoke_nb, source_indices, timeout=timeout
             )
         except Exception as exc:  # noqa: BLE001
-            reason = str(exc).splitlines()[0] if str(exc) else "unknown error"
+            reason = str(exc).strip() or type(exc).__name__
             failed.append((notebook_rel, reason))
         else:
             passed.append(notebook_rel)
@@ -364,16 +347,6 @@ def main() -> int:
 
     if args.notebook:
         enabled = [path for path in enabled if path in set(args.notebook)]
-
-    if args.changed_since:
-        changed = _notebooks_changed_since(args.changed_since)
-        if changed is None:
-            print(f"'{args.changed_since}' is not diffable; smoke testing all enabled notebooks.")
-        else:
-            enabled = [path for path in enabled if path in changed]
-            if not enabled:
-                print(f"No enabled notebooks changed since {args.changed_since}; nothing to smoke test.")
-                return 0
 
     if not enabled:
         print("No enabled notebooks selected for Colab smoke tests.")

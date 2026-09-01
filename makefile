@@ -135,9 +135,8 @@ generate_booktests:
 check_colab_notebooks:  # faster
 	$(PYTHON) -m scripts.check_colab_notebooks --strict
 
-check_colab_notebooks_smoke:  # slower; SMOKE_CHANGED_SINCE=<ref> scopes to notebooks changed since <ref>
-	$(PYTHON) -m scripts.smoke_test_colab_notebooks --cells-after-bootstrap $(SMOKE_CODE_CELLS) \
-		$(if $(SMOKE_CHANGED_SINCE),--changed-since $(SMOKE_CHANGED_SINCE))
+check_colab_notebooks_smoke:  # slower; executes bootstrap + a few cells of every enabled notebook
+	$(PYTHON) -m scripts.smoke_test_colab_notebooks --cells-after-bootstrap $(SMOKE_CODE_CELLS)
 
 harden_colab_notebook:  # Add Colab button if necessary
 	@if [ -n "$(NOTEBOOK)" ]; then \
