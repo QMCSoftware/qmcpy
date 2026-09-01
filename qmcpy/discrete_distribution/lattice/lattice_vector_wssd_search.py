@@ -33,11 +33,13 @@ def lattice_vector_wssd_search(n_max, d_max, coord_weights=None, kernel=None):
         Custom kernels
 
         >>> bernoulli6 = lambda x: x * (x * (-1/2 + x * (x * (5/2 + x * (-3 + x))))) + 1/42
-        >>> lattice_vector_wssd_search(n_max=2**15, d_max=10, coord_weights=None, kernel=bernoulli6) # doctest: +NORMALIZE_WHITESPACE
-        array([    1, 12589, 15515,  3957,  1879,  8985, 15139,  9529,  7363,
-               6089])
-    """
+        >>> lattice_vector_wssd_search(n_max=2**15, d_max=10, coord_weights=None, kernel=bernoulli6) # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
+        array([    1, 12589, ...])
 
+        The algorithm in its current form is sensitive to differences in floating point precision across platforms, hence the nondeterministic nature of the example above. This can cause differences in generator quality, though in my ad hoc testing it is usually not catastrophic. It was originally built on a Windows machine.
+
+    """
+    np.seterr(all='warn')
     if kernel is None:
         kernel = lambda x: x * (x - 1) + 1 / 6 # default kernel is the second Bernoulli polynomial
     if coord_weights is None:
@@ -60,11 +62,11 @@ def lattice_vector_wssd_search(n_max, d_max, coord_weights=None, kernel=None):
     m = np.ceil(np.log2(n_max)).astype(int)
 
     # ----------------------------------------------------------------------
-    # Set up rhovector
+    # Set up rhovector - how often each value appears
     # ----------------------------------------------------------------------
-    bits = np.zeros((n_max, m), dtype=int)
+    bits = np.zeros((n_max, m), dtype=np.uint64)
     for i in range(n_max):
-        bits[i, :] = 2 * np.array([((i >> j) & 1) for j in range(m)], dtype=int)
+        bits[i, :] = 2 * np.array([((i >> j) & 1) for j in range(m)], dtype=np.uint64)
 
     cumsumbits = np.cumsum(bits, axis=0)        # n_max x m
     rhovector = np.dot((1.0 / np.arange(1, n_max + 1)), cumsumbits)  # 1 x m
@@ -77,17 +79,17 @@ def lattice_vector_wssd_search(n_max, d_max, coord_weights=None, kernel=None):
         rIdx1 = rIdx2 + 1
 
     # ----------------------------------------------------------------------
-    # Get ordering of the search space
+    # Get ordering of the search space - needed for circulant matrix
     # ----------------------------------------------------------------------
-    gR = np.ones(2**(m - 2), dtype=int)
+    gR = np.ones(2**(m - 2), dtype=int) # gR determines ordering of rows to have circulant matrix
     intMod = 2**m
     for idx in range(1, 2**(m - 2)):
         temp = (gR[idx - 1] * 5) % intMod
         gR[idx] = min(intMod - temp, temp)
 
-    gRows = np.ones(2**(m - 1), dtype=int)
+    gRows = np.ones(2**(m - 1), dtype=int) # gRows determines* ordering of cols to have circulant matrix
     gRows[-1] = 0
-    rowVects = np.ones(2**m - 1, dtype=int)
+    rowVects = np.ones(2**m - 1, dtype=int) # rowVects  
     gStrtIdx = 0
     vStrtIdx = 0
 
@@ -112,7 +114,7 @@ def lattice_vector_wssd_search(n_max, d_max, coord_weights=None, kernel=None):
     rowVects[-1] = 2**(m - 1)
 
     # ----------------------------------------------------------------------
-    # Set up prodV
+    # Set up prodV - where we store information about previous components 
     # ----------------------------------------------------------------------
     prodV = np.ones((2**m - 1, 1))
     prodV = prodV * rhovectorNx1
@@ -128,10 +130,10 @@ def lattice_vector_wssd_search(n_max, d_max, coord_weights=None, kernel=None):
     # ----------------------------------------------------------------------
     # Begin search
     # ----------------------------------------------------------------------
-    gen_vec = np.ones(d_max, dtype=int)
+    gen_vec = np.ones(d_max, dtype=np.uint64)
 
     for hComp in range(2, d_max + 1):
-        wssd = np.zeros(2**(m - 2))
+        wssd = np.zeros(2**(m - 2), dtype=np.float64)
 
         gamma = coord_weights[hComp - 1]
         omega = lambda x: 1 + gamma * kernel(x)
@@ -139,37 +141,37 @@ def lattice_vector_wssd_search(n_max, d_max, coord_weights=None, kernel=None):
 
         curIdx2 = 0
         prodIdx1 = 0
-        for l in range(m, 1, -1):
-            nextIdx2 = curIdx2 + 2**(l - 2) - 1
-            prodIdx2 = prodIdx1 + 2**(l - 2) - 1
+        for l in range(m, 1, -1): # we iterate over decreasing size blocks of powers of two=
+            nextIdx2 = curIdx2 + 2**(l - 2)
+            prodIdx2 = prodIdx1 + 2**(l - 2)
 
-            curRow = gRows[curIdx2:nextIdx2 + 1]
-            col = curRow / 2**l
-            fftCol = omega(col)
+            curRow = gRows[curIdx2:nextIdx2]
+            col = curRow / 2**l 
+            fftCol = omega(col).astype(np.complex128) # first column of this circulant matrix block
 
-            pCol = prodV[prodIdx1:prodIdx2 + 1, 0]
+            pCol = prodV[prodIdx1:prodIdx2, 0].astype(np.complex128) # corresponding section of prodV
 
-            wVector = 2 * np.fft.ifft(np.fft.fft(fftCol) * np.fft.fft(pCol)).real
+            wVector = 2 * np.fft.ifft(np.fft.fft(fftCol) * np.fft.fft(pCol)).real # matrix vector product as fft
             numrep = 2**(m - l)
             wssd = wssd + np.tile(wVector, numrep)
 
-            curIdx2 = nextIdx2 + 1
-            prodIdx1 = prodIdx2 + 2**(l - 2) + 1
+            curIdx2 = nextIdx2
+            prodIdx1 = prodIdx2 + 2**(l - 2)
 
-        wssd = wssd + omega(1 / 2) * prodV[-1, 0]
-        wssd = wssd + n_max * k0 - n_max * (n_max + 1) / 2
+        wssd = wssd + omega(1 / 2) * prodV[-1, 0] # not actually wssd; we avoid subtracting a constant to save precision
 
-        bestIdx = int(np.argmin(wssd))
-        newH = int(gR[bestIdx])
+        bestIdx = np.uint64(np.argmin(wssd))
+        newH = np.uint64(gR[bestIdx])
 
         # Avoid duplicates
         while newH in gen_vec:
             wssd[bestIdx] = np.inf
-            bestIdx = int(np.argmin(wssd))
-            newH = int(gR[bestIdx])
+            bestIdx = np.uint64(np.argmin(wssd))
+            newH = np.uint64(gR[bestIdx])
 
         gen_vec[hComp - 1] = newH
 
+        # set up prodV for next iteration
         rowV = (newH * rowVects) % 2**m
         rowV = rowV / 2**m
         rowV = omega(rowV)

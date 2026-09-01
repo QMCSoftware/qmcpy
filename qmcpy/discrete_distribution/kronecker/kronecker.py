@@ -458,7 +458,7 @@ class Kronecker(AbstractLDDiscreteDistribution):
         if k_tilde is None:
             k_tilde = (lambda x, gamma: np.prod(1 + (x * (x - 1) + 1/6) * gamma, axis=-1), 1)
 
-        return np.sqrt(self._square_periodic_discrepancies(n, k_tilde, gamma))
+        return np.sqrt(self.expected_square_periodic_discrepancies(n, k_tilde, gamma))
         
 
     def wssd_discrepancy(self, n, sample_weights, k_tilde = None, gamma = None):
@@ -469,14 +469,14 @@ class Kronecker(AbstractLDDiscreteDistribution):
         if k_tilde is None:
             k_tilde = (lambda x, gamma: np.prod(1 + (x * (x - 1) + 1/6) * gamma, axis=-1), 1)
 
-        discrepancies = self._square_periodic_discrepancies(n, k_tilde, gamma)
+        discrepancies = self.expected_square_periodic_discrepancies(n, k_tilde, gamma)
         return np.sum(sample_weights * discrepancies, axis=-1)
 
     
-    def _square_periodic_discrepancies(self, n, k_tilde, gamma):
-        n_array = np.arange(1, n + 1)
+    def expected_square_periodic_discrepancies(self, n_max, k_tilde, gamma):
+        n_array = np.arange(1, n_max + 1)
         # we need the points without a random shift for the calculation, so we can't use self._gen_samples
-        i = np.arange(0, n)
+        i = np.arange(0, n_max)
         points = (i[:,None] * self.gen_vec[:,None,:]) % 1
         k_tilde_terms = k_tilde[0](points, gamma)
 
