@@ -9,7 +9,7 @@ import argparse
 from collections import defaultdict
 from pathlib import Path
 
-from check_colab_notebooks import (
+from scripts.check_colab_notebooks import (
     DEFAULT_MANIFEST,
     REPO_ROOT,
     cell_source_text,
@@ -65,27 +65,6 @@ def pattern_family(source: str) -> str:
     return "Basic qmcpy bootstrap"
 
 
-def exact_variant(source: str) -> str:
-    if not source:
-        return "missing bootstrap cell"
-
-    labels = ["qmcpy"]
-    if "git clone" in source:
-        labels.append("repo-clone")
-    if "os.chdir(" in source or "sys.path.insert" in source:
-        labels.append("path-setup")
-    if "apt-get" in source:
-        labels.append("apt")
-
-    extra_installs = extra_install_commands(source)
-    if extra_installs:
-        labels.append(f"extra-pip: {', '.join(extra_installs)}")
-    else:
-        labels.append("extra-pip: none")
-
-    return " | ".join(labels)
-
-
 def placement_label(badge_position: int | None, bootstrap_position: int | None) -> str:
     badge = "missing" if badge_position is None else str(badge_position)
     bootstrap = "missing" if bootstrap_position is None else str(bootstrap_position)
@@ -133,7 +112,6 @@ def run_report(manifest_path: Path) -> int:
             cells, is_bootstrap_cell
         )
         family = pattern_family(bootstrap_source)
-        exact = exact_variant(bootstrap_source)
         placement = placement_label(badge_position, bootstrap_position)
         extra_installs = extra_install_commands(bootstrap_source)
 

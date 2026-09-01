@@ -71,6 +71,7 @@ test = [
     "phmutest >= 1.0.1",
     "pytest-accept >= 0.1.10",
     "testbook >= 0.4.2",
+    "nbformat >= 5.1.4",
     "psutil >= 5.9.5",
     "parsl >= 2025.7.28",
     "seaborn >= 0.8",

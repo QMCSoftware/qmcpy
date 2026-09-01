@@ -113,26 +113,26 @@ generate_booktests:
 	cd test/booktests/ && python generate_test.py --check-missing
 
 check_colab_notebooks:
-	$(PYTHON_BIN) scripts/check_colab_notebooks.py --strict
+	$(PYTHON_BIN) -m scripts.check_colab_notebooks --strict
 
-check_colab_notebooks_smoke: 
-	$(PYTHON_BIN) scripts/smoke_test_colab_notebooks.py --cells-after-bootstrap $(SMOKE_CODE_CELLS)
+check_colab_notebooks_smoke:
+	$(PYTHON_BIN) -m scripts.smoke_test_colab_notebooks --cells-after-bootstrap $(SMOKE_CODE_CELLS)
 
 harden_colab_notebook:
 	@if [ -n "$(NOTEBOOK)" ]; then \
 		if [ -n "$(FORCE)" ]; then \
-			$(PYTHON_BIN) scripts/harden_colab_notebook.py --notebook "$(NOTEBOOK)" --force; \
+			$(PYTHON_BIN) -m scripts.harden_colab_notebook --notebook "$(NOTEBOOK)" --force; \
 		else \
-			$(PYTHON_BIN) scripts/harden_colab_notebook.py --notebook "$(NOTEBOOK)"; \
+			$(PYTHON_BIN) -m scripts.harden_colab_notebook --notebook "$(NOTEBOOK)"; \
 		fi; \
 	elif [ -n "$(FORCE)" ]; then \
-		$(PYTHON_BIN) scripts/harden_colab_notebook.py --force; \
+		$(PYTHON_BIN) -m scripts.harden_colab_notebook --force; \
 	else \
-		$(PYTHON_BIN) scripts/harden_colab_notebook.py --all-unclassified; \
+		$(PYTHON_BIN) -m scripts.harden_colab_notebook --all-unclassified; \
 	fi
 
 report_colab_notebook_patterns:
-	$(PYTHON_BIN) scripts/report_colab_notebook_patterns.py
+	$(PYTHON_BIN) -m scripts.report_colab_notebook_patterns
 
 check_booktests:
 	rm -fr demos/.ipynb_checkpoints/*checkpoint.ipynb && \

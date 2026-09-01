@@ -18,18 +18,10 @@ import ast
 import copy
 import json
 import os
-import sys
 import tempfile
 from pathlib import Path
 
-try:
-    from testbook import testbook
-except ImportError as exc:  # pragma: no cover - import guard for non-test envs
-    raise SystemExit(
-        "testbook is required for Colab smoke tests. Install test dependencies, e.g. `pip install -e .[test]`."
-    ) from exc
-
-from check_colab_notebooks import (
+from scripts.check_colab_notebooks import (
     DEFAULT_MANIFEST,
     cell_source_text,
     is_bootstrap_cell,
@@ -245,6 +237,14 @@ def build_smoke_notebook(notebook_path: Path, cells_after_bootstrap: int) -> tup
 
 
 def execute_smoke_notebook(notebook_path: Path, smoke_nb: dict, source_indices: list[int | None], timeout: int) -> None:
+    try:
+        from testbook import testbook
+    except ImportError as exc:  # pragma: no cover - depends on the local environment
+        raise RuntimeError(
+            "testbook is required for Colab smoke tests. "
+            "Install test dependencies, e.g. `pip install -e .[test]`."
+        ) from exc
+
     notebook_dir = notebook_path.parent.resolve()
     with tempfile.NamedTemporaryFile(
         suffix=".ipynb",

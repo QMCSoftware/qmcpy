@@ -22,6 +22,7 @@ DEMOS_DIR = REPO_ROOT / "demos"
 DEFAULT_MANIFEST = Path(__file__).with_name("colab_notebooks_manifest.json")
 
 CORE_BOOTSTRAP_FRAGMENT = "import google.colab"
+BOOTSTRAP_CELL_MARKER = "# @title Execute this cell to install dependencies"
 REPO_QMCPY_INSTALL_FRAGMENTS = (
     "git+https://github.com/QMCSoftware/QMCSoftware",
     "pip install -q -e",
@@ -120,12 +121,16 @@ def has_expected_badge(cell: dict, repo: str, git_ref: str, notebook_path: str) 
 def is_any_install_cell(cell: dict) -> bool:
     if cell.get("cell_type") != "code":
         return False
-    source = cell_source_text(cell)
-    return "import google.colab" in source
+    source_lines = cell_source_text(cell).splitlines()
+    return bool(source_lines) and source_lines[0].strip() == BOOTSTRAP_CELL_MARKER
 
 
 def pip_install_lines(source: str) -> list[str]:
-    return [line.lower() for line in source.splitlines() if "pip install" in line.lower()]
+    return [
+        line.lower()
+        for line in source.splitlines()
+        if line.lstrip().lower().startswith(("!pip install", "%pip install"))
+    ]
 
 
 def installs_qmcpy(source: str) -> bool:
@@ -146,8 +151,11 @@ def installs_packages(source: str, package_names: tuple[str, ...]) -> bool:
 
 def is_bootstrap_cell(cell: dict) -> bool:
     source = cell_source_text(cell)
-    return cell.get("cell_type") == "code" and (
-        CORE_BOOTSTRAP_FRAGMENT in source and installs_qmcpy(source)
+    return is_any_install_cell(cell) and (
+        CORE_BOOTSTRAP_FRAGMENT in source
+        and "except ImportError:" in source
+        and "if IN_COLAB:" in source
+        and installs_qmcpy(source)
     )
 
 

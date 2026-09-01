@@ -14,10 +14,14 @@ from __future__ import annotations
 
 import argparse
 import copy
+import hashlib
 import json
 from pathlib import Path
 
-from check_colab_notebooks import (
+import nbformat
+
+from scripts.check_colab_notebooks import (
+    BOOTSTRAP_CELL_MARKER,
     DEFAULT_MANIFEST,
     EXTRA_PIP_DEPENDENCIES,
     REPO_ROOT,
@@ -32,7 +36,6 @@ from check_colab_notebooks import (
     local_module_matches,
     load_json,
     pip_install_lines,
-    validate_disabled_notebook,
     validate_enabled_notebook,
     validate_manifest,
     manifest_sets,
@@ -66,6 +69,14 @@ def dump_json(path: Path, payload: dict) -> None:
     with path.open("w", encoding="utf-8") as handle:
         json.dump(payload, handle, indent=1, ensure_ascii=False)
         handle.write("\n")
+
+
+def dump_notebook(path: Path, payload: dict) -> None:
+    nbformat.write(nbformat.from_dict(payload), path)
+
+
+def generated_cell_id(notebook_path: str, cell_kind: str) -> str:
+    return hashlib.sha256(f"{notebook_path}:{cell_kind}".encode()).hexdigest()[:8]
 
 
 def discovered_imports(cells: list[dict]) -> set[str]:
@@ -159,9 +170,13 @@ def bootstrap_cell_source(notebook_path: Path, manifest: dict, cells: list[dict]
     needs_repo_clone = bool(local_repo_import_matches(notebook_path, cells))
 
     lines = [
-        "# @title Execute this cell to install dependencies\n",
+        f"{BOOTSTRAP_CELL_MARKER}\n",
         "try:\n",
         "  import google.colab\n",
+        "  IN_COLAB = True\n",
+        "except ImportError:\n",
+        "  IN_COLAB = False\n",
+        "if IN_COLAB:\n",
     ]
 
     if needs_repo_clone:
@@ -203,7 +218,6 @@ def bootstrap_cell_source(notebook_path: Path, manifest: dict, cells: list[dict]
                 ]
             )
 
-    lines.extend(["except:\n", "  pass"])
     return lines
 
 def badge_stripped_cell(cell: dict) -> dict | None:
@@ -258,6 +272,8 @@ def pending_unclassified(
 
 
 def harden_notebook(notebook_path: Path, manifest_path: Path) -> None:
+    original_notebook_text = notebook_path.read_text(encoding="utf-8")
+    original_manifest_text = manifest_path.read_text(encoding="utf-8")
     manifest = load_json(manifest_path)
     notebook_payload = load_json(notebook_path)
 
@@ -299,6 +315,10 @@ def harden_notebook(notebook_path: Path, manifest_path: Path) -> None:
     notebook_payload["cells"] = cells
 
     notebook_rel = notebook_path.relative_to(REPO_ROOT).as_posix()
+    if notebook_payload.get("nbformat_minor", 0) >= 5:
+        badge_cell["id"] = generated_cell_id(notebook_rel, "badge")
+        bootstrap_cell["id"] = generated_cell_id(notebook_rel, "bootstrap")
+
     enabled = list(manifest.get("enabled", []))
     disabled = dict(manifest.get("disabled", {}))
     if notebook_rel in disabled:
@@ -311,9 +331,13 @@ def harden_notebook(notebook_path: Path, manifest_path: Path) -> None:
     manifest["enabled"] = enabled
     manifest["disabled"] = disabled
 
+    notebook_changed = notebook_payload != original_notebook
+    manifest_changed = manifest != original_manifest
     try:
-        dump_json(notebook_path, notebook_payload)
-        dump_json(manifest_path, manifest)
+        if notebook_changed:
+            dump_notebook(notebook_path, notebook_payload)
+        if manifest_changed:
+            dump_json(manifest_path, manifest)
 
         reloaded_manifest = load_json(manifest_path)
         errors = validate_manifest(
@@ -331,8 +355,10 @@ def harden_notebook(notebook_path: Path, manifest_path: Path) -> None:
         if errors:
             raise RuntimeError("\n".join(errors))
     except Exception:
-        dump_json(notebook_path, original_notebook)
-        dump_json(manifest_path, original_manifest)
+        if notebook_changed:
+            notebook_path.write_text(original_notebook_text, encoding="utf-8")
+        if manifest_changed:
+            manifest_path.write_text(original_manifest_text, encoding="utf-8")
         raise
 
 
@@ -359,44 +385,9 @@ def manifest_notebook_paths(manifest_path: Path, mode: str) -> list[Path]:
     return sorted((REPO_ROOT / notebook_rel).resolve() for notebook_rel in notebook_rels)
 
 
-def disable_notebook(notebook_path: Path, manifest_path: Path, reason: str) -> None:
-    manifest = load_json(manifest_path)
-    original_manifest = copy.deepcopy(manifest)
-    notebook_payload = load_json(notebook_path)
-    original_notebook = copy.deepcopy(notebook_payload)
-    notebook_rel = notebook_path.relative_to(REPO_ROOT).as_posix()
-    enabled = sorted(
-        path for path in manifest.get("enabled", []) if path != notebook_rel
-    )
-    manifest["enabled"] = enabled
-    disabled = dict(manifest.get("disabled", {}))
-    disabled[notebook_rel] = reason
-    manifest["disabled"] = disabled
-    try:
-        notebook_payload["cells"] = remove_existing_bootstrap_cells(
-            remove_any_badge_cells(list(notebook_payload.get("cells", [])))
-        )
-        dump_json(notebook_path, notebook_payload)
-        dump_json(manifest_path, manifest)
-        reloaded_manifest = load_json(manifest_path)
-        errors = validate_manifest(
-            reloaded_manifest,
-            allowed_missing=pending_unclassified(reloaded_manifest, notebook_rel),
-        )
-        errors.extend(validate_disabled_notebook(notebook_path))
-        if errors:
-            raise RuntimeError("\n".join(errors))
-    except Exception:
-        dump_json(notebook_path, original_notebook)
-        dump_json(manifest_path, original_manifest)
-        raise
-
-
 def harden_batch(
     notebook_paths: list[Path],
     manifest_path: Path,
-    *,
-    disable_failures: bool,
 ) -> tuple[list[str], list[tuple[str, str]]]:
     successes: list[str] = []
     failures: list[tuple[str, str]] = []
@@ -409,12 +400,6 @@ def harden_batch(
             successes.append(notebook_rel)
         except Exception as exc:
             summary = error_summary(exc)
-            if disable_failures:
-                disable_notebook(
-                    notebook_path,
-                    manifest_path,
-                    f"Automatic Colab hardening failed: {summary}",
-                )
             failures.append((notebook_rel, summary))
 
     return successes, failures
@@ -479,13 +464,8 @@ def main() -> int:
             return 0
         except Exception as exc:
             summary = error_summary(exc)
-            disable_notebook(
-                notebook_path,
-                manifest_path,
-                f"Automatic Colab hardening failed: {summary}",
-            )
             print(
-                f"Could not harden {notebook_rel}; restored the notebook and added it to disabled."
+                f"Could not harden {notebook_rel}; restored it and left it unclassified."
             )
             print(f"Reason: {summary}")
             return 1
@@ -494,7 +474,6 @@ def main() -> int:
     successes, failures = harden_batch(
         manifest_notebook_paths(manifest_path, mode),
         manifest_path,
-        disable_failures=not args.force,
     )
     for notebook_rel in successes:
         print(f"Hardened {notebook_rel} for Colab.")

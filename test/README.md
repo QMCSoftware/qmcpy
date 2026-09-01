@@ -16,7 +16,7 @@ This document describes the available test targets in the Makefile for QMCSoftwa
 | `make booktests_parallel_no_docker` | Notebook tests with Parsl parallelization | Variable | Distributed notebook execution |
 | `make check_colab_notebooks` | Audit enabled notebooks for Colab-readiness | Fast | Catch missing pip installs, repo-local imports, and source-install drift |
 | `make check_colab_notebooks_smoke` | Execute Colab notebook setup smoke tests | Fast | Run bootstrap plus early import/setup cells for enabled notebooks |
-| `make harden_colab_notebook [NOTEBOOK=...]` | Insert Colab bootstrap and classify notebook(s) | Fast | Harden one notebook, or classify any untracked demo notebooks into enabled or disabled |
+| `make harden_colab_notebook [NOTEBOOK=...]` | Insert Colab bootstrap and classify notebook(s) | Fast | Harden one notebook, or attempt to harden unclassified demo notebooks |
 | `make report_colab_notebook_patterns` | Group notebooks by Colab bootstrap family | Fast | Audit which notebooks use basic, extra-pip, LaTeX, or repo-local setup cells |
 | `make coverage` | Display coverage report | Instant | View test coverage summary |
 | `make delcoverage` | Reset coverage tracking | Instant | Start fresh coverage analysis |
@@ -159,9 +159,9 @@ Auto-generates missing test stub files for notebooks.
 - **Note**: Called automatically by `booktests_no_docker`; rarely used standalone
 
 #### `make check_colab_notebooks`
-Alias for `make check_colab_notebooks`.
-- **Behavior**: Runs the same strict checks
-- **Use when**: You want an explicit strict command name for readability/scripts
+Runs the strict static Colab-readiness checks.
+- **Behavior**: Validates the manifest, badge and bootstrap placement, early dependencies, and repo-local imports
+- **Use when**: You change a demo notebook or its Colab setup
 
 #### `make check_colab_notebooks_smoke`
 Runs a lightweight execution smoke test for each Colab-enabled notebook.
@@ -173,16 +173,16 @@ Runs a lightweight execution smoke test for each Colab-enabled notebook.
 #### `make harden_colab_notebook [NOTEBOOK=...]`
 Hardens one notebook, or if `NOTEBOOK` is omitted, scans `demos/` for notebooks that are not yet listed in either `enabled` or `disabled`.
 - **What it does**: Inserts the badge, adds a generated Colab bootstrap cell, infers common extra pip dependencies, and adds repo-local `sys.path` setup when needed
-- **Classification rule**: Existing `disabled` entries are left untouched; unclassified notebooks are added to `enabled` if hardening validates, otherwise they are added to `disabled` with an automatic failure reason
+- **Classification rule**: Existing `disabled` entries are left untouched; unclassified notebooks are added to `enabled` only after hardening validates. Failures remain unclassified for manual review
 - **Force mode**: `make harden_colab_notebook FORCE=1` regenerates the Open in Colab badge and the `# @title Execute this cell to install dependencies` cell for every notebook already listed in `enabled`; `make harden_colab_notebook NOTEBOOK=... FORCE=1` does the same for one notebook
 - **Cell order**: The generated `import google.colab` bootstrap cell is always inserted after the Open in Colab badge
-- **Validation**: Runs the existing Colab checks after rewriting; if validation fails, the notebook is restored before being marked disabled
+- **Validation**: Runs the existing Colab checks after rewriting; if validation fails, the notebook and manifest are restored and the failure is reported
 - **Examples**: `make harden_colab_notebook NOTEBOOK=demos/plot_proj_function.ipynb`, `make harden_colab_notebook`, and `make harden_colab_notebook FORCE=1`
 
 #### `make report_colab_notebook_patterns`
 Groups notebooks already classified in `scripts/colab_notebooks_manifest.json` by the current Colab badge/bootstrap cell pattern.
 - **Pattern families**: Reports basic `qmcpy`-only bootstrap cells, extra-pip variants, LaTeX setup cells, repo-clone/path-setup cells, and disabled notebooks grouped by reason
-- **Exact variants**: Separately lists exact bootstrap variants such as `scikit-learn scikit-optimize` or `sympy torch tueplots`
+- **Dependency details**: Lists extra install commands for notebooks that need more than `qmcpy`
 - **Placement summary**: Reports where the badge and bootstrap cells appear, for example `badge cell 1, bootstrap cell 2`
 - **Use when**: You want to batch-normalize notebook Colab setup or review which notebooks will be affected by bootstrap changes
 
