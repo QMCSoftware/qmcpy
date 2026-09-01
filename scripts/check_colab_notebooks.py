@@ -12,9 +12,11 @@ from __future__ import annotations
 import argparse
 import ast
 import json
+import re
 import sys
 import warnings
 from pathlib import Path
+from urllib.parse import urlsplit
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -41,6 +43,8 @@ REPO_FETCH_FRAGMENTS = ("git clone", "raw.githubusercontent.com", "wget ", "curl
 PATH_SETUP_FRAGMENTS = ("sys.path.insert", "os.chdir(", "%cd ", "cd ")
 IGNORED_NOTEBOOK_NAME_PREFIXES = (".tmp", "._tmp")
 EXTRA_DEPS_MARKER = "# colab-deps:"
+COLAB_URL_HOSTNAME = "colab.research.google.com"
+URL_PATTERN = re.compile(r"https?://[^\s)\]\"']+")
 
 
 def load_json(path: Path) -> dict:
@@ -105,11 +109,20 @@ def badge_markup(repo: str, git_ref: str, notebook_path: str) -> str:
     )
 
 
+def contains_colab_url(source: str) -> bool:
+    # Parse candidate URLs and compare the exact hostname rather than
+    # substring-matching the domain, which a crafted URL could spoof.
+    return any(
+        urlsplit(match.group(0)).hostname == COLAB_URL_HOSTNAME
+        for match in URL_PATTERN.finditer(source)
+    )
+
+
 def is_any_badge_cell(cell: dict) -> bool:
     if cell.get("cell_type") != "markdown":
         return False
     source = cell_source_text(cell)
-    return "Open In Colab" in source or "colab.research.google.com" in source
+    return "Open In Colab" in source or contains_colab_url(source)
 
 
 def has_expected_badge(cell: dict, repo: str, git_ref: str, notebook_path: str) -> bool:

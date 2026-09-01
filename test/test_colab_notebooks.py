@@ -88,6 +88,20 @@ def test_badge_stripping_preserves_intro_and_drops_badge_only_cells():
     ]
 
 
+def test_is_any_badge_cell_rejects_spoofed_hostname():
+    spoofed = markdown_cell(
+        "[click](https://evil.example/colab.research.google.com/assets/colab-badge.svg)\n"
+    )
+    genuine = markdown_cell(
+        "[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)]"
+        "(https://colab.research.google.com/github/QMCSoftware/QMCSoftware/"
+        "blob/develop/demos/iris.ipynb)\n"
+    )
+
+    assert not check.is_any_badge_cell(spoofed)
+    assert check.is_any_badge_cell(genuine)
+
+
 def test_bootstrap_detection_uses_marker_and_real_install_command(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
