@@ -34,7 +34,7 @@ def lattice_vector_wssd_search(n_max, d_max, coord_weights=None, kernel=None):
 
         >>> bernoulli6 = lambda x: x * (x * (-1/2 + x * (x * (5/2 + x * (-3 + x))))) + 1/42
         >>> lattice_vector_wssd_search(n_max=2**15, d_max=10, coord_weights=None, kernel=bernoulli6) # doctest: +ELLIPSIS
-        array([    1, 12589, ...])
+        array([    1, 12589, ...]...)
 
         The algorithm in its current form is sensitive to differences in floating point precision across platforms, hence the nondeterministic nature of the example above. This can cause differences in generator quality, though in my ad hoc testing it is usually not catastrophic. It was originally built on a Windows machine.
 
@@ -130,7 +130,7 @@ def lattice_vector_wssd_search(n_max, d_max, coord_weights=None, kernel=None):
     # ----------------------------------------------------------------------
     # Begin search
     # ----------------------------------------------------------------------
-    gen_vec = np.ones(d_max, dtype=np.uint64)
+    gen_vec = np.ones(d_max, dtype=int)
 
     for hComp in range(2, d_max + 1):
         wssd = np.zeros(2**(m - 2), dtype=np.float64)
@@ -167,7 +167,7 @@ def lattice_vector_wssd_search(n_max, d_max, coord_weights=None, kernel=None):
         while newH in gen_vec:
             wssd[bestIdx] = np.inf
             bestIdx = np.uint64(np.argmin(wssd))
-            newH = np.uint64(gR[bestIdx])
+            newH = int(gR[bestIdx])
 
         gen_vec[hComp - 1] = newH
 
