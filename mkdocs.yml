@@ -77,6 +77,7 @@ nav:
         - Some True Measures: demos/some_true_measures.ipynb
         - SciPyWrapper dependence and Custom distributions: demos/scipywrapper_dependence_custom/scipywrapper_demo.ipynb
         - ProductMeasure: demos/product_measure.ipynb
+        - Mixed Distributions: demos/mixed_distributions.ipynb
         - Acceptance-Rejection Sampling: demos/acceptance_rejection.ipynb
         - Copula TrueMeasure Examples: demos/copula_examples.ipynb
   - For Developers:
