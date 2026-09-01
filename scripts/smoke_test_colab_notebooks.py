@@ -310,7 +310,27 @@ def parse_args() -> argparse.Namespace:
         default=[],
         help="Optional manifest-relative notebook path to smoke test. May be passed multiple times.",
     )
+    parser.add_argument(
+        "--changed-since",
+        metavar="REF",
+        help="Only smoke test enabled notebooks changed since git REF (e.g. origin/develop). "
+        "If REF is unresolvable, fall back to all enabled notebooks.",
+    )
     return parser.parse_args()
+
+
+def _notebooks_changed_since(ref: str) -> set[str] | None:
+    """demos/*.ipynb changed since `ref`, repo-relative; None if `ref` can't be diffed."""
+    import subprocess
+
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(REPO_ROOT), "diff", "--name-only", ref, "--", "demos/"],
+            capture_output=True, text=True, check=True,
+        ).stdout
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+    return {ln for ln in out.split() if ln.endswith(".ipynb")}
 
 
 def smoke_test_batch(
@@ -344,6 +364,16 @@ def main() -> int:
 
     if args.notebook:
         enabled = [path for path in enabled if path in set(args.notebook)]
+
+    if args.changed_since:
+        changed = _notebooks_changed_since(args.changed_since)
+        if changed is None:
+            print(f"'{args.changed_since}' is not diffable; smoke testing all enabled notebooks.")
+        else:
+            enabled = [path for path in enabled if path in changed]
+            if not enabled:
+                print(f"No enabled notebooks changed since {args.changed_since}; nothing to smoke test.")
+                return 0
 
     if not enabled:
         print("No enabled notebooks selected for Colab smoke tests.")

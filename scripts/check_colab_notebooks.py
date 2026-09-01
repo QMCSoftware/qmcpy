@@ -303,6 +303,22 @@ def validate_strict_enabled_notebook(path: Path) -> list[str]:
             f"{notebook_path}: depends on UM-Bridge and should be classified as Colab-disabled."
         )
 
+    for idx, cell in notebook_code_cells(cells):
+        for line in cell_source_text(cell).splitlines():
+            if "IN_COLAB" in line:
+                continue
+            hit = re.search(r"\b2\s*\*\*\s*(\d{2,})\b", line)
+            if hit and int(hit.group(1)) >= 20:
+                errors.append(
+                    f"{notebook_path}: cell {idx + 1} uses 2**{hit.group(1)} without an "
+                    "`... if IN_COLAB else ...` guard -- likely to OOM/timeout in Colab; "
+                    "guard the size or Colab-disable the notebook."
+                )
+                break
+        else:
+            continue
+        break
+
     for module in imported_roots:
         local_matches = local_module_matches(notebook_dir, module)
         if not local_matches:
@@ -374,6 +390,7 @@ def validate_manifest(manifest: dict, allowed_missing: set[str] | None = None) -
         errors.append(
             "Manifest is missing notebook classifications for: "
             + ", ".join(sorted(missing))
+            + " -- run `make harden_colab_notebook` to classify them"
         )
 
     extra = declared - discovered
