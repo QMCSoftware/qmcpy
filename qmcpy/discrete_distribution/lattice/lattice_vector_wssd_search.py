@@ -33,7 +33,7 @@ def lattice_vector_wssd_search(n_max, d_max, coord_weights=None, kernel=None):
         Custom kernels
 
         >>> bernoulli6 = lambda x: x * (x * (-1/2 + x * (x * (5/2 + x * (-3 + x))))) + 1/42
-        >>> lattice_vector_wssd_search(n_max=2**15, d_max=10, coord_weights=None, kernel=bernoulli6) # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
+        >>> lattice_vector_wssd_search(n_max=2**15, d_max=10, coord_weights=None, kernel=bernoulli6) # doctest: +ELLIPSIS
         array([    1, 12589, ...])
 
         The algorithm in its current form is sensitive to differences in floating point precision across platforms, hence the nondeterministic nature of the example above. This can cause differences in generator quality, though in my ad hoc testing it is usually not catastrophic. It was originally built on a Windows machine.
