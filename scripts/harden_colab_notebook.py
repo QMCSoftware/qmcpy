@@ -18,8 +18,6 @@ import hashlib
 import json
 from pathlib import Path
 
-import nbformat
-
 from scripts.check_colab_notebooks import (
     BOOTSTRAP_CELL_MARKER,
     DEFAULT_MANIFEST,
@@ -65,14 +63,21 @@ LATEX_MARKERS = (
 COLAB_BADGE_IMAGE_FRAGMENT = "colab.research.google.com/assets/colab-badge.svg"
 
 
-def dump_json(path: Path, payload: dict) -> None:
+def dump_json(path: Path, payload: dict, *, indent: int = 1) -> None:
     with path.open("w", encoding="utf-8") as handle:
-        json.dump(payload, handle, indent=1, ensure_ascii=False)
+        json.dump(payload, handle, indent=indent, ensure_ascii=False)
         handle.write("\n")
 
 
-def dump_notebook(path: Path, payload: dict) -> None:
-    nbformat.write(nbformat.from_dict(payload), path)
+def json_indent(source: str) -> int:
+    for line in source.splitlines()[1:]:
+        if line.strip():
+            return len(line) - len(line.lstrip())
+    return 1
+
+
+def dump_notebook(path: Path, payload: dict, original_source: str) -> None:
+    dump_json(path, payload, indent=json_indent(original_source))
 
 
 def generated_cell_id(notebook_path: str, cell_kind: str) -> str:
@@ -335,7 +340,7 @@ def harden_notebook(notebook_path: Path, manifest_path: Path) -> None:
     manifest_changed = manifest != original_manifest
     try:
         if notebook_changed:
-            dump_notebook(notebook_path, notebook_payload)
+            dump_notebook(notebook_path, notebook_payload, original_notebook_text)
         if manifest_changed:
             dump_json(manifest_path, manifest)
 

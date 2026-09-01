@@ -138,6 +138,21 @@ def test_extra_pip_packages_preserves_later_explicit_installs():
     assert harden.extra_pip_packages(cells) == ["ipywidgets", "QuantLib"]
 
 
+def test_dump_notebook_preserves_existing_json_indent(tmp_path: Path):
+    notebook_path = tmp_path / "example.ipynb"
+    notebook = {
+        "cells": [code_cell("pass\n")],
+        "metadata": {},
+        "nbformat": 4,
+        "nbformat_minor": 5,
+    }
+    original_source = json.dumps(notebook, indent=2) + "\n"
+
+    harden.dump_notebook(notebook_path, notebook, original_source)
+
+    assert notebook_path.read_text(encoding="utf-8") == original_source
+
+
 def test_harden_check_smoke_round_trip_is_idempotent(
     colab_repo, monkeypatch: pytest.MonkeyPatch
 ):
