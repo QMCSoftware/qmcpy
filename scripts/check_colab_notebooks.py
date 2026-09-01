@@ -72,6 +72,9 @@ def python_source_for_ast(source: str) -> str:
     for line in source.splitlines():
         stripped = line.lstrip()
         if stripped.startswith(("!", "%")):
+            # Replace rather than drop, so a magic-only block body still parses.
+            indent = line[: len(line) - len(stripped)]
+            filtered_lines.append(f"{indent}pass")
             continue
         filtered_lines.append(line)
     return "\n".join(filtered_lines)
@@ -237,15 +240,29 @@ def find_first_module_import(cells: list[dict], module: str) -> int | None:
 
 def local_module_matches(notebook_dir: Path, module: str) -> list[Path]:
     matches: list[Path] = []
-    direct_file = notebook_dir / f"{module}.py"
-    package_init = notebook_dir / module / "__init__.py"
-    if direct_file.exists():
-        matches.append(direct_file)
-    if package_init.exists():
-        matches.append(package_init)
+
+    def add_if_present(directory: Path) -> None:
+        direct_file = directory / f"{module}.py"
+        package_init = directory / module / "__init__.py"
+        if direct_file.exists() and direct_file not in matches:
+            matches.append(direct_file)
+        if package_init.exists() and package_init not in matches:
+            matches.append(package_init)
+
+    add_if_present(notebook_dir)
     for candidate in notebook_dir.rglob(f"{module}.py"):
         if candidate not in matches and "__pycache__" not in candidate.parts:
             matches.append(candidate)
+
+    # A notebook nested in a subfolder (e.g. a demo's `output/`) may import a
+    # shared helper module that lives in an ancestor folder, up to demos/.
+    directory = notebook_dir.parent
+    while directory == DEMOS_DIR or DEMOS_DIR in directory.parents:
+        add_if_present(directory)
+        if directory == DEMOS_DIR:
+            break
+        directory = directory.parent
+
     return matches
 
 
@@ -306,7 +323,10 @@ def validate_strict_enabled_notebook(path: Path) -> list[str]:
             (match for match in local_matches if match.parent != notebook_dir), None
         )
         if nested_match is not None:
-            rel_parent = nested_match.parent.relative_to(notebook_dir).as_posix()
+            # Repo-root-relative (not notebook-relative) so this also works when
+            # the module lives in an ancestor of notebook_dir, matching the
+            # path harden_colab_notebook.py embeds in the generated bootstrap.
+            rel_parent = nested_match.parent.relative_to(REPO_ROOT).as_posix()
             if rel_parent and rel_parent not in source_before_import:
                 errors.append(
                     f"{notebook_path}: imports local module '{module}' from '{rel_parent}' without referencing that path in Colab setup."

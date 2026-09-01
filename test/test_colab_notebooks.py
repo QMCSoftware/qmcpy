@@ -147,9 +147,36 @@ def test_extra_pip_packages_preserves_later_explicit_installs():
             "except ModuleNotFoundError:\n"
             "    !pip install -q QuantLib\n"
         ),
+        code_cell("!pip install -q seaborn\n"),
     ]
 
-    assert harden.extra_pip_packages(cells) == ["ipywidgets", "QuantLib"]
+    assert harden.extra_pip_packages(cells) == ["QuantLib", "ipywidgets", "seaborn"]
+
+
+def test_imported_modules_survives_magic_only_block_body():
+    # A shell-magic line as the *only* statement in a block used to leave an
+    # empty `if:`/`try:` body, making ast.parse raise and silently hiding
+    # every import in the cell (not just the magic line itself).
+    source = (
+        "import os\n"
+        "from util import helper\n"
+        "if True:\n"
+        "    !echo hi\n"
+    )
+    assert check.imported_modules(source) == {"os", "util"}
+
+
+def test_local_module_matches_finds_ancestor_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.setattr(check, "DEMOS_DIR", tmp_path)
+    (tmp_path / "util.py").write_text("", encoding="utf-8")
+    notebook_dir = tmp_path / "output"
+    notebook_dir.mkdir()
+
+    matches = check.local_module_matches(notebook_dir, "util")
+
+    assert matches == [tmp_path / "util.py"]
 
 
 def test_extra_pip_packages_honors_colab_deps_marker():

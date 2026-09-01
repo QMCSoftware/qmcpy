@@ -150,11 +150,6 @@ Runs notebook tests with **Parsl distributed parallelization** for compute-heavy
 - **Dependencies**: Parsl must be installed and configured
 - **Use when**: Running large notebook suites with distributed compute resources
 
-#### `make tests_parallel_no_docker`
-Runs only unit tests with parallel pytest workers (no doctests or booktests).
-- **Time**: ~13–20 seconds
-- **Coverage**: Incremental
-- **Use when**: Testing unit tests only in parallel mode
 
 ---
 
@@ -198,6 +193,14 @@ Groups notebooks already classified in `scripts/colab_notebooks_manifest.json` b
 - **Placement summary**: Reports where the badge and bootstrap cells appear, for example `badge cell 1, bootstrap cell 2`
 - **Use when**: You want to batch-normalize notebook Colab setup or review which notebooks will be affected by bootstrap changes
 
+Every enabled notebook, grouped by its Colab bootstrap pattern family (regenerate with `make report_colab_notebook_patterns`):
+
+- **Basic qmcpy bootstrap** (28): [acceptance_rejection.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/acceptance_rejection.ipynb), [asian-option-mlqmc.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/asian-option-mlqmc.ipynb), [brownian_bridge.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/brownian_bridge.ipynb), [control_variates.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/control_variates.ipynb), [copula_examples.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/copula_examples.ipynb), [Iteration_Log_Tolerance_Demo.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/demo_resume_data/Iteration_Log_Tolerance_Demo.ipynb), [digital_net_b2.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/digital_net_b2.ipynb), [gaussian_diagnostics_demo.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/gaussian_diagnostics/gaussian_diagnostics_demo.ipynb), [korobov_hammersley_latinhypercube_demos.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/korobov_hammersley_latinhypercube_demos.ipynb), [lattice_random_generator.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/lattice_random_generator.ipynb), [lebesgue_integration.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/lebesgue_integration.ipynb), [linear-scrambled-halton.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/linear-scrambled-halton.ipynb), [nei_demo.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/nei_demo.ipynb), [plot_proj_function.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/plot_proj_function.ipynb), [pricing_options.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/pricing_options.ipynb), [product_measure.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/product_measure.ipynb), [qei-demo-for-blog.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/qei-demo-for-blog.ipynb), [qmcpy-logo.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/qmcpy-logo.ipynb), [qmcpy_intro.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/qmcpy_intro.ipynb), [quickstart.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/quickstart.ipynb), [ray_tracing.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/ray_tracing.ipynb), [sample_scatter_plots.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/sample_scatter_plots.ipynb), [scipywrapper_demo.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/scipywrapper_dependence_custom/scipywrapper_demo.ipynb), [some_true_measures.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/some_true_measures.ipynb), [statistics_for_TrueMeasure.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/statistics_for_TrueMeasure.ipynb), [sorokin_thesis_2025.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/talk_paper_demos/SorokinThesis2025/sorokin_thesis_2025.ipynb), [pydata_chi_2023.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/talk_paper_demos/pydata_chi_2023.ipynb), [why_add_q_to_mc_blog.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/talk_paper_demos/why_add_q_to_mc_blog/why_add_q_to_mc_blog.ipynb)
+- **Extra pip bootstrap** (4): [iris.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/iris.ipynb), [joss2026.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/talk_paper_demos/JOSS2026/joss2026.ipynb), [MCQMC_2020_QMC_Software_Tutorial.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/talk_paper_demos/MCQMC_Tutorial_2020/MCQMC_2020_QMC_Software_Tutorial.ipynb), [Sorokin_random_LD_seq_QMC_fast_kernel_methods_2026.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/talk_paper_demos/Sorokin_random_LD_seq_QMC_fast_kernel_methods_2026/Sorokin_random_LD_seq_QMC_fast_kernel_methods_2026.ipynb)
+- **LaTeX bootstrap** (4): [dakota_genz.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/DAKOTA_Genz/dakota_genz.ipynb), [elliptic-pde.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/elliptic-pde.ipynb), [vectorized_qmc.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/vectorized_qmc.ipynb), [vectorized_qmc_bayes.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/vectorized_qmc_bayes.ipynb)
+- **Repo-local bootstrap** (7): [gbm_examples.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/GBM/gbm_examples.ipynb), [accuracy_and_resume.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/demo_resume_data/accuracy_and_resume.ipynb), [resume_examples.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/demo_resume_data/resume_examples.ipynb), [01_sequential.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/talk_paper_demos/Parslfest_2025/01_sequential.ipynb), [02_parallel.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/talk_paper_demos/Parslfest_2025/02_parallel.ipynb), [03_visualize_speedup.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/talk_paper_demos/Parslfest_2025/03_visualize_speedup.ipynb), [01_sequential_output.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/talk_paper_demos/Parslfest_2025/output/01_sequential_output.ipynb)
+- **Repo-local bootstrap + extra pip installs** (1): [gbm_demo.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/GBM/gbm_demo.ipynb)
+
 #### `make coverage`
 Displays the current coverage report (must run other targets first to accumulate coverage data).
 - **Output**: Terminal summary of coverage percentages per file/module
@@ -206,15 +209,6 @@ Displays the current coverage report (must run other targets first to accumulate
 #### `make delcoverage`
 Deletes `.coverage` and `coverage.json` files to reset coverage tracking.
 - **Use before**: Running a fresh coverage report without accumulated data
-
-## Redundancy Analysis & Status
-
-### Removed Redundant Target ✅
-
-#### `make tests_parallel_no_docker` (REMOVED)
-- **Was redundant**: Ran only unit tests in parallel. `make tests_fast` is a strict superset (doctests + unittests + booktests in parallel).
-- **Status**: **Removed from Makefile** to simplify maintenance and reduce user confusion.
-- **Migration**: Users should use `make tests_fast` instead (faster, more comprehensive).
 
 ---
 
