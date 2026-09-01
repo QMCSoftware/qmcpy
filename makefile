@@ -4,6 +4,9 @@ PYTEST ?=
 PYTHON ?= python3
 WITH_MPMC ?= 0
 HAS_MPMC ?= $(shell python -c "import importlib.util; mods=('torch','pyg_lib','torch_geometric'); print(int(all(importlib.util.find_spec(m) is not None for m in mods)))" 2>/dev/null || echo 0)
+SMOKE_CODE_CELLS ?= 2
+# Shared Python interpreter lookup for the Colab helper targets.
+PYTHON_BIN ?= $(shell command -v python 2>/dev/null || { [ -n "$$CONDA_PREFIX" ] && command -v "$$CONDA_PREFIX/bin/python" 2>/dev/null; } || { command -v conda >/dev/null 2>&1 && conda run -n qmcpy python -c 'import sys; print(sys.executable)' 2>/dev/null; } || command -v python3 2>/dev/null)
 
 # set environment variable for documentation
 export JUPYTER_PLATFORM_DIRS=1
@@ -130,6 +133,28 @@ tests_no_docker_no_mpmc: doctests_no_docker_no_mpmc unittests coverage
 generate_booktests:
 	@echo "\nGenerating missing booktest files..."
 	cd test/booktests/ && python generate_test.py --check-missing
+
+check_colab_notebooks:
+	$(PYTHON_BIN) scripts/check_colab_notebooks.py --strict
+
+check_colab_notebooks_smoke:
+	$(PYTHON_BIN) scripts/smoke_test_colab_notebooks.py --cells-after-bootstrap $(SMOKE_CODE_CELLS)
+
+harden_colab_notebook:
+	@if [ -n "$(NOTEBOOK)" ]; then \
+		if [ -n "$(FORCE)" ]; then \
+			$(PYTHON_BIN) scripts/harden_colab_notebook.py --notebook "$(NOTEBOOK)" --force; \
+		else \
+			$(PYTHON_BIN) scripts/harden_colab_notebook.py --notebook "$(NOTEBOOK)"; \
+		fi; \
+	elif [ -n "$(FORCE)" ]; then \
+		$(PYTHON_BIN) scripts/harden_colab_notebook.py --force; \
+	else \
+		$(PYTHON_BIN) scripts/harden_colab_notebook.py --all-unclassified; \
+	fi
+
+report_colab_notebook_patterns:
+	$(PYTHON_BIN) scripts/report_colab_notebook_patterns.py
 
 check_booktests:
 	rm -fr demos/.ipynb_checkpoints/*checkpoint.ipynb && \
