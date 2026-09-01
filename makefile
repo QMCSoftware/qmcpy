@@ -2,6 +2,7 @@
 PYTEST_XDIST ?= $(shell python scripts/pytest_xdist.py 2>/dev/null)
 PYTEST ?=
 PYTHON ?= python3
+SMOKE_CODE_CELLS ?= 2
 WITH_MPMC ?= 0
 HAS_MPMC ?= $(shell python -c "import importlib.util; mods=('torch','pyg_lib','torch_geometric'); print(int(all(importlib.util.find_spec(m) is not None for m in mods)))" 2>/dev/null || echo 0)
 
@@ -130,6 +131,28 @@ tests_no_docker_no_mpmc: doctests_no_docker_no_mpmc unittests coverage
 generate_booktests:
 	@echo "\nGenerating missing booktest files..."
 	cd test/booktests/ && python generate_test.py --check-missing
+
+check_colab_notebooks:
+	$(PYTHON) -m scripts.check_colab_notebooks --strict
+
+check_colab_notebooks_smoke:
+	$(PYTHON) -m scripts.smoke_test_colab_notebooks --cells-after-bootstrap $(SMOKE_CODE_CELLS)
+
+harden_colab_notebook:
+	@if [ -n "$(NOTEBOOK)" ]; then \
+		if [ -n "$(FORCE)" ]; then \
+			$(PYTHON) -m scripts.harden_colab_notebook --notebook "$(NOTEBOOK)" --force; \
+		else \
+			$(PYTHON) -m scripts.harden_colab_notebook --notebook "$(NOTEBOOK)"; \
+		fi; \
+	elif [ -n "$(FORCE)" ]; then \
+		$(PYTHON) -m scripts.harden_colab_notebook --force; \
+	else \
+		$(PYTHON) -m scripts.harden_colab_notebook --all-unclassified; \
+	fi
+
+report_colab_notebook_patterns:
+	$(PYTHON) -m scripts.report_colab_notebook_patterns
 
 check_booktests:
 	rm -fr demos/.ipynb_checkpoints/*checkpoint.ipynb && \
