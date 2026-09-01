@@ -431,6 +431,7 @@ format:
 	$(MAKE) flatten_qmcpy_imports
 	$(MAKE) markdown-unwrap MARKDOWN_UNWRAP_PATH="$(MARKDOWN_UNWRAP_PATH)"
 	$(MAKE) rm_trailing_whitespace FORMAT_PATH="$(FORMAT_PATH)"
+	$(MAKE) harden_colab_notebook
 
 flatten_qmcpy_imports:
 	$(PYTHON) scripts/flatten_qmcpy_imports.py
