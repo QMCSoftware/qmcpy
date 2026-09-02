@@ -208,11 +208,15 @@ In the built HTML documentation:
 
 ## Demos
 
-Demos are Jupyter notebooks which may be launched using the command
+Demos are Jupyter notebooks under `demos/`. To open one:
 
 ~~~bash
-jupyter-lab
+jupyter-lab                                              # or: make open_notebook NOTEBOOK=demos/quickstart.ipynb
+make open_colab_notebook NOTEBOOK=demos/quickstart.ipynb # in Colab, from your current (pushed) branch
+make open_colab_notebook_gist NOTEBOOK=demos/quickstart.ipynb  # in Colab, from your uncommitted working copy (needs the gh CLI)
 ~~~
+
+`open_colab_notebook` uses the branch version only when the notebook is new or differs from `develop`, otherwise the `develop` version. See [docs/tests.md](docs/tests.md) for details.
 
 ## Other Developer Tools
 

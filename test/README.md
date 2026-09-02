@@ -18,6 +18,9 @@ This document describes the available test targets in the Makefile for QMCSoftwa
 | `make check_colab_notebooks_smoke` | Execute Colab notebook setup smoke tests | Fast | Run bootstrap plus early import/setup cells for enabled notebooks |
 | `make harden_colab_notebook [NOTEBOOK=...]` | Insert Colab bootstrap and classify notebook(s) | Fast | Harden one notebook, or attempt to harden unclassified demo notebooks |
 | `make report_colab_notebook_patterns` | Group notebooks by Colab bootstrap family | Fast | Audit which notebooks use basic, extra-pip, LaTeX, or repo-local setup cells |
+| `make open_colab_notebook NOTEBOOK=...` | Open a notebook in Colab from the current branch | Fast | Preview branch-only notebook changes in Colab before merge |
+| `make open_colab_notebook_gist NOTEBOOK=...` | Upload the working-tree notebook to a secret gist and open it in Colab | Fast | Preview uncommitted notebook edits in Colab (needs `gh`) |
+| `make open_notebook NOTEBOOK=...` | Open the working-tree notebook in local JupyterLab | Instant | Edit/run a demo notebook locally with full repo context |
 | `make coverage` | Display coverage report | Instant | View test coverage summary |
 | `make delcoverage` | Reset coverage tracking | Instant | Start fresh coverage analysis |
 
@@ -200,6 +203,36 @@ Every enabled notebook, grouped by its Colab bootstrap pattern family (regenerat
 - **LaTeX bootstrap** (4): [dakota_genz.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/DAKOTA_Genz/dakota_genz.ipynb), [elliptic-pde.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/elliptic-pde.ipynb), [vectorized_qmc.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/vectorized_qmc.ipynb), [vectorized_qmc_bayes.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/vectorized_qmc_bayes.ipynb)
 - **Repo-local bootstrap** (7): [gbm_examples.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/GBM/gbm_examples.ipynb), [accuracy_and_resume.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/demo_resume_data/accuracy_and_resume.ipynb), [resume_examples.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/demo_resume_data/resume_examples.ipynb), [01_sequential.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/talk_paper_demos/Parslfest_2025/01_sequential.ipynb), [02_parallel.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/talk_paper_demos/Parslfest_2025/02_parallel.ipynb), [03_visualize_speedup.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/talk_paper_demos/Parslfest_2025/03_visualize_speedup.ipynb), [01_sequential_output.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/talk_paper_demos/Parslfest_2025/output/01_sequential_output.ipynb)
 - **Repo-local bootstrap + extra pip installs** (1): [gbm_demo.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/GBM/gbm_demo.ipynb)
+
+### Opening a demo notebook
+
+| Target | Notebook source | Opens in | Requires |
+|--------|-----------------|----------|----------|
+| `make open_notebook` | working tree | local JupyterLab | `jupyterlab` |
+| `make open_colab_notebook` | `origin/<branch>` (or `<base>` when unchanged) | Google Colab | branch + notebook pushed to `origin` |
+| `make open_colab_notebook_gist` | working tree | Google Colab | `gh` CLI |
+
+#### `make open_colab_notebook NOTEBOOK=demos/<path>.ipynb`
+Opens a demo notebook in Google Colab from the **current git branch** instead of the committed `develop` badge URL, so you can preview branch-only notebook changes in Colab before they merge.
+- **When it uses the branch**: The Colab link points at the current branch when the notebook is new on the branch, or when its content on `origin/<branch>` differs from `origin/<base>`; otherwise it opens the `<base>` version, since the committed badge already covers that case
+- **Requires a push**: Colab loads notebooks from GitHub, so the branch and the notebook must already be pushed to `origin`; the target stops with a hint if they are not, and warns when your local working copy differs from what is pushed
+- **Base branch**: The comparison base is `COLAB_BASE` (default `develop`) and must itself be a branch on `origin`
+- **Output**: Prints the `https://colab.research.google.com/github/<owner>/<repo>/blob/<ref>/<path>` URL and opens it with `python -m webbrowser`
+- **Examples**: `make open_colab_notebook NOTEBOOK=demos/nei_demo.ipynb`, `make open_colab_notebook NOTEBOOK=demos/GBM/gbm_demo.ipynb COLAB_BASE=master`
+
+#### `make open_colab_notebook_gist NOTEBOOK=demos/<path>.ipynb`
+Uploads the **working-tree** copy of a notebook to a throwaway secret GitHub gist and opens that gist in Colab, so you can preview uncommitted edits without pushing to a branch.
+- **Requires**: The [`gh` CLI](https://cli.github.com), authenticated with `gh auth login`
+- **What it prints**: The gist URL, the `https://colab.research.google.com/gist/<login>/<id>/<file>` URL (also opened with `python -m webbrowser`), and the `gh gist delete <id>` cleanup command
+- **Gist visibility**: "secret" means unlisted, not private; delete it when finished
+- **Limitation**: A gist is a single file, so sibling `.py` helpers and repo-local imports will not resolve; the bootstrap cell's `git clone` falls back to `develop`. Use `make open_colab_notebook` for notebooks that depend on repo files
+- **Example**: `make open_colab_notebook_gist NOTEBOOK=demos/quickstart.ipynb`
+
+#### `make open_notebook NOTEBOOK=demos/<path>.ipynb`
+Opens the working-tree notebook in local JupyterLab (`jupyter lab <path>`, falling back to `python -m jupyterlab`).
+- **Use when**: You want to edit or run a demo notebook locally with the current source install, helper files, and uncommitted changes all in place
+- **Note**: Runs the Lab server in the foreground; stop it with `Ctrl+C`
+- **Example**: `make open_notebook NOTEBOOK=demos/quickstart.ipynb`
 
 #### `make coverage`
 Displays the current coverage report (must run other targets first to accumulate coverage data).

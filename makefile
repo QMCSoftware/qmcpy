@@ -154,6 +154,65 @@ harden_colab_notebook:  # Add Colab button if necessary
 report_colab_notebook_patterns:
 	$(PYTHON) -m scripts.report_colab_notebook_patterns
 
+open_colab_notebook:  # Open NOTEBOOK in Colab from the current branch, but only when it differs from COLAB_BASE (default develop); usage: make open_colab_notebook NOTEBOOK=demos/foo.ipynb [COLAB_BASE=develop]
+	@nb="$(NOTEBOOK)"; nb="$${nb#./}"; base="$${COLAB_BASE:-develop}"; \
+	if [ -z "$$nb" ]; then echo "Usage: make open_colab_notebook NOTEBOOK=demos/path/to.ipynb [COLAB_BASE=develop]"; exit 2; fi; \
+	case "$$nb" in *.ipynb) ;; *) echo "Not a .ipynb file: $$nb"; exit 2;; esac; \
+	branch=$$(git rev-parse --abbrev-ref HEAD); \
+	slug=$$(git remote get-url origin 2>/dev/null | sed -E 's#(git@github\.com:|https://github\.com/)##; s#\.git$$##'); \
+	if [ -z "$$slug" ]; then echo "Cannot determine the GitHub owner/repo from the 'origin' remote."; exit 1; fi; \
+	git fetch -q origin "$$base" "$$branch" 2>/dev/null || true; \
+	if ! git rev-parse -q --verify "origin/$$branch" >/dev/null; then \
+		echo "Branch '$$branch' is not on origin -- push it first (Colab loads notebooks from GitHub)."; exit 1; \
+	fi; \
+	if ! git rev-parse -q --verify "origin/$$base" >/dev/null; then \
+		echo "Base '$$base' is not a branch on origin -- set COLAB_BASE to a pushed branch (e.g. develop)."; exit 1; \
+	fi; \
+	if ! git ls-tree -r --name-only "origin/$$branch" | grep -qxF "$$nb"; then \
+		echo "'$$nb' is not committed on origin/$$branch -- commit and push it first."; exit 1; \
+	fi; \
+	git diff --quiet "origin/$$branch" -- "$$nb" || \
+		echo "note: local '$$nb' differs from origin/$$branch; Colab shows the pushed version."; \
+	if [ "$$branch" = "$$base" ]; then \
+		ref="$$base"; echo "On '$$base' -- opening the $$base version."; \
+	elif ! git ls-tree -r --name-only "origin/$$base" | grep -qxF "$$nb"; then \
+		ref="$$branch"; echo "'$$nb' is new (not on origin/$$base) -- opening the '$$branch' version."; \
+	elif git diff --quiet "origin/$$base" "origin/$$branch" -- "$$nb"; then \
+		ref="$$base"; echo "'$$nb' is unchanged vs origin/$$base -- the standard badge covers it; opening the $$base version."; \
+	else \
+		ref="$$branch"; echo "'$$nb' differs from origin/$$base -- opening the '$$branch' version."; \
+	fi; \
+	url="https://colab.research.google.com/github/$$slug/blob/$$ref/$$nb"; \
+	echo "$$url"; \
+	$(PYTHON) -m webbrowser "$$url" >/dev/null 2>&1 || echo "(could not auto-open a browser; copy the URL above)"
+
+open_colab_notebook_gist:  # Upload NOTEBOOK from the working tree to a throwaway secret gist and open it in Colab (needs the gh CLI); usage: make open_colab_notebook_gist NOTEBOOK=demos/foo.ipynb
+	@nb="$(NOTEBOOK)"; nb="$${nb#./}"; \
+	if [ -z "$$nb" ]; then echo "Usage: make open_colab_notebook_gist NOTEBOOK=demos/path/to.ipynb"; exit 2; fi; \
+	if [ ! -f "$$nb" ]; then echo "No such file: $$nb"; exit 2; fi; \
+	case "$$nb" in *.ipynb) ;; *) echo "Not a .ipynb file: $$nb"; exit 2;; esac; \
+	if ! command -v gh >/dev/null 2>&1; then \
+		echo "The 'gh' CLI is required (https://cli.github.com), then run 'gh auth login'."; exit 1; \
+	fi; \
+	base=$$(basename "$$nb"); \
+	url=$$(gh gist create --desc "qmcpy Colab preview of $$nb (safe to delete)" "$$nb") || exit 1; \
+	id=$${url##*/}; \
+	login=$$(gh api user -q .login 2>/dev/null); \
+	colab="https://colab.research.google.com/gist/$${login:+$$login/}$$id/$$base"; \
+	echo "gist (secret):    $$url"; \
+	echo "colab:            $$colab"; \
+	echo "delete when done: gh gist delete $$id"; \
+	echo "note: sibling .py helpers won't resolve from a gist; the bootstrap cell falls back to develop."; \
+	$(PYTHON) -m webbrowser "$$colab" >/dev/null 2>&1 || echo "(could not auto-open a browser; copy the colab URL above)"
+
+open_notebook:  # Open NOTEBOOK from the working tree in local JupyterLab; usage: make open_notebook NOTEBOOK=demos/foo.ipynb
+	@nb="$(NOTEBOOK)"; nb="$${nb#./}"; \
+	if [ -z "$$nb" ]; then echo "Usage: make open_notebook NOTEBOOK=demos/path/to.ipynb"; exit 2; fi; \
+	if [ ! -f "$$nb" ]; then echo "No such file: $$nb"; exit 2; fi; \
+	case "$$nb" in *.ipynb) ;; *) echo "Not a .ipynb file: $$nb"; exit 2;; esac; \
+	if command -v jupyter >/dev/null 2>&1; then exec jupyter lab "$$nb"; \
+	else exec $(PYTHON) -m jupyterlab "$$nb"; fi
+
 check_booktests:
 	rm -fr demos/.ipynb_checkpoints/*checkpoint.ipynb && \
 	find demos -name '*.ipynb' | while read nb; do \
