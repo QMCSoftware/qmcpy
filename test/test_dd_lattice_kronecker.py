@@ -150,6 +150,7 @@ class TestLatticeKroneckerMethods(object):
         assert coefficients.shape == (2, 4)
         assert np.isfinite(vector).all() and np.isfinite(discrepancies).all()
         assert np.all((0 <= vector) & (vector < 1))
+        assert 0 < wssd
         npt.assert_allclose(
             wssd, np.arange(1, n + 1) @ discrepancies, rtol=0, atol=5e-14
         )
@@ -178,6 +179,18 @@ class TestLatticeKroneckerMethods(object):
             wssd, np.arange(1, n + 1) @ discrepancies, rtol=0, atol=5e-14
         )
 
+        vector, wssd, discrepancies, coefficients = (
+                    kronecker_vector_search_mobius_transform(
+                        n_max=n,
+                        d_max=3,
+                        searchsize=3,
+                        kernel= lambda x: 3 * _bernoulli_two(x),
+                        coord_weights=coord_weights,
+                        gen_vec_init=1.25,
+                    )
+                )
+        assert 0 < wssd
+        
     @pytest.mark.parametrize(
         ("kwargs", "message"),
         [

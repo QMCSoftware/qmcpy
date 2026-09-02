@@ -8,6 +8,7 @@ def kronecker_vector_search_mobius_transform(n_max, d_max, searchsize, kernel=No
         - The first component is gen_vec_init, defaults to the golden ratio.
         - We use a modified mobius transformation f(x) = (a*x + b)/(c*x + d) where a, c are distinct primes and b, d are the two pairs of the smallest positive integers such that |a*d - b*c| = 1.
         - Each subsequent component is found by performing the mobius transformation on the previous component, searching over all pairs of distinct primes from the first searchsize many primes.
+    
     Args:
         n_max (int): The maximum sample size to be searched over.
         d_max (int): The maximum dimension for which to find the generating vector.
@@ -15,16 +16,20 @@ def kronecker_vector_search_mobius_transform(n_max, d_max, searchsize, kernel=No
         searchsize (int): The number of primes to search over for each component of the generating vector.
         coord_weights (array-like, optional): An array of coordinate weights to use in the search. If None, weights are set to j^(-2).
         gen_vec_init (array-like, optional): The initial value for the generating vector. If None, the golden ratio is used for the first component. Note that gen_vec_init is taken mod 1.
+    
     Returns:
         generating_vector, wssd, discrepancies, coeff (tuple):
         - generating_vector (numpy array): The generating vector found by the search.
         - wssd (float): The weighted sum of squared discrepancies for n = 1,...,n_max, for the generating vector found.
         - discrepancies (numpy array): The discrepancies for n = 1,...,n_max.
         - coeff (numpy array): The coefficients of the linear transformation used in the search. A description of the coeff array is found below.
+    
     Time cost:
         The time cost of the search is O(searchsize^2 * d_max * n_max).
+    
     Approach:
         Conducts a deterministic CBC search for a generating vector, minimizing the weighted sum of squared discrepancies (wssd) with sample weights w_n = n.
+    
     Details on coeff array:
         The coeff array is a (d_max-1) x 4 array where each row corresponds to a dimension from 2 to d_max. The columns correspond to the coefficients of the linear transformation used to compute the gen_vec component for that dimension. Specifically,
         - gen_vec[dim+1] = (coeff[dim, 0] * gen_vec[dim] + coeff[dim, 1]) / (coeff[dim, 2] * gen_vec[dim] + coeff[dim, 3])
@@ -55,12 +60,7 @@ def kronecker_vector_search_mobius_transform(n_max, d_max, searchsize, kernel=No
         import sympy
     except ImportError:
         print("While not required, installing the sympy package is recommended for this search method. It is used to compute the Bezout coefficients for the linear transformation used in the search. If sympy is not installed, the search will use a recursive and likely slower implementation of the Euclidean algorithm instead.")
-        response = input("Do you want to continue without sympy? (y/n): ")
-        if response.lower() != 'y':
-            raise ImportError("Please install sympy and try again.")
-        else:
-            has_sympy = False
-            print("Continuing without sympy. This may take longer.")
+        has_sympy = False
     else:
         has_sympy = True
 
@@ -112,7 +112,7 @@ def kronecker_vector_search_mobius_transform(n_max, d_max, searchsize, kernel=No
 
     num = n_max * (n_max + 1) / 2
 
-    nK0 = (1 + coord_weights/6)
+    nK0 = (1 + coord_weights * kernel(0))
     nK0 = n_max * np.cumprod(nK0)
 
     # precompute Bezout coefficients for all pairs of primes in the search space

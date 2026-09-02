@@ -399,10 +399,12 @@ class Lattice(AbstractLDDiscreteDistribution):
 
     def expected_squared_periodic_discrepancies(self, n_max, coord_weights=None, kernel=None):
         """Returns the expected squared periodic discrepancies for each of the first n_max points of the lattice sequence.
+
         Args:
             n_max (int): Maximum number of points to calculate the squared periodic discrepancies for.
             coord_weights (Union[None, np.ndarray]): Coordinate weights for the discrepancy calculation. If None, uses weights gamma_j = j^(-2).
             kernel (Union[None, Callable]): Kernel function for the discrepancy calculation. If None, uses the second bernoulli polynomial.
+        
         Returns:
             discs (np.ndarray): The expected squared periodic discrepancies for the first n_max points.
         """
@@ -416,6 +418,8 @@ class Lattice(AbstractLDDiscreteDistribution):
 
         if kernel is None:
             kernel = lambda x: x * (x - 1) + 1/6
+
+        coord_weights = coord_weights[:self.d]
 
         k_tilde = lambda x: np.prod(1 + coord_weights * kernel(x), axis=-1)
         
@@ -461,15 +465,19 @@ class Lattice(AbstractLDDiscreteDistribution):
 
     def wssd(self, n_max, coord_weights=None, sample_weights=None):
         """Returns the weighted sum of the expected squared periodic discrepancies for the first n_max points of the lattice sequence.
+        
         Args:
             n_max (int): Number of points to calculate the weighted squared periodic discrepancy for.
             coord_weights (Union[None, np.ndarray]): Coordinate weights for the discrepancy calculation. If None, uses weights gamma_j = j^(-2).
             sample_weights (Union[None, np.ndarray]): Sample weights for the weighted squared periodic discrepancy calculation. If None, uses weights w_n = n. Note that the time cost may be higher for other sample weights.
+        
         Returns:
             wssd (float): The weighted squared periodic discrepancy.
         """
         if coord_weights is not None and len(coord_weights) < self.d:
             raise ValueError("Length of coord_weights must be greater than or equal to the dimension of the lattice")
+        if coord_weights is not None:
+            coord_weights = coord_weights[:self.d]
         if sample_weights is not None and len(sample_weights) < n_max:
             raise ValueError("Length of sample_weights must be at least n_max")
         if sample_weights is None:
