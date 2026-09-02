@@ -159,8 +159,9 @@ open_colab_notebook:  # Open NOTEBOOK in Colab from the current branch, but only
 	if [ -z "$$nb" ]; then echo "Usage: make open_colab_notebook NOTEBOOK=demos/path/to.ipynb [COLAB_BASE=develop]"; exit 2; fi; \
 	case "$$nb" in *.ipynb) ;; *) echo "Not a .ipynb file: $$nb"; exit 2;; esac; \
 	branch=$$(git rev-parse --abbrev-ref HEAD); \
-	slug=$$(git remote get-url origin 2>/dev/null | sed -E 's#(git@github\.com:|https://github\.com/)##; s#\.git$$##'); \
-	if [ -z "$$slug" ]; then echo "Cannot determine the GitHub owner/repo from the 'origin' remote."; exit 1; fi; \
+	slug=$$($(PYTHON) -c "import json; wprint(json.load(open('scripts/colab_notebooks_manifest.json'))['repo'])" 2>/dev/null); \
+	[ -n "$$slug" ] || slug=$$(git remote get-url origin 2>/dev/null | sed -E 's#(git@github\.com:|https://github\.com/)##; s#\.git$$##'); \
+	if [ -z "$$slug" ]; then echo "Cannot determine the GitHub owner/repo (manifest 'repo' or 'origin' remote)."; exit 1; fi; \
 	git fetch -q origin "$$base" "$$branch" 2>/dev/null || true; \
 	if ! git rev-parse -q --verify "origin/$$branch" >/dev/null; then \
 		echo "Branch '$$branch' is not on origin -- push it first (Colab loads notebooks from GitHub)."; exit 1; \

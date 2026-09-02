@@ -218,6 +218,8 @@ make open_colab_notebook_gist NOTEBOOK=demos/quickstart.ipynb  # in Colab, from 
 
 `open_colab_notebook` uses the branch version only when the notebook is new or differs from `develop`, otherwise the `develop` version. See [docs/tests.md](docs/tests.md) for details.
 
+Note: `make format` runs `make harden_colab_notebook`, so it will insert a Colab badge and bootstrap cell into any unclassified `demos/*.ipynb` and add it to `scripts/colab_notebooks_manifest.json` (and fail if a notebook cannot be hardened automatically).
+
 ## Other Developer Tools
 
 The [Developers Tools](https://qmcpy.org/references-for-python-and-mathematical-software-development/) page on [qmcpy.org](https://qmcpy.org) documents additional tools we have found helpful for mathematical software development and presentation.

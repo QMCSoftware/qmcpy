@@ -50,7 +50,7 @@ def colab_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 
     manifest_path = tmp_path / "manifest.json"
     manifest = {
-        "repo": "QMCSoftware/QMCSoftware",
+        scripts/colab_notebooks_manifest.json,
         "git_ref": "develop",
         "enabled": [],
         "disabled": {},
