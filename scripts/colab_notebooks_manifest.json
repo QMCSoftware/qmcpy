@@ -18,6 +18,7 @@
   "demos/gaussian_diagnostics/gaussian_diagnostics_demo.ipynb",
   "demos/iris.ipynb",
   "demos/korobov_hammersley_latinhypercube_demos.ipynb",
+  "demos/lattice_kronecker_methods.ipynb",
   "demos/lattice_random_generator.ipynb",
   "demos/lebesgue_integration.ipynb",
   "demos/linear-scrambled-halton.ipynb",
