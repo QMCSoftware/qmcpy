@@ -7,6 +7,7 @@ import sys
 
 
 PYG_LIB_REQUIREMENT = "pyg_lib>=0.6.0"
+PYG_LIB_SOURCE = "git+https://github.com/pyg-team/pyg-lib.git@0.8.0"
 TORCH_GEOMETRIC_REQUIREMENT = "torch-geometric>=2.6.1"
 
 
@@ -79,7 +80,6 @@ def main(torch_module=None):
         TORCH_GEOMETRIC_REQUIREMENT,
     )
 
-    last_error = None
     accelerator = accelerator_tag(torch_module)
     for wheel_url in wheel_urls(torch_module.__version__, accelerator):
         print(f"Trying pyg_lib wheels from {wheel_url}", flush=True)
@@ -97,14 +97,28 @@ def main(torch_module=None):
                 wheel_url,
             )
             return
-        except subprocess.CalledProcessError as error:
-            last_error = error
+        except subprocess.CalledProcessError:
+            pass
 
-    raise RuntimeError(
-        f"Unable to install pyg_lib for torch {torch_module.__version__} "
-        f"({accelerator}). "
-        "PyG wheels at https://data.pyg.org/whl/ may not support this build."
-    ) from last_error
+    print(
+        "Pre-built pyg_lib wheels were unavailable; trying the official "
+        "source release",
+        flush=True,
+    )
+    try:
+        run(
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "--no-build-isolation",
+            PYG_LIB_SOURCE,
+        )
+    except subprocess.CalledProcessError as error:
+        raise RuntimeError(
+            f"Unable to install pyg_lib for torch {torch_module.__version__} "
+            f"({accelerator}) from PyG wheels or the official source release."
+        ) from error
 
 
 if __name__ == "__main__":
