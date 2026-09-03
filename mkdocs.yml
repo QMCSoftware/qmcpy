@@ -47,6 +47,7 @@ nav:
       - 2020 MCQMC Software Tutorial: demos/talk_paper_demos/MCQMC_Tutorial_2020/MCQMC_2020_QMC_Software_Tutorial.ipynb
     - Technical Examples:
       - 2023 Random Lattice Generating Vectors: demos/lattice_random_generator.ipynb
+      - Lattice and Kronecker Generating-Vector Search: demos/lattice_kronecker_methods.ipynb
       - 2022 Bayesian Cubature Stopping Criterion: demos/gaussian_diagnostics/gaussian_diagnostics_demo.ipynb
       - 2020 Why Add Q to MC?: demos/talk_paper_demos/why_add_q_to_mc_blog/why_add_q_to_mc_blog.ipynb
       - 2020 Bayesian Optimization Expected Improvement:
