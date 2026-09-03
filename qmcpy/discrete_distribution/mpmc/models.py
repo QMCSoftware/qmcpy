@@ -7,19 +7,23 @@ try:
 except Exception:  # torch_geometric built without the pooling ops
     _tg_radius_graph = None
 
+_tg_radius_graph_ok = _tg_radius_graph is not None
+
 
 def radius_graph(x, r, batch=None, loop=False):
     """Edges between points within distance ``r`` (per batch), shaped ``[2, E]``.
 
-    Uses torch_geometric's compiled ``radius_graph`` when its backend
-    (``pyg_lib`` or ``torch_cluster``) is installed, otherwise a native
-    ``torch.cdist`` fallback so MPMC runs without those optional packages.
+    Uses torch_geometric's compiled ``radius_graph`` when its backend is present
+    and working, otherwise a native ``torch.cdist`` fallback so MPMC runs
+    without ``pyg_lib`` / ``torch_cluster`` (and on platforms where their
+    compiled ops -- e.g. ``torch.ops.pyg.radius`` on Windows -- fail to load).
     """
-    if _tg_radius_graph is not None:
+    global _tg_radius_graph_ok
+    if _tg_radius_graph_ok:
         try:
             return _tg_radius_graph(x, r=r, batch=batch, loop=loop)
-        except ImportError:
-            pass
+        except (ImportError, AttributeError, RuntimeError, OSError):
+            _tg_radius_graph_ok = False  # backend missing/broken -- use native from now on
     dist = torch.cdist(x, x)
     mask = dist <= r
     if batch is not None:
