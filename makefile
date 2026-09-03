@@ -122,6 +122,21 @@ unittests: ensure_artifacts
 		--no-header \
 		test/ -W ignore::DeprecationWarning
 
+# Core unit tests only: skips test/booktests/ (needs the notebook stack); other
+# modules self-skip via pytest.importorskip. Pairs with the `test_core` extra so
+# interpreters at the `requires-python` floor can run this. Unlike `unittests`
+# this omits -x: on a compatibility run the full list of failures is the point.
+unittests_core: ensure_artifacts
+	@mkdir -p $(UNIT_COV_DIR)
+	COVERAGE_FILE=$(UNIT_COV_DIR)/.coverage \
+	python -m pytest $(PYTEST_XDIST) $(PYTEST_EXTRA_ARGS) \
+		--cov=qmcpy \
+		--cov-report term \
+		--cov-report json:$(UNIT_COV_DIR)/coverage.json \
+		--no-header -rs \
+		--ignore=test/booktests \
+		test/ -W ignore::DeprecationWarning
+
 tests_no_docker_no_mpmc: doctests_no_docker_no_mpmc unittests coverage
 
 ##########################################################

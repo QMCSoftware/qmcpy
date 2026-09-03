@@ -11,6 +11,13 @@ on:
       - master
   workflow_dispatch:
 
+# CodeQL "Workflow does not contain permissions": restrict the GITHUB_TOKEN to
+# the minimum. These jobs only read the repo -- checkout, conda/python setup,
+# caching, and tests. Codecov uploads authenticate with CODECOV_TOKEN, not the
+# GITHUB_TOKEN, so no write scope is needed.
+permissions:
+  contents: read
+
 concurrency:
   group: unittests-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -21,23 +28,19 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
         matrix:
+            # These versions are real: python-version is passed to
+            # setup-miniconda and asserted by the "Verify interpreter" step.
+            # Floor is 3.10 -- the `test` extra needs pytest >= 9.0.3 and
+            # parsl >= 2026.01.05, which both require 3.10+. Older interpreters
+            # run in the core-tests job below. Each version appears once; the
+            # full install set resolves on all three OSes for 3.10-3.14.
             include:
-              - os: macos-latest
-                python-version: '3.5'
-              - os: macos-latest
-                python-version: '3.8'
               - os: macos-latest
                 python-version: '3.11'
               - os: macos-latest
                 python-version: '3.14'
               - os: ubuntu-latest
-                python-version: '3.6'
-              - os: ubuntu-latest
-                python-version: '3.9'
-              - os: ubuntu-latest
                 python-version: '3.12'
-              - os: windows-latest
-                python-version: '3.7'
               - os: windows-latest
                 python-version: '3.10'
               - os: windows-latest
@@ -48,9 +51,37 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v3
         with:
           miniconda-version: "latest"
-          auto-activate-base: true
+          python-version: ${{ matrix.python-version }}
+          channels: conda-forge
+          auto-activate-base: false
+          # Name the env explicitly: without this the active environment is
+          # ambiguous (base vs the auto-created `test`), which can leave pip
+          # and python pointing at different prefixes.
+          activate-environment: qmcpy-ci
           conda-remove-defaults: true
-          use-only-tar-bz2: true
+
+      # Guards the failure mode this matrix used to have: the job name claimed a
+      # Python version while every job actually ran the conda base interpreter.
+      # Steps that touch Python must use a profile-loading shell (bash -el / pwsh)
+      # or they will see base rather than the activated env.
+      - name: Verify interpreter matches the matrix (Unix)
+        if: runner.os != 'Windows'
+        shell: bash -el {0}
+        run: |
+          echo "which python : $(which python)"
+          echo "which pip    : $(which pip)"
+          conda info --envs || true
+          python -c "import sys; print('prefix:',sys.prefix); print(sys.version)"
+          python -c "import sys; got='.'.join(map(str,sys.version_info[:2])); want='${{ matrix.python-version }}'; assert got==want, 'matrix says %s but interpreter is %s'%(want,got)"
+
+      - name: Verify interpreter matches the matrix (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Get-Command python | Format-List
+          conda info --envs
+          python -c "import sys; print('prefix:',sys.prefix); print(sys.version)"
+          python -c "import sys; got='.'.join(map(str,sys.version_info[:2])); want='${{ matrix.python-version }}'; assert got==want, 'matrix says %s but interpreter is %s'%(want,got)"
 
       # -----------------------------------------------------------
       # Clean old coverage files
@@ -194,21 +225,25 @@ jobs:
 
       - name: Build and cache wheels (Linux)
         if: runner.os == 'Linux'
+        shell: bash -el {0}
         run: |
-          python -m pip wheel -w ./.wheels .[test,test_torch,test_gpytorch,test_botorch,test_umbridge] || true
+          python -m pip wheel -w ./.wheels ".[test,test_torch,test_gpytorch,test_botorch,test_umbridge]" || true
 
       - name: Install Python dependencies (Linux)
         if: runner.os == 'Linux'
+        shell: bash -el {0}
         run: |
           pip install --find-links ./.wheels -e ".[test,test_torch,test_gpytorch,test_botorch,test_umbridge]"
 
       - name: Build and cache wheels (macOS)
         if: runner.os == 'macOS'
+        shell: bash -el {0}
         run: |
-          python -m pip wheel -w ./.wheels .[test,test_torch,test_gpytorch,test_botorch] || true
+          python -m pip wheel -w ./.wheels ".[test,test_torch,test_gpytorch,test_botorch]" || true
 
       - name: Install Python dependencies (macOS)
         if: runner.os == 'macOS'
+        shell: bash -el {0}
         run: |
           pip install --find-links ./.wheels -e ".[test,test_torch,test_gpytorch,test_botorch]"
 
@@ -227,5 +262,145 @@ jobs:
       # -----------------------------------------------------------
       # Run unittests for Python source files
       # -----------------------------------------------------------
-      - name: Run unittests (parallel)
+      - name: Run unittests (parallel, Unix)
+        if: runner.os != 'Windows'
+        shell: bash -el {0}
         run: make unittests
+
+      - name: Run unittests (parallel, Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: make unittests
+
+  # Exercise the supported 3.9 floor without the `test` extra's Python 3.10+
+  # dependencies. First verify the built wheel as a user would install it;
+  # then run test/test_*.py against the slim `test_core` extra. Modules needing
+  # an optional stack skip themselves via pytest.importorskip.
+  # The 3.9 support claim is OS-independent, so prove it on every OS we ship
+  # for. qmctoolscl publishes exactly one wheel (cp312, win_amd64), so all three
+  # legs build it from its sdist -- which is precisely the risk being covered.
+  core-tests:
+    name: Core Unit Tests on ${{ matrix.os }} (Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+        fail-fast: false
+        matrix:
+            os: [ubuntu-latest, macos-latest, windows-latest]
+            python-version: ['3.9']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniconda-version: "latest"
+          python-version: ${{ matrix.python-version }}
+          channels: conda-forge
+          auto-activate-base: false
+          activate-environment: qmcpy-core
+          conda-remove-defaults: true
+
+      - name: Verify interpreter matches the matrix (Unix)
+        if: runner.os != 'Windows'
+        shell: bash -el {0}
+        run: |
+          echo "which python : $(which python)"
+          conda info --envs || true
+          python -c "import sys; print('prefix:',sys.prefix); print(sys.version)"
+          python -c "import sys; got='.'.join(map(str,sys.version_info[:2])); want='${{ matrix.python-version }}'; assert got==want, 'matrix says %s but interpreter is %s'%(want,got)"
+
+      - name: Verify interpreter matches the matrix (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          conda info --envs
+          python -c "import sys; print('prefix:',sys.prefix); print(sys.version)"
+          python -c "import sys; got='.'.join(map(str,sys.version_info[:2])); want='${{ matrix.python-version }}'; assert got==want, 'matrix says %s but interpreter is %s'%(want,got)"
+
+      - name: Build and test the user wheel (Unix)
+        if: runner.os != 'Windows'
+        shell: bash -el {0}
+        run: |
+          python -m pip install build
+          python -m build --wheel
+          python -m pip install dist/*.whl
+          python -m pip check
+          python -c "import os,tempfile; os.chdir(tempfile.gettempdir()); import qmcpy; print(qmcpy.__file__)"
+
+      - name: Build and test the user wheel (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          python -m pip install build
+          python -m build --wheel
+          $wheel = (Get-ChildItem dist/*.whl | Select-Object -First 1).FullName
+          python -m pip install $wheel
+          python -m pip check
+          python -c "import os,tempfile; os.chdir(tempfile.gettempdir()); import qmcpy; print(qmcpy.__file__)"
+
+      - name: Install qmcpy and minimal test dependencies (Unix)
+        if: runner.os != 'Windows'
+        shell: bash -el {0}
+        run: python -m pip install -e ".[test_core]"
+
+      - name: Install qmcpy and minimal test dependencies (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: python -m pip install -e ".[test_core]"
+
+      - name: Run core unit tests (Unix)
+        if: runner.os != 'Windows'
+        shell: bash -el {0}
+        run: make unittests_core
+
+      - name: Run core unit tests (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: make unittests_core
+
+  # Early-warning job for the next Python. 3.15.0-rc.1 is published in
+  # actions/python-versions but NOT in conda-forge, so this uses setup-python
+  # rather than setup-miniconda like the jobs above.
+  #
+  # Non-blocking by design: at time of writing scipy (a core dependency) and
+  # scikit-learn publish no cp315 wheels, so the install is expected to fail
+  # until the scientific stack catches up. The job exists to tell us the day
+  # that changes -- when it goes green, promote 3.15 into the `tests` matrix.
+  prerelease-tests:
+    name: Core Unit Tests (Python ${{ matrix.python-version }}, pre-release)
+    runs-on: ubuntu-latest
+    # Never gate a merge on an unreleased interpreter.
+    continue-on-error: true
+    strategy:
+        fail-fast: false
+        matrix:
+            python-version: ['3.15.0-rc.1']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          allow-prereleases: true
+
+      - name: Report interpreter
+        run: python -VV
+
+      # Step-level continue-on-error is still needed: without it a failed
+      # install would skip the reporting step below.
+      - name: Install qmcpy and minimal test dependencies
+        id: install
+        continue-on-error: true
+        run: pip install -e ".[test_core]"
+
+      - name: Run core unit tests
+        if: steps.install.outcome == 'success'
+        run: make unittests_core
+
+      - name: Report pre-release ecosystem not ready
+        if: steps.install.outcome != 'success'
+        run: |
+          echo "::warning title=Python ${{ matrix.python-version }} not installable::\
+          qmcpy could not be installed on Python ${{ matrix.python-version }}. \
+          This is expected while the scientific stack lacks cp315 wheels (scipy \
+          and scikit-learn in particular). See the install log above; when this \
+          job passes, promote 3.15 into the tests matrix."
