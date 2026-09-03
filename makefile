@@ -2,6 +2,7 @@
 PYTEST_XDIST ?= $(shell python scripts/pytest_xdist.py 2>/dev/null)
 PYTEST ?=
 PYTHON ?= python3
+SMOKE_CODE_CELLS ?= 2
 WITH_MPMC ?= 0
 HAS_MPMC ?= $(shell python -c "import importlib.util; mods=('torch','pyg_lib','torch_geometric'); print(int(all(importlib.util.find_spec(m) is not None for m in mods)))" 2>/dev/null || echo 0)
 
@@ -122,6 +123,21 @@ unittests: ensure_artifacts
 		--no-header \
 		test/ -W ignore::DeprecationWarning
 
+# Core unit tests only: skips test/booktests/ (needs the notebook stack); other
+# modules self-skip via pytest.importorskip. Pairs with the `test_core` extra so
+# interpreters at the `requires-python` floor can run this. Unlike `unittests`
+# this omits -x: on a compatibility run the full list of failures is the point.
+unittests_core: ensure_artifacts
+	@mkdir -p $(UNIT_COV_DIR)
+	COVERAGE_FILE=$(UNIT_COV_DIR)/.coverage \
+	python -m pytest $(PYTEST_XDIST) $(PYTEST_EXTRA_ARGS) \
+		--cov=qmcpy \
+		--cov-report term \
+		--cov-report json:$(UNIT_COV_DIR)/coverage.json \
+		--no-header -rs \
+		--ignore=test/booktests \
+		test/ -W ignore::DeprecationWarning
+
 tests_no_docker_no_mpmc: doctests_no_docker_no_mpmc unittests coverage
 
 ##########################################################
@@ -130,6 +146,88 @@ tests_no_docker_no_mpmc: doctests_no_docker_no_mpmc unittests coverage
 generate_booktests:
 	@echo "\nGenerating missing booktest files..."
 	cd test/booktests/ && python generate_test.py --check-missing
+
+check_colab_notebooks:  # faster
+	$(PYTHON) -m scripts.check_colab_notebooks --strict
+
+check_colab_notebooks_smoke:  # slower; executes bootstrap + a few cells of every enabled notebook
+	$(PYTHON) -m scripts.smoke_test_colab_notebooks --cells-after-bootstrap $(SMOKE_CODE_CELLS)
+
+harden_colab_notebook:  # Add Colab button if necessary
+	@if [ -n "$(NOTEBOOK)" ]; then \
+		if [ -n "$(FORCE)" ]; then \
+			$(PYTHON) -m scripts.harden_colab_notebook --notebook "$(NOTEBOOK)" --force; \
+		else \
+			$(PYTHON) -m scripts.harden_colab_notebook --notebook "$(NOTEBOOK)"; \
+		fi; \
+	elif [ -n "$(FORCE)" ]; then \
+		$(PYTHON) -m scripts.harden_colab_notebook --force; \
+	else \
+		$(PYTHON) -m scripts.harden_colab_notebook --all-unclassified; \
+	fi
+
+report_colab_notebook_patterns:
+	$(PYTHON) -m scripts.report_colab_notebook_patterns
+
+open_colab_notebook:  # Open NOTEBOOK in Colab from the current branch, but only when it differs from COLAB_BASE (default develop); usage: make open_colab_notebook NOTEBOOK=demos/foo.ipynb [COLAB_BASE=develop]
+	@nb="$(NOTEBOOK)"; nb="$${nb#./}"; base="$${COLAB_BASE:-develop}"; \
+	if [ -z "$$nb" ]; then echo "Usage: make open_colab_notebook NOTEBOOK=demos/path/to.ipynb [COLAB_BASE=develop]"; exit 2; fi; \
+	case "$$nb" in *.ipynb) ;; *) echo "Not a .ipynb file: $$nb"; exit 2;; esac; \
+	branch=$$(git rev-parse --abbrev-ref HEAD); \
+	slug=$$($(PYTHON) -c "import json; wprint(json.load(open('scripts/colab_notebooks_manifest.json'))['repo'])" 2>/dev/null); \
+	[ -n "$$slug" ] || slug=$$(git remote get-url origin 2>/dev/null | sed -E 's#(git@github\.com:|https://github\.com/)##; s#\.git$$##'); \
+	if [ -z "$$slug" ]; then echo "Cannot determine the GitHub owner/repo (manifest 'repo' or 'origin' remote)."; exit 1; fi; \
+	git fetch -q origin "$$base" "$$branch" 2>/dev/null || true; \
+	if ! git rev-parse -q --verify "origin/$$branch" >/dev/null; then \
+		echo "Branch '$$branch' is not on origin -- push it first (Colab loads notebooks from GitHub)."; exit 1; \
+	fi; \
+	if ! git rev-parse -q --verify "origin/$$base" >/dev/null; then \
+		echo "Base '$$base' is not a branch on origin -- set COLAB_BASE to a pushed branch (e.g. develop)."; exit 1; \
+	fi; \
+	if ! git ls-tree -r --name-only "origin/$$branch" | grep -qxF "$$nb"; then \
+		echo "'$$nb' is not committed on origin/$$branch -- commit and push it first."; exit 1; \
+	fi; \
+	git diff --quiet "origin/$$branch" -- "$$nb" || \
+		echo "note: local '$$nb' differs from origin/$$branch; Colab shows the pushed version."; \
+	if [ "$$branch" = "$$base" ]; then \
+		ref="$$base"; echo "On '$$base' -- opening the $$base version."; \
+	elif ! git ls-tree -r --name-only "origin/$$base" | grep -qxF "$$nb"; then \
+		ref="$$branch"; echo "'$$nb' is new (not on origin/$$base) -- opening the '$$branch' version."; \
+	elif git diff --quiet "origin/$$base" "origin/$$branch" -- "$$nb"; then \
+		ref="$$base"; echo "'$$nb' is unchanged vs origin/$$base -- the standard badge covers it; opening the $$base version."; \
+	else \
+		ref="$$branch"; echo "'$$nb' differs from origin/$$base -- opening the '$$branch' version."; \
+	fi; \
+	url="https://colab.research.google.com/github/$$slug/blob/$$ref/$$nb"; \
+	echo "$$url"; \
+	$(PYTHON) -m webbrowser "$$url" >/dev/null 2>&1 || echo "(could not auto-open a browser; copy the URL above)"
+
+open_colab_notebook_gist:  # Upload NOTEBOOK from the working tree to a throwaway secret gist and open it in Colab (needs the gh CLI); usage: make open_colab_notebook_gist NOTEBOOK=demos/foo.ipynb
+	@nb="$(NOTEBOOK)"; nb="$${nb#./}"; \
+	if [ -z "$$nb" ]; then echo "Usage: make open_colab_notebook_gist NOTEBOOK=demos/path/to.ipynb"; exit 2; fi; \
+	if [ ! -f "$$nb" ]; then echo "No such file: $$nb"; exit 2; fi; \
+	case "$$nb" in *.ipynb) ;; *) echo "Not a .ipynb file: $$nb"; exit 2;; esac; \
+	if ! command -v gh >/dev/null 2>&1; then \
+		echo "The 'gh' CLI is required (https://cli.github.com), then run 'gh auth login'."; exit 1; \
+	fi; \
+	base=$$(basename "$$nb"); \
+	url=$$(gh gist create --desc "qmcpy Colab preview of $$nb (safe to delete)" "$$nb") || exit 1; \
+	id=$${url##*/}; \
+	login=$$(gh api user -q .login 2>/dev/null); \
+	colab="https://colab.research.google.com/gist/$${login:+$$login/}$$id/$$base"; \
+	echo "gist (secret):    $$url"; \
+	echo "colab:            $$colab"; \
+	echo "delete when done: gh gist delete $$id"; \
+	echo "note: sibling .py helpers won't resolve from a gist; the bootstrap cell falls back to develop."; \
+	$(PYTHON) -m webbrowser "$$colab" >/dev/null 2>&1 || echo "(could not auto-open a browser; copy the colab URL above)"
+
+open_notebook:  # Open NOTEBOOK from the working tree in local JupyterLab; usage: make open_notebook NOTEBOOK=demos/foo.ipynb
+	@nb="$(NOTEBOOK)"; nb="$${nb#./}"; \
+	if [ -z "$$nb" ]; then echo "Usage: make open_notebook NOTEBOOK=demos/path/to.ipynb"; exit 2; fi; \
+	if [ ! -f "$$nb" ]; then echo "No such file: $$nb"; exit 2; fi; \
+	case "$$nb" in *.ipynb) ;; *) echo "Not a .ipynb file: $$nb"; exit 2;; esac; \
+	if command -v jupyter >/dev/null 2>&1; then exec jupyter lab "$$nb"; \
+	else exec $(PYTHON) -m jupyterlab "$$nb"; fi
 
 check_booktests:
 	rm -fr demos/.ipynb_checkpoints/*checkpoint.ipynb && \
@@ -408,6 +506,7 @@ format:
 	$(MAKE) flatten_qmcpy_imports
 	$(MAKE) markdown-unwrap MARKDOWN_UNWRAP_PATH="$(MARKDOWN_UNWRAP_PATH)"
 	$(MAKE) rm_trailing_whitespace FORMAT_PATH="$(FORMAT_PATH)"
+	$(MAKE) harden_colab_notebook
 
 flatten_qmcpy_imports:
 	$(PYTHON) scripts/flatten_qmcpy_imports.py
