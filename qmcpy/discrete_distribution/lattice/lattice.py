@@ -437,40 +437,33 @@ class Lattice(AbstractLDDiscreteDistribution):
         k_vector = k_vector.reshape(-1)
 
         # get the constant vector term of the summation
-        k_const = -1 + k_vector[0]*np.array([j**(-1) for j in range(1, n_max + 1)], dtype=np.float64)
+        k_const = -1 + k_vector[0] / np.arange(1, n_max + 1, dtype=np.float64)
 
         # group the kernel evaluations by powers of 2
         k_sum = np.zeros(np.ceil(np.log2(n_max)).astype(int), dtype=np.float64)
         for i in range(k_sum.size):
             k_sum[i] = np.sum(k_vector[2**i:(2**(i+1))])
 
-        # get the frequency matrix for how often each kernel evaluation appears
-        # this is always the same and can be precomputed, but for values of n_max large enough to matter (~ 2^25)
-        # the precomputed file is >1GB and would take longer to load than to compute
-        i = np.arange(2**k_sum.size)
-        pattern = np.zeros((k_sum.size, 2**k_sum.size), dtype=np.float64) # start with the pattern for the full power of two
+        # k_sum @ freq_mtx in O(n_max) memory: the shared 1/(j+1)**2 factor collapses the
+        # (log2(n_max), n_max) frequency matrix to cumsum(2*w) / (j+1)**2, with w[j] the sum
+        # of k_sum over the set bits of j.
+        idx = np.arange(n_max)
+        w = np.zeros(n_max, dtype=np.float64)
         for l in range(k_sum.size):
-            pattern[l] = ((i >> (l)) & 1) * 2
-
-        # truncate the matrix to the correct size, get the cumsum and divide by the square of the index
-        pattern = pattern[:, :n_max]
-        freq_mtx = np.cumsum(pattern, axis=1)
-        divisor = np.arange(1, n_max + 1) ** 2
-        freq_mtx /= divisor
-
-        # multiply by the frequency matrix and add the constant vector
-        discs = k_const + (k_sum @ freq_mtx)
+            w += k_sum[l] * ((idx >> l) & 1)
+        discs = k_const + np.cumsum(2.0 * w) / (idx + 1.0) ** 2
         return discs
 
 
-    def wssd(self, n_max, coord_weights=None, sample_weights=None):
+    def wssd(self, n_max, coord_weights=None, sample_weights=None, kernel=None):
         """Returns the weighted sum of the expected squared periodic discrepancies for the first n_max points of the lattice sequence.
-        
+
         Args:
             n_max (int): Number of points to calculate the weighted squared periodic discrepancy for.
             coord_weights (Union[None, np.ndarray]): Coordinate weights for the discrepancy calculation. If None, uses weights gamma_j = j^(-2).
             sample_weights (Union[None, np.ndarray]): Sample weights for the weighted squared periodic discrepancy calculation. If None, uses weights w_n = n. Note that the time cost may be higher for other sample weights.
-        
+            kernel (Union[None, Callable]): Kernel function for the discrepancy calculation. If None, uses the second bernoulli polynomial.
+
         Returns:
             wssd (float): The weighted squared periodic discrepancy.
         """
@@ -478,12 +471,12 @@ class Lattice(AbstractLDDiscreteDistribution):
             raise ValueError("Length of coord_weights must be greater than or equal to the dimension of the lattice")
         if coord_weights is not None:
             coord_weights = coord_weights[:self.d]
-        if sample_weights is not None and len(sample_weights) < n_max:
-            raise ValueError("Length of sample_weights must be at least n_max")
+        if sample_weights is not None and len(sample_weights) != n_max:
+            raise ValueError("Length of sample_weights must equal n_max")
         if sample_weights is None:
             sample_weights = np.arange(1, n_max + 1, dtype=np.float64)
 
-        discs = self.expected_squared_periodic_discrepancies(n_max, coord_weights=coord_weights)
+        discs = self.expected_squared_periodic_discrepancies(n_max, coord_weights=coord_weights, kernel=kernel)
         wssd = np.dot(sample_weights, discs)
-        
+
         return wssd

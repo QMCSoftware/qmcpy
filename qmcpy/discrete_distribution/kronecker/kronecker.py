@@ -285,7 +285,7 @@ class Kronecker(AbstractLDDiscreteDistribution):
             gen_vec = _richtmyer_generating_vector(self.dvec.max()+1)
         elif isinstance(generating_vector, str) and generating_vector.lower() == "suzuki":
             self.gen_vec_source = "SUZUKI"
-            gen_vec = _suzuki_generating_vector(self.dvec.max()+1)       
+            gen_vec = _suzuki_generating_vector(self.dvec.max()+1)
         elif isinstance(generating_vector, str) and generating_vector.lower() == "cbc_mt":
             self.gen_vec_source = "CBC_MT"
             CBC_MT = np.array([0.618033988749895,
@@ -459,7 +459,6 @@ class Kronecker(AbstractLDDiscreteDistribution):
             k_tilde = (lambda x, gamma: np.prod(1 + (x * (x - 1) + 1/6) * gamma, axis=-1), 1)
 
         return np.sqrt(self._square_periodic_discrepancies(n, k_tilde, gamma))
-        
 
     def wssd_discrepancy(self, n, sample_weights, k_tilde = None, gamma = None):
         # calculates the weighted sum of square discrepancy
@@ -472,7 +471,7 @@ class Kronecker(AbstractLDDiscreteDistribution):
         discrepancies = self._square_periodic_discrepancies(n, k_tilde, gamma)
         return np.sum(sample_weights * discrepancies, axis=-1)
 
-    
+
     def _square_periodic_discrepancies(self, n, k_tilde, gamma):
         n_array = np.arange(1, n + 1)
         # we need the points without a random shift for the calculation, so we can't use self._gen_samples

@@ -7,7 +7,7 @@
 - Treat MPMC as an optional feature, not part of the minimum QMCPy dependency set.
 - Prefer `pyg_lib` plus `torch-geometric`; do not require `torch-cluster` as a separate dependency.
 - For reproducible local work and future CI pinning, prefer a modern PyTorch line with matching `data.pyg.org` wheels installed by `qmcpy-install-mpmc`.
-- Keep older Python jobs in `unittests.yml` for core QMCPy coverage, but do not require them to run MPMC.
+- `unittests.yml` runs the full suite on `3.10`-`3.14` plus a slim `core-tests` tier on `3.9` (see [Minimum Python Version by Role](CONTRIBUTING.md#minimum-python-version-by-role)); neither installs MPMC.
 
 ## Support Policy
 
@@ -17,7 +17,8 @@
 | `3.13` | Target | Supported | `torch >= 2.10`, `torch-geometric >= 2.6.1`, `pyg_lib >= 0.6.0` | Run MPMC doctests and unit tests |
 | `3.12` | Target | Supported | `torch >= 2.10`, `torch-geometric >= 2.6.1`, `pyg_lib >= 0.6.0` | Run MPMC doctests and unit tests |
 | `3.10` to `3.11` | Best effort | Not a release blocker for MPMC | May work with matching PyTorch / PyG wheels, but not required by current CI policy | Optional manual testing only |
-| `3.5` to `3.9` | Legacy core-package coverage only | Not supported for MPMC | Do not spend CI budget trying to keep MPMC running here | No MPMC doctests or unit tests |
+
+Python `3.9` is covered only by the slim `core-tests` tier, which never installs MPMC's PyTorch Geometric stack (see [Minimum Python Version by Role](CONTRIBUTING.md#minimum-python-version-by-role)).
 
 The distinction is intentional:
 
@@ -26,27 +27,25 @@ The distinction is intentional:
 
 ## CI Policy
 
-The current CI split should be:
+The current CI split is:
 
-- `alltests.yml`: full-sweep validation on Linux, macOS, and Windows for Python `3.13`, including `make doctests_mpmc` and the standard unit-test suite.
-- `unittests.yml`: a broader version sampler for the repository, with explicit MPMC jobs on Python `3.12`, `3.13`, and `3.14`.
-- Older `unittests.yml` jobs: keep them for core QMCPy regressions, but do not require MPMC there.
+- `alltests.yml`: the only workflow that installs the MPMC stack (`qmcpy-install-mpmc`) and runs `make doctests_mpmc` plus the MPMC unit tests, on Python `3.13`. The steps are not OS-gated: Ubuntu alone on feature-branch pushes, all three OSes on full sweeps.
+- `unittests.yml`: `3.10`-`3.14` on all three OSes, plus a `core-tests` tier on Ubuntu for `3.9`. Neither calls `qmcpy-install-mpmc`, so `test/test_dd_mpmc.py` skips throughout via `pytest.importorskip("pyg_lib")`. This workflow gives **no** MPMC coverage.
 
-This gives one place to enforce modern MPMC compatibility without forcing the entire repository to abandon older Python jobs immediately.
+See [MPMC Coverage by OS](ci-testing.md#mpmc-coverage-by-os) for the per-operating-system breakdown.
+
+This keeps MPMC enforcement in one place. The trade-off: MPMC regressions are invisible to `unittests.yml`, so raising MPMC coverage means adding a job to `alltests.yml`, not widening the `unittests.yml` matrix.
 
 ## Local Developer Commands
 
-Install the usual test and MPMC extras first, then add the platform-specific
-PyG runtime with QMCPy's installed helper command:
+Install the usual test and MPMC extras first, then add the platform-specific PyG runtime with QMCPy's installed helper command:
 
 ```bash
 python -m pip install -e ".[test,test_torch,test_gpytorch,test_botorch,mpmc]"
 qmcpy-install-mpmc
 ```
 
-The `mpmc` extra contains dependencies available from PyPI. The helper handles
-`pyg_lib` separately because its wheel page depends on the installed PyTorch
-version and accelerator build, which standard project metadata cannot select.
+The `mpmc` extra contains dependencies available from PyPI. The helper handles `pyg_lib` separately because its wheel page depends on the installed PyTorch version and accelerator build, which standard project metadata cannot select.
 
 Then run the MPMC-specific checks:
 

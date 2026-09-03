@@ -9,6 +9,7 @@ def lattice_vector_wssd_search(n_max, d_max, coord_weights=None, kernel=None):
         d_max (int): The dimension of the lattice rule.
         coord_weights (array-like, optional): The coordinate weights used to compute the discrepancy. Defaults to j^(-2) for j=1,...,d_max.
         kernel (callable, optional): The kernel used to compute the discrepancy. Should accept a single argument and return a scalar. Defaults to the second Bernoulli polynomial.
+
     Returns:
         gen_vec (array-like): The generating vector of the lattice that minimizes the WSSD.
 
@@ -34,13 +35,13 @@ def lattice_vector_wssd_search(n_max, d_max, coord_weights=None, kernel=None):
         Custom kernels
 
         >>> bernoulli6 = lambda x: x * (x * (-1/2 + x * (x * (5/2 + x * (-3 + x))))) + 1/42
-        >>> gen_vec = lattice_vector_wssd_search(n_max=2**15, d_max=10, coord_weights=None, kernel=bernoulli6)
-        >>> gen_vec[0]
-        1
-        >>> len(gen_vec)
-        10
+        >>> lattice_vector_wssd_search(n_max=2**15, d_max=10, coord_weights=None, kernel=bernoulli6)
+        array([    1, 12589, 12955, 12021,    25, 14249,  1949,  2487,  8893,
+               14279])
 
-        The algorithm in its current form is sensitive to differences in floating point precision across platforms, hence the lack of specificity in the previous example. This can cause differences in generator quality, though in my ad hoc testing it is usually not catastrophic. It was originally built on a Windows machine.
+        Ties in the WSSD score are broken by smallest candidate index (tolerance rtol = 1e-13),
+        so the vector is reproducible across platforms; a strongly degenerate kernel can still
+        depend on that tolerance, but the default Bernoulli polynomial is well conditioned.
 
     """
     np.seterr(all='warn')
@@ -55,7 +56,7 @@ def lattice_vector_wssd_search(n_max, d_max, coord_weights=None, kernel=None):
         raise ValueError("coord_weights must be array-like")
     if not isinstance(n_max, int) or not isinstance(d_max, int):
         raise ValueError("n_max and d_max must be integers")
-    
+
     if len(coord_weights) < d_max:
         raise ValueError("coord_weights must have length at least d_max")
     if n_max < 8:
@@ -64,6 +65,8 @@ def lattice_vector_wssd_search(n_max, d_max, coord_weights=None, kernel=None):
         raise ValueError("d_max must be at least 1")
 
     m = np.ceil(np.log2(n_max)).astype(int)
+    if d_max > 2**(m - 2):
+        raise ValueError("d_max exceeds the CBC candidate pool for this n_max; increase n_max")
 
     # ----------------------------------------------------------------------
     # Set up rhovector - how often each value appears
@@ -93,7 +96,7 @@ def lattice_vector_wssd_search(n_max, d_max, coord_weights=None, kernel=None):
 
     gRows = np.ones(2**(m - 1), dtype=int) # gRows determines* ordering of cols to have circulant matrix
     gRows[-1] = 0
-    rowVects = np.ones(2**m - 1, dtype=int) # rowVects  
+    rowVects = np.ones(2**m - 1, dtype=int) # rowVects
     gStrtIdx = 0
     vStrtIdx = 0
 
@@ -118,7 +121,7 @@ def lattice_vector_wssd_search(n_max, d_max, coord_weights=None, kernel=None):
     rowVects[-1] = 2**(m - 1)
 
     # ----------------------------------------------------------------------
-    # Set up prodV - where we store information about previous components 
+    # Set up prodV - where we store information about previous components
     # ----------------------------------------------------------------------
     prodV = np.ones((2**m - 1, 1))
     prodV = prodV * rhovectorNx1
@@ -134,6 +137,12 @@ def lattice_vector_wssd_search(n_max, d_max, coord_weights=None, kernel=None):
     # ----------------------------------------------------------------------
     # Begin search
     # ----------------------------------------------------------------------
+    def best_index(scores):
+        # smallest index among (near-)tied minima -> reproducible across platforms, since
+        # bit-level FFT/FMA differences can otherwise flip which near-equal score is the min
+        lo = scores.min()
+        return int(np.flatnonzero(scores <= lo + 1e-13 * abs(lo))[0])
+
     gen_vec = np.ones(d_max, dtype=int)
 
     for hComp in range(2, d_max + 1):
@@ -150,7 +159,7 @@ def lattice_vector_wssd_search(n_max, d_max, coord_weights=None, kernel=None):
             prodIdx2 = prodIdx1 + 2**(l - 2)
 
             curRow = gRows[curIdx2:nextIdx2]
-            col = curRow / 2**l 
+            col = curRow / 2**l
             fftCol = omega(col).astype(np.complex128) # first column of this circulant matrix block
 
             pCol = prodV[prodIdx1:prodIdx2, 0].astype(np.complex128) # corresponding section of prodV
@@ -164,13 +173,12 @@ def lattice_vector_wssd_search(n_max, d_max, coord_weights=None, kernel=None):
 
         wssd = wssd + omega(1 / 2) * prodV[-1, 0] # not actually wssd; we avoid subtracting a constant to save precision
 
-        bestIdx = np.uint64(np.argmin(wssd))
-        newH = np.uint64(gR[bestIdx])
+        bestIdx = best_index(wssd)
+        newH = int(gR[bestIdx])
 
-        # Avoid duplicates
-        while newH in gen_vec:
+        while newH in gen_vec:                      # avoid duplicates
             wssd[bestIdx] = np.inf
-            bestIdx = np.uint64(np.argmin(wssd))
+            bestIdx = best_index(wssd)
             newH = int(gR[bestIdx])
 
         gen_vec[hComp - 1] = newH
