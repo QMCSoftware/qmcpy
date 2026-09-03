@@ -91,8 +91,8 @@ def test_main_explains_that_torch_must_be_installed(monkeypatch):
         install_mpmc_pyg.main()
 
 
-def test_main_reports_missing_wheel_and_source(monkeypatch):
-    """Exhausting binary and source installs reports the build that failed."""
+def test_main_warns_when_pyg_lib_unavailable(monkeypatch, capsys):
+    """pyg_lib is optional: when every install path fails, main() warns and returns."""
     def fail_pyg_lib(*args):
         if (
             install_mpmc_pyg.PYG_LIB_REQUIREMENT in args
@@ -102,8 +102,6 @@ def test_main_reports_missing_wheel_and_source(monkeypatch):
 
     monkeypatch.setattr(install_mpmc_pyg, "run", fail_pyg_lib)
 
-    with pytest.raises(
-        RuntimeError,
-        match=r"torch 2\.12\.1\+cpu \(cpu\).*official source release",
-    ):
-        install_mpmc_pyg.main(_torch())
+    install_mpmc_pyg.main(_torch())  # must not raise
+
+    assert "could not install the optional pyg_lib" in capsys.readouterr().out
