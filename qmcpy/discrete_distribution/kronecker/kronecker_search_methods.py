@@ -2,8 +2,6 @@ import warnings
 
 import numpy as np
 
-from ...util import ParameterWarning
-
 def kronecker_vector_search_mobius_transform(n_max, d_max, searchsize, kernel=None, coord_weights=None, gen_vec_init=None):
     """
     Note that the sympy package is highly recommended for this search method, though not required.
@@ -66,7 +64,7 @@ def kronecker_vector_search_mobius_transform(n_max, d_max, searchsize, kernel=No
         warnings.warn(
             "sympy is recommended for this search method: it computes the Bezout coefficients "
             "for the linear transformation. Without it a slower recursive Euclidean algorithm is used.",
-            ParameterWarning,
+            UserWarning,
         )
         has_sympy = False
     else:

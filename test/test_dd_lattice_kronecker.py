@@ -12,7 +12,6 @@ from qmcpy import (
     Lattice,
     lattice_vector_wssd_search,
 )
-from qmcpy.util import ParameterWarning
 
 ######################################################
 # Helper functions
@@ -236,7 +235,7 @@ class TestLatKron(object):
     def test_kron_search_no_sympy(self, monkeypatch):
         # the missing-sympy branch must warn (filterable), not print or call input()
         monkeypatch.setitem(sys.modules, "sympy", None)
-        with pytest.warns(ParameterWarning, match="sympy"):
+        with pytest.warns(UserWarning, match="sympy"):
             vector, *_ = kronecker_vector_search_mobius_transform(8, 2, 2)
         assert vector.shape == (2,) and np.isfinite(vector).all()
 
