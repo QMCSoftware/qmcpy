@@ -6,8 +6,8 @@ import shutil
 import sys
 import tempfile
 import unittest
+import unittest.mock as mock
 from pathlib import Path
-from unittest import mock
 
 from scripts import check_colab_notebooks as check
 from scripts import harden_colab_notebook as harden
