@@ -103,8 +103,8 @@ class ProductMeasure(AbstractTrueMeasure):
         """
         Initialize a product measure from one sampler and several marginals.
 
-        Parameters
-        ----------
+        Parameters:
+        
         sampler : AbstractDiscreteDistribution
             The sampler for the whole product measure. Its dimension must
             equal the sum of the marginal dimensions.
