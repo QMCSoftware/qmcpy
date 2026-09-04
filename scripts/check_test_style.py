@@ -17,6 +17,11 @@
        kn    kernel                   sr    scripts/ tooling, packaging, docs checks
        sc    stopping_criterion
 
+   A test that spans two areas goes under the component actually under test,
+   with the other named in ``<rest>`` (e.g. ``test_sc_cubbayes_kernels.py``);
+   ``ee`` is only for tests where neither side is the clear subject.  Only the
+   codes above are accepted -- new two-letter codes are a ``--strict`` failure.
+
 Usage:
     python scripts/check_test_style.py [TEST_DIR] [--strict] [--quiet]
 
