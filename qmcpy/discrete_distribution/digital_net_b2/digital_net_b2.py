@@ -323,6 +323,8 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
             repos = DataSource()
             if repos.exists(local_root + generating_matrices):
                 datafile = repos.open(local_root + generating_matrices)
+            elif repos.exists(generating_matrices):
+                datafile = repos.open(generating_matrices)
             elif repos.exists(
                 "https://raw.githubusercontent.com/QMCSoftware/LDData/refs/heads/main/dnet/"
                 + generating_matrices
@@ -354,8 +356,6 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
                     "https://raw.githubusercontent.com/QMCSoftware/"
                     + generating_matrices
                 )
-            elif repos.exists(generating_matrices):
-                datafile = repos.open(generating_matrices)
             else:
                 raise ParameterError("LDData path %s not found" % generating_matrices)
             contents = [line.rstrip("\n").strip() for line in datafile.readlines()]
