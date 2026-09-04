@@ -548,7 +548,10 @@ format:
 	$(MAKE) markdown-unwrap MARKDOWN_UNWRAP_PATH="$(MARKDOWN_UNWRAP_PATH)"
 	@echo ""
 	$(MAKE) rm_trailing_whitespace FORMAT_PATH="$(FORMAT_PATH)"
+	@echo ""
 	$(MAKE) harden_colab_notebook
+	@echo ""
+	$(MAKE) check_docstring_changed
 
 flatten_qmcpy_imports:
 	$(PYTHON) scripts/flatten_qmcpy_imports.py
