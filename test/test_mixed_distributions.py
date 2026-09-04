@@ -1,13 +1,7 @@
 import numpy as np
 import pytest
 
-from qmcpy import (
-    AbstractTrueMeasure,
-    DigitalNetB2,
-    Gaussian,
-    Kumaraswamy,
-    Mixture,
-)
+from qmcpy import AbstractTrueMeasure, DigitalNetB2, Gaussian, Kumaraswamy, Mixture
 from qmcpy.util import DimensionError, MethodImplementationError, ParameterError
 
 
