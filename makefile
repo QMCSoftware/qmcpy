@@ -52,7 +52,7 @@ check_test_style:
 	@$(PYTHON) scripts/check_test_style.py $(TEST_STYLE_PATH) $(STRICT)
 
 DOCSTRING_PATH ?= qmcpy
-DOCSTRING_BASE ?= develop
+DOCSTRING_BASE ?= origin/develop
 PYDOCLINT ?= pydoclint
 # Two-part docstring check for public APIs under qmcpy/:
 #  1. scripts/check_docstring.py -- formatting: a one-line summary before the
@@ -77,7 +77,7 @@ check_docstring_changed:
 	@set -e; \
 	changed_files="$$( \
 		{ \
-			git diff --name-only --diff-filter=ACMR "$(DOCSTRING_BASE)...HEAD" -- 'qmcpy/*.py'; \
+			git diff --name-only --diff-filter=ACMR "$(DOCSTRING_BASE)...HEAD" -- 'qmcpy/*.py' 2>/dev/null || true; \
 			git diff --name-only --diff-filter=ACMR HEAD -- 'qmcpy/*.py'; \
 			git ls-files --others --exclude-standard -- 'qmcpy/*.py'; \
 		} | sort -u \

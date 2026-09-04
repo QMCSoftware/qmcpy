@@ -69,6 +69,8 @@ Notebook tests are separate: they live in `test/booktests/` as `tb_*.py` and are
 STRICT=--strict make check_test_style
 ```
 
+`STRICT=--strict make check_test_style` also runs in CI (the `alltests` workflow), so both conventions are enforced on every pull request.
+
 ## Detailed Descriptions
 
 ## Scope
