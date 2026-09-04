@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 """Check that public docstrings under ``qmcpy/`` follow Google style.
 
-A *public* object is a module, or a class / function / method whose name does
-not start with ``_``.  Only module-level functions/classes and the methods of
-public classes are inspected (helpers nested inside functions are skipped).
-For every public docstring this script flags:
+A *public* object is a module, a class / function / method whose name does not
+start with ``_``, or the ``__init__`` of a public class (QMCPy documents
+constructor arguments in ``__init__``'s own docstring).  Only module-level
+functions/classes and the methods of public classes are inspected (helpers
+nested inside functions are skipped).  For every such docstring this script
+flags:
 
 * ``missing``                  -- public class / function / method has no
                                   docstring (suppressed by ``--skip-missing``)
+* ``missing-summary``          -- the docstring opens straight with a section
+                                  header (``Args:``, ``Returns:``, ...) instead
+                                  of a one-line summary.  This is the common
+                                  cause of pydoclint's opaque ``DOC001``.
 * ``numpy-section``            -- a section written NumPy-style (``Returns``
                                   followed by a ``-----`` underline) instead of
                                   Google style (``Returns:``)
@@ -19,16 +25,21 @@ For every public docstring this script flags:
                                   stray space before the colon, ...)
 
 Usage:
-    python scripts/check_docstring.py [PATH ...] [--strict] [--quiet] [--skip-missing]
+    python scripts/check_docstring.py [PATH ...] [--strict] [--quiet]
+                                      [--skip-missing] [--diff [REF]]
 
 PATH defaults to ``qmcpy``.  Informational by default (exit 0); ``--strict``
 makes the exit code non-zero when anything is flagged, so it can gate CI
-(``STRICT=--strict make check_docstring``).
+(``STRICT=--strict make check_docstring``).  ``--diff [REF]`` (REF defaults to
+``develop``) prints a second summary restricted to the scanned files that
+changed relative to REF -- committed on the branch, modified in the working
+tree, or untracked.
 """
 from __future__ import annotations
 
 import ast
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -60,9 +71,12 @@ def _iter_public(tree):
         elif isinstance(node, ast.ClassDef) and not node.name.startswith("_"):
             yield node, "class"
             for sub in node.body:
-                if isinstance(sub, (ast.FunctionDef, ast.AsyncFunctionDef)) \
-                        and not sub.name.startswith("_"):
+                if not isinstance(sub, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    continue
+                if not sub.name.startswith("_"):
                     yield sub, "method"
+                elif sub.name == "__init__":
+                    yield sub, "constructor"
 
 
 def _doc_node(node):
@@ -75,6 +89,14 @@ def _doc_node(node):
     return None
 
 
+def _is_section_word(s):
+    """Return the section word if ``s`` is a lone Google/NumPy section header."""
+    word = s[:-1].strip() if s.endswith(":") else s
+    if word in GOOGLE_SECTIONS or word in NUMPY_SECTIONS:
+        return word
+    return None
+
+
 def check_file(path, skip_missing=False):
     """Return a list of ``(lineno, category, detail)`` findings for one file."""
     findings = []
@@ -82,13 +104,16 @@ def check_file(path, skip_missing=False):
     for node, kind in _iter_public(tree):
         dnode = _doc_node(node)
         if dnode is None:
-            if kind != "module" and not skip_missing:
+            # A bare "no docstring" finding is noise for __init__ (pydoclint
+            # owns constructor-argument coverage) and meaningless for a module.
+            if kind not in ("module", "constructor") and not skip_missing:
                 findings.append((
                     getattr(node, "lineno", 1), "missing",
                     f"public {kind} `{getattr(node, 'name', path.stem)}` has no docstring",
                 ))
             continue
         lines = dnode.value.split("\n")
+        first_nonblank = next((j for j, ln in enumerate(lines) if ln.strip()), None)
         for i, raw in enumerate(lines):
             s = raw.strip()
             if not s:
@@ -103,7 +128,12 @@ def check_file(path, skip_missing=False):
                 continue
             m = _HEADER.match(s)
             if m and m.group(1) in GOOGLE_SECTIONS:
-                if i > 0 and lines[i - 1].strip() != "":
+                if i == first_nonblank and kind != "module":
+                    findings.append((
+                        dnode.lineno + i, "missing-summary",
+                        f"docstring opens with `{s}`; add a one-line summary first",
+                    ))
+                elif i > 0 and lines[i - 1].strip() != "":
                     findings.append((
                         dnode.lineno + i, "no-blank-before-section",
                         f"add a blank line before `{s}`",
@@ -116,7 +146,61 @@ def check_file(path, skip_missing=False):
     return findings
 
 
+def _changed_files(ref):
+    """Return resolved paths of *.py files that changed relative to ``ref``.
+
+    Union of files committed on the branch (``ref...HEAD``), files modified in
+    the working tree, and untracked files.  Raises ``RuntimeError`` if git is
+    unavailable or ``ref`` cannot be resolved.
+    """
+    commands = (
+        ["git", "diff", "--name-only", "--diff-filter=ACMR", f"{ref}...HEAD"],
+        ["git", "diff", "--name-only", "--diff-filter=ACMR", "HEAD"],
+        ["git", "ls-files", "--others", "--exclude-standard"],
+    )
+    names = set()
+    for cmd in commands:
+        try:
+            out = subprocess.run(
+                cmd, capture_output=True, text=True, check=True,
+            ).stdout
+        except (OSError, subprocess.CalledProcessError) as exc:
+            raise RuntimeError(f"`{' '.join(cmd)}` failed: {exc}") from exc
+        names.update(n for n in out.splitlines() if n.endswith(".py"))
+    return {Path(n).resolve() for n in names}
+
+
+def _summary(total, n_files, by_cat, label):
+    """Format one summary line."""
+    if total == 0:
+        return f"{label}: no issues in {n_files} file(s)"
+    breakdown = ", ".join(f"{v} {k}" for k, v in sorted(by_cat.items()))
+    return f"{label}: {total} issue(s) across {n_files} file(s): {breakdown}"
+
+
+def _parse_diff_flag(argv):
+    """Pull ``--diff [REF]`` out of ``argv``; return (remaining_argv, ref|None)."""
+    args, ref, i = [], None, 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--diff":
+            nxt = argv[i + 1] if i + 1 < len(argv) else ""
+            if nxt and not nxt.startswith("-"):
+                ref, i = nxt, i + 2
+            else:
+                ref, i = "develop", i + 1
+            continue
+        if a.startswith("--diff="):
+            ref = a.split("=", 1)[1] or "develop"
+            i += 1
+            continue
+        args.append(a)
+        i += 1
+    return args, ref
+
+
 def main(argv):
+    argv, diff_ref = _parse_diff_flag(list(argv))
     strict = "--strict" in argv
     quiet = "--quiet" in argv
     skip_missing = "--skip-missing" in argv
@@ -131,12 +215,14 @@ def main(argv):
 
     total = 0
     by_cat = {}
+    per_file = {}
     for f in files:
         try:
             findings = check_file(f, skip_missing=skip_missing)
         except SyntaxError as exc:
             print(f"{f.as_posix()}: skipped (syntax error: {exc})", file=sys.stderr)
             continue
+        per_file[f] = findings
         for lineno, cat, detail in findings:
             by_cat[cat] = by_cat.get(cat, 0) + 1
             total += 1
@@ -145,11 +231,23 @@ def main(argv):
 
     if not quiet:
         print()
-    if total == 0:
-        print(f"OK: {len(files)} file(s) scanned, public docstrings are Google style")
-    else:
-        summary = ", ".join(f"{v} {k}" for k, v in sorted(by_cat.items()))
-        print(f"{total} issue(s) across {len(files)} file(s) scanned: {summary}")
+    print(_summary(total, len(files), by_cat, f"{len(files)} file(s) scanned"))
+
+    if diff_ref is not None:
+        try:
+            changed = _changed_files(diff_ref)
+        except RuntimeError as exc:
+            print(f"--diff {diff_ref}: skipped ({exc})", file=sys.stderr)
+        else:
+            sub_cat, sub_total, sub_files = {}, 0, 0
+            for f, findings in per_file.items():
+                if f.resolve() not in changed:
+                    continue
+                sub_files += 1
+                for _, cat, _ in findings:
+                    sub_cat[cat] = sub_cat.get(cat, 0) + 1
+                    sub_total += 1
+            print(_summary(sub_total, sub_files, sub_cat, f"changed vs {diff_ref}"))
 
     return 1 if (strict and total) else 0
 

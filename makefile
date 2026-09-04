@@ -52,16 +52,25 @@ check_test_style:
 	@$(PYTHON) scripts/check_test_style.py $(TEST_STYLE_PATH) $(STRICT)
 
 DOCSTRING_PATH ?= qmcpy
-# Check that public docstrings under qmcpy/ are Google style: no NumPy-style
-# "-----" section underlines, a blank line before every Args:/Returns:/Raises:/...
-# header, and canonical "Name:" section headers. Also flags public classes,
-# functions, and methods with no docstring (pass --skip-missing via
-# CHECK_DOCSTRING_ARGS to check style only). Informational by default; pass
-# --strict to make it fail (e.g. STRICT=--strict make check_docstring).
-check_docstring:
-	@$(PYTHON) scripts/check_docstring.py $(DOCSTRING_PATH) $(CHECK_DOCSTRING_ARGS) $(STRICT)
-
 DOCSTRING_BASE ?= develop
+PYDOCLINT ?= pydoclint
+# Two-part docstring check for public APIs under qmcpy/:
+#  1. scripts/check_docstring.py -- formatting: a one-line summary before the
+#     first section, no NumPy-style "-----" section underlines, a blank line
+#     before every Args:/Returns:/... header, canonical "Name:" headers, and
+#     public objects with no docstring (pass --skip-missing via
+#     CHECK_DOCSTRING_ARGS to check style only). It also prints a second summary
+#     restricted to files changed relative to DOCSTRING_BASE.
+#  2. pydoclint (config in pyproject.toml [tool.pydoclint]) -- content: every
+#     parameter and return value is documented and matches the signature, in
+#     Google form.
+# Informational by default; pass --strict (STRICT=--strict make check_docstring)
+# to make both parts fail the build.
+check_docstring:
+	@$(PYTHON) scripts/check_docstring.py $(DOCSTRING_PATH) --diff $(DOCSTRING_BASE) $(CHECK_DOCSTRING_ARGS) $(STRICT)
+	@echo ""
+	@$(PYDOCLINT) $(PYDOCLINT_ARGS) $(DOCSTRING_PATH) $(if $(STRICT),,|| true)
+
 # Same checks as check_docstring, but only on qmcpy/*.py files that changed
 # relative to DOCSTRING_BASE (committed, staged/unstaged, and untracked).
 check_docstring_changed:
@@ -76,9 +85,11 @@ check_docstring_changed:
 	if [ -z "$$changed_files" ]; then \
 		echo "No changed qmcpy/*.py files relative to $(DOCSTRING_BASE)."; \
 	else \
-		echo "Checking docstring style on changed qmcpy files relative to $(DOCSTRING_BASE):"; \
+		echo "Checking docstrings on changed qmcpy files relative to $(DOCSTRING_BASE):"; \
 		printf '%s\n' "$$changed_files"; \
 		$(PYTHON) scripts/check_docstring.py $$changed_files $(CHECK_DOCSTRING_ARGS) $(STRICT); \
+		echo ""; \
+		$(PYDOCLINT) $(PYDOCLINT_ARGS) $$changed_files $(if $(STRICT),,|| true); \
 	fi
 
 ##########################################################

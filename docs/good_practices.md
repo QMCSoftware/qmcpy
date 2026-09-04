@@ -38,18 +38,18 @@ When notebook-backed content changes:
 QMCPy documentation is built from docstrings, so public APIs should document their behavior clearly and consistently.
 
 - Use **Google-style docstrings** for public classes, methods, and functions.
-- Document parameters, return values, shapes, assumptions, and any stochastic behavior.
+- Start every docstring with a one-line summary before any section header.
+- Document every parameter and return value, plus shapes, assumptions, and any stochastic behavior. Constructor arguments go in the `__init__` method's own docstring, with the type in the docstring (`name (type): ...`).
+- Put a blank line before every section header (`Args:`, `Returns:`, `Raises:`, `Examples:`, ...) and write the header as `Name:` — not a NumPy-style `Name` followed by an `-----` underline.
 - Include short doctestable examples when they clarify expected use.
 - Update docstrings at the same time as the implementation so the rendered API docs do not drift from the code.
-- Put a blank line before every section header (`Args:`, `Returns:`, `Raises:`, `Examples:`, ...) and write the header as `Name:` — not a NumPy-style `Name` followed by an `-----` underline.
 
-* `make check_docstring` scans public objects under `qmcpy/` for these conventions (NumPy-style sections, a missing blank line before a section header, malformed headers, and public objects with no docstring). It is informational by default;
-    - `STRICT=--strict make check_docstring` makes it fail. Pass
-    - `CHECK_DOCSTRING_ARGS=--skip-missing` to report only the style problems and not
-    the objects that lack a docstring, or 
-    - `DOCSTRING_PATH=qmcpy/true_measure`
-    to narrow the scan.
-* `make check_docstring_changed` runs the same checks on just the `qmcpy/*.py` files that changed relative to `DOCSTRING_BASE` (default `develop`), which is the quick check to run before opening a PR.
+`make check_docstring` runs two checks over public objects under `qmcpy/`:
+
+- `scripts/check_docstring.py` for **formatting** — a one-line summary before the first section (`missing-summary`), no NumPy-style sections, a blank line before every section header, canonical `Name:` headers, and public objects with no docstring. After the overall count it prints a second summary restricted to files changed relative to `DOCSTRING_BASE` (default `develop`), so you can see your branch's contribution to the backlog.
+- `pydoclint` (configured in `pyproject.toml` under `[tool.pydoclint]`) for **content** — every parameter and return value is documented and matches the signature, in Google form.
+
+It is informational by default; `STRICT=--strict make check_docstring` makes both parts fail the build. Pass `CHECK_DOCSTRING_ARGS=--skip-missing` to skip the "no docstring" formatting check, or `DOCSTRING_PATH=qmcpy/true_measure` to narrow the scan. `make check_docstring_changed` runs the same two checks on just the `qmcpy/*.py` files that changed relative to `DOCSTRING_BASE` — the quick check to run before opening a PR (it is also part of `make format`).
 
 ## Extend the Existing Object Model
 

@@ -150,6 +150,7 @@ docs = [  # brew install weasyprint
     "mkdocs-print-site-plugin >= 2.7.2",
     "mkdocs-exclude >= 1.0.2",
     "pylint >= 4.0.5",
+    "pydoclint >= 0.5.0",
 ]
 dev = [ # brew install weasyprint
     "qmcpy[docs,test,torch,gpytorch,botorch,umbridge,mpmc]",
@@ -183,6 +184,20 @@ class = [
     "plotly >= 5.0",
     "networkx >= 3.0",
 ]
+
+[tool.pydoclint]
+# `make check_docstring` reads this. QMCPy convention: constructor arguments are
+# documented in the __init__ method's own docstring, and parameter types live in
+# the docstring (`name (type): ...`), not in the signature.
+style = "google"
+allow-init-docstring = true
+arg-type-hints-in-signature = false
+arg-type-hints-in-docstring = true
+check-return-types = false
+check-yield-types = false
+check-class-attributes = false
+skip-checking-short-docstrings = true
+skip-checking-raises = true
 
 [tool.pylint.typecheck]
 # Members that live on compiled/C-extension objects (numpy, scipy, matplotlib)
