@@ -20,9 +20,11 @@ flags:
 * ``no-blank-before-section``  -- a Google section header (``Args:``,
                                   ``Returns:``, ``Raises:``, ...) is not preceded
                                   by a blank line
-* ``malformed-section-header`` -- a section word on its own line that is not the
-                                  canonical ``Name:`` form (missing colon, a
-                                  stray space before the colon, ...)
+* ``malformed-section-header`` -- a line that names a known section but is not
+                                  the canonical ``Name:`` form: a missing colon
+                                  (``Examples``), wrong casing (``EXAMPLES:``,
+                                  ``examples:``), or stray characters around the
+                                  colon (``Args :``)
 
 Usage:
     python scripts/check_docstring.py [PATH ...] [--strict] [--quiet]
@@ -59,6 +61,8 @@ NUMPY_SECTIONS = {
 _DASHES = re.compile(r"^-{3,}$")
 # Canonical header: capitalised word(s), a single colon, nothing else.
 _HEADER = re.compile(r"^([A-Z][A-Za-z]*(?: [A-Z][A-Za-z]*)*):$")
+# Case-insensitive lookup from any known section label to its canonical spelling.
+_CANON = {name.lower(): name for name in GOOGLE_SECTIONS | NUMPY_SECTIONS}
 
 
 def _iter_public(tree):
@@ -138,11 +142,22 @@ def check_file(path, skip_missing=False):
                         dnode.lineno + i, "no-blank-before-section",
                         f"add a blank line before `{s}`",
                     ))
-            elif word in GOOGLE_SECTIONS and not _DASHES.match(nxt):
-                findings.append((
-                    dnode.lineno + i, "malformed-section-header",
-                    f"`{s}` is not the canonical `{word}:` form",
-                ))
+            elif not _DASHES.match(nxt):
+                canon = _CANON.get(re.sub(r"\s+", " ", word).strip().lower())
+                if canon is not None and s != f"{canon}:":
+                    if not s.rstrip().endswith(":"):
+                        why = "missing colon"
+                    elif word != canon:
+                        why = (
+                            f"label must be `{canon}` "
+                            "(first letter capitalised, the rest lower-case)"
+                        )
+                    else:
+                        why = "stray characters around the colon"
+                    findings.append((
+                        dnode.lineno + i, "malformed-section-header",
+                        f"`{s}` should be `{canon}:` ({why})",
+                    ))
     return findings
 
 

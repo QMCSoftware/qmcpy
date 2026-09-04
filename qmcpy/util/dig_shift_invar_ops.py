@@ -117,7 +117,7 @@ def weighted_walsh_funcs(alpha, xb, t):
         xb (Union[np.ndarray, torch.Tensor]): Integer points at which to evaluate the weighted Walsh function.
         t (int): Number of bits in each integer in xb.
 
-    returns:
+    Returns:
         y (Union[np.ndarray, torch.Tensor]): Weighted Walsh function values.
 
     **References:**

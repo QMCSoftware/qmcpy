@@ -15,8 +15,7 @@ class DummySampler(AbstractLDDiscreteDistribution):
     Direct calls to ``DummySampler`` raise an error because the sampler is only
     a construction placeholder and cannot generate meaningful QMC points.
 
-    Examples
-    --------
+    Examples:
     >>> from qmcpy import DummySampler
     >>> sampler = DummySampler(2)
     >>> sampler.d
