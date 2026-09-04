@@ -54,12 +54,7 @@ python -m pytest test/ -k test_tm_      # every true_measure test
 make unittests PYTEST_EXTRA_ARGS="-k test_sc_"
 ```
 
-When a test spans two areas (say a stopping criterion exercised against a
-particular kernel), file it under the component actually under test and name the
-other in `<topic>` — e.g. `test_sc_cubbayes_kernels.py`. Reserve `ee` for cases
-where neither side is the clear subject. Do not invent new area codes: only the
-prefixes in the table are accepted, and `make check_test_style STRICT=--strict`
-fails on anything else.
+When a test spans two areas (say a stopping criterion exercised against a particular kernel), file it under the component actually under test and name the other in `<topic>` — e.g. `test_sc_cubbayes_kernels.py`. Reserve `ee` for cases where neither side is the clear subject. Do not invent new area codes: only the prefixes in the table are accepted, and `make check_test_style STRICT=--strict` fails on anything else.
 
 Notebook tests are separate: they live in `test/booktests/` as `tb_*.py` and are generated from `demos/` (see `test/booktests/README.md`).
 
