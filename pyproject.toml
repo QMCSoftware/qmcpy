@@ -27,6 +27,14 @@ classifiers= [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
     "Programming Language :: Python :: 3",
+    # Keep these aligned with `requires-python` and the tested interpreter
+    # matrix. See CONTRIBUTING.md.
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Mathematics",
     ]
 readme = "README.md"
@@ -45,7 +53,9 @@ keywords=[
     ]
 license = {file = "LICENSE"}
 dynamic = ["version"]
-requires-python = ">= 3.5"
+# Deliberate QMCPy support-policy floor, not a source-language or transitive
+# dependency floor. CI verifies the built wheel on 3.9; see CONTRIBUTING.md.
+requires-python = ">= 3.9"
 dependencies = [
     "numpy >= 1.17.0",
     "scipy >= 1.1.0",
@@ -91,6 +101,18 @@ test = [
     "ipywidgets >= 8.1.7, < 9",
     "nbconvert >= 7.2.9",
     "pytest-xdist >= 3.8.0",
+    ]
+# Minimal set for `make unittests_core` (test/test_*.py only). Omits the
+# notebook/booktest stack (parsl, testbook, ...) whose 3.10 floor would
+# otherwise force every unit-test job onto 3.10+, so CI can exercise the
+# published `requires-python` floor. See CONTRIBUTING.md.
+test_core = [
+    "pytest >= 7.0",
+    "pytest-cov >= 4.0",
+    "pytest-xdist >= 3.0",
+    "scikit-learn >= 1.0.0",
+    "pandas >= 1.3.0",
+    "pyyaml >= 6.0",
     ]
 test_torch = [
     "torch >= 2.7.0, < 2.13", # kept in sync with the mpmc extra: PyG pyg_lib wheels stop at torch 2.12

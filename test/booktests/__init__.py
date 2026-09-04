@@ -3,18 +3,27 @@ Individual notebook test modules using testbook.
 Each tb_*.py file tests a single demo notebook.
 """
 
-import unittest, gc
-from pathlib import Path
-import psutil
 import gc
-import time
 import os
 import subprocess
 import sys
+import tempfile
+import time
+import unittest
+import uuid
+from pathlib import Path
+
+import psutil
 from testbook import testbook
 import nbformat
+
+if os.name == "nt":
+    worker_id = os.environ.get("PYTEST_XDIST_WORKER", "main")
+    mpl_config_dir = Path(tempfile.gettempdir()) / "qmcpy-matplotlib" / worker_id
+    mpl_config_dir.mkdir(parents=True, exist_ok=True)
+    os.environ.setdefault("MPLCONFIGDIR", str(mpl_config_dir))
+
 import matplotlib
-import uuid
 
 matplotlib.rcParams["text.usetex"] = False  # Disable LaTeX
 

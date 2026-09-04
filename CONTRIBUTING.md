@@ -73,6 +73,27 @@ pip install -e ".[mpmc]"
 qmcpy-install-mpmc
 ~~~
 
+### Minimum Python Version by Role
+
+`requires-python` covers a bare install; the optional dependency groups in `pyproject.toml` raise it. Each row shows the strictest floor among that role's pinned dependencies. Rows marked `+` add a capability to the Application-user install; unmarked rows are self-contained role profiles.
+
+| Role | Install command | Binding constraint | Minimum Python |
+|---|---|---|---|
+| Application user | `pip install qmcpy` | QMCPy support policy | 3.9 |
+| + torch / GP features | `pip install "qmcpy[torch,gpytorch]"` | inherits the QMCPy floor | 3.9 |
+| + MPMC | `pip install "qmcpy[mpmc]"`, then `qmcpy-install-mpmc` | `torch >= 2.10.0` | 3.10 |
+| + Bayesian optimization | `pip install "qmcpy[botorch]"` | `botorch >= 0.10.0` | 3.9 |
+| Course instructor (`class`) | `pip install -e ".[class]"` | `arviz >= 0.17`, `matplotlib >= 3.9.0`, `statsmodels >= 0.14.3` | 3.9 |
+| Test developer | `pip install -e ".[test]"` | `pytest >= 9.0.3`, `parsl >= 2026.01.05` | 3.10 |
+| Documentation developer | `pip install -e ".[docs]"` | inherits `test`; `pylint >= 4.0.5` | 3.10 |
+| Release / core developer | `pip install -e ".[dev]"` | inherits `docs` / `test` | 3.10 |
+
+Using `qmcpy` needs Python **3.9+**; contributing code, running tests, or building docs needs **3.10+**. We recommend 3.13 for development.
+
+Python 3.9 is a deliberate QMCPy **support-policy floor**, not a claim about source syntax or `qmctoolscl`'s declared floor. It is the oldest interpreter whose current runtime stack QMCPy commits to support and test; earlier versions are outside that policy even if a particular toolchain can install them.
+
+CI measures the lower tier rather than assuming it: `unittests.yml`'s `core-tests` job builds the QMCPy wheel on Python 3.9 on Linux, macOS, and Windows, installs it with no extras, checks its dependencies, and imports it from outside the source tree. The 3.9 claim is OS-independent, and `qmctoolscl` ships only one wheel (cp312, `win_amd64`), so every leg builds it from its source distribution. It then runs `make unittests_core` with the slim `test_core` extra and no notebook stack. Its main `tests` job runs the full suite on 3.10-3.14, each version on one operating system. Every conda matrix asserts the running interpreter before any test runs. Test modules self-skip via `pytest.importorskip` when an optional stack (torch, gpytorch, PyG) is absent, so each interpreter runs what applies to it.
+
 ## 📚 Using `qmcpy` In Courses (`class` Extra)
 
 `qmcpy` provides a `class` optional dependency group that installs a complete teaching environment (JupyterLab, plotting, statistics, and utilities) in addition to `qmcpy` itself.
@@ -209,11 +230,17 @@ In the built HTML documentation:
 
 ## Demos
 
-Demos are Jupyter notebooks which may be launched using the command
+Demos are Jupyter notebooks under `demos/`. To open one:
 
 ~~~bash
-jupyter-lab
+jupyter-lab                                              # or: make open_notebook NOTEBOOK=demos/quickstart.ipynb
+make open_colab_notebook NOTEBOOK=demos/quickstart.ipynb # in Colab, from your current (pushed) branch
+make open_colab_notebook_gist NOTEBOOK=demos/quickstart.ipynb  # in Colab, from your uncommitted working copy (needs the gh CLI)
 ~~~
+
+`open_colab_notebook` uses the branch version only when the notebook is new or differs from `develop`, otherwise the `develop` version. See [docs/tests.md](docs/tests.md) for details.
+
+Note: `make format` runs `make harden_colab_notebook`, so it will insert a Colab badge and bootstrap cell into any unclassified `demos/*.ipynb` and add it to `scripts/colab_notebooks_manifest.json` (and fail if a notebook cannot be hardened automatically).
 
 ## Other Developer Tools
 
