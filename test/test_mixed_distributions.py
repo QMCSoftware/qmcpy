@@ -1,7 +1,16 @@
 import numpy as np
 import pytest
+from scipy.stats import uniform
 
-from qmcpy import AbstractTrueMeasure, DigitalNetB2, Gaussian, Kumaraswamy, Mixture
+from qmcpy import (
+    AbstractTrueMeasure,
+    DigitalNetB2,
+    Gaussian,
+    Kumaraswamy,
+    Mixture,
+    SciPyWrapper,
+    Uniform,
+)
 from qmcpy.util import DimensionError, MethodImplementationError, ParameterError
 
 
@@ -88,6 +97,51 @@ def test_multiple_components():
     np.testing.assert_allclose(samples[:, 0], [-4.0, 0.0, 0.0, 5.0])
 
 
+def test_heterogeneous_components_dispatch_transform_coordinates():
+    gaussian = gaussian_component(1, -2.0)
+    wrapped = SciPyWrapper(DigitalNetB2(1, seed=19), uniform(loc=2.0, scale=3.0))
+    mixture = Mixture(DigitalNetB2(2, seed=7), [gaussian, wrapped], [0.3, 0.7])
+    u = np.array([[0.8, 0.2], [0.1, 0.7], [0.6, 0.9], [0.2, 0.4]])
+
+    expected = np.empty((4, 1))
+    expected[[1, 3]] = gaussian._transform(u[[1, 3], 1:])
+    expected[[0, 2]] = wrapped._transform(u[[0, 2], 1:])
+
+    np.testing.assert_allclose(mixture._transform(u), expected)
+
+
+def test_range_is_coordinate_wise_bounding_box():
+    components = [
+        Uniform(DigitalNetB2(2, seed=17), lower_bound=[-3, 2], upper_bound=[1, 4]),
+        Uniform(DigitalNetB2(2, seed=19), lower_bound=[-1, -2], upper_bound=[5, 3]),
+    ]
+    mixture = Mixture(DigitalNetB2(3, seed=7), components, [0.3, 0.7])
+
+    np.testing.assert_array_equal(mixture.range, [[-3, 5], [-2, 4]])
+
+
+def test_range_expands_shared_component_bounds():
+    components = [
+        TransformOnlyMeasure(DigitalNetB2(2, seed=17)),
+        Uniform(DigitalNetB2(2, seed=19), lower_bound=[-2, 0.25], upper_bound=[-1, 2]),
+    ]
+    mixture = Mixture(DigitalNetB2(3, seed=7), components, [0.3, 0.7])
+
+    np.testing.assert_array_equal(mixture.range, [[-2, 1], [0, 2]])
+
+
+def test_malformed_custom_component_range_is_rejected():
+    class MalformedRangeMeasure(TransformOnlyMeasure):
+        def __init__(self, sampler):
+            super(MalformedRangeMeasure, self).__init__(sampler)
+            self.range = np.zeros((3, 2))
+
+    component = MalformedRangeMeasure(DigitalNetB2(2, seed=17))
+
+    with pytest.raises(DimensionError, match="component range must have shape"):
+        Mixture(DigitalNetB2(3, seed=7), [component], [1.0])
+
+
 def test_one_component_mixture_is_valid():
     component = gaussian_component(1, 1.5)
     mixture = Mixture(DigitalNetB2(2, seed=7), [component], [1.0])
@@ -115,6 +169,21 @@ def test_probabilities_must_sum_to_one():
 
     with pytest.raises(ParameterError, match="sum to 1"):
         Mixture(DigitalNetB2(2, seed=7), components, [0.2, 0.7])
+
+
+def test_probabilities_are_owned_and_read_only():
+    probabilities = np.array([0.3, 0.7])
+    components = [gaussian_component(1, -2.0), gaussian_component(1, 3.0)]
+    mixture = Mixture(DigitalNetB2(2, seed=7), components, probabilities)
+    np.testing.assert_array_equal(mixture.probabilities, [0.3, 0.7])
+
+    probabilities[:] = [0.8, 0.2]
+
+    np.testing.assert_array_equal(mixture.probabilities, [0.3, 0.7])
+    np.testing.assert_allclose(mixture._transform([[0.5, 0.5]]), [[3.0]])
+    assert not mixture.probabilities.flags.writeable
+    with pytest.raises(ValueError, match="read-only"):
+        mixture.probabilities[0] = 0.8
 
 
 def test_number_of_probabilities_must_match_components():
@@ -207,6 +276,36 @@ def test_weight_is_weighted_sum_of_component_weights():
     np.testing.assert_allclose(mixture._weight(x), expected)
 
 
+def test_public_sampling_with_return_weights():
+    components = [gaussian_component(1, -1.0), gaussian_component(1, 2.0)]
+    mixture = Mixture(DigitalNetB2(2, seed=7), components, [0.3, 0.7])
+
+    samples, weights = mixture(16, return_weights=True)
+
+    assert samples.shape == (16, 1)
+    assert weights.shape == (16,)
+    assert np.all(np.isfinite(samples))
+    assert np.all(np.isfinite(weights))
+    assert np.all(weights > 0)
+    np.testing.assert_allclose(weights, 1.0 / mixture._weight(samples))
+
+
+def test_weight_preserves_leading_axes():
+    components = [gaussian_component(2, [-1.0, 0.0]), gaussian_component(2, [2.0, 1.0])]
+    probabilities = np.array([0.3, 0.7])
+    mixture = Mixture(DigitalNetB2(3, seed=7), components, probabilities)
+    x = np.linspace(-2.0, 3.0, 12).reshape(2, 3, 2)
+
+    expected = sum(
+        probability * component._weight(x)
+        for probability, component in zip(probabilities, components)
+    )
+    weights = mixture._weight(x)
+
+    assert weights.shape == (2, 3)
+    np.testing.assert_allclose(weights, expected)
+
+
 def test_component_weight_failure_propagates():
     transform_only = TransformOnlyMeasure(DigitalNetB2(1, seed=23))
     mixture = Mixture(
@@ -228,7 +327,10 @@ def test_spawn_replaces_outer_sampler_and_preserves_components():
 
     for child in spawned + [explicit_same_dimension]:
         assert isinstance(child, Mixture)
-        assert child.d == 1
+        assert child.d == mixture.d == 1
+        np.testing.assert_array_equal(child.probabilities, mixture.probabilities)
+        np.testing.assert_array_equal(child.range, mixture.range)
+        assert not child.probabilities.flags.writeable
         assert child.discrete_distrib.d == 2
         assert child.discrete_distrib is not mixture.discrete_distrib
         assert all(
