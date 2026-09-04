@@ -51,6 +51,36 @@ TEST_STYLE_PATH ?= test
 check_test_style:
 	@$(PYTHON) scripts/check_test_style.py $(TEST_STYLE_PATH) $(STRICT)
 
+DOCSTRING_PATH ?= qmcpy
+# Check that public docstrings under qmcpy/ are Google style: no NumPy-style
+# "-----" section underlines, a blank line before every Args:/Returns:/Raises:/...
+# header, and canonical "Name:" section headers. Also flags public classes,
+# functions, and methods with no docstring (pass --skip-missing via
+# CHECK_DOCSTRING_ARGS to check style only). Informational by default; pass
+# --strict to make it fail (e.g. STRICT=--strict make check_docstring).
+check_docstring:
+	@$(PYTHON) scripts/check_docstring.py $(DOCSTRING_PATH) $(CHECK_DOCSTRING_ARGS) $(STRICT)
+
+DOCSTRING_BASE ?= develop
+# Same checks as check_docstring, but only on qmcpy/*.py files that changed
+# relative to DOCSTRING_BASE (committed, staged/unstaged, and untracked).
+check_docstring_changed:
+	@set -e; \
+	changed_files="$$( \
+		{ \
+			git diff --name-only --diff-filter=ACMR "$(DOCSTRING_BASE)...HEAD" -- 'qmcpy/*.py'; \
+			git diff --name-only --diff-filter=ACMR HEAD -- 'qmcpy/*.py'; \
+			git ls-files --others --exclude-standard -- 'qmcpy/*.py'; \
+		} | sort -u \
+	)"; \
+	if [ -z "$$changed_files" ]; then \
+		echo "No changed qmcpy/*.py files relative to $(DOCSTRING_BASE)."; \
+	else \
+		echo "Checking docstring style on changed qmcpy files relative to $(DOCSTRING_BASE):"; \
+		printf '%s\n' "$$changed_files"; \
+		$(PYTHON) scripts/check_docstring.py $$changed_files $(CHECK_DOCSTRING_ARGS) $(STRICT); \
+	fi
+
 ##########################################################
 # Doctests
 ##########################################################
