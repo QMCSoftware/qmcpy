@@ -907,7 +907,7 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
 
-    changed_files = 0
+    changed = []  # list of (display_path, import_count)
     changed_imports = 0
     for path in targets:
         original = path.read_bytes()
@@ -919,29 +919,26 @@ def main(argv: list[str] | None = None) -> int:
         if not count:
             continue
 
-        changed_files += 1
+        changed.append((_display_path(path, repository_root), count))
         changed_imports += count
         if not args.check:
             path.write_bytes(updated)
-        action = "Would update" if args.check else "Updated"
-        import_label = "import" if count == 1 else "imports"
-        print(
-            f"{action}: {_display_path(path, repository_root)} "
-            f"({count} {import_label})"
-        )
 
-    if changed_files:
-        action = "need updates" if args.check else "updated"
+    action = "would update" if args.check else "updated"
+    if changed:
+        file_label = "file" if len(changed) == 1 else "files"
         import_label = "import" if changed_imports == 1 else "imports"
-        file_label = "file" if changed_files == 1 else "files"
         print(
-            f"{changed_imports} {import_label} in "
-            f"{changed_files} {file_label} {action}."
+            f"qmcpy imports {action}: {len(changed)} {file_label}, "
+            f"{changed_imports} {import_label}:"
         )
+        for display_path, count in sorted(changed):
+            per = "import" if count == 1 else "imports"
+            print(f"  {display_path} ({count} {per})")
     else:
-        print("All eligible QMCPy imports already use the top-level package.")
+        print(f"  qmcpy imports {action}: 0 files")
 
-    return int(args.check and changed_files > 0)
+    return int(args.check and bool(changed))
 
 
 if __name__ == "__main__":

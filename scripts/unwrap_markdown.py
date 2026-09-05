@@ -280,23 +280,31 @@ def main() -> int:
         print("error: no .md or .ipynb files found", file=sys.stderr)
         return 2
 
-    changed_files = 0
+    changed_paths = []
     changed_cells = 0
     for path in targets:
         suffix = path.suffix.lower()
         if suffix == ".md":
-            changed = process_markdown_file(path, args.check)
-            changed_files += int(changed)
+            if process_markdown_file(path, args.check):
+                changed_paths.append(path)
         elif suffix == ".ipynb":
             changed, cell_count = process_notebook(path, args.check)
-            changed_files += int(changed)
+            if changed:
+                changed_paths.append(path)
             changed_cells += cell_count
 
     mode = "would update" if args.check else "updated"
-    print(
-        f"markdown unwrap {mode}: {changed_files} file(s), {changed_cells} markdown cell(s)",
+    summary = (
+        f"markdown unwrap {mode}: {len(changed_paths)} file(s), "
+        f"{changed_cells} markdown cell(s)"
     )
-    return 1 if args.check and changed_files else 0
+    if changed_paths:
+        print(summary + ":")
+        for path in sorted(changed_paths):
+            print(f"  {path}")
+    else:
+        print("  " + summary)
+    return 1 if args.check and changed_paths else 0
 
 
 if __name__ == "__main__":

@@ -25,6 +25,48 @@ This document describes the available test targets in the Makefile for QMCSoftwa
 | `make delcoverage` | Reset coverage tracking | Instant | Start fresh coverage analysis |
 
 
+## Test File Organization
+
+Unit tests live flat in `test/` (no subpackage subfolders). Every file is named:
+
+```
+test_<area>_<topic>.py
+```
+
+`<area>` is a short code for the `qmcpy` subpackage under test, or a cross-cutting bucket:
+
+| area | scope |
+|------|-------|
+| `dd` | `qmcpy/discrete_distribution` |
+| `ft` | `qmcpy/fast_transform` |
+| `ig` | `qmcpy/integrand` |
+| `kn` | `qmcpy/kernel` |
+| `sc` | `qmcpy/stopping_criterion` |
+| `tm` | `qmcpy/true_measure` |
+| `ut` | `qmcpy/util` |
+| `ee` | end-to-end / cross-cutting pipeline (`integrate()`, worked problems such as Keister and pi) |
+| `sr` | `scripts/` tooling, packaging, and docs checks |
+
+This keeps related tests adjacent when the directory is sorted, and lets you run one area at a time:
+
+```bash
+python -m pytest test/ -k test_tm_      # every true_measure test
+make unittests PYTEST_EXTRA_ARGS="-k test_sc_"
+```
+
+Notebook tests are separate: they live in `test/booktests/` as `tb_*.py` and are generated from `demos/` (see `test/booktests/README.md`).
+
+### Conventions checked by `make check_test_style`
+
+1. **Area prefix** — the filename must start with a recognized `test_<area>_` prefix from the table above.
+2. **Object class** — write a test file as one or more `unittest.TestCase` subclasses rather than bare `def test_*` pytest functions. A class groups related assertions under a name (so `pytest -k TestCubMCG` selects them and a failure report names the group), shares construction through `setUp` / `setUpClass` / `self.addCleanup`, and runs identically under `pytest`, `python -m unittest`, and the coverage and booktest runners without depending on pytest fixtures. Most of the suite already follows this; a few legacy files still use bare functions and new files should not.
+
+`make check_test_style` lists any violation and is informational (exit 0). It also runs as part of `make format`. To make it fail instead — for a pre-commit hook or CI gate — pass `--strict`:
+
+```bash
+STRICT=--strict make check_test_style
+```
+
 ## Detailed Descriptions
 
 ## Scope

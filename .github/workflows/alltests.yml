@@ -312,6 +312,14 @@ jobs:
         run: |
           make check_colab_notebooks
           make check_colab_notebooks_smoke
+      - name: Check test-suite conventions (Linux)
+        if: runner.os == 'Linux'
+        shell: bash -l {0}
+        run: |
+          set -e
+          make check_test_style STRICT=--strict
+          python -m pip install -q "pydoclint>=0.5.0"
+          make check_docstring   # informational (exits 0 without STRICT)
       # -----------------------------------------------------------
       # Install minimal LaTeX required by Jupyter notebooks (OS-specific)
       # -----------------------------------------------------------

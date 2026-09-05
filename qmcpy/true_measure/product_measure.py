@@ -45,8 +45,7 @@ class ProductMeasure(AbstractTrueMeasure):
     samplerless/template true-measure mode may be useful, but that is separate
     from this class.
 
-    Notes
-    -----
+    Notes:
     For independent marginal blocks, means, variances, and standard deviations
     are concatenated in marginal order, while covariance is block diagonal.
 
@@ -55,8 +54,7 @@ class ProductMeasure(AbstractTrueMeasure):
     QMCPy's recursive transform helper, but exact final-space product weights
     are not currently implemented here.
 
-    Examples
-    --------
+    Examples:
     Combine two one-dimensional uniform true measures:
 
     >>> from qmcpy import DigitalNetB2, DummySampler, ProductMeasure, Uniform
@@ -105,8 +103,8 @@ class ProductMeasure(AbstractTrueMeasure):
         """
         Initialize a product measure from one sampler and several marginals.
 
-        Parameters
-        ----------
+        Parameters:
+        
         sampler : AbstractDiscreteDistribution
             The sampler for the whole product measure. Its dimension must
             equal the sum of the marginal dimensions.

@@ -114,8 +114,7 @@ class ZeroInflatedExpUniform(SciPyWrapper):
     The ``y_split`` keyword is retained temporarily for backward
     compatibility with the deprecated two-dimensional construction.
 
-    Examples
-    --------
+    Examples:
     Without replications:
 
     >>> from qmcpy import DigitalNetB2, ZeroInflatedExpUniform
