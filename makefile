@@ -54,6 +54,13 @@ check_test_style:
 DOCSTRING_PATH ?= qmcpy
 DOCSTRING_BASE ?= origin/develop
 PYDOCLINT ?= pydoclint
+DOCSTRING_FORMATTER ?= format-docstring
+DOCSTRING_FORMAT_PATH ?= qmcpy
+DOCSTRING_FORMAT_DIFF_BASE ?= develop
+DOCSTRING_FORMAT_ARGS ?= --docstring-style google --fix-rst-backticks=False --include-arg-types=True --include-arg-defaults=False --include-return-and-yield-types=False
+DOCSTRING_TYPE_PATH ?= qmcpy
+DOCSTRING_TYPE_DIFF_BASE ?= develop
+DOCSTRING_TYPE_ARGS ?=
 # Two-part docstring check for public APIs under qmcpy/:
 #  1. scripts/check_docstring.py -- formatting: a one-line summary before the
 #     first section, no NumPy-style "-----" section underlines, a blank line
@@ -70,6 +77,39 @@ check_docstring:
 	@$(PYTHON) scripts/check_docstring.py $(DOCSTRING_PATH) --diff $(DOCSTRING_BASE) $(CHECK_DOCSTRING_ARGS) $(STRICT)
 	@echo ""
 	@$(PYDOCLINT) $(PYDOCLINT_ARGS) $(DOCSTRING_PATH) $(if $(STRICT),,|| true)
+
+format_google_docstrings:
+	@command -v "$(DOCSTRING_FORMATTER)" >/dev/null 2>&1 || { \
+		echo "Missing $(DOCSTRING_FORMATTER). Install with: $(PYTHON) -m pip install format-docstring"; \
+		exit 127; \
+	}
+	@echo "$(DOCSTRING_FORMATTER) formats existing Google-style docstrings; it does not infer missing scientific argument types."
+	$(DOCSTRING_FORMATTER) $(DOCSTRING_FORMAT_ARGS) $(DOCSTRING_FORMAT_PATH)
+
+format_google_docstrings_changed:
+	@command -v "$(DOCSTRING_FORMATTER)" >/dev/null 2>&1 || { \
+		echo "Missing $(DOCSTRING_FORMATTER). Install with: $(PYTHON) -m pip install format-docstring"; \
+		exit 127; \
+	}
+	@set -e; \
+	changed_files="$$(git diff --name-only --diff-filter=ACMR "$(DOCSTRING_FORMAT_DIFF_BASE)" -- '*.py')"; \
+	if [ -z "$$changed_files" ]; then \
+		echo "No changed Python files relative to $(DOCSTRING_FORMAT_DIFF_BASE)."; \
+	else \
+		echo "$(DOCSTRING_FORMATTER) formats existing Google-style docstrings; it does not infer missing scientific argument types."; \
+		echo "Formatting Google-style docstrings in Python files changed relative to $(DOCSTRING_FORMAT_DIFF_BASE):"; \
+		printf '%s\n' "$$changed_files"; \
+		$(DOCSTRING_FORMATTER) $(DOCSTRING_FORMAT_ARGS) $$changed_files; \
+	fi
+
+add_docstring_arg_types:
+	$(PYTHON) scripts/add_docstring_arg_types.py $(DOCSTRING_TYPE_ARGS) $(DOCSTRING_TYPE_PATH)
+
+add_docstring_arg_types_changed:
+	$(PYTHON) scripts/add_docstring_arg_types.py --diff "$(DOCSTRING_TYPE_DIFF_BASE)" $(DOCSTRING_TYPE_ARGS)
+
+check_docstring_arg_types_changed:
+	$(PYTHON) scripts/add_docstring_arg_types.py --diff "$(DOCSTRING_TYPE_DIFF_BASE)" --check $(DOCSTRING_TYPE_ARGS)
 
 # Same checks as check_docstring, but only on qmcpy/*.py files that changed
 # relative to DOCSTRING_BASE (committed, staged/unstaged, and untracked).

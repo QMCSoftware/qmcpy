@@ -51,6 +51,10 @@ QMCPy documentation is built from docstrings, so public APIs should document the
 
 It is informational by default; `STRICT=--strict make check_docstring` makes both parts fail the build. Pass `CHECK_DOCSTRING_ARGS=--skip-missing` to skip the "no docstring" formatting check, or `DOCSTRING_PATH=qmcpy/true_measure` to narrow the scan. `make check_docstring_changed` runs the same two checks on just the `qmcpy/*.py` files that changed relative to `DOCSTRING_BASE` — the quick check to run before opening a PR (it is also part of `make format`).
 
+For annotated public APIs, `make add_docstring_arg_types` inserts missing Google-style argument types into existing `Args:` entries from the function signature. For example, `distance: float` becomes `distance (float): ...` in the docstring. Use `DOCSTRING_TYPE_PATH=path/to/file.py` to narrow the scan, or run `make add_docstring_arg_types_changed` to apply it only to Python files reported by `git diff --name-only develop -- '*.py'`. Use `DOCSTRING_TYPE_DIFF_BASE=origin/develop` to compare against a different base, and use `make check_docstring_arg_types_changed` to fail when changed files still need annotation-derived updates. The helper does not infer types for unannotated functions and does not invent missing scientific argument descriptions.
+
+For mostly well-formed Google-style docstrings, developers may also use the optional open-source `format-docstring` helper to normalize wrapping and existing argument type syntax. Install it locally with `python -m pip install format-docstring`, then run `make format_google_docstrings` to apply it under `qmcpy/`, or run `make format_google_docstrings_changed` to apply it only to Python files reported by `git diff --name-only develop -- '*.py'`. Always review the resulting diff because automated formatting can reflow examples and prose.
+
 ## Extend the Existing Object Model
 
 New functionality should fit the existing QMCPy class hierarchy instead of introducing parallel designs without discussion.
