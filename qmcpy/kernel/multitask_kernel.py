@@ -5,14 +5,16 @@ import numpy as np
 
 
 class KernelMultiTask(AbstractKernel):
-    r"""
-    Multi-task kernel
+    r"""Multi-task kernel
 
-    $$K((i,\boldsymbol{x}),(j,\boldsymbol{z})) = K_{\mathrm{task}}(i,j) K_{\mathrm{base}}(\boldsymbol{x},\boldsymbol{z})$$
+    $$K((i,\boldsymbol{x}),(j,\boldsymbol{z})) = K_{\mathrm{task}}(i,j)
+    K_{\mathrm{base}}(\boldsymbol{x},\boldsymbol{z})$$
 
-    parameterized for $T$ tasks by a factor $\mathsf{F} \in \mathbb{R}^{T \times r}$ and a diagonal $\boldsymbol{v} \in \mathbb{R}^T$ so that
+    parameterized for $T$ tasks by a factor $\mathsf{F} \in \mathbb{R}^{T
+    \times r}$ and a diagonal $\boldsymbol{v} \in \mathbb{R}^T$ so that
 
-    $$\left[K_{\mathrm{task}}(i,j)\right]_{i,j=1}^T = \mathsf{F} \mathsf{F}^T + \mathrm{diag}(\boldsymbol{v}).$$
+    $$\left[K_{\mathrm{task}}(i,j)\right]_{i,j=1}^T = \mathsf{F} \mathsf{F}^T +
+    \mathrm{diag}(\boldsymbol{v}).$$
 
     Examples:
         >>> kmt = KernelMultiTask(KernelGaussian(d=2),num_tasks=3,diag=[1,2,3])
@@ -344,13 +346,20 @@ class KernelMultiTask(AbstractKernel):
             base_kernel (AbstractKernel): $K_{\mathrm{base}}$.
             num_tasks (int): Number of tasks $T>1$.
             factor (Union[np.ndarray, torch.Tensor]): Factor $\mathsf{F}$.
-            diag (Union[np.ndarray, torch.Tensor]): Diagonal parameter $\boldsymbol{v}$.
+            diag (Union[np.ndarray, torch.Tensor]): Diagonal parameter
+                $\boldsymbol{v}$.
             shape_factor (list): Shape of `factor` when `np.isscalar(factor)`.
             shape_diag (list): Shape of `diag` when `np.isscalar(diag)`.
-            tfs_factor (Tuple[callable,callable]): The first argument transforms to the raw value to be optimized; the second applies the inverse transform.
-            tfs_diag (Tuple[callable,callable]): The first argument transforms to the raw value to be optimized; the second applies the inverse transform.
-            requires_grad_factor (bool): If `True` and `torchify`, set `requires_grad=True` for `factor`.
-            requires_grad_diag (bool): If `True` and `torchify`, set `requires_grad=True` for `diag`.
+            tfs_factor (Tuple[callable,callable]): The first argument
+                transforms to the raw value to be optimized; the second applies
+                the inverse transform.
+            tfs_diag (Tuple[callable,callable]): The first argument transforms
+                to the raw value to be optimized; the second applies the
+                inverse transform.
+            requires_grad_factor (bool): If `True` and `torchify`, set
+                `requires_grad=True` for `factor`.
+            requires_grad_diag (bool): If `True` and `torchify`, set
+                `requires_grad=True` for `diag`.
             method (str): `"LOW RANK"` or "CHOLESKY"
         """
         assert isinstance(base_kernel, AbstractKernel)
@@ -464,55 +473,74 @@ class KernelMultiTask(AbstractKernel):
         return kmat[..., 0]
 
     def __call__(self, task0, task1, x0, x1, beta0=None, beta1=None, c=None):
-        r"""
-        Evaluate the kernel with (optional) partial derivatives
+        r"""Evaluate the kernel with (optional) partial derivatives
 
-        $$\sum_{\ell=1}^p c_\ell \partial_{\boldsymbol{x}_0}^{\boldsymbol{\beta}_{\ell,0}} \partial_{\boldsymbol{x}_1}^{\boldsymbol{\beta}_{\ell,1}} K((i_0,\boldsymbol{x}_0),(i_1,\boldsymbol{x}_1)).$$
+        $$\sum_{\ell=1}^p c_\ell
+        \partial_{\boldsymbol{x}_0}^{\boldsymbol{\beta}_{\ell,0}}
+        \partial_{\boldsymbol{x}_1}^{\boldsymbol{\beta}_{\ell,1}}
+        K((i_0,\boldsymbol{x}_0),(i_1,\boldsymbol{x}_1)).$$
 
         Args:
-            task0 (Union[int, np.ndarray, torch.Tensor]): First task indices $i_0$.
-            task1 (Union[int, np.ndarray, torch.Tensor]): Second task indices $i_1$.
-            x0 (Union[np.ndarray, torch.Tensor]): Shape `x0.shape=(...,d)` first input to kernel.
-            x1 (Union[np.ndarray, torch.Tensor]): Shape `x1.shape=(...,d)` second input to kernel.
-            beta0 (Union[np.ndarray, torch.Tensor]): Shape `beta0.shape=(p,d)` derivative orders with respect to first inputs, $\boldsymbol{\beta}_0$.
-            beta1 (Union[np.ndarray, torch.Tensor]): Shape `beta1.shape=(p,d)` derivative orders with respect to first inputs, $\boldsymbol{\beta}_1$.
-            c (Union[np.ndarray, torch.Tensor]): Shape `c.shape=(p,)` coefficients of derivatives.
+            task0 (Union[int, np.ndarray, torch.Tensor]): First task indices
+                $i_0$.
+            task1 (Union[int, np.ndarray, torch.Tensor]): Second task indices
+                $i_1$.
+            x0 (Union[np.ndarray, torch.Tensor]): Shape `x0.shape=(...,d)`
+                first input to kernel.
+            x1 (Union[np.ndarray, torch.Tensor]): Shape `x1.shape=(...,d)`
+                second input to kernel.
+            beta0 (Union[np.ndarray, torch.Tensor]): Shape `beta0.shape=(p,d)`
+                derivative orders with respect to first inputs,
+                $\boldsymbol{\beta}_0$.
+            beta1 (Union[np.ndarray, torch.Tensor]): Shape `beta1.shape=(p,d)`
+                derivative orders with respect to first inputs,
+                $\boldsymbol{\beta}_1$.
+            c (Union[np.ndarray, torch.Tensor]): Shape `c.shape=(p,)`
+                coefficients of derivatives.
 
         Returns:
-            k (Union[np.ndarray, torch.Tensor]): Kernel evaluations with batched shape, see the doctests for examples.
+            Kernel evaluations with batched shape, see the doctests for
+            examples.
         """
         kmat_x = self.base_kernel.__call__(x0, x1, beta0, beta1, c)
         return self._parsed__call__(task0, task1, kmat_x)
 
     def single_integral_01d(self, task0, task1, x):
-        r"""
-        Evaluate the integral of the kernel over the unit cube
+        r"""Evaluate the integral of the kernel over the unit cube
 
-        $$\tilde{K}((i_0,\boldsymbol{x}),i_1) = \int_{[0,1]^d} K((i_0,\boldsymbol{x}),(i_1,\boldsymbol{z}) \; \mathrm{d} \boldsymbol{z}.$$
+        $$\tilde{K}((i_0,\boldsymbol{x}),i_1) = \int_{[0,1]^d}
+        K((i_0,\boldsymbol{x}),(i_1,\boldsymbol{z}) \; \mathrm{d}
+        \boldsymbol{z}.$$
 
         Args:
-            task0 (Union[int, np.ndarray, torch.Tensor]): First task indices $i_0$.
-            task1 (Union[int, np.ndarray, torch.Tensor]): Second task indices $i_1$.
-            x (Union[np.ndarray, torch.Tensor]): Shape `x0.shape=(...,d)` first input to kernel with
+            task0 (Union[int, np.ndarray, torch.Tensor]): First task indices
+                $i_0$.
+            task1 (Union[int, np.ndarray, torch.Tensor]): Second task indices
+                $i_1$.
+            x (Union[np.ndarray, torch.Tensor]): Shape `x0.shape=(...,d)` first
+                input to kernel with
 
         Returns:
-            tildek (Union[np.ndarray, torch.Tensor]): Shape `y.shape=x.shape[:-1]` integral kernel evaluations.
+            Shape `y.shape=x.shape[:-1]` integral kernel evaluations.
         """
         kint_x = self.base_kernel.single_integral_01d(x)
         return self._parsed__call__(task0, task1, kint_x)
 
     def double_integral_01d(self, task0, task1):
-        r"""
-        Evaluate the integral of the kernel over the unit cube
+        r"""Evaluate the integral of the kernel over the unit cube
 
-        $$\tilde{K}(i_0,i_1) = \int_{[0,1]^d} \int_{[0,1]^d} K((i_0,\boldsymbol{x}),(i_1,\boldsymbol{z})) \; \mathrm{d} \boldsymbol{x} \; \mathrm{d} \boldsymbol{z}.$$
+        $$\tilde{K}(i_0,i_1) = \int_{[0,1]^d} \int_{[0,1]^d}
+        K((i_0,\boldsymbol{x}),(i_1,\boldsymbol{z})) \; \mathrm{d}
+        \boldsymbol{x} \; \mathrm{d} \boldsymbol{z}.$$
 
         Args:
-            task0 (Union[int, np.ndarray, torch.Tensor]): First task indices $i_0$.
-            task1 (Union[int, np.ndarray, torch.Tensor]): Second task indices $i_1$.
+            task0 (Union[int, np.ndarray, torch.Tensor]): First task indices
+                $i_0$.
+            task1 (Union[int, np.ndarray, torch.Tensor]): Second task indices
+                $i_1$.
 
         Returns:
-            tildek (Union[np.ndarray, torch.Tensor]): Double integral kernel evaluations.
+            Double integral kernel evaluations.
         """
         kint_x = self.base_kernel.double_integral_01d()
         return self._parsed__call__(task0, task1, kint_x)

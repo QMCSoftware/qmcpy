@@ -10,9 +10,9 @@ import numpy as np
 
 
 class CubQMCNetG(AbstractCubQMCLDG):
-    r"""
-    Quasi-Monte Carlo stopping criterion using digital net cubature
-    with guarantees for cones of functions with a predictable decay in the Walsh coefficients.
+    r"""Quasi-Monte Carlo stopping criterion using digital net cubature with
+    guarantees for cones of functions with a predictable decay in the Walsh
+    coefficients.
 
     Examples:
         >>> k = Keister(DigitalNetB2(seed=7))
@@ -201,7 +201,7 @@ class CubQMCNetG(AbstractCubQMCLDG):
         array([16384, 16384, 16384])
         >>> assert (np.abs(true_value-solution)<abs_tol).all()
 
-    **References:**
+    **References: **
 
     1.  Hickernell, Fred J., and Lluís Antoni Jiménez Rugama.
         "Reliable adaptive cubature using digital sequences."
@@ -236,7 +236,9 @@ class CubQMCNetG(AbstractCubQMCLDG):
             rel_tol (np.ndarray): Relative error tolerance.
             n_init (int): Initial number of samples.
             n_limit (int): Maximum number of samples.
-            error_fun (Union[str, callable]): Function mapping the approximate solution, absolute error tolerance, and relative error tolerance to the current error bound.
+            error_fun (Union[str, callable]): Function mapping the approximate
+                solution, absolute error tolerance, and relative error
+                tolerance to the current error bound.
 
                 - `'EITHER'`, the default, requires the approximation error must be below either the absolue *or* relative tolerance.
                     Equivalent to setting
@@ -248,12 +250,16 @@ class CubQMCNetG(AbstractCubQMCLDG):
                     ```python
                     error_fun = lambda sv,abs_tol,rel_tol: np.minimum(abs_tol,abs(sv)*rel_tol)
                     ```
-            fudge (function): Positive function multiplying the finite sum of the Fourier coefficients specified in the cone of functions.
-            check_cone (bool): Whether or not to check if the function falls in the cone.
-            control_variates (list): Integrands to use as control variates, each with the same underlying discrete distribution instance.
+            fudge (function): Positive function multiplying the finite sum of
+                the Fourier coefficients specified in the cone of functions.
+            check_cone (bool): Whether or not to check if the function falls in
+                the cone.
+            control_variates (list): Integrands to use as control variates,
+                each with the same underlying discrete distribution instance.
             control_variate_means (np.ndarray): Means of each control variate.
-            update_cv_coeffs (bool): If set to true, the control variate coefficients are recomputed at each iteration.
-                Otherwise they are estimated once after the initial sampling and then fixed.
+            update_cv_coeffs (bool): If set to true, the control variate
+                coefficients are recomputed at each iteration. Otherwise they
+                are estimated once after the initial sampling and then fixed.
         """
         if control_variates is None:
             control_variates = []

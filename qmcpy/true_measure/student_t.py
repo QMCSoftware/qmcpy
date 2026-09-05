@@ -6,8 +6,7 @@ from .scipy_wrapper import SciPyWrapper
 
 
 class _StudentTAdapter:
-    """
-    Multivariate Student t adapter for SciPyWrapper.
+    """Multivariate Student t adapter for SciPyWrapper.
 
     - transform(u): sequential conditioning using univariate t conditionals
     - logpdf(x): forwarded to scipy.stats.multivariate_t (if available)
@@ -103,8 +102,7 @@ class _StudentTAdapter:
 
 
 class StudentT(SciPyWrapper):
-    """
-    Convenience true measure: multivariate Student t.
+    """Convenience true measure: multivariate Student t.
     """
 
     def __init__(self, sampler, loc, shape, df):

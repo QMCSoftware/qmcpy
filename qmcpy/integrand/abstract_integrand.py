@@ -22,7 +22,8 @@ class AbstractIntegrand(object):
                 - When `parallel = 0` or `parallel = 1` then function evaluation is done in serial fashion.
                 - `parallel > 1` specifies the number of processes used by `multiprocessing.Pool` or `multiprocessing.pool.ThreadPool`.
 
-                Setting `parallel=True` is equivalent to `parallel = os.cpu_count()`.
+                Setting `parallel=True` is equivalent to `parallel =
+                os.cpu_count()`.
             threadpool (bool): When `parallel > 1`:
 
                 - Setting `threadpool = True` will use `multiprocessing.pool.ThreadPool`.
@@ -92,11 +93,12 @@ class AbstractIntegrand(object):
             warn (bool): If `False`, disable warnings when generating samples.
 
         Returns:
-            t (np.ndarray): Samples from the sequence.
+            Samples from the sequence.
 
                 - If `replications` is `None` then this will be of size (`n_max`-`n_min`) $\times$ `dimension`
                 - If `replications` is a positive int, then `t` will be of size `replications` $\times$ (`n_max`-`n_min`) $\times$ `dimension`
-            weights (np.ndarray): Only returned when `return_weights=True`. The Jacobian weights for the transformation
+            weights (np.ndarray): Only returned when `return_weights=True`. The
+            Jacobian weights for the transformation
         """
         return self.gen_samples(n=n, n_min=n_min, n_max=n_max, warn=warn)
 
@@ -108,43 +110,52 @@ class AbstractIntegrand(object):
         return y
 
     def g(self, t, *args, **kwargs):
-        r"""
-        *Abstract method* implementing the integrand as a function of the true measure.
+        r"""*Abstract method* implementing the integrand as a function of the
+        true measure.
 
         Args:
             t (np.ndarray): Inputs with shape `(*batch_shape, d)`.
             args (tuple): positional arguments to `g`.
             kwargs (dict): keyword arguments to `g`.
 
-                Some algorithms will additionally try to pass in a `compute_flags` keyword argument.
-                This `np.ndarray` are flags indicating which outputs require evaluation.
-                For example, if the vector function has 3 outputs and `compute_flags = [False, True, False]`,
-                then the function is only required to evaluate the second output and may leave the remaining outputs as `np.nan` values,
-                i.e., the outputs corresponding to `compute_flags` which are `False` will not be used in the computation.
+                Some algorithms will additionally try to pass in a
+                `compute_flags` keyword argument. This `np.ndarray` are flags
+                indicating which outputs require evaluation. For example, if
+                the vector function has 3 outputs and `compute_flags = [False,
+                True, False]`, then the function is only required to evaluate
+                the second output and may leave the remaining outputs as
+                `np.nan` values, i.e., the outputs corresponding to
+                `compute_flags` which are `False` will not be used in the
+                computation.
 
         Returns:
-            y (np.ndarray): function evaluations with shape `(*batch_shape, *dimension_indv)` where `dimension_indv` is the shape of the function outputs.
+            function evaluations with shape `(*batch_shape, *dimension_indv)`
+            where `dimension_indv` is the shape of the function outputs.
         """
         raise MethodImplementationError(self, "g")
 
     def f(self, x, *args, **kwargs):
-        r"""
-        Function to evaluate the transformed integrand as a function of the discrete distribution.
-        Automatically applies the transformation determined by the true measure.
+        r"""Function to evaluate the transformed integrand as a function of
+        the discrete distribution. Automatically applies the transformation
+        determined by the true measure.
 
         Args:
             x (np.ndarray): Inputs with shape `(*batch_shape, d)`.
             args (tuple): positional arguments to `g`.
             kwargs (dict): keyword arguments to `g`.
 
-                Some algorithms will additionally try to pass in a `compute_flags` keyword argument.
-                This `np.ndarray` are flags indicating which outputs require evaluation.
-                For example, if the vector function has 3 outputs and `compute_flags = [False, True, False]`,
-                then the function is only required to evaluate the second output and may leave the remaining outputs as `np.nan` values,
-                i.e., the outputs corresponding to `compute_flags` which are `False` will not be used in the computation.
+                Some algorithms will additionally try to pass in a
+                `compute_flags` keyword argument. This `np.ndarray` are flags
+                indicating which outputs require evaluation. For example, if
+                the vector function has 3 outputs and `compute_flags = [False,
+                True, False]`, then the function is only required to evaluate
+                the second output and may leave the remaining outputs as
+                `np.nan` values, i.e., the outputs corresponding to
+                `compute_flags` which are `False` will not be used in the
+                computation.
 
-                The keyword argument `periodization_transform`, a string, specifies a periodization transform.
-                Options are:
+                The keyword argument `periodization_transform`, a string,
+                specifies a periodization transform. Options are:
 
                 - `False`: No periodizing transform, $\psi(x) = x$.
                 - `'BAKER'`: Baker tansform $\psi(x) = 1-2\lvert x-1/2 \rvert$.
@@ -155,7 +166,8 @@ class AbstractIntegrand(object):
                 - `'C3SIN'`: Sidi $C^3$ transform $\psi(x) = (12\pi x-8\sin(2 \pi x) + \sin(4 \pi x))/(12 \pi)$.
 
         Returns:
-            y (np.ndarray): function evaluations with shape `(*batch_shape, *dimension_indv)` where `dimension_indv` is the shape of the function outputs.
+            function evaluations with shape `(*batch_shape, *dimension_indv)`
+            where `dimension_indv` is the shape of the function outputs.
         """
         if "periodization_transform" in kwargs:
             periodization_transform = kwargs["periodization_transform"]
@@ -283,21 +295,22 @@ class AbstractIntegrand(object):
         return y
 
     def bound_fun(self, bound_low, bound_high):
-        """
-        Compute the bounds on the combined function based on bounds for the
-        individual functions.
+        """Compute the bounds on the combined function based on bounds for
+        the individual functions.
 
-        Defaults to the identity where we essentially
-        do not combine integrands, but instead integrate each function
-        individually.
+        Defaults to the identity where we essentially do not combine
+        integrands, but instead integrate each function individually.
 
         Args:
-            bound_low (np.ndarray): Lower bounds on individual estimates with shape `integrand.d_indv`.
-            bound_high (np.ndarray): Upper bounds on individual estimates with shape `integrand.d_indv`.
+            bound_low (np.ndarray): Lower bounds on individual estimates with
+                shape `integrand.d_indv`.
+            bound_high (np.ndarray): Upper bounds on individual estimates with
+                shape `integrand.d_indv`.
 
         Returns:
-            comb_bound_low (np.ndarray): Lower bounds on combined estimates with shape `integrand.d_comb`.
-            comb_bound_high (np.ndarray): Upper bounds on combined estimates with shape `integrand.d_comb`.
+            Lower bounds on combined estimates with shape `integrand.d_comb`.
+            comb_bound_high (np.ndarray): Upper bounds on combined estimates
+            with shape `integrand.d_comb`.
         """
         if self.d_indv != self.d_comb:
             raise ParameterError(
@@ -311,18 +324,24 @@ class AbstractIntegrand(object):
         return bound_low, bound_high
 
     def dependency(self, comb_flags):
-        """
-        Takes a vector of indicators of weather of not the error bound is satisfied for combined integrands and returns flags for individual integrands.
+        """Takes a vector of indicators of weather of not the error bound is
+        satisfied for combined integrands and returns flags for individual
+        integrands.
 
-        For example, if we are taking the ratio of 2 individual integrands, then getting `comb_flags=True` means the ratio
-        has not been approximated to within the tolerance, so the dependency function should return `indv_flags=[True,True]`
-        indicating that both the numerator and denominator integrands need to be better approximated.
+        For example, if we are taking the ratio of 2 individual integrands,
+        then getting `comb_flags=True` means the ratio has not been
+        approximated to within the tolerance, so the dependency function should
+        return `indv_flags=[True,True]` indicating that both the numerator and
+        denominator integrands need to be better approximated.
 
         Args:
-            comb_flags (np.ndarray): Flags of shape `integrand.d_comb` indicating whether the combined outputs are insufficiently approximated.
+            comb_flags (np.ndarray): Flags of shape `integrand.d_comb`
+                indicating whether the combined outputs are insufficiently
+                approximated.
 
         Returns:
-            indv_flags (np.ndarray): Flags of shape `integrand.d_indv` indicating whether the individual integrands require additional sampling.
+            Flags of shape `integrand.d_indv` indicating whether the individual
+            integrands require additional sampling.
         """
         return (
             comb_flags
@@ -331,18 +350,19 @@ class AbstractIntegrand(object):
         )
 
     def spawn(self, levels):
-        r"""
-        Spawn new instances of the current integrand at different levels with new seeds.
-        Used by multi-level QMC algorithms which require integrands at multiple levels.
+        r"""Spawn new instances of the current integrand at different levels
+        with new seeds. Used by multi-level QMC algorithms which require
+        integrands at multiple levels.
 
-        Note:
-            Use `replications` instead of using `spawn` when possible, e.g., when spawning copies which all have the same level.
+        Notes:
+            Use `replications` instead of using `spawn` when possible, e.g.,
+            when spawning copies which all have the same level.
 
         Args:
             levels (np.ndarray): Levels at which to spawn new integrands.
 
         Returns:
-            spawned_integrand (list): Integrands with new true measures and discrete distributions.
+            Integrands with new true measures and discrete distributions.
         """
         levels = np.array([levels]) if np.isscalar(levels) else np.array(levels)
         if (levels > self.max_level).any():
@@ -356,17 +376,17 @@ class AbstractIntegrand(object):
         return spawned_integrand
 
     def dimension_at_level(self, level):
-        """
-        *Abstract method* which returns the dimension of the generator required for a given level.
+        """*Abstract method* which returns the dimension of the generator
+        required for a given level.
 
-        Note:
+        Notes:
             Only used for multilevel problems.
 
         Args:
             level (int): Level at which to return the dimension.
 
         Returns:
-            d (int): Dimension at the given input level.
+            Dimension at the given input level.
         """
         return self.d
 

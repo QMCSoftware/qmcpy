@@ -9,7 +9,9 @@ class AbstractCubMLMC(AbstractStoppingCriterion):
 
     @staticmethod
     def _append_level_diff_samples(data, level, dp):
-        """Append raw level-difference samples when checkpoint caching is enabled."""
+        """Append raw level-difference samples when checkpoint caching is
+        enabled.
+        """
         if not hasattr(data, "level_diffs"):
             return
         while len(data.level_diffs) <= level:
@@ -126,7 +128,7 @@ class AbstractCubMLMC(AbstractStoppingCriterion):
         """Build a fresh Data object for a new MLMC integration run.
 
         Returns:
-            Data: Initialised with zero sample counts and warm-up allocation.
+            Initialised with zero sample counts and warm-up allocation.
         """
         data = Data(
             parameters=[
@@ -179,10 +181,12 @@ class AbstractCubMLMC(AbstractStoppingCriterion):
                 )
 
     def _update_replay_data(self, data):
-        """Replay cached level-difference samples, falling back to fresh draws.
+        """Replay cached level-difference samples, falling back to fresh
+        draws.
 
         Used during exact-resume replay to reconstruct the integration state by
-        consuming previously stored per-level samples before generating new ones.
+        consuming previously stored per-level samples before generating new
+        ones.
 
         Args:
             data (Data): Integration state carrying ``cached_level_diffs`` and

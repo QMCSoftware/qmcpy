@@ -7,27 +7,23 @@
 
 
 class DimensionError(Exception):
-    """
-    Class for raising error about dimension
+    """Class for raising error about dimension
     """
 
 
 class DistributionCompatibilityError(Exception):
-    """
-    Class for raising error about incompatible distribution
+    """Class for raising error about incompatible distribution
     """
 
 
 class NotYetImplemented(Exception):
-    """
-    Class for raising error when a component has been implemented yet
+    """Class for raising error when a component has been implemented yet
     """
 
 
 class MethodImplementationError(Exception):
-    """
-    Class for raising error when an abstract method has not been implemented
-    in the child class.
+    """Class for raising error when an abstract method has not been
+    implemented in the child class.
     """
 
     def __init__(self, subclass, method_name):
@@ -41,30 +37,25 @@ class MethodImplementationError(Exception):
 
 
 class ParameterError(Exception):
-    """
-    Class for raising error about input parameters
+    """Class for raising error about input parameters
     """
 
 
 class ParameterWarning(Warning):
-    """
-    Class for issuing warnings about unacceptable parameters
+    """Class for issuing warnings about unacceptable parameters
     """
 
 
 class MaxSamplesWarning(Warning):
-    """
-    Class for issuing warning about using maximum number of data samples
+    """Class for issuing warning about using maximum number of data samples
     """
 
 
 class MaxLevelsWarning(Warning):
-    """
-    Class for issuing warning about using maximum number of data samples
+    """Class for issuing warning about using maximum number of data samples
     """
 
 
 class CubatureWarning(Warning):
-    """
-    Class for issuing warnings throughout cubature algorithms
+    """Class for issuing warnings throughout cubature algorithms
     """

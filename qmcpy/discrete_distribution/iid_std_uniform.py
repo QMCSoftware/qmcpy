@@ -5,10 +5,10 @@ import warnings
 
 
 class IIDStdUniform(AbstractIIDDiscreteDistribution):
-    r"""
-    IID standard uniform points, a wrapper around [`numpy.random.rand`](https://numpy.org/doc/stable/reference/random/generated/numpy.random.rand.html).
+    r"""IID standard uniform points, a wrapper around
+    [`numpy.random.rand`](https://numpy.org/doc/stable/reference/random/generated/numpy.random.rand.html).
 
-    Note:
+    Notes:
         - Unlike low discrepancy sequence, calling an `IIDStdUniform` instance gives new samples every time,
             e.g., running the first doctest below with `dd = Lattice(dimension=2)` would give the same 4 points in both calls,
             but since we are using an `IIDStdUniform` instance it gives different points every call.
@@ -53,8 +53,11 @@ class IIDStdUniform(AbstractIIDDiscreteDistribution):
         r"""
         Args:
             dimension (int): Dimension of the samples.
-            replications (Union[None, int]): Number of randomizations. This is implemented only for API consistency. Equivalent to reshaping samples.
-            seed (Union[None, int, np.random.SeedSeq): Seed the random number generator for reproducibility.
+            replications (Union[None, int]): Number of randomizations. This is
+                implemented only for API consistency. Equivalent to reshaping
+                samples.
+            seed (Union[None, int, np.random.SeedSeq): Seed the random number
+            generator for reproducibility.
         """
         super(IIDStdUniform, self).__init__(
             int(dimension), replications, seed, d_limit=np.inf, n_limit=np.inf

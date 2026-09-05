@@ -5,17 +5,16 @@ import numpy as np
 def latnetbuilder_linker(lnb_dir="./", out_dir="./", fout_prefix="lnb4qmcpy"):
     """
     Args:
-        lnb_dir (str): relative path to directory where `outputMachine.txt` is stored
-            e.g. 'my_lnb/poly_lat/'
+        lnb_dir (str): relative path to directory where `outputMachine.txt` is
+            stored e.g. 'my_lnb/poly_lat/'
         out_dir (str): relative path to directory where output should be stored
             e.g. 'my_lnb/poly_lat_qmcpy/'
-        fout_prefix (str): start of output file name.
-            e.g. 'my_poly_lat_vec'
+        fout_prefix (str): start of output file name. e.g. 'my_poly_lat_vec'
 
     Returns:
-        str: path to file which can be passed into QMCPy's Lattice or Sobol' in order to use
-             the linked latnetbuilder generating vector/matrix
-             e.g. 'my_poly_lat_vec.10.16.npy'
+        path to file which can be passed into QMCPy's Lattice or Sobol' in
+        order to use the linked latnetbuilder generating vector/matrix e.g.
+        'my_poly_lat_vec.10.16.npy'
 
     Adapted from latnetbuilder parser:
         https://github.com/umontreal-simul/latnetbuilder/blob/master/python-wrapper/latnetbuilder/parse_output.py#L74

@@ -5,8 +5,7 @@ from ..discrete_distribution import DigitalNetB2
 
 
 class Sin1d(AbstractIntegrand):
-    r"""
-    Sine function in $d=1$ dimension.
+    r"""Sine function in $d=1$ dimension.
 
     $$g(t) = \sin(t), \qquad t \sim \mathcal{U}[0,2\pi k]$$
 
@@ -43,11 +42,13 @@ class Sin1d(AbstractIntegrand):
     def __init__(self, sampler, k=1):
         r"""
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.
-            k (float): The true measure will be uniform between $0$ and $2 \pi k$.
+            k (float): The true measure will be uniform between $0$ and $2 \pi
+                k$.
         """
         self.sampler = sampler
         self.k = k

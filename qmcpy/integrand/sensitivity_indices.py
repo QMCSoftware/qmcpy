@@ -8,8 +8,7 @@ import scipy.special
 
 
 class SensitivityIndices(AbstractIntegrand):
-    r"""
-    Sensitivity indices i.e. normalized Sobol' Indices.
+    r"""Sensitivity indices i.e. normalized Sobol' Indices.
 
     Examples:
         Singleton indices
@@ -97,7 +96,7 @@ class SensitivityIndices(AbstractIntegrand):
         >>> closed_total_approx.shape
         (2, 4, 4, 5, 6)
 
-    **References:**
+    **References: **
 
     1.  Aleksei G. Sorokin and Jagadeeswaran Rathinavel.
         On Bounding and Approximating Functions of Multiple Expectations Using Quasi-Monte Carlo.
@@ -114,8 +113,11 @@ class SensitivityIndices(AbstractIntegrand):
     def __init__(self, integrand, indices="singletons"):
         r"""
         Args:
-            integrand (AbstractIntegrand): Integrand to find sensitivity indices of.
-            indices (np.ndarray): Bool array with shape $(\dots,d)$ where each length $d$ vector item indicates which dimensions are active in the subset.
+            integrand (AbstractIntegrand): Integrand to find sensitivity
+                indices of.
+            indices (np.ndarray): Bool array with shape $(\dots,d)$ where each
+                length $d$ vector item indicates which dimensions are active in
+                the subset.
 
                 - The default `indices='singletons'` sets `indices=np.eye(d,dtype=bool)`.
                 - Setting `incides='all'` sets `indices = np.array([[bool(int(b)) for b in np.binary_repr(i,width=d)] for i in range(1,2**d-1)],dtype=bool)`

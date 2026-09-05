@@ -3,8 +3,7 @@ from copy import copy
 
 
 def _univ_repr(qmc_object, abc_class_name, attributes):
-    """
-    Clean way to represent qmc_object data.
+    """Clean way to represent qmc_object data.
 
     Args:
         qmc_object (object): an qmc_object instance
@@ -12,11 +11,11 @@ def _univ_repr(qmc_object, abc_class_name, attributes):
         attributes (list): list of attributes to include
 
     Returns:
-        s (str): string representation of this qmcpy object
+        string representation of this qmcpy object
 
-    Note:
-        print(qmc_object) is equivalent to print(qmc_object.__repr__()).
-        See an abstract classes __repr__ method for example call to this method.
+    Notes:
+        print(qmc_object) is equivalent to print(qmc_object.__repr__()). See an
+        abstract classes __repr__ method for example call to this method.
     """
     with np.printoptions(precision=3, threshold=10):
         unique_attributes = []

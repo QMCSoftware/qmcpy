@@ -10,18 +10,17 @@ def mlmc_test(
     levels_min = 2,
     levels_max = 10,
     ):
-    r"""
-    Multilevel Monte Carlo test routine.
+    r"""Multilevel Monte Carlo test routine.
 
     Examples:
         >>> fo = qp.FinancialOption(
         ...     sampler=qp.IIDStdUniform(seed=7),
         ...     option = "ASIAN",
         ...     asian_mean = "GEOMETRIC",
-        ...     volatility = 0.2, 
-        ...     start_price = 100, 
-        ...     strike_price = 100, 
-        ...     interest_rate = 0.05, 
+        ...     volatility = 0.2,
+        ...     start_price = 100,
+        ...     strike_price = 100,
+        ...     interest_rate = 0.05,
         ...     t_final = 1)
         >>> print('Exact Value: %s'%fo.get_exact_value_inf_dim())
         Exact Value: 5.546818633789201
@@ -43,12 +42,12 @@ def mlmc_test(
             gamma = 1.000000  (exponent for MLMC cost)
         MLMC complexity tests
             rmse_tol       value          mlmc_cost      std_cost       savings        N_l
-            5.000e-03      5.545e+00      3.339e+07      1.038e+08      3.11           8605392      1566846      559701       198886       70359        
-            1.000e-02      5.539e+00      7.272e+06      1.243e+07      1.71           2009192      365451       130781       46623        
-            2.000e-02      5.549e+00      1.827e+06      3.108e+06      1.70           503397       91821        33196        11736        
-            5.000e-02      5.474e+00      2.324e+05      2.556e+05      1.10           71432        13143        4617         
-            1.000e-01      5.466e+00      6.220e+04      6.389e+04      1.03           19477        3361         1225         
-        
+            5.000e-03      5.545e+00      3.339e+07      1.038e+08      3.11           8605392      1566846      559701       198886       70359
+            1.000e-02      5.539e+00      7.272e+06      1.243e+07      1.71           2009192      365451       130781       46623
+            2.000e-02      5.549e+00      1.827e+06      3.108e+06      1.70           503397       91821        33196        11736
+            5.000e-02      5.474e+00      2.324e+05      2.556e+05      1.10           71432        13143        4617
+            1.000e-01      5.466e+00      6.220e+04      6.389e+04      1.03           19477        3361         1225
+
     Args:
         integrand (AbstractIntegrand): multilevel integrand
         n (int): number of samples for convergence tests

@@ -11,24 +11,22 @@ import numpy as np
 
 
 class ClaytonCopula(AbstractCopula):
-    r"""
-    Clayton copula transform with user supplied marginals.
+    r"""Clayton copula transform with user supplied marginals.
 
     This implementation supports general dimension for ``theta > 0``. It maps
     independent uniforms to Clayton-dependent uniforms using the conditional
     inverse / inverse Rosenblatt transform. For coordinate ``j`` after
-    observing the previous ``m = j - 1`` coordinates, the conditional inverse is
+    observing the previous ``m = j - 1`` coordinates, the conditional inverse
+    is
 
-    $$
-    v = \left(1 + A
-        \left(w^{-\theta/(1 + m \theta)} - 1\right)\right)^{-1/\theta},
-    $$
+    $$ v = \left(1 + A \left(w^{-\theta/(1 + m \theta)} -
+    1\right)\right)^{-1/\theta}, $$
 
-    where ``A = 1 + sum(phi(u_i))`` over previous coordinates and
-    ``phi(u) = u^{-theta} - 1``.
+    where ``A = 1 + sum(phi(u_i))`` over previous coordinates and ``phi(u) =
+    u^{-theta} - 1``.
 
-    The base ``AbstractCopula`` class then applies each marginal quantile function.
-    SciPy calls the quantile function ``ppf``.
+    The base ``AbstractCopula`` class then applies each marginal quantile
+    function. SciPy calls the quantile function ``ppf``.
 
     Clayton copulas have positive lower-tail dependence for ``theta > 0``.
 
@@ -64,7 +62,7 @@ class ClaytonCopula(AbstractCopula):
         >>> ClaytonCopula(DigitalNetB2(2, seed=7), marginals=marginals, theta=1e-8)(4).shape
         (4, 2)
 
-    **References:**
+    **References: **
 
     1.  Roger B. Nelsen. *An Introduction to Copulas*. Second Edition,
         Springer Series in Statistics, Springer, 2006.

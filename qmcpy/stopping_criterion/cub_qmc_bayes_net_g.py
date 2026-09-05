@@ -15,9 +15,9 @@ import warnings
 
 
 class CubQMCBayesNetG(AbstractCubBayesLDG):
-    r"""
-    Quasi-Monte Carlo stopping criterion using fast Bayesian cubature and digital nets
-    with guarantees for Gaussian processes having certain digitally shift invariant kernels.
+    r"""Quasi-Monte Carlo stopping criterion using fast Bayesian cubature and
+    digital nets with guarantees for Gaussian processes having certain
+    digitally shift invariant kernels.
 
     Examples:
         >>> k = Keister(DigitalNetB2(2, seed=123456789))
@@ -171,7 +171,7 @@ class CubQMCBayesNetG(AbstractCubBayesLDG):
             n_limit         2^(32)
             entropy         7
 
-    **References:**
+    **References: **
 
     1.  Jagadeeswaran, Rathinavel, and Fred J. Hickernell.
         "Fast automatic Bayesian cubature using Sobol’sampling."
@@ -207,7 +207,9 @@ class CubQMCBayesNetG(AbstractCubBayesLDG):
             rel_tol (np.ndarray): Relative error tolerance.
             n_init (int): Initial number of samples.
             n_limit (int): Maximum number of samples.
-            error_fun (Union[str, callable]): Function mapping the approximate solution, absolute error tolerance, and relative error tolerance to the current error bound.
+            error_fun (Union[str, callable]): Function mapping the approximate
+                solution, absolute error tolerance, and relative error
+                tolerance to the current error bound.
 
                 - `'EITHER'`, the default, requires the approximation error must be below either the absolue *or* relative tolerance.
                     Equivalent to setting

@@ -12,9 +12,9 @@ import numpy as np
 
 
 class CubQMCBayesLatticeG(AbstractCubBayesLDG):
-    r"""
-    Quasi-Monte Carlo stopping criterion using fast Bayesian cubature and rank-1 lattices
-    with guarantees for Gaussian processes having certain shift invariant kernels.
+    r"""Quasi-Monte Carlo stopping criterion using fast Bayesian cubature and
+    rank-1 lattices with guarantees for Gaussian processes having certain shift
+    invariant kernels.
 
     Examples:
         >>> k = Keister(Lattice(2, seed=123456789))
@@ -162,7 +162,7 @@ class CubQMCBayesLatticeG(AbstractCubBayesLDG):
             n_limit         2^(20)
             entropy         7
 
-    **References:**
+    **References: **
 
     1.  Jagadeeswaran, Rathinavel, and Fred J. Hickernell.
         "Fast automatic Bayesian cubature using lattice sampling."
@@ -200,7 +200,9 @@ class CubQMCBayesLatticeG(AbstractCubBayesLDG):
             rel_tol (np.ndarray): Relative error tolerance.
             n_init (int): Initial number of samples.
             n_limit (int): Maximum number of samples.
-            error_fun (Union[str, callable]): Function mapping the approximate solution, absolute error tolerance, and relative error tolerance to the current error bound.
+            error_fun (Union[str, callable]): Function mapping the approximate
+                solution, absolute error tolerance, and relative error
+                tolerance to the current error bound.
 
                 - `'EITHER'`, the default, requires the approximation error must be below either the absolue *or* relative tolerance.
                     Equivalent to setting
@@ -213,13 +215,15 @@ class CubQMCBayesLatticeG(AbstractCubBayesLDG):
                     error_fun = lambda sv,abs_tol,rel_tol: np.minimum(abs_tol,abs(sv)*rel_tol)
                     ```
             alpha (np.ndarray): Uncertainty level in $(0,1)$.
-            ptransform (str): Periodization transform, see the options in `AbstractIntegrand.f`.
+            ptransform (str): Periodization transform, see the options in
+                `AbstractIntegrand.f`.
             errbd_type (str): Options are
 
                 - `'MLE'`: Marginal Log Likelihood.
                 - `'GCV'`: Generalized Cross Validation.
                 - `'FULL'`: Full Bayes.
-            order (int): Bernoulli kernel's order. If zero, choose order automatically
+            order (int): Bernoulli kernel's order. If zero, choose order
+                automatically
         """
         super(CubQMCBayesLatticeG, self).__init__(
             integrand,

@@ -9,10 +9,10 @@ from typing import Union
 
 
 class Gaussian(AbstractTrueMeasure):
-    """
-    Gaussian (Normal) distribution as described in [https://en.wikipedia.org/wiki/Multivariate_normal_distribution](https://en.wikipedia.org/wiki/Multivariate_normal_distribution).
+    """Gaussian (Normal) distribution as described in
+    [https://en.wikipedia.org/wiki/Multivariate_normal_distribution](https://en.wikipedia.org/wiki/Multivariate_normal_distribution).
 
-    Note:
+    Notes:
         - `Normal` is an alias for `Gaussian`
 
     Examples:
@@ -51,13 +51,16 @@ class Gaussian(AbstractTrueMeasure):
     def __init__(self, sampler, mean=0.0, covariance=1.0, decomp_type="PCA"):
         """
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.
             mean (Union[float, np.ndarray]): Mean vector.
-            covariance (Union[float, np.ndarray]): Covariance matrix. A float or vector will be expanded into a diagonal matrix.
-            decomp_type (str): Method for decomposition for covariance matrix. Options include
+            covariance (Union[float, np.ndarray]): Covariance matrix. A float
+                or vector will be expanded into a diagonal matrix.
+            decomp_type (str): Method for decomposition for covariance matrix.
+                Options include
 
                 - `'PCA'` for principal component analysis, or
                 - `'Cholesky'` for cholesky decomposition.
@@ -108,7 +111,9 @@ class Gaussian(AbstractTrueMeasure):
             self._setup_scipy_mvn()
 
     def _compute_decomposition(self):
-        """Compute matrix decomposition (PCA or Cholesky). Raises ParameterError for BrownianBridge."""
+        """Compute matrix decomposition (PCA or Cholesky). Raises
+        ParameterError for BrownianBridge.
+        """
         if self._a_cache is not None:
             return self._a_cache
 

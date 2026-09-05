@@ -4,10 +4,10 @@ from ..true_measure import Uniform
 
 
 class Linear0(AbstractIntegrand):
-    r"""
-    Linear Function with analytic mean $0$.
+    r"""Linear Function with analytic mean $0$.
 
-    $$g(\boldsymbol{t}) = \sum_{j=1}^d t_j \qquad \boldsymbol{T} \sim \mathcal{U}[0,1]^d.$$
+    $$g(\boldsymbol{t}) = \sum_{j=1}^d t_j \qquad \boldsymbol{T} \sim
+    \mathcal{U}[0,1]^d.$$
 
     Examples:
         >>> integrand = Linear0(DigitalNetB2(100,seed=7))
@@ -31,7 +31,8 @@ class Linear0(AbstractIntegrand):
     def __init__(self, sampler):
         r"""
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.

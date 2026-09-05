@@ -7,8 +7,7 @@ from scipy.stats import norm
 
 
 class FinancialOption(AbstractIntegrand):
-    r"""
-    Financial options.
+    r"""Financial options.
 
     - Start price $S_0$
     - Strike price $K$
@@ -17,11 +16,15 @@ class FinancialOption(AbstractIntegrand):
     - Drift $\gamma$
     - Equidistant monitoring times $\boldsymbol{\tau} = (\tau_1,\dots,\tau_d)^T$ with $\tau_d$ the final (exercise) time and $\tau_j = \tau_d j/d$.
 
-    Define the [geometric brownian motion](https://en.wikipedia.org/wiki/Geometric_Brownian_motion) as
+    Define the [geometric brownian
+    motion](https://en.wikipedia.org/wiki/Geometric_Brownian_motion) as
 
-    $$\boldsymbol{S}(\boldsymbol{t}) = S_0 e^{(\gamma-\sigma^2/2)\boldsymbol{\tau}+\sigma\boldsymbol{t}}, \qquad \boldsymbol{T} \sim \mathcal{N}(\boldsymbol{0},\mathsf{\Sigma})$$
+    $$\boldsymbol{S}(\boldsymbol{t}) = S_0
+    e^{(\gamma-\sigma^2/2)\boldsymbol{\tau}+\sigma\boldsymbol{t}}, \qquad
+    \boldsymbol{T} \sim \mathcal{N}(\boldsymbol{0},\mathsf{\Sigma})$$
 
-    where $\boldsymbol{T}$ is a standard Brownian motion so $\mathsf{\Sigma} = \left(\min\{\tau_j,\tau_{j'}\}\right)_{j,j'=1}^d$.
+    where $\boldsymbol{T}$ is a standard Brownian motion so $\mathsf{\Sigma} =
+    \left(\min\{\tau_j,\tau_{j'}\}\right)_{j,j'=1}^d$.
 
     The discounted payoff is
 
@@ -29,56 +32,77 @@ class FinancialOption(AbstractIntegrand):
 
     where the payoff function $P$ will be defined depending on the option.
 
-    Below we will use $S_{-1}$ to denote the final element of $\boldsymbol{S}$, the value of the path at exercise time.
+    Below we will use $S_{-1}$ to denote the final element of $\boldsymbol{S}$,
+    the value of the path at exercise time.
 
     # European Options
 
     *European Call and Put Options* have respective payoffs
 
-    $$P(\boldsymbol{S}) = \max\{S_{-1}-K,0\}, \qquad P(\boldsymbol{S}) = \max\{K-S_{-1},0\}.$$
+    $$P(\boldsymbol{S}) = \max\{S_{-1}-K,0\}, \qquad P(\boldsymbol{S}) =
+    \max\{K-S_{-1},0\}.$$
 
     # Asian Options
 
-    An asian option considers the average value of an asset path across time. We use the trapezoidal rule to approximate either the *arithmetic mean* by
+    An asian option considers the average value of an asset path across time.
+    We use the trapezoidal rule to approximate either the *arithmetic mean* by
 
-    $$A(\boldsymbol{S}) = \frac{1}{d}\left[\frac{1}{2} S_0 + \sum_{j=1}^{d-1} S_j + \frac{1}{2} S_{-1}\right]$$
+    $$A(\boldsymbol{S}) = \frac{1}{d}\left[\frac{1}{2} S_0 + \sum_{j=1}^{d-1}
+    S_j + \frac{1}{2} S_{-1}\right]$$
 
     or the *geometric mean* by
 
-    $$A(\boldsymbol{S}) = \left[\sqrt{S_0} \prod_{j=1}^{d-1} S_j \sqrt{S_{-1}}\right]^{1/d}.$$
+    $$A(\boldsymbol{S}) = \left[\sqrt{S_0} \prod_{j=1}^{d-1} S_j
+    \sqrt{S_{-1}}\right]^{1/d}.$$
 
     *Asian Call and Put Option* have respective payoffs
 
-    $$P(\boldsymbol{S}) = \max\{A(\boldsymbol{S})-K,0\}, \qquad P(\boldsymbol{S}) = \max\{K-A(\boldsymbol{S}),0\}.$$
+    $$P(\boldsymbol{S}) = \max\{A(\boldsymbol{S})-K,0\}, \qquad
+    P(\boldsymbol{S}) = \max\{K-A(\boldsymbol{S}),0\}.$$
 
     # Barrier Options
 
     - Barrier $B$.
 
-    *In* options are activate when the path crosses the barrier $B$, while *out* options are activated only if the path never crosses the barrier $B$.
-    An *up* option satisfies $S_0<B$ while a *down* option satisfies $S_0>B$, both indicating the direction of the barrier from the start price.
+    *In* options are activate when the path crosses the barrier $B$, while
+    *out* options are activated only if the path never crosses the barrier $B$.
+    An *up* option satisfies $S_0<B$ while a *down* option satisfies $S_0>B$,
+    both indicating the direction of the barrier from the start price.
 
     *Barrier Up-In Call and Put Options* have respective payoffs
 
-    $$P(\boldsymbol{S}) = \begin{cases} \max\{S_{-1})-K,0\}, & \text{any } \boldsymbol{S} \geq B \\ 0, & \mathrm{otherwise} \end{cases}, \qquad P(\boldsymbol{S}) = \begin{cases} \max\{K-S_{-1}),0\}, & \text{any } \boldsymbol{S} \geq B \\ 0, & \mathrm{otherwise} \end{cases}.$$
+    $$P(\boldsymbol{S}) = \begin{cases} \max\{S_{-1})-K,0\}, & \text{any }
+    \boldsymbol{S} \geq B \\ 0, & \mathrm{otherwise} \end{cases}, \qquad
+    P(\boldsymbol{S}) = \begin{cases} \max\{K-S_{-1}),0\}, & \text{any }
+    \boldsymbol{S} \geq B \\ 0, & \mathrm{otherwise} \end{cases}.$$
 
     *Barrier Up-Out Call and Put Options* have respective payoffs
 
-    $$P(\boldsymbol{S}) = \begin{cases} \max\{S_{-1})-K,0\}, & \text{all } \boldsymbol{S} < B \\ 0, & \mathrm{otherwise} \end{cases}, \qquad P(\boldsymbol{S}) = \begin{cases} \max\{K-S_{-1}),0\}, & \text{all } \boldsymbol{S} < B \\ 0, & \mathrm{otherwise} \end{cases}.$$
+    $$P(\boldsymbol{S}) = \begin{cases} \max\{S_{-1})-K,0\}, & \text{all }
+    \boldsymbol{S} < B \\ 0, & \mathrm{otherwise} \end{cases}, \qquad
+    P(\boldsymbol{S}) = \begin{cases} \max\{K-S_{-1}),0\}, & \text{all }
+    \boldsymbol{S} < B \\ 0, & \mathrm{otherwise} \end{cases}.$$
 
     *Barrier Down-In Call and Put Options* have respective payoffs
 
-    $$P(\boldsymbol{S}) = \begin{cases} \max\{S_{-1})-K,0\}, & \text{any } \boldsymbol{S} \leq B \\ 0, & \mathrm{otherwise} \end{cases}, \qquad P(\boldsymbol{S}) = \begin{cases} \max\{K-S_{-1}),0\}, & \text{any } \boldsymbol{S} \leq B \\ 0, & \mathrm{otherwise} \end{cases}.$$
+    $$P(\boldsymbol{S}) = \begin{cases} \max\{S_{-1})-K,0\}, & \text{any }
+    \boldsymbol{S} \leq B \\ 0, & \mathrm{otherwise} \end{cases}, \qquad
+    P(\boldsymbol{S}) = \begin{cases} \max\{K-S_{-1}),0\}, & \text{any }
+    \boldsymbol{S} \leq B \\ 0, & \mathrm{otherwise} \end{cases}.$$
 
     *Barrier Down-Out Call and Put Options* have respective payoffs
 
-    $$P(\boldsymbol{S}) = \begin{cases} \max\{S_{-1})-K,0\}, & \text{all } \boldsymbol{S} > B \\ 0, & \mathrm{otherwise} \end{cases}, \qquad P(\boldsymbol{S}) = \begin{cases} \max\{K-S_{-1}),0\}, & \text{all } \boldsymbol{S} > B \\ 0, & \mathrm{otherwise} \end{cases}.$$
+    $$P(\boldsymbol{S}) = \begin{cases} \max\{S_{-1})-K,0\}, & \text{all }
+    \boldsymbol{S} > B \\ 0, & \mathrm{otherwise} \end{cases}, \qquad
+    P(\boldsymbol{S}) = \begin{cases} \max\{K-S_{-1}),0\}, & \text{all }
+    \boldsymbol{S} > B \\ 0, & \mathrm{otherwise} \end{cases}.$$
 
     # Lookback Options
 
     *Lookback Call and Put Options* have respective payoffs
 
-    $$P(\boldsymbol{S}) = S_{-1}-\min(S_0, \ldots S_{-1}), \qquad P(\boldsymbol{S}) = \max(S_0, \ldots S_{-1})-S_{-1}.$$
+    $$P(\boldsymbol{S}) = S_{-1}-\min(S_0, \ldots S_{-1}), \qquad
+    P(\boldsymbol{S}) = \max(S_0, \ldots S_{-1})-S_{-1}.$$
 
     # Digital Option
 
@@ -86,21 +110,30 @@ class FinancialOption(AbstractIntegrand):
 
     *Digital Call and Put Options* have respective payoffs
 
-    $$P(\boldsymbol{S}) = \begin{cases} \rho, & S_{-1} \geq K \\ 0, & \mathrm{otherwise} \end{cases}, \qquad P(\boldsymbol{S}) =  \begin{cases} \rho, & S_{-1} \leq K \\ 0, & \mathrm{otherwise} \end{cases}.$$
+    $$P(\boldsymbol{S}) = \begin{cases} \rho, & S_{-1} \geq K \\ 0, &
+    \mathrm{otherwise} \end{cases}, \qquad P(\boldsymbol{S}) =  \begin{cases}
+    \rho, & S_{-1} \leq K \\ 0, & \mathrm{otherwise} \end{cases}.$$
 
     # Multilevel Options
 
     - Initial level $\ell_0 \geq 0$.
     - Level $\ell \geq \ell_0$.
 
-    Let $\boldsymbol{S}_\mathrm{fine}=\boldsymbol{S}$ be the *fine* full path. For $\ell>\ell_0$ write the *coarse* path as $\boldsymbol{S}_\mathrm{coarse} = (S_j)_{j \text{ even}}$ which only considers every other element of $\boldsymbol{S}$.
-    In this multilevel setting the payoff is
+    Let $\boldsymbol{S}_\mathrm{fine}=\boldsymbol{S}$ be the *fine* full path.
+    For $\ell>\ell_0$ write the *coarse* path as
+    $\boldsymbol{S}_\mathrm{coarse} = (S_j)_{j \text{ even}}$ which only
+    considers every other element of $\boldsymbol{S}$. In this multilevel
+    setting the payoff is
 
-    $$P_\ell(\boldsymbol{S}) = \begin{cases} P(\boldsymbol{S}_\mathrm{fine}), & \ell = \ell_0, \\ P(\boldsymbol{S}_\mathrm{fine})-P(\boldsymbol{S}_\mathrm{coarse}), & \ell > \ell_0 \end{cases}.$$
+    $$P_\ell(\boldsymbol{S}) = \begin{cases} P(\boldsymbol{S}_\mathrm{fine}), &
+    \ell = \ell_0, \\
+    P(\boldsymbol{S}_\mathrm{fine})-P(\boldsymbol{S}_\mathrm{coarse}), & \ell >
+    \ell_0 \end{cases}.$$
 
     Cancellations from the telescoping sum allow us to write
 
-    $$\lim_{\ell \to \infty} P_\ell = P_{\ell_0} + \sum_{\ell=\ell_0+1}^\infty P_\ell.$$
+    $$\lim_{\ell \to \infty} P_\ell = P_{\ell_0} + \sum_{\ell=\ell_0+1}^\infty
+    P_\ell.$$
 
     Examples:
         >>> integrand = FinancialOption(DigitalNetB2(dimension=3,seed=7),option="EUROPEAN")
@@ -195,7 +228,7 @@ class FinancialOption(AbstractIntegrand):
         >>> print("%.4f"%muhathat.sum())
         1.7982
 
-    **References:**
+    **References: **
 
     1.  M.B. Giles.
         Improved multilevel Monte Carlo convergence using the Milstein scheme.
@@ -224,24 +257,28 @@ class FinancialOption(AbstractIntegrand):
     ):
         r"""
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.
-            option (str): Option type in `['ASIAN', 'EUROPEAN', 'BARRIER', 'LOOKBACK', 'DIGITAL']`
+            option (str): Option type in `['ASIAN', 'EUROPEAN', 'BARRIER',
+                'LOOKBACK', 'DIGITAL']`
             call_put (str): Either `'CALL'` or `'PUT'`.
             volatility (float): $\sigma$.
             start_price (float): $S_0$.
             strike_price (float): $K$.
             interest_rate (float): $r$.
             t_final (float): $\tau_d$.
-            decomp_type (str): Method for decomposition for covariance matrix. Options include
+            decomp_type (str): Method for decomposition for covariance matrix.
+                Options include
 
                 - `'PCA'` for principal component analysis,
                 - `'Cholesky'` for cholesky decomposition, or
                 - `'BrownianBridge'` or `'Bridge'` for brownian bridge construction.
             level (Union[None, int]): Level for multilevel problems
-            d_coarsest (Union[None, int]): Dimension of the problem on the coarsest level.
+            d_coarsest (Union[None, int]): Dimension of the problem on the
+                coarsest level.
             asian_mean (str): Either `'ARITHMETIC'` or `'GEOMETRIC'`.
             asian_mean_quadrature_rule (str): Either 'TRAPEZOIDAL' or 'RIGHT'.
             barrier_in_out (str): Either `'IN'` or `'OUT'`.
@@ -553,14 +590,14 @@ class FinancialOption(AbstractIntegrand):
         return np.where(gbm[..., -1] <= self.strike_price, self.digital_payout, 0)
 
     def get_exact_value(self):
-        """
-        Compute the exact analytic fair price of the option in finite dimensions. Supports
+        """Compute the exact analytic fair price of the option in finite
+        dimensions. Supports
 
         - `option='EUROPEAN'`
         - `option='ASIAN'` with `asian_mean='GEOMETRIC'` and `asian_mean_quadrature_rule='RIGHT'`
 
         Returns:
-            mean (float): Exact value of the integral.
+            Exact value of the integral.
         """
         if self.option == "EUROPEAN":
             denom = self.volatility * np.sqrt(self.t_final)
@@ -612,13 +649,13 @@ class FinancialOption(AbstractIntegrand):
         return fp
 
     def get_exact_value_inf_dim(self):
-        r"""
-        Get the exact analytic fair price of the option in infinite dimensions. Supports
+        r"""Get the exact analytic fair price of the option in infinite
+        dimensions. Supports
 
         - `option='ASIAN'` with `asian_mean='GEOMETRIC'`
 
         Returns:
-            mean (float): Exact value of the integral.
+            Exact value of the integral.
         """
         if self.option == "ASIAN":
             assert (

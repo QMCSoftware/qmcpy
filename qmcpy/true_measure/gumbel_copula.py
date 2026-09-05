@@ -11,17 +11,16 @@ import numpy as np
 
 
 class GumbelCopula(AbstractCopula):
-    r"""
-    Gumbel copula transform with user supplied marginals.
+    r"""Gumbel copula transform with user supplied marginals.
 
-    This implementation supports general dimension for ``theta >= 1``. It
-    maps independent uniforms to Gumbel-dependent uniforms by numerically
-    inverting the conditional CDFs from the inverse Rosenblatt construction.
-    The base ``AbstractCopula`` class then applies marginal quantile functions.
-    SciPy calls the quantile function ``ppf``.
+    This implementation supports general dimension for ``theta >= 1``. It maps
+    independent uniforms to Gumbel-dependent uniforms by numerically inverting
+    the conditional CDFs from the inverse Rosenblatt construction. The base
+    ``AbstractCopula`` class then applies marginal quantile functions. SciPy
+    calls the quantile function ``ppf``.
 
-    Gumbel copulas have positive upper-tail dependence for ``theta > 1``.
-    The boundary case ``theta = 1`` is the independent copula.
+    Gumbel copulas have positive upper-tail dependence for ``theta > 1``. The
+    boundary case ``theta = 1`` is the independent copula.
 
     Examples:
         >>> import numpy as np
@@ -59,7 +58,7 @@ class GumbelCopula(AbstractCopula):
         >>> bool(((0 <= independent_samples) & (independent_samples <= 1)).all())
         True
 
-    **References:**
+    **References: **
 
     1.  Roger B. Nelsen. *An Introduction to Copulas*. Second Edition,
         Springer Series in Statistics, Springer, 2006.
@@ -84,7 +83,8 @@ class GumbelCopula(AbstractCopula):
             marginals (list): Length d list of SciPy-like univariate
                 distributions implementing a quantile function, called ``ppf``
                 in SciPy.
-            theta (float): Gumbel dependence parameter, requiring ``theta >= 1``.
+            theta (float): Gumbel dependence parameter, requiring ``theta >=
+                1``.
         """
         self.parameters = ["marginals", "theta"]
         super(GumbelCopula, self).__init__(sampler=sampler, marginals=marginals)

@@ -11,12 +11,12 @@ class Polynomial:
     """
 
     def __init__(self, coeffs):
-        """
-        Polynomial evaluation with Horner's rule
+        """Polynomial evaluation with Horner's rule
 
         Args:
             coeffs (list or np.ndarray or torch.Tensor): vector of coefficients
-            e.g. coeffs = [a, b, c] corresponds to the quadratic polynomial a*x**2 + b*x + c
+            e.g. coeffs = [a, b, c] corresponds to the quadratic polynomial
+            a*x**2 + b*x + c
         """
         assert isinstance(coeffs, list)
         self.order = len(coeffs)
@@ -53,8 +53,7 @@ BERNOULLIPOLYSDICT = {
 
 
 def bernoulli_poly(n, x):
-    r"""
-    $n^\text{th}$ Bernoulli polynomial
+    r"""$n^\text{th}$ Bernoulli polynomial
 
     Examples:
         >>> x = np.arange(6).reshape((2,3))/6
@@ -103,10 +102,11 @@ def bernoulli_poly(n, x):
 
     Args:
         n (int): Polynomial order.
-        x (Union[np.ndarray, torch.Tensor]): Points at which to evaluate the Bernoulli polynomial.
+        x (Union[np.ndarray, torch.Tensor]): Points at which to evaluate the
+            Bernoulli polynomial.
 
     Returns:
-        y (Union[np.ndarray, torch.Tensor]): Bernoulli polynomial values.
+        Bernoulli polynomial values.
     """
     assert isinstance(n, int)
     assert n in BERNOULLIPOLYSDICT, "n = %d not in BERNOULLIPOLYSDICT" % n

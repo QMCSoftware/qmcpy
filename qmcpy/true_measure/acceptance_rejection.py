@@ -13,34 +13,31 @@ def _next_pow2(n):
 
 
 class AcceptanceRejection(AbstractTrueMeasure):
-    """
-    Deterministic Acceptance-Rejection (DAR) sampler on the unit cube.
+    """Deterministic Acceptance-Rejection (DAR) sampler on the unit cube.
 
-    Implements Algorithm 2 from Zhu & Dick (2014). A (t,m,s)-net in
-    dimension s = d+1 is used as the driver, where the first d coordinates
-    form the candidate point and the last coordinate is the acceptance
-    threshold. This gives a star discrepancy bound of O(N^{-1/s}) on the
-    accepted samples, compared to O(N^{-1/2}) for standard random
-    acceptance-rejection.
+    Implements Algorithm 2 from Zhu & Dick (2014). A (t,m,s)-net in dimension s
+    = d+1 is used as the driver, where the first d coordinates form the
+    candidate point and the last coordinate is the acceptance threshold. This
+    gives a star discrepancy bound of O(N^{-1/s}) on the accepted samples,
+    compared to O(N^{-1/2}) for standard random acceptance-rejection.
 
-    The sampler dimension must be d+1 where d is the target dimension.
-    The number of driver points is always a power of 2 (required for the
+    The sampler dimension must be d+1 where d is the target dimension. The
+    number of driver points is always a power of 2 (required for the
     (t,m,s)-net property of Theorem 1).
 
     Args:
-        sampler (AbstractDiscreteDistribution): A QMCPy discrete
-            distribution of dimension s = target_dim + 1. Must mimic
-            StdUniform. The last coordinate is used as the acceptance
-            threshold.
-        target_density (callable): Unnormalised target density psi(x)
-            where x has shape (N, d). Must return shape (N,) and be
-            non-negative on [0,1]^d.
-        upper_bound (float): L = sup_{x in [0,1]^d} psi(x). Every
-            evaluation of psi must be <= L.
-        density_integral (float): C = integral_{[0,1]^d} psi(x) dx.
-            The acceptance rate is C/L.
-        max_retries (int): Number of times gen_samples will double the
-            driver size if not enough points are accepted. Default 4.
+        sampler (AbstractDiscreteDistribution): A QMCPy discrete distribution
+            of dimension s = target_dim + 1. Must mimic StdUniform. The last
+            coordinate is used as the acceptance threshold.
+        target_density (callable): Unnormalised target density psi(x) where x
+            has shape (N, d). Must return shape (N,) and be non-negative on
+            [0,1]^d.
+        upper_bound (float): L = sup_{x in [0,1]^d} psi(x). Every evaluation of
+            psi must be <= L.
+        density_integral (float): C = integral_{[0,1]^d} psi(x) dx. The
+            acceptance rate is C/L.
+        max_retries (int): Number of times gen_samples will double the driver
+            size if not enough points are accepted. Default 4.
 
     Examples:
         >>> import numpy as np
@@ -108,33 +105,32 @@ class AcceptanceRejection(AbstractTrueMeasure):
         super(AcceptanceRejection, self).__init__()
 
     def gen_samples(self, n=None, n_min=None, n_max=None, return_weights=False, warn=True):
-        """
-        Generate accepted samples from the target density.
+        """Generate accepted samples from the target density.
 
-        Unlike other TrueMeasures, this method cannot be decomposed into
-        a fixed 1-to-1 _transform because acceptance-rejection produces
-        a variable number of outputs from a fixed driver batch. gen_samples
-        is therefore overridden directly.
+        Unlike other TrueMeasures, this method cannot be decomposed into a
+        fixed 1-to-1 _transform because acceptance-rejection produces a
+        variable number of outputs from a fixed driver batch. gen_samples is
+        therefore overridden directly.
 
-        Supports continued sampling: calling with n_min=0 starts fresh,
-        and subsequent calls with n_min>0 continue from the same driver
-        sequence position.
+        Supports continued sampling: calling with n_min=0 starts fresh, and
+        subsequent calls with n_min>0 continue from the same driver sequence
+        position.
 
         Args:
-            n (int): Number of accepted samples to return. Treated as
-                n_min=0, n_max=n (always resets the driver sequence).
-            n_min (int): Starting accepted-sample index. Use 0 to reset
-                and start fresh. Use a positive value to continue from
-                the previous call.
-            n_max (int): Ending accepted-sample index (exclusive).
-                Number of samples returned is n_max - n_min.
+            n (int): Number of accepted samples to return. Treated as n_min=0,
+                n_max=n (always resets the driver sequence).
+            n_min (int): Starting accepted-sample index. Use 0 to reset and
+                start fresh. Use a positive value to continue from the previous
+                call.
+            n_max (int): Ending accepted-sample index (exclusive). Number of
+                samples returned is n_max - n_min.
             return_weights (bool): If True, also return importance weights
                 psi(x)/C for each accepted sample.
-            warn (bool): If True, warn when fewer than n samples are
-                returned after all retries.
+            warn (bool): If True, warn when fewer than n samples are returned
+                after all retries.
 
         Returns:
-            samples (np.ndarray): Shape (n, target_dim).
+            Shape (n, target_dim).
             weights (np.ndarray): Shape (n,). Only returned when
                 return_weights=True.
         """
@@ -210,49 +206,47 @@ class AcceptanceRejection(AbstractTrueMeasure):
 
 
 class AcceptanceRejectionReal(AbstractTrueMeasure):
-    """
-    Deterministic Acceptance-Rejection (DAR) sampler on real space R^d.
+    """Deterministic Acceptance-Rejection (DAR) sampler on real space R^d.
 
-    Implements Algorithm 3 from Zhu & Dick (2014). Extends Algorithm 2
-    to densities on R^d by mapping the unit-cube driver through marginal
-    quantile functions (inverse Rosenblatt transform, Lemma 4) before
-    applying the acceptance test.
+    Implements Algorithm 3 from Zhu & Dick (2014). Extends Algorithm 2 to
+    densities on R^d by mapping the unit-cube driver through marginal quantile
+    functions (inverse Rosenblatt transform, Lemma 4) before applying the
+    acceptance test.
 
     The driver point (u_1, ..., u_d, u_{d+1}) is transformed as:
 
-        z_j = F_j^{-1}(u_j)   for j = 1, ..., d
-        u   = u_{d+1}          threshold coordinate (unchanged)
+    z_j = F_j^{-1}(u_j)   for j = 1, ..., d u   = u_{d+1}          threshold
+    coordinate (unchanged)
 
     Acceptance condition:  psi(z) >= L * H(z) * u
 
-    where H is the auxiliary bound function satisfying psi(z) <= L * H(z)
-    for all z in R^d. This gives the same discrepancy bound O(N^{-1/s})
-    as Algorithm 2.
+    where H is the auxiliary bound function satisfying psi(z) <= L * H(z) for
+    all z in R^d. This gives the same discrepancy bound O(N^{-1/s}) as
+    Algorithm 2.
 
-    Note:
-        inv_cdfs applies each quantile function independently per
-        dimension. This is exact when H factors as a product of
-        independent marginals (e.g. a product of univariate distributions).
+    Notes:
+        inv_cdfs applies each quantile function independently per dimension.
+        This is exact when H factors as a product of independent marginals
+        (e.g. a product of univariate distributions).
 
     Args:
-        sampler (AbstractDiscreteDistribution): A QMCPy discrete
-            distribution of dimension s = target_dim + 1. Must mimic
-            StdUniform.
-        target_density (callable): Unnormalised target density psi(z)
-            where z has shape (N, d). Must return shape (N,).
-            Must satisfy psi(z) <= L * H(z) for all z.
-        inv_cdfs (list of callable): List of d quantile functions
-            [F_1^{-1}, ..., F_d^{-1}], one per dimension. Each maps
-            a 1-D array of uniforms in [0,1] to R.
-            Example: [scipy.stats.norm.ppf] for a 1-D standard Gaussian.
-        H_func (callable): Auxiliary bound function H(z) where z has
-            shape (N, d). Must return shape (N,) and satisfy
-            psi(z) <= L * H(z) for all z in R^d.
+        sampler (AbstractDiscreteDistribution): A QMCPy discrete distribution
+            of dimension s = target_dim + 1. Must mimic StdUniform.
+        target_density (callable): Unnormalised target density psi(z) where z
+            has shape (N, d). Must return shape (N,). Must satisfy psi(z) <= L
+            * H(z) for all z.
+        inv_cdfs (list of callable): List of d quantile functions [F_1^{-1},
+            ..., F_d^{-1}], one per dimension. Each maps a 1-D array of
+            uniforms in [0,1] to R. Example: [scipy.stats.norm.ppf] for a 1-D
+            standard Gaussian.
+        H_func (callable): Auxiliary bound function H(z) where z has shape (N,
+            d). Must return shape (N,) and satisfy psi(z) <= L * H(z) for all z
+            in R^d.
         upper_bound (float): L satisfying psi(z) <= L * H(z) for all z.
-        density_integral (float): C = integral_{R^d} psi(z) dz.
-            The acceptance rate is C/L.
-        max_retries (int): Number of times gen_samples will double the
-            driver size if not enough points are accepted. Default 4.
+        density_integral (float): C = integral_{R^d} psi(z) dz. The acceptance
+            rate is C/L.
+        max_retries (int): Number of times gen_samples will double the driver
+            size if not enough points are accepted. Default 4.
 
     Examples:
         >>> import numpy as np
@@ -276,7 +270,8 @@ class AcceptanceRejectionReal(AbstractTrueMeasure):
             density_integral 1
             acceptance_rate 2^(-1)
 
-        Continued sampling: batches resume the driver sequence without restarting.
+        Continued sampling: batches resume the driver sequence without
+        restarting.
 
         >>> inv_cdfs = [lambda u: norm.ppf(u, loc=0, scale=2)]
         >>> m1 = AcceptanceRejectionReal(DigitalNetB2(dimension=2, seed=7), psi, inv_cdfs=inv_cdfs, H_func=H, upper_bound=2., density_integral=1.)
@@ -326,33 +321,32 @@ class AcceptanceRejectionReal(AbstractTrueMeasure):
         super(AcceptanceRejectionReal, self).__init__()
 
     def gen_samples(self, n=None, n_min=None, n_max=None, return_weights=False, warn=True):
-        """
-        Generate accepted samples from the target density on R^d.
+        """Generate accepted samples from the target density on R^d.
 
-        Unlike other TrueMeasures, this method cannot be decomposed into
-        a fixed 1-to-1 _transform because acceptance-rejection produces
-        a variable number of outputs from a fixed driver batch. gen_samples
-        is therefore overridden directly.
+        Unlike other TrueMeasures, this method cannot be decomposed into a
+        fixed 1-to-1 _transform because acceptance-rejection produces a
+        variable number of outputs from a fixed driver batch. gen_samples is
+        therefore overridden directly.
 
-        Supports continued sampling: calling with n_min=0 starts fresh,
-        and subsequent calls with n_min>0 continue from the same driver
-        sequence position.
+        Supports continued sampling: calling with n_min=0 starts fresh, and
+        subsequent calls with n_min>0 continue from the same driver sequence
+        position.
 
         Args:
-            n (int): Number of accepted samples to return. Treated as
-                n_min=0, n_max=n (always resets the driver sequence).
-            n_min (int): Starting accepted-sample index. Use 0 to reset
-                and start fresh. Use a positive value to continue from
-                the previous call.
-            n_max (int): Ending accepted-sample index (exclusive).
-                Number of samples returned is n_max - n_min.
+            n (int): Number of accepted samples to return. Treated as n_min=0,
+                n_max=n (always resets the driver sequence).
+            n_min (int): Starting accepted-sample index. Use 0 to reset and
+                start fresh. Use a positive value to continue from the previous
+                call.
+            n_max (int): Ending accepted-sample index (exclusive). Number of
+                samples returned is n_max - n_min.
             return_weights (bool): If True, also return importance weights
                 psi(z)/C for each accepted sample.
-            warn (bool): If True, warn when fewer than n samples are
-                returned after all retries.
+            warn (bool): If True, warn when fewer than n samples are returned
+                after all retries.
 
         Returns:
-            samples (np.ndarray): Shape (n, target_dim).
+            Shape (n, target_dim).
             weights (np.ndarray): Shape (n,). Only returned when
                 return_weights=True.
         """

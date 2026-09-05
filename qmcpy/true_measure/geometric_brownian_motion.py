@@ -21,10 +21,11 @@ from scipy.stats import multivariate_normal, norm
 
 
 class GeometricBrownianMotion(BrownianMotion):
-    r"""
-    A Geometric Brownian Motion (GBM) with initial value $S_0$, drift $\gamma$, and diffusion $\sigma^2$ is
+    r"""A Geometric Brownian Motion (GBM) with initial value $S_0$, drift
+    $\gamma$, and diffusion $\sigma^2$ is
 
-    $$\mathrm{GBM}(t) = S_0 \exp[(\gamma - \sigma^2/2) t + \sigma \mathrm{BM}(t)]$$
+    $$\mathrm{GBM}(t) = S_0 \exp[(\gamma - \sigma^2/2) t + \sigma
+    \mathrm{BM}(t)]$$
 
     where BM is a Brownian Motion drift $\gamma$ and diffusion $\sigma^2$.
 
@@ -59,14 +60,21 @@ class GeometricBrownianMotion(BrownianMotion):
     ):
         r"""
         Args:
-            sampler (DiscreteDistribution/TrueMeasure): A discrete distribution or true measure.
-            t_final (float): End time for the geometric Brownian motion, non-negative.
-            initial_value (float): Positive initial value of the process, $S_0$.
+            sampler (DiscreteDistribution/TrueMeasure): A discrete distribution
+                or true measure.
+            t_final (float): End time for the geometric Brownian motion,
+                non-negative.
+            initial_value (float): Positive initial value of the process,
+                $S_0$.
             drift (float): Drift coefficient $\gamma$.
-            diffusion (float): Positive diffusion coefficient $\sigma^2$, where $\sigma$ is volatility.
-            decomp_type (str): Method of decomposition, either "PCA", "Cholesky", or "BrownianBridge".
-            lazy_load (bool): If True, defer GBM-specific computations until needed.
-            lazy_decomp (bool): If True, defer expensive matrix decomposition until needed.
+            diffusion (float): Positive diffusion coefficient $\sigma^2$, where
+                $\sigma$ is volatility.
+            decomp_type (str): Method of decomposition, either "PCA",
+                "Cholesky", or "BrownianBridge".
+            lazy_load (bool): If True, defer GBM-specific computations until
+                needed.
+            lazy_decomp (bool): If True, defer expensive matrix decomposition
+                until needed.
         """
         super().__init__(
             sampler,
@@ -196,14 +204,16 @@ class GeometricBrownianMotion(BrownianMotion):
         )
 
     def _validate_input(self):
-        """
-        Validates the input parameters of the GeometricBrownianMotion class.
+        """Validates the input parameters of the GeometricBrownianMotion
+        class.
 
         Raises:
             ValueError: If the end time `t_final' is negative.
-            ValueError: If the diffusion coefficient is less than or equal to zero.
+            ValueError: If the diffusion coefficient is less than or equal to
+                zero.
             ValueError: If the initial value is less than or equal to zero.
-            ParameterError: If the decomposition type is not 'PCA', 'Cholesky', or 'BrownianBridge'.
+            ParameterError: If the decomposition type is not 'PCA', 'Cholesky',
+                or 'BrownianBridge'.
         """
         if self.t < 0:
             raise ValueError(
@@ -223,8 +233,8 @@ class GeometricBrownianMotion(BrownianMotion):
             )
 
     def _validate_samples(self, samples, strict=False):
-        """
-        Validate that generated GBM samples meet mathematical requirements.
+        """Validate that generated GBM samples meet mathematical
+        requirements.
         """
         min_val = samples.min()
         max_val = samples.max()
@@ -260,7 +270,8 @@ class GeometricBrownianMotion(BrownianMotion):
         return validation_results
 
     def _setup_lognormal_distribution(self):
-        """Setup scipy multivariate normal for the log-transformed variables."""
+        """Setup scipy multivariate normal for the log-transformed variables.
+        """
         # Mean of log(S(t)/S0): (drift - 0.5*diffusion) * t
         log_mean = (self.drift - 0.5 * self.diffusion) * self.time_vec
 
@@ -273,9 +284,9 @@ class GeometricBrownianMotion(BrownianMotion):
         )
 
     def _weight(self, x):
-        """
-        Compute PDF of multivariate log-normal distribution.
-        For log-normal: f(x) = (1/∏x_i) * φ(log(x/S0)) where φ is multivariate normal PDF.
+        """Compute PDF of multivariate log-normal distribution. For
+        log-normal: f(x) = (1/∏x_i) * φ(log(x/S0)) where φ is multivariate
+        normal PDF.
 
         Args:
             x (ndarray): GBM sample paths of shape (n_samples, n_timepoints)
@@ -300,17 +311,16 @@ class GeometricBrownianMotion(BrownianMotion):
     def gen_samples(
         self, n=None, n_min=None, n_max=None, return_weights=False, warn=True
     ) -> Union[ndarray, Tuple[ndarray, ndarray]]:
-        """
-        Generate GBM samples using the parent's transform pipeline.
-        
+        """Generate GBM samples using the parent's transform pipeline.
+
         Args:
             n (int): number of samples to generate
             n_min (int): minimum index of sequence
-            n_max (int): maximum index of sequence  
+            n_max (int): maximum index of sequence
             return_weights (bool): whether to return Jacobian weights
             warn (bool): whether to warn about sample generation
-            
+
         Returns:
-            samples (Union[ndarray,tuple]): GBM samples, optionally with weights if return_weights=True
+            GBM samples, optionally with weights if return_weights=True
         """
         return super().gen_samples(n=n, n_min=n_min, n_max=n_max, return_weights=return_weights, warn=warn)

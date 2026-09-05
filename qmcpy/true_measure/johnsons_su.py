@@ -6,8 +6,9 @@ from scipy.stats import norm
 
 
 class JohnsonsSU(AbstractTrueMeasure):
-    r"""
-    Johnson's $S_U$-distribution with independent marginals as described in [https://en.wikipedia.org/wiki/Johnson%27s_SU-distribution](https://en.wikipedia.org/wiki/Johnson%27s_SU-distribution).
+    r"""Johnson's $S_U$-distribution with independent marginals as described
+    in
+    [https://en.wikipedia.org/wiki/Johnson%27s_SU-distribution](https://en.wikipedia.org/wiki/Johnson%27s_SU-distribution).
 
     Examples:
         >>> true_measure = JohnsonsSU(DigitalNetB2(2,seed=7),gamma=1,xi=2,delta=3,lam=4)
@@ -43,7 +44,8 @@ class JohnsonsSU(AbstractTrueMeasure):
     def __init__(self, sampler, gamma=1, xi=1, delta=2, lam=2):
         r"""
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.

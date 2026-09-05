@@ -6,13 +6,10 @@ from ..discrete_distribution import DigitalNetB2
 
 
 class _UniformTriangleAdapter:
-    """
-    Uniform on triangle T = {(x, y): 0 <= y <= x <= 1}
+    """Uniform on triangle T = {(x, y): 0 <= y <= x <= 1}
 
     Exact transform:
-      u1, u2 ~ U(0, 1)
-      x = sqrt(u1)
-      y = u2 * x
+      u1, u2 ~ U(0, 1) x = sqrt(u1) y = u2 * x
     """
 
     def __init__(self):
@@ -50,10 +47,9 @@ class _UniformTriangleAdapter:
 
 
 class UniformTriangle(SciPyWrapper):
-    """
-    Uniform distribution on the triangle {(x, y): 0 <= y <= x <= 1}.
+    """Uniform distribution on the triangle {(x, y): 0 <= y <= x <= 1}.
 
-    Example:
+    Examples:
     >>> tm = UniformTriangle(sampler=DigitalNetB2(2, seed=7))
     >>> x = tm(4)
     >>> x.shape

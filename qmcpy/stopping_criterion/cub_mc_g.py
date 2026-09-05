@@ -15,8 +15,8 @@ import warnings
 
 
 class CubMCG(AbstractStoppingCriterion):
-    r"""
-    IID Monte Carlo stopping criterion using Berry-Esseen inequalities in a two step method with guarantees for functions with bounded kurtosis.
+    r"""IID Monte Carlo stopping criterion using Berry-Esseen inequalities in
+    a two step method with guarantees for functions with bounded kurtosis.
 
     Examples:
         >>> ao = FinancialOption(IIDStdUniform(52,seed=7))
@@ -237,7 +237,7 @@ class CubMCG(AbstractStoppingCriterion):
             replications    1
             entropy         7
 
-    **References:**
+    **References: **
 
     1.  Fred J. Hickernell, Lan Jiang, Yuewei Liu, and Art B. Owen,
         "Guaranteed conservative fixed width confidence intervals via Monte Carlo sampling,"
@@ -270,9 +270,11 @@ class CubMCG(AbstractStoppingCriterion):
             rel_tol (np.ndarray): Relative error tolerance.
             n_init (int): Initial number of samples.
             n_limit (int): Maximum number of samples.
-            inflate (float): Inflation factor $\geq 1$ to multiply by the variance estimate to make it more conservative.
+            inflate (float): Inflation factor $\geq 1$ to multiply by the
+                variance estimate to make it more conservative.
             alpha (np.ndarray): Uncertainty level in $(0,1)$.
-            control_variates (list): Integrands to use as control variates, each with the same underlying discrete distribution instance.
+            control_variates (list): Integrands to use as control variates,
+                each with the same underlying discrete distribution instance.
             control_variate_means (np.ndarray): Means of each control variate.
         """
         if control_variates is None:

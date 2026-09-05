@@ -5,12 +5,10 @@ from .scipy_wrapper import SciPyWrapper
 
 
 class TriangularDistribution:
-    """
-    Triangular distribution matching scipy.stats.triang behavior.
+    """Triangular distribution matching scipy.stats.triang behavior.
 
-    Support: [loc, loc + scale]
-    Mode: loc + c*scale, with 0 < c < 1
-    Provides ppf and pdf for SciPyWrapper custom-marginal usage.
+    Support: [loc, loc + scale] Mode: loc + c*scale, with 0 < c < 1 Provides
+    ppf and pdf for SciPyWrapper custom-marginal usage.
     """
 
     def __init__(self, c=0.5, loc=0.0, scale=1.0):

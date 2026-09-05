@@ -9,8 +9,8 @@ from ..util import DimensionError, ParameterError, _univ_repr
 
 
 class ProductMeasure(AbstractTrueMeasure):
-    r"""
-    Product true measure for independent composition of marginal true measures.
+    r"""Product true measure for independent composition of marginal true
+    measures.
 
     ``ProductMeasure`` represents an independent product of smaller true
     measures. Each marginal may be one-dimensional or multidimensional. If the
@@ -29,12 +29,11 @@ class ProductMeasure(AbstractTrueMeasure):
 
     For example, if the marginals are
 
-        marginal 1: 2D Gaussian
-        marginal 2: 1D zero-inflated exponential
+    marginal 1: 2D Gaussian marginal 2: 1D zero-inflated exponential
 
     then ``ProductMeasure`` uses a 3D sampler and returns samples with three
-    coordinates. The first two coordinates come from the Gaussian marginal,
-    and the third coordinate comes from the zero-inflated exponential marginal.
+    coordinates. The first two coordinates come from the Gaussian marginal, and
+    the third coordinate comes from the zero-inflated exponential marginal.
 
     The marginal true measures still have their own samplers because QMCPy's
     current ``AbstractTrueMeasure`` API requires every true measure to be
@@ -100,24 +99,23 @@ class ProductMeasure(AbstractTrueMeasure):
     """
 
     def __init__(self, sampler, marginals):
-        """
-        Initialize a product measure from one sampler and several marginals.
+        """Initialize a product measure from one sampler and several
+        marginals.
 
-        Parameters:
-        
-        sampler : AbstractDiscreteDistribution
-            The sampler for the whole product measure. Its dimension must
-            equal the sum of the marginal dimensions.
+        Args:
 
-        marginals : list or tuple of AbstractTrueMeasure
-            Independent true measures to place side by side. A marginal may
-            itself be multidimensional.
+        sampler: AbstractDiscreteDistribution The sampler for the whole product
+            measure. Its dimension must equal the sum of the marginal
+            dimensions.
 
-        Why one sampler?
-        ----------------
-        The product measure should be driven by one total-dimensional QMC
-        point set. We do not generate separate QMC samples from each marginal.
-        Instead, one sample u in [0,1]^d is split into blocks:
+        marginals: list or tuple of AbstractTrueMeasure Independent true
+            measures to place side by side. A marginal may itself be
+            multidimensional.
+
+        Why one sampler? ---------------- The product measure should be driven
+        by one total-dimensional QMC point set. We do not generate separate QMC
+        samples from each marginal. Instead, one sample u in [0,1]^d is split
+        into blocks:
 
             u = (u_marginal_1, u_marginal_2, ..., u_marginal_k).
 
@@ -194,7 +192,9 @@ class ProductMeasure(AbstractTrueMeasure):
                 self.parameters.append(statistic)
 
     def _marginal_statistic(self, marginal, marginal_index, statistic):
-        """Return a statistic or identify the marginal that does not provide it."""
+        """Return a statistic or identify the marginal that does not provide
+        it.
+        """
         try:
             return getattr(marginal, statistic)
         except AttributeError as error:
@@ -289,7 +289,9 @@ class ProductMeasure(AbstractTrueMeasure):
         return self._covariance_cache
 
     def __repr__(self):
-        """Represent ProductMeasure without expanding marginal sparse matrices."""
+        """Represent ProductMeasure without expanding marginal sparse
+        matrices.
+        """
         lines = [f"{type(self).__name__} (AbstractTrueMeasure)"]
         for parameter in dict.fromkeys(self.parameters):
             if parameter == "marginals":
@@ -312,12 +314,12 @@ class ProductMeasure(AbstractTrueMeasure):
 
     @staticmethod
     def _expand_bounds(bounds, dimension, name):
-        """
-        Expand a marginal's bounds so they have one row per output coordinate.
+        """Expand a marginal's bounds so they have one row per output
+        coordinate.
 
-        Some true measures store bounds as shape (1, 2), meaning the same
-        bound applies to all coordinates. Others store bounds as shape
-        (dimension, 2), meaning each coordinate has its own bound.
+        Some true measures store bounds as shape (1, 2), meaning the same bound
+        applies to all coordinates. Others store bounds as shape (dimension,
+        2), meaning each coordinate has its own bound.
 
         ProductMeasure needs all marginal ranges stacked together, so every
         marginal range must be represented as shape (dimension, 2).
@@ -336,20 +338,18 @@ class ProductMeasure(AbstractTrueMeasure):
 
     @property
     def _has_recursive_marginal(self):
-        """
-        Check whether any marginal is itself recursively composed.
+        """Check whether any marginal is itself recursively composed.
 
         In QMCPy, a true measure can sometimes be built on top of another true
         measure. Sampling can still be handled by the recursive transform
         helper, but exact product weights in the final transformed space are
-        more delicate. For now, ProductMeasure only computes exact weights
-        when all marginals are direct true measures.
+        more delicate. For now, ProductMeasure only computes exact weights when
+        all marginals are direct true measures.
         """
         return any(marginal.transform != marginal for marginal in self.marginals)
 
     def _split_blocks(self, x):
-        """
-        Split an input array into marginal coordinate blocks.
+        """Split an input array into marginal coordinate blocks.
 
         The split always happens along the final axis, so this works for both
         ordinary samples with shape (n, d) and replicated samples with shape
@@ -365,18 +365,16 @@ class ProductMeasure(AbstractTrueMeasure):
         return np.split(x, self._split_indices, axis=-1)
 
     def _transform(self, x):
-        """
-        Transform unit-cube samples into product-measure samples.
+        """Transform unit-cube samples into product-measure samples.
 
-        Steps
-        -----
+        Steps -----
         1. Split the full unit-cube sample into marginal blocks.
         2. Send each block to the matching marginal true measure.
         3. Concatenate the transformed marginal outputs.
 
         This implements
 
-            T(u) = (T_1(u_1), T_2(u_2), ..., T_k(u_k)),
+        T(u) = (T_1(u_1), T_2(u_2), ..., T_k(u_k)),
 
         where each marginal T_j acts only on its own coordinate block.
         """
@@ -390,17 +388,16 @@ class ProductMeasure(AbstractTrueMeasure):
         return np.concatenate(transformed_blocks, axis=-1)
 
     def _weight(self, x):
-        """
-        Compute the product density/weight for independent marginals.
+        """Compute the product density/weight for independent marginals.
 
         For independent components, the joint weight is the product of the
         marginal weights:
 
             w(x) = w_1(x_1) * w_2(x_2) * ... * w_k(x_k).
 
-        This method supports direct marginal true measures. Recursive
-        marginals are blocked for now because their final-space weights need
-        more careful handling.
+        This method supports direct marginal true measures. Recursive marginals
+        are blocked for now because their final-space weights need more careful
+        handling.
         """
         if self._has_recursive_marginal:
             raise ParameterError(
@@ -417,8 +414,7 @@ class ProductMeasure(AbstractTrueMeasure):
         return weight
 
     def _spawn(self, sampler, dimension):
-        """
-        Spawn a new ProductMeasure with a new outer sampler.
+        """Spawn a new ProductMeasure with a new outer sampler.
 
         QMCPy's spawn mechanism creates new randomized copies of a sampler or
         true measure. ProductMeasure preserves the same marginal structure and

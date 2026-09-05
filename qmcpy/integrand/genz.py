@@ -6,14 +6,16 @@ import numpy as np
 
 
 class Genz(AbstractIntegrand):
-    r"""
-    Genz function following the [`DAKOTA` implementation](https://snl-dakota.github.io/docs/6.17.0/users/usingdakota/examples/additionalexamples.html?highlight=genz#genz-functions).
+    r"""Genz function following the [`DAKOTA`
+    implementation](https://snl-dakota.github.io/docs/6.17.0/users/usingdakota/examples/additionalexamples.html?highlight=genz#genz-functions).
 
-    $$g_\mathrm{oscillatory}(\boldsymbol{t}) = \cos\left(-\sum_{j=1}^d c_j t_j\right)$$
+    $$g_\mathrm{oscillatory}(\boldsymbol{t}) = \cos\left(-\sum_{j=1}^d c_j
+    t_j\right)$$
 
     or
 
-    $$g_\mathrm{corner-peak}(\boldsymbol{t}) = \left(1+\sum_{j=1}^d c_j t_j\right)^{-(d+1)}$$
+    $$g_\mathrm{corner-peak}(\boldsymbol{t}) = \left(1+\sum_{j=1}^d c_j
+    t_j\right)^{-(d+1)}$$
 
     where
 
@@ -21,7 +23,9 @@ class Genz(AbstractIntegrand):
 
     and the coefficients $\boldsymbol{c}$ are have three kinds
 
-    $$c_k^{(1)} = \frac{k-1/2}{d}, \qquad c_k^{(2)} = \frac{1}{k^2}, \qquad c_k^{(3)} = \exp\left(\frac{k \log(10^{-8})}{d}\right), \qquad k=1,\dots,d.$$
+    $$c_k^{(1)} = \frac{k-1/2}{d}, \qquad c_k^{(2)} = \frac{1}{k^2}, \qquad
+    c_k^{(3)} = \exp\left(\frac{k \log(10^{-8})}{d}\right), \qquad
+    k=1,\dots,d.$$
 
     Examples:
         >>> for kind_func in ['OSCILLATORY','CORNER PEAK']:
@@ -53,7 +57,8 @@ class Genz(AbstractIntegrand):
     def __init__(self, sampler, kind_func="OSCILLATORY", kind_coeff=1):
         """
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.

@@ -74,8 +74,8 @@ class SuggesterSimple(Suggester):
 
 
 class PFGPCI(AbstractStoppingCriterion):
-    """
-    Probability of failure estimation using adaptive Gaussian process construction and resulting credible intervals.
+    """Probability of failure estimation using adaptive Gaussian process
+    construction and resulting credible intervals.
 
     Examples:
         >>> pfgpci = PFGPCI(
@@ -154,7 +154,7 @@ class PFGPCI(AbstractStoppingCriterion):
               error_ref: [2.01e-02   7.02e-03   1.28e-02   4.52e-03  ]
                   in_ci: [True       True       True       True      ]
 
-    **References:**
+    **References: **
 
     1.  Sorokin, Aleksei G., and Vishwas Rao.
         "Credible Intervals for Probability of Failure with Gaussian Processes."
@@ -197,26 +197,50 @@ class PFGPCI(AbstractStoppingCriterion):
         Args:
             integrand (AbstractIntegrand): The integrand.
             failure_threshold (float): Thresholds for failure.
-            failure_above_threshold (bool): Set to `True` if failure occurs when the simulation exceeds `failure_threshold` and False otherwise.
-            abs_tol (float): The desired maximum distance from the estimate to either end of the credible interval.
-            n_init (float): Initial number of samples from integrand.discrete_distrib from which to build the first surrogate GP
+            failure_above_threshold (bool): Set to `True` if failure occurs
+                when the simulation exceeds `failure_threshold` and False
+                otherwise.
+            abs_tol (float): The desired maximum distance from the estimate to
+                either end of the credible interval.
+            n_init (float): Initial number of samples from
+                integrand.discrete_distrib from which to build the first
+                surrogate GP
             n_limit (int): Budget of simulations.
-            n_batch (int): The number of samples per batch to draw from batch_sampler.
-            alpha (float): The credible interval is constructed to hold with probability at least 1 - alpha
-            init_samples (float): If the simulation has already been run, pass in (x,y) where x are past samples from the discrete distribution and y are corresponding simulation evaluations.
-            batch_sampler (Suggester or AbstractDiscreteDistribution): A suggestion scheme for future samples.
-            n_approx (int): Number of points from integrand.discrete_distrib used to approximate estimate and credible interval bounds
+            n_batch (int): The number of samples per batch to draw from
+                batch_sampler.
+            alpha (float): The credible interval is constructed to hold with
+                probability at least 1 - alpha
+            init_samples (float): If the simulation has already been run, pass
+                in (x,y) where x are past samples from the discrete
+                distribution and y are corresponding simulation evaluations.
+            batch_sampler (Suggester or AbstractDiscreteDistribution):
+                A suggestion scheme for future samples.
+            n_approx (int): Number of points from integrand.discrete_distrib
+                used to approximate estimate and credible interval bounds
             gpytorch_prior_mean (gpytorch.means): prior mean function of the GP
-            gpytorch_prior_cov (gpytorch.kernels): Prior covariance kernel of the GP
-            gpytorch_likelihood (gpytorch.likelihoods): GP likelihood, require one of gpytorch.likelihoods.{GaussianLikelihood, GaussianLikelihoodWithMissingObs, FixedNoiseGaussianLikelihood}
-            gpytorch_marginal_log_likelihood_func (callable): Function taking in the likelihood and gpytorch model and returning a marginal log likelihood from gpytorch.mlls
-            torch_optimizer_func (callable): Function taking in the gpytorch model and returning an optimizer from torch.optim
-            gpytorch_train_iter (int): Training iterations for the GP in gpytorch
-            gpytorch_use_gpu (bool): If True, have gpytorch use a GPU for fitting and trining the GP
-            verbose (int): If verbose > 0, print information through the call to integrate()
-            n_ref_approx (int): If n_ref_approx > 0, use n_ref_approx points to get a reference QMC approximation of the true solution.
-                Caution: If n_ref_approx > 0, it should be a large int e.g. 2**22, in which case it is only helpful for cheap to evaluate simulations
-            seed_ref_approx (int): Seed for the reference approximation. Only applies when n_ref_approx>0
+            gpytorch_prior_cov (gpytorch.kernels): Prior covariance kernel of
+                the GP
+            gpytorch_likelihood (gpytorch.likelihoods): GP likelihood, require
+                one of gpytorch.likelihoods.{GaussianLikelihood,
+                GaussianLikelihoodWithMissingObs, FixedNoiseGaussianLikelihood}
+            gpytorch_marginal_log_likelihood_func (callable): Function taking
+                in the likelihood and gpytorch model and returning a marginal
+                log likelihood from gpytorch.mlls
+            torch_optimizer_func (callable): Function taking in the gpytorch
+                model and returning an optimizer from torch.optim
+            gpytorch_train_iter (int): Training iterations for the GP in
+                gpytorch
+            gpytorch_use_gpu (bool): If True, have gpytorch use a GPU for
+                fitting and trining the GP
+            verbose (int): If verbose > 0, print information through the call
+                to integrate()
+            n_ref_approx (int): If n_ref_approx > 0, use n_ref_approx points to
+                get a reference QMC approximation of the true solution.
+                Caution: If n_ref_approx > 0, it should be a large int e.g.
+                2**22, in which case it is only helpful for cheap to evaluate
+                simulations
+            seed_ref_approx (int): Seed for the reference approximation. Only
+                applies when n_ref_approx>0
         """
         self.parameters = ["abs_tol", "n_init", "n_limit", "n_batch"]
         self.integrand = integrand

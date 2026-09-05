@@ -7,9 +7,10 @@ from scipy.stats import norm
 
 
 class BrownianMotion(Gaussian):
-    r"""
-    Brownian Motion as described in [https://en.wikipedia.org/wiki/Brownian_motion](https://en.wikipedia.org/wiki/Brownian_motion).
-    For a standard Brownian Motion $W$ we define the Brownian Motion $B$ with initial value $B_0$, drift $\gamma$, and diffusion $\sigma^2$ to be
+    r"""Brownian Motion as described in
+    [https://en.wikipedia.org/wiki/Brownian_motion](https://en.wikipedia.org/wiki/Brownian_motion).
+    For a standard Brownian Motion $W$ we define the Brownian Motion $B$ with
+    initial value $B_0$, drift $\gamma$, and diffusion $\sigma^2$ to be
 
     $$B(t) = B_0 + \gamma t + \sigma W(t).$$
 
@@ -70,7 +71,8 @@ class BrownianMotion(Gaussian):
             bridge_construction_times [1.   0.5  0.75 0.25]
             bridge_output_times [0.25 0.5  0.75 1.  ]
 
-        Example 4: With Brownian Bridge construction and independent replications
+        Example 4: With Brownian Bridge construction and independent
+        replications
 
         >>> x = BrownianMotion(DigitalNetB2(4,seed=7,replications=3),decomp_type='BrownianBridge')(2)
         >>> x.shape
@@ -85,9 +87,10 @@ class BrownianMotion(Gaussian):
                [[ 0.59845146,  1.10849282,  1.34022073,  1.02092441],
                 [-0.20298903, -0.23324496, -0.3026512 , -0.35202342]]])
 
-        Example 5: With custom monitoring times and passing bridge_vdc_gray_ordering=False (reaches all four cases)
+        Example 5: With custom monitoring times and passing
+        bridge_vdc_gray_ordering=False (reaches all four cases)
 
-        >>> true_measure = BrownianMotion(DigitalNetB2(4,seed=7),decomp_type='BrownianBridge',monitoring_times=[0.6,1.0,0.3,0.8],bridge_vdc_gray_ordering=False)        
+        >>> true_measure = BrownianMotion(DigitalNetB2(4,seed=7),decomp_type='BrownianBridge',monitoring_times=[0.6,1.0,0.3,0.8],bridge_vdc_gray_ordering=False)
         >>> true_measure.time_vec
         array([0.3, 0.6, 0.8, 1. ])
         >>> true_measure(2)
@@ -98,7 +101,8 @@ class BrownianMotion(Gaussian):
         >>> true_measure.bridge_output_times
         array([0.3, 0.6, 0.8, 1. ])
 
-        Example 6: With custom monitoring times. By default the times are sorted and inserted in van der Corput order 
+        Example 6: With custom monitoring times. By default the times are
+        sorted and inserted in van der Corput order
 
         >>> true_measure = BrownianMotion(DigitalNetB2(4,seed=7),decomp_type='BrownianBridge',monitoring_times=[0.6,1.0,0.3,0.8])
         >>> true_measure.time_vec
@@ -124,9 +128,9 @@ class BrownianMotion(Gaussian):
         >>> true_measure.bridge_output_times
         array([0.6, 1. , 0.3, 0.8])
 
-        **References:**
+        **References: **
 
-        1.  Art B. Owen. 
+        1.  Art B. Owen.
             Monte Carlo theory, methods and examples.
             Section 6.4, Detailed Simulation of Brownian Motion, 2013
             [https://artowen.su.domains/mc/](https://artowen.su.domains/mc/)
@@ -147,7 +151,8 @@ class BrownianMotion(Gaussian):
     ):
         r"""
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.
@@ -155,19 +160,25 @@ class BrownianMotion(Gaussian):
             initial_value (float): Initial value $B_0$.
             drift (int): Drift $\gamma$.
             diffusion (int): Diffusion $\sigma^2$.
-            decomp_type (str): Method for decomposition for covariance matrix. Options include
+            decomp_type (str): Method for decomposition for covariance matrix.
+                Options include
 
                 - `'PCA'` for principal component analysis,
                 - `'Cholesky'` for cholesky decomposition, or
                 - `'BrownianBridge'` or `'Bridge'` for brownian bridge construction.
-            lazy_decomp (bool): If True, defer expensive matrix decomposition until needed.
-            monitoring_times (Union[np.ndarray, list]): Optional custom sampling times for `'BrownianBridge'` 
-                with length d. The given order is the insertion order if `'bridge_vdc_gray_ordering'` is False.
-            bridge_vdc_gray_ordering (bool): For `'BrownianBridge'` when monitoring_times is specified. If True, 
-                monitoring_times is sorted to match van der Corput ordering. 
-            bridge_output_order (str): If `'increasing'`, output is returned in increasing order. If `'input'`, 
-                output matches the order given in `'monitoring_times'`. If a custom monitoring times is not given,
-                the output is given in increasing order.
+            lazy_decomp (bool): If True, defer expensive matrix decomposition
+                until needed.
+            monitoring_times (Union[np.ndarray, list]): Optional custom
+                sampling times for `'BrownianBridge'` with length d. The given
+                order is the insertion order if `'bridge_vdc_gray_ordering'` is
+                False.
+            bridge_vdc_gray_ordering (bool): For `'BrownianBridge'` when
+                monitoring_times is specified. If True, monitoring_times is
+                sorted to match van der Corput ordering.
+            bridge_output_order (str): If `'increasing'`, output is returned in
+                increasing order. If `'input'`, output matches the order given
+                in `'monitoring_times'`. If a custom monitoring times is not
+                given, the output is given in increasing order.
         """
         if str(decomp_type).upper() == "BRIDGE":
             decomp_type = "BrownianBridge"

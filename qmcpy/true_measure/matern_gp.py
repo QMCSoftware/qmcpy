@@ -12,8 +12,7 @@ from typing import Union
 
 
 class MaternGP(Gaussian):
-    r"""
-    A Gaussian process with Matérn covariance kernel.
+    r"""A Gaussian process with Matérn covariance kernel.
 
     Examples:
         >>> true_measure = MaternGP(DigitalNetB2(dimension=3,seed=7),points=np.linspace(0,1,3)[:,None],nu=3/2,length_scale=[3,4,5],variance=0.01,mean=np.array([.3,.4,.5]))
@@ -58,7 +57,7 @@ class MaternGP(Gaussian):
                 [0.2147053 , 0.33293508, 0.43572791],
                 [0.37343973, 0.46534628, 0.56356714]]])
 
-    **References:**
+    **References: **
 
     1.  [`sklearn.gaussian_process.kernels.Matern`](https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.kernels.Matern.html).
 
@@ -78,11 +77,14 @@ class MaternGP(Gaussian):
     ):
         r"""
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.
-            points (np.ndarray): The positions of points on a metric space. The array should have shape $(d,k)$ where $d$ is the dimension of the sampler and $k$ is the latent dimension.
+            points (np.ndarray): The positions of points on a metric space. The
+                array should have shape $(d,k)$ where $d$ is the dimension of
+                the sampler and $k$ is the latent dimension.
             nu (float): The "smoothness" of the MaternGP function, e.g.,
 
                 - $\nu = 1/2$ is equivalent to the absolute exponential kernel,
@@ -90,15 +92,19 @@ class MaternGP(Gaussian):
                 - $\nu = 5/2$ implies twice differentiability.
                 - as $\nu \to \infty$ the kernel becomes equivalent to the RBF kernel, see [`sklearn.gaussian_process.kernels.RBF`](https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.kernels.RBF.html#sklearn.gaussian_process.kernels.RBF).
 
-                Note that when $\nu \notin \{1/2, 3/2, 5/2, \infty \}$ the kernel is around $10$ times slower to evaluate.
-            length_scale (Union[float, np.ndarray]): Determines "peakiness", or how correlated two points are based on their distance.
+                Note that when $\nu \notin \{1/2, 3/2, 5/2, \infty \}$ the
+                kernel is around $10$ times slower to evaluate.
+            length_scale (Union[float, np.ndarray]): Determines "peakiness", or
+                how correlated two points are based on their distance.
             variance (float): Global scaling factor of the kernel. Retrievable
                 after construction via the `kernel_variance` property. (The
                 inherited `variance` attribute is the vector of marginal
                 variances, i.e. the diagonal of `covariance`.)
-            mean (Union[float, np.ndarray]): Mean vector for multivariate `Gaussian`.
+            mean (Union[float, np.ndarray]): Mean vector for multivariate
+                `Gaussian`.
             nugget (float): Positive nugget to add to diagonal.
-            decomp_type (str): Method for decomposition for covariance matrix. Options include
+            decomp_type (str): Method for decomposition for covariance matrix.
+                Options include
 
                 - `'PCA'` for principal component analysis, or
                 - `'Cholesky'` for cholesky decomposition.

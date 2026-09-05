@@ -7,7 +7,8 @@ class AbstractCubMLQMC(AbstractStoppingCriterion):
 
     @staticmethod
     def _append_level_replication_sums(data, level, rep_sums, n_increment):
-        """Append replayable per-replication sums for one MLQMC level update."""
+        """Append replayable per-replication sums for one MLQMC level update.
+        """
         if (not hasattr(data, "level_rep_sums")) or (not hasattr(data, "level_n_increments")):
             return
         while len(data.level_rep_sums) <= level:

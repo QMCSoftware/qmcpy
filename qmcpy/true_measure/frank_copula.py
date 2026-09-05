@@ -11,11 +11,9 @@ import numpy as np
 
 
 def _eulerian_coefficients(n):
-    """
-    Return Eulerian coefficients for Li_{-n}(z).
+    """Return Eulerian coefficients for Li_{-n}(z).
 
-    For nonnegative integer n,
-    Li_{-n}(z) = z * A_n(z) / (1 - z) ** (n + 1),
+    For nonnegative integer n, Li_{-n}(z) = z * A_n(z) / (1 - z) ** (n + 1),
     where A_n is the Eulerian polynomial.
     """
     if n == 0:
@@ -33,8 +31,7 @@ def _eulerian_coefficients(n):
 
 
 class FrankCopula(AbstractCopula):
-    r"""
-    Frank copula transform with user supplied univariate marginals.
+    r"""Frank copula transform with user supplied univariate marginals.
 
     This implementation supports general dimension for ``theta > 0``. Negative
     ``theta`` is supported only for the bivariate case, where the negative
@@ -43,9 +40,9 @@ class FrankCopula(AbstractCopula):
 
     The transform uses the inverse Rosenblatt construction for the Frank
     Archimedean copula. It maps independent uniforms to dependent uniforms by
-    recursively inverting conditional CDFs. The base ``AbstractCopula`` class then
-    applies each marginal quantile function. SciPy calls the quantile function
-    ``ppf``.
+    recursively inverting conditional CDFs. The base ``AbstractCopula`` class
+    then applies each marginal quantile function. SciPy calls the quantile
+    function ``ppf``.
 
     Examples:
         >>> import numpy as np
@@ -88,7 +85,7 @@ class FrankCopula(AbstractCopula):
         >>> FrankCopula(DigitalNetB2(5, seed=7), marginals=[stats.uniform()] * 5, theta=5.0)(4).shape
         (4, 5)
 
-    **References:**
+    **References: **
 
     1.  Roger B. Nelsen. *An Introduction to Copulas*. Second Edition,
         Springer Series in Statistics, Springer, 2006.
@@ -113,8 +110,8 @@ class FrankCopula(AbstractCopula):
             marginals (list): Length d list of SciPy-like univariate
                 distributions implementing a quantile function, called ``ppf``
                 in SciPy.
-            theta (float): Frank dependence parameter. Must be nonzero. Negative
-                values are currently supported only for ``d=2``.
+            theta (float): Frank dependence parameter. Must be nonzero.
+                Negative values are currently supported only for ``d=2``.
         """
         self.parameters = ["marginals", "theta"]
         super(FrankCopula, self).__init__(sampler=sampler, marginals=marginals)

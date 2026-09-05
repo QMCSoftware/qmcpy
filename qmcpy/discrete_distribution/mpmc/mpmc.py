@@ -26,16 +26,16 @@ _DISCREPANCY = {
 }
 
 class MPMC(AbstractLDDiscreteDistribution):
-    """
-    Low-discrepancy generator trained by MPMC. Produces nbatch independent pointsets of size n in [0,1]^d.
-    
+    """Low-discrepancy generator trained by MPMC. Produces nbatch independent
+    pointsets of size n in [0,1]^d.
+
     Requires PyTorch and PyTorch Geometric. Install with:
 
-        python -m pip install "qmcpy[mpmc]"
-        qmcpy-install-mpmc
-    
-    For GPU support or platform-specific details, see https://pytorch.org/get-started/locally/
-    
+    python -m pip install "qmcpy[mpmc]" qmcpy-install-mpmc
+
+    For GPU support or platform-specific details, see
+    https://pytorch.org/get-started/locally/
+
     Examples:
         >>> mpmc = MPMC(
         ...     dimension=2,
@@ -300,7 +300,7 @@ class MPMC(AbstractLDDiscreteDistribution):
     def _train(self, args: SimpleNamespace):
         """
         Returns:
-            x (np.ndarray): shape `(nbatch, nsamples, dim)`
+            shape `(nbatch, nsamples, dim)`
         """
         model = MPMC_net(
             dim=args.dim, nhid=args.nhid, nlayers=args.nlayers,

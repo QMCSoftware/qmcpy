@@ -12,7 +12,7 @@ class Data(object):
     def save(self, path, compress=False, overwrite=False):
         """Save this Data object to disk using pickle.
 
-        Warning:
+        Warnings:
             ``pickle`` files are not secure against untrusted input. Only save
             and later load checkpoint files that you created yourself or that
             come from a trusted source.
@@ -21,15 +21,14 @@ class Data(object):
             path (str or pathlib.Path): File path to save to. If
                 ``compress=True``, a ``.gz`` suffix is appended automatically
                 when not already present.
-            compress (bool, optional): Gzip-compress the saved file. Defaults
-                to False.
-            overwrite (bool, optional): If False (default), raise
-                ``FileExistsError`` when the file already exists. If True,
-                overwrite any existing file.
+            compress (bool): Gzip-compress the saved file. Defaults to False.
+            overwrite (bool): If False (default), raise ``FileExistsError``
+                when the file already exists. If True, overwrite any existing
+                file.
 
         Returns:
-            str: The final path the file was written to (may differ from
-            *path* when ``compress=True`` appends ``.gz``).
+            The final path the file was written to (may differ from *path* when
+            ``compress=True`` appends ``.gz``).
 
         Raises:
             FileExistsError: If the target path already exists and
@@ -52,17 +51,17 @@ class Data(object):
     def load(cls, path):
         """Load a Data object from disk.
 
-        Warning:
+        Warnings:
             ``pickle`` deserialization can execute arbitrary code. Only load
             checkpoint files that you created yourself or that come from a
             trusted source.
 
         Args:
-            path (str or pathlib.Path): Path to the saved file. Files ending
-                in ``.gz`` are decompressed automatically.
+            path (str or pathlib.Path): Path to the saved file. Files ending in
+                ``.gz`` are decompressed automatically.
 
         Returns:
-            Data: The loaded Data object.
+            The loaded Data object.
         """
         path = str(path)
         open_fn = gzip.open if path.endswith(".gz") else open

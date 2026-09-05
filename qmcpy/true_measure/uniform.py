@@ -6,8 +6,8 @@ import numpy as np
 
 
 class Uniform(AbstractTrueMeasure):
-    r"""
-    Uniform distribution, see [https://en.wikipedia.org/wiki/Continuous_uniform_distribution](https://en.wikipedia.org/wiki/Continuous_uniform_distribution).
+    r"""Uniform distribution, see
+    [https://en.wikipedia.org/wiki/Continuous_uniform_distribution](https://en.wikipedia.org/wiki/Continuous_uniform_distribution).
 
     Examples:
         >>> true_measure = Uniform(DigitalNetB2(2,seed=7),lower_bound=[0,.5],upper_bound=[2,3])
@@ -52,7 +52,8 @@ class Uniform(AbstractTrueMeasure):
     def __init__(self, sampler, lower_bound=0, upper_bound=1):
         r"""
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.

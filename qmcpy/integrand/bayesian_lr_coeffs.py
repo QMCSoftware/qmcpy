@@ -6,8 +6,8 @@ import numpy as np
 
 
 class BayesianLRCoeffs(AbstractIntegrand):
-    r"""
-    Logistic Regression Coefficients computed as the posterior mean in a Bayesian framework.
+    r"""Logistic Regression Coefficients computed as the posterior mean in a
+    Bayesian framework.
 
     Examples:
         >>> integrand = BayesianLRCoeffs(DigitalNetB2(3,seed=7),feature_array=np.arange(8).reshape((4,2)),response_vector=[0,0,1,1])
@@ -37,17 +37,23 @@ class BayesianLRCoeffs(AbstractIntegrand):
     ):
         r"""
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.
-            feature_array (np.ndarray): Array of features with shape $(N,d-1)$ where $N$ is the number of observations and $d$ is the dimension.
-            response_vector (np.ndarray): Binary responses vector of length $N$.
-            prior_mean (np.ndarray): Length $d$ vector of prior means, one for each coefficient.
+            feature_array (np.ndarray): Array of features with shape $(N,d-1)$
+                where $N$ is the number of observations and $d$ is the
+                dimension.
+            response_vector (np.ndarray): Binary responses vector of length
+                $N$.
+            prior_mean (np.ndarray): Length $d$ vector of prior means, one for
+                each coefficient.
 
                 - The first $d-1$ inputs correspond to the $d-1$ features.
                 - The last input corresponds to the intercept coefficient.
-            prior_covariance (np.ndarray): Prior covariance array with shape $(d,d)$ d x d where indexing is consistent with the prior mean.
+            prior_covariance (np.ndarray): Prior covariance array with shape
+                $(d,d)$ d x d where indexing is consistent with the prior mean.
         """
         self.prior_mean = prior_mean
         self.prior_covariance = prior_covariance

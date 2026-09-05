@@ -5,10 +5,10 @@ from ..discrete_distribution import DigitalNetB2
 
 
 class Multimodal2d(AbstractIntegrand):
-    r"""
-    Multimodal function in $d=2$ dimensions.
+    r"""Multimodal function in $d=2$ dimensions.
 
-    $$g(\boldsymbol{t}) = (t_0^2+4)(t_1-1)/20-\sin(5t_0/2)-2 \qquad \boldsymbol{T} = (T_0,T_1) \sim \mathcal{U}([-4,7] \times [-3,8]).$$
+    $$g(\boldsymbol{t}) = (t_0^2+4)(t_1-1)/20-\sin(5t_0/2)-2 \qquad
+    \boldsymbol{T} = (T_0,T_1) \sim \mathcal{U}([-4,7] \times [-3,8]).$$
 
     Examples:
         >>> integrand = Multimodal2d(DigitalNetB2(2,seed=7))
@@ -44,7 +44,8 @@ class Multimodal2d(AbstractIntegrand):
     def __init__(self, sampler):
         r"""
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.

@@ -8,21 +8,21 @@ import warnings
 
 
 class Hammersley(DigitalNetAnyBases):
-    r"""
-    Hammersley point set: a deterministic, 'closed' low discrepancy point set.
+    r"""Hammersley point set: a deterministic, 'closed' low discrepancy point
+    set.
 
     With $p_1,\dots,p_{d-1}$ the first $d-1$ prime numbers, the point set
-    $\{t_0,\dots,t_{n-1}\}$ with $n$ points in $d$ dimensions is given by
-    $t_i = (i/n,\ \varphi_{p_1}(i),\ \dots,\ \varphi_{p_{d-1}}(i))$
-    for $i=0,\dots,n-1$, where $\varphi_p$ denotes the radical inverse
-    function in base $p$.
+    $\{t_0,\dots,t_{n-1}\}$ with $n$ points in $d$ dimensions is given by $t_i
+    = (i/n,\ \varphi_{p_1}(i),\ \dots,\ \varphi_{p_{d-1}}(i))$ for
+    $i=0,\dots,n-1$, where $\varphi_p$ denotes the radical inverse function in
+    base $p$.
 
     Being a 'closed' point set (n must be fixed in advance, unlike an
-    extensible sequence such as Halton), the QMC error bound gains one
-    fewer power of $\log n$ than the corresponding Halton bound:
-    $|I_d(f)-Q_{n,d}(f)| \le C_d\, (\log n)^{d-1}/n\, V(f)$.
+    extensible sequence such as Halton), the QMC error bound gains one fewer
+    power of $\log n$ than the corresponding Halton bound: $|I_d(f)-Q_{n,d}(f)|
+    \le C_d\, (\log n)^{d-1}/n\, V(f)$.
 
-    Note:
+    Notes:
         - This class is fully deterministic: no randomization is supported,
           and the `seed` argument has no effect on the generated points.
         - The first point is always the origin.
@@ -53,7 +53,7 @@ class Hammersley(DigitalNetAnyBases):
                [0.5 ],
                [0.75]])
 
-    **References:**
+    **References: **
 
     1.  J. Dick, F. Y. Kuo, and I. H. Sloan.
         High-dimensional integration: the quasi-Monte Carlo way.
@@ -74,22 +74,21 @@ class Hammersley(DigitalNetAnyBases):
                 ):
         r"""
         Args:
-            dimension (int): Dimension of the samples. Must be a scalar
-                `int` (unlike `Halton`, an array of indices is not
-                supported -- see class Notes).
+            dimension (int): Dimension of the samples. Must be a scalar `int`
+                (unlike `Halton`, an array of indices is not supported -- see
+                class Notes).
 
-            seed (Union[None, int, np.random.SeedSequence]): Unused; kept
-                for API consistency with the other discrete distributions.
-                This point set is fully deterministic, so `seed` has no
-                effect on the generated points.
+            seed (Union[None, int, np.random.SeedSequence]): Unused; kept for
+                API consistency with the other discrete distributions. This
+                point set is fully deterministic, so `seed` has no effect on
+                the generated points.
 
             t (Union[None, int]): Passed through to the internal `Halton`
-                generator used for dimensions 2,...,`dimension` (ignored
-                when `dimension` is 1). See `Halton`'s docstring for
-                details.
+                generator used for dimensions 2,...,`dimension` (ignored when
+                `dimension` is 1). See `Halton`'s docstring for details.
 
-            n_lim (int): Maximum number of points `n` this distribution
-                can be asked to generate.
+            n_lim (int): Maximum number of points `n` this distribution can be
+                asked to generate.
         """
 
         if not np.isscalar(dimension):

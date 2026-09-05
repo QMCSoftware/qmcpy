@@ -78,20 +78,29 @@ class AbstractKernel(object):
         }
 
     def __call__(self, x0, x1, beta0=None, beta1=None, c=None, **kwargs):
-        r"""
-        Evaluate the kernel with (optional) partial derivatives
+        r"""Evaluate the kernel with (optional) partial derivatives
 
-        $$\sum_{\ell=1}^p c_{\ell} \partial_{\boldsymbol{x}_0}^{\boldsymbol{\beta}_{\ell 0}} \partial_{\boldsymbol{x}_1}^{\boldsymbol{\beta}_{\ell 1}} K(\boldsymbol{x}_0,\boldsymbol{x}_1).$$
+        $$\sum_{\ell=1}^p c_{\ell}
+        \partial_{\boldsymbol{x}_0}^{\boldsymbol{\beta}_{\ell 0}}
+        \partial_{\boldsymbol{x}_1}^{\boldsymbol{\beta}_{\ell 1}}
+        K(\boldsymbol{x}_0,\boldsymbol{x}_1).$$
 
         Args:
-            x0 (Union[np.ndarray, torch.Tensor]): Shape `x0.shape=(...,d)` first input to kernel with
-            x1 (Union[np.ndarray, torch.Tensor]): Shape `x1.shape=(...,d)` second input to kernel with
-            beta0 (Union[np.ndarray, torch.Tensor]): Shape `beta0.shape=(p,d)` derivative orders with respect to first inputs, $\boldsymbol{\beta}_0$.
-            beta1 (Union[np.ndarray, torch.Tensor]): Shape `beta1.shape=(p,d)` derivative orders with respect to first inputs, $\boldsymbol{\beta}_1$.
-            c (Union[np.ndarray, torch.Tensor]): Shape `c.shape=(p,)` coefficients of derivatives.
+            x0 (Union[np.ndarray, torch.Tensor]): Shape `x0.shape=(...,d)`
+                first input to kernel with
+            x1 (Union[np.ndarray, torch.Tensor]): Shape `x1.shape=(...,d)`
+                second input to kernel with
+            beta0 (Union[np.ndarray, torch.Tensor]): Shape `beta0.shape=(p,d)`
+                derivative orders with respect to first inputs,
+                $\boldsymbol{\beta}_0$.
+            beta1 (Union[np.ndarray, torch.Tensor]): Shape `beta1.shape=(p,d)`
+                derivative orders with respect to first inputs,
+                $\boldsymbol{\beta}_1$.
+            c (Union[np.ndarray, torch.Tensor]): Shape `c.shape=(p,)`
+                coefficients of derivatives.
             kwargs (dict): keyword arguments to parsed call
         Returns:
-            k (Union[np.ndarray, torch.Tensor]): Shape `y.shape=(x0+x1).shape[:-1]` kernel evaluations.
+            Shape `y.shape=(x0+x1).shape[:-1]` kernel evaluations.
         """
         assert isinstance(x0, self.nptarraytype)
         assert isinstance(x0, self.nptarraytype)
@@ -253,16 +262,17 @@ class AbstractKernel(object):
         raise MethodImplementationError(self, "parsed___call__")
 
     def single_integral_01d(self, x):
-        r"""
-        Evaluate the integral of the kernel over the unit cube
+        r"""Evaluate the integral of the kernel over the unit cube
 
-        $$\tilde{K}(\boldsymbol{x}) = \int_{[0,1]^d} K(\boldsymbol{x},\boldsymbol{z}) \; \mathrm{d} \boldsymbol{z}.$$
+        $$\tilde{K}(\boldsymbol{x}) = \int_{[0,1]^d}
+        K(\boldsymbol{x},\boldsymbol{z}) \; \mathrm{d} \boldsymbol{z}.$$
 
         Args:
-            x (Union[np.ndarray, torch.Tensor]): Shape `x0.shape=(...,d)` first input to kernel with
+            x (Union[np.ndarray, torch.Tensor]): Shape `x0.shape=(...,d)` first
+                input to kernel with
 
         Returns:
-            tildek (Union[np.ndarray, torch.Tensor]): Shape `y.shape=x.shape[:-1]` integral kernel evaluations.
+            Shape `y.shape=x.shape[:-1]` integral kernel evaluations.
         """
         if self.npt == np:
             assert isinstance(x, np.ndarray)
@@ -281,13 +291,14 @@ class AbstractKernel(object):
         raise MethodImplementationError(self, "parsed_single_integral_01d")
 
     def double_integral_01d(self):
-        r"""
-        Evaluate the integral of the kernel over the unit cube
+        r"""Evaluate the integral of the kernel over the unit cube
 
-        $$\tilde{K} = \int_{[0,1]^d} \int_{[0,1]^d} K(\boldsymbol{x},\boldsymbol{z}) \; \mathrm{d} \boldsymbol{x} \; \mathrm{d} \boldsymbol{z}.$$
+        $$\tilde{K} = \int_{[0,1]^d} \int_{[0,1]^d}
+        K(\boldsymbol{x},\boldsymbol{z}) \; \mathrm{d} \boldsymbol{x} \;
+        \mathrm{d} \boldsymbol{z}.$$
 
         Returns:
-            tildek (Union[np.ndarray, torch.Tensor]): Double integral kernel evaluations.
+            Double integral kernel evaluations.
         """
         raise MethodImplementationError(self, "double_integral_01d")
 
@@ -340,17 +351,29 @@ class AbstractKernelScaleLengthscales(AbstractKernel):
         Args:
             d (int): Dimension.
             scale (Union[np.ndarray, torch.Tensor]): Scaling factor $S$.
-            lengthscales (Union[np.ndarray, torch.Tensor]): Lengthscales $\boldsymbol{\gamma}$.
+            lengthscales (Union[np.ndarray, torch.Tensor]): Lengthscales
+                $\boldsymbol{\gamma}$.
             shape_scale (list): Shape of `scale` when `np.isscalar(scale)`.
-            shape_lengthscales (list): Shape of `lengthscales` when `np.isscalar(lengthscales)`
-            tfs_scale (Tuple[callable,callable]): The first argument transforms to the raw value to be optimized; the second applies the inverse transform.
-            tfs_lengthscales (Tuple[callable,callable]): The first argument transforms to the raw value to be optimized; the second applies the inverse transform.
-            torchify (bool): If `True`, use the `torch` backend. Set to `True` if computing gradients with respect to inputs and/or hyperparameters.
-            requires_grad_scale (bool): If `True` and `torchify`, set `requires_grad=True` for `scale`.
-            requires_grad_lengthscales (bool): If `True` and `torchify`, set `requires_grad=True` for `lengthscales`.
+            shape_lengthscales (list): Shape of `lengthscales` when
+                `np.isscalar(lengthscales)`
+            tfs_scale (Tuple[callable,callable]): The first argument transforms
+                to the raw value to be optimized; the second applies the
+                inverse transform.
+            tfs_lengthscales (Tuple[callable,callable]): The first argument
+                transforms to the raw value to be optimized; the second applies
+                the inverse transform.
+            torchify (bool): If `True`, use the `torch` backend. Set to `True`
+                if computing gradients with respect to inputs and/or
+                hyperparameters.
+            requires_grad_scale (bool): If `True` and `torchify`, set
+                `requires_grad=True` for `scale`.
+            requires_grad_lengthscales (bool): If `True` and `torchify`, set
+                `requires_grad=True` for `lengthscales`.
             device (torch.device): If `torchify`, put things onto this device.
-            compile_call (bool): If `True`, `torch.compile` the `parsed___call__` method.
-            compile_call_kwargs (dict): When `compile_call` is `True`, pass these keyword arguments to `torch.compile`.
+            compile_call (bool): If `True`, `torch.compile` the
+                `parsed___call__` method.
+            compile_call_kwargs (dict): When `compile_call` is `True`, pass
+                these keyword arguments to `torch.compile`.
         """
         if shape_scale is None:
             shape_scale = [1]

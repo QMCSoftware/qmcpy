@@ -9,10 +9,9 @@ from copy import deepcopy
 
 
 class Lattice(AbstractLDDiscreteDistribution):
-    r"""
-    Low discrepancy lattice sequence.
+    r"""Low discrepancy lattice sequence.
 
-    Note:
+    Notes:
         - Lattice sample sizes should be powers of $2$ e.g. $1$, $2$, $4$, $8$, $16$, $\dots$.
         - The first point of an unrandomized lattice is the origin.
 
@@ -52,7 +51,8 @@ class Lattice(AbstractLDDiscreteDistribution):
                 [0.40212985, 0.94669968, 0.35605352]]])
 
 
-        Different orderings (avoid warnings that the first point is the origin).
+        Different orderings (avoid warnings that the first point is the
+        origin).
 
         >>> Lattice(dimension=2,randomize=False,order='RADICAL INVERSE')(4,warn=False)
         array([[0.  , 0.  ],
@@ -70,7 +70,8 @@ class Lattice(AbstractLDDiscreteDistribution):
                [0.5 , 0.5 ],
                [0.75, 0.25]])
 
-        Generating vector from [https://github.com/QMCSoftware/LDData/tree/main/lattice](https://github.com/QMCSoftware/LDData/tree/main/lattice)
+        Generating vector from
+        [https://github.com/QMCSoftware/LDData/tree/main/lattice](https://github.com/QMCSoftware/LDData/tree/main/lattice)
 
         >>> Lattice(dimension=3,randomize=False,generating_vector="mps.exod2_base2_m20_CKN.txt")(8,warn=False)
         array([[0.   , 0.   , 0.   ],
@@ -93,7 +94,8 @@ class Lattice(AbstractLDDiscreteDistribution):
                [0.25, 0.75, 0.75],
                [0.75, 0.25, 0.25]])
 
-        Two random generating vectors both supporting $2^{25}$ points along with independent random shifts
+        Two random generating vectors both supporting $2^{25}$ points along
+        with independent random shifts
 
         >>> discrete_distrib = Lattice(3,seed=7,generating_vector=25,replications=2)
         >>> discrete_distrib.gen_vec
@@ -154,24 +156,29 @@ class Lattice(AbstractLDDiscreteDistribution):
                 - If an `np.ndarray` is passed in, use generating vector components at these indices.
 
             replications (int): Number of independent randomizations.
-            seed (Union[None, int, np.random.SeedSeq): Seed the random number generator for reproducibility.
+            seed (Union[None, int, np.random.SeedSeq): Seed the random number
+            generator for reproducibility.
             randomize (str): Options are
 
                 - `'SHIFT'`: Random shift.
                 - `'FALSE'`: No randomization. In this case the first point will be the origin.
 
-            generating_vector (Union[str, np.ndarray, int]): Specify the generating vector.
+            generating_vector (Union[str, np.ndarray, int]): Specify the
+                generating vector.
 
                 - A `str` should be the name (or path) of a file from the LDData repo at [https://github.com/QMCSoftware/LDData/tree/main/lattice](https://github.com/QMCSoftware/LDData/tree/main/lattice).
                 - A `np.ndarray` of integers with shape $(d,)$ or $(r,d)$ where $d$ is the number of dimensions and $r$ is the number of replications.
                     Must supply `m_max` where $2^{m_\mathrm{max}}$ is the max number of supported samples.
                 - An `int`, call it $M$,
                 gives the random generating vector $(1,v_1,\dots,v_{d-1})^T$
-                where $d$ is the dimension and $v_i$ are randomly selected from $\{3,5,\dots,2^M-1\}$ uniformly and independently.
-                We require require $1 < M < 27$.
+                where $d$ is the dimension and $v_i$ are randomly selected from
+                $\{3,5,\dots,2^M-1\}$ uniformly and independently. We require
+                require $1 < M < 27$.
 
-            order (str): `'LINEAR'`, `'RADICAL INVERSE'`, or `'GRAY'` ordering. See the doctest example above.
-            m_max (int): $2^{m_\mathrm{max}}$ is the maximum number of supported samples.
+            order (str): `'LINEAR'`, `'RADICAL INVERSE'`, or `'GRAY'` ordering.
+                See the doctest example above.
+            m_max (int): $2^{m_\mathrm{max}}$ is the maximum number of
+                supported samples.
         """
         self.parameters = ["randomize", "gen_vec_source", "order", "n_limit"]
         self.input_generating_vector = deepcopy(generating_vector)

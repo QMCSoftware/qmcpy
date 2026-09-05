@@ -4,10 +4,10 @@ import itertools
 
 
 def fftbr(x):
-    r"""
-    1 dimensional Bit-Reversed-Order (BRO) Fast Fourier Transform (FFT) along the last dimension.
-    Requires the last dimension of x is already in BRO, so we can skip the first step of the decimation-in-time FFT.
-    Requires the size of the last dimension is a power of 2.
+    r"""1 dimensional Bit-Reversed-Order (BRO) Fast Fourier Transform (FFT)
+    along the last dimension. Requires the last dimension of x is already in
+    BRO, so we can skip the first step of the decimation-in-time FFT. Requires
+    the size of the last dimension is a power of 2.
 
     Examples:
         >>> rng = np.random.Generator(np.random.SFC64(11))
@@ -23,7 +23,7 @@ def fftbr(x):
         x (np.ndarray): Array of samples at which to run BRO-FFT.
 
     Returns:
-        y (np.ndarray): BRO-FFT values.
+        BRO-FFT values.
     """
     n = x.shape[-1]
     assert n & (n - 1) == 0  # require n is a power of 2
@@ -41,10 +41,10 @@ def fftbr(x):
 
 
 def ifftbr(x):
-    r"""
-    1 dimensional Bit-Reversed-Order (BRO) Inverse Fast Fourier Transform (IFFT) along the last dimension.
-    Outputs an array in bit-reversed order, so we can skip the last step of the decimation-in-time IFFT.
-    Requires the size of the last dimension is a power of 2.
+    r"""1 dimensional Bit-Reversed-Order (BRO) Inverse Fast Fourier Transform
+    (IFFT) along the last dimension. Outputs an array in bit-reversed order, so
+    we can skip the last step of the decimation-in-time IFFT. Requires the size
+    of the last dimension is a power of 2.
 
     Examples:
         >>> rng = np.random.Generator(np.random.SFC64(11))
@@ -60,7 +60,7 @@ def ifftbr(x):
         x (np.ndarray): Array of samples at which to run BRO-IFFT.
 
     Returns:
-        y (np.ndarray): BRO-IFFT values.
+        BRO-IFFT values.
     """
     n = x.shape[-1]
     assert n & (n - 1) == 0  # require n is a power of 2
@@ -77,9 +77,8 @@ def ifftbr(x):
 
 
 def fwht(x):
-    r"""
-    1 dimensional Fast Walsh Hadamard Transform (FWHT) along the last dimension.
-    Requires the size of the last dimension is a power of 2.
+    r"""1 dimensional Fast Walsh Hadamard Transform (FWHT) along the last
+    dimension. Requires the size of the last dimension is a power of 2.
 
     Examples:
         >>> rng = np.random.Generator(np.random.SFC64(11))
@@ -93,7 +92,7 @@ def fwht(x):
         x (np.ndarray): Array of samples at which to run FWHT.
 
     Returns:
-        y (np.ndarray): FWHT values.
+        FWHT values.
     """
     y = x.copy() + 0.0
     n = x.shape[-1]
@@ -115,8 +114,8 @@ def fwht(x):
 
 
 def omega_fwht(m):
-    r"""
-    A useful when efficiently updating FWHT values after doubling the sample size.
+    r"""A useful when efficiently updating FWHT values after doubling the
+    sample size.
 
     Examples:
         >>> rng = np.random.Generator(np.random.SFC64(11))
@@ -136,14 +135,14 @@ def omega_fwht(m):
         m (int): Size $2^m$ output.
 
     Returns:
-        y (np.ndarray): $\left(1\right)_{k=0}^{2^m}$.
+        $\left(1\right)_{k=0}^{2^m}$.
     """
     return np.ones(2**m)
 
 
 def omega_fftbr(m):
-    r"""
-    A useful when efficiently updating FFT values after doubling the sample size.
+    r"""A useful when efficiently updating FFT values after doubling the
+    sample size.
 
     Examples:
         >>> rng = np.random.Generator(np.random.SFC64(11))
@@ -163,6 +162,6 @@ def omega_fftbr(m):
         m (int): Size $2^m$ output.
 
     Returns:
-        y (np.ndarray): $\left(e^{- \pi \mathrm{i} k / 2^m}\right)_{k=0}^{2^m}$.
+        $\left(e^{- \pi \mathrm{i} k / 2^m}\right)_{k=0}^{2^m}$.
     """
     return np.exp(-np.pi * 1j * np.arange(2**m) / 2**m)

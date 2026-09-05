@@ -91,8 +91,9 @@ class CubMLQMC(AbstractCubMLQMC):
         Args:
             integrand (AbstractIntegrand): The integrand.
             abs_tol (np.ndarray): Absolute error tolerance.
-            rmse_tol (np.ndarray): Root mean squared error tolerance.
-                If supplied, then absolute tolerance and alpha are ignored in favor of the rmse tolerance.
+            rmse_tol (np.ndarray): Root mean squared error tolerance. If
+                supplied, then absolute tolerance and alpha are ignored in
+                favor of the rmse tolerance.
             n_init (int): Initial number of samples.
             n_limit (int): Maximum number of samples.
             alpha (np.ndarray): Uncertainty level in $(0,1)$.
@@ -222,16 +223,16 @@ class CubMLQMC(AbstractCubMLQMC):
         """Run (or continue) the MLQMC integration.
 
         Args:
-            resume (Data, optional): Checkpoint returned by a previous
-                ``integrate()`` call.  The new tolerance may be tighter *or*
-                looser than the one used when the checkpoint was created.
-                With a tighter tolerance the algorithm draws additional samples
-                from where it left off.  With a looser tolerance the existing
-                samples already satisfy the requirement and the method returns
-                immediately with no new sampling.
+            resume (Data): Checkpoint returned by a previous ``integrate()``
+                call.  The new tolerance may be tighter *or* looser than the
+                one used when the checkpoint was created. With a tighter
+                tolerance the algorithm draws additional samples from where it
+                left off.  With a looser tolerance the existing samples already
+                satisfy the requirement and the method returns immediately with
+                no new sampling.
 
         Returns:
-            tuple: ``(solution, data)``.
+            ``(solution, data)``.
         """
         t_start = time()
         resume_provenance = self._capture_resume_provenance(resume)

@@ -7,25 +7,21 @@ from ..util import DimensionError, MethodImplementationError, ParameterError
 
 
 class AbstractCopula(AbstractTrueMeasure):
-    r"""
-    Abstract base class for copula TrueMeasures.
+    r"""Abstract base class for copula TrueMeasures.
 
     A copula layer maps independent uniform input points to dependent uniform
     points on the unit cube:
 
-    $$
-    U \in [0,1]^d \mapsto V = T(U) \in [0,1]^d.
-    $$
+    $$ U \in [0,1]^d \mapsto V = T(U) \in [0,1]^d. $$
 
     The base class then applies marginal quantile functions to obtain final
     target samples,
 
-    $$
-    X_j = F_j^{-1}(V_j).
-    $$
+    $$ X_j = F_j^{-1}(V_j). $$
 
     SciPy calls the quantile function ``ppf``. Concrete subclasses implement
-    ``_transform_to_uniform`` for the family-specific copula sampling transform.
+    ``_transform_to_uniform`` for the family-specific copula sampling
+    transform.
     """
 
     def __init__(self, sampler, marginals):
@@ -40,28 +36,27 @@ class AbstractCopula(AbstractTrueMeasure):
         super(AbstractCopula, self).__init__()
 
     def _transform_to_uniform(self, x) -> np.ndarray:
-        r"""
-        Transform independent uniforms ``U`` into dependent copula uniforms ``V``.
+        r"""Transform independent uniforms ``U`` into dependent copula
+        uniforms ``V``.
         """
         raise MethodImplementationError(self, "_transform_to_uniform")
 
     def copula_transform(self, u) -> np.ndarray:
-        r"""
-        Apply only the copula layer ``U -> V``.
+        r"""Apply only the copula layer ``U -> V``.
 
         Args:
             u (np.ndarray): Independent uniform points on ``[0,1]^d``.
 
         Returns:
-            np.ndarray: Dependent uniform points on ``[0,1]^d``.
+            Dependent uniform points on ``[0,1]^d``.
         """
         return self._transform_to_uniform(u)
 
     def gen_copula_samples(
         self, n=None, n_min=None, n_max=None, warn=True
     ) -> np.ndarray:
-        r"""
-        Generate dependent copula uniforms without applying marginal quantiles.
+        r"""Generate dependent copula uniforms without applying marginal
+        quantiles.
 
         This is the copula-only workflow ``U -> V``. Calling the object itself
         keeps the ordinary TrueMeasure workflow ``U -> V -> X``.
@@ -72,8 +67,7 @@ class AbstractCopula(AbstractTrueMeasure):
         return self._transform_to_uniform(u)
 
     def _apply_marginal_quantiles(self, v) -> np.ndarray:
-        r"""
-        Apply marginal quantile functions to dependent uniforms.
+        r"""Apply marginal quantile functions to dependent uniforms.
 
         SciPy frozen distributions expose the quantile function as ``ppf``.
         """

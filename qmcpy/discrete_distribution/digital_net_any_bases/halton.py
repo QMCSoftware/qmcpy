@@ -2,13 +2,12 @@ from .digital_net_any_bases import DigitalNetAnyBases
 
 
 class Halton(DigitalNetAnyBases):
-    r"""
-    Low discrepancy Halton points.
+    r"""Low discrepancy Halton points.
 
-    Note:
+    Notes:
         - The first point of an unrandomized Halton sequence is the origin.
         - QRNG does *not* support multiple replications (independent randomizations).
-    
+
     Examples:
         >>> discrete_distrib = Halton(2,seed=7)
         >>> discrete_distrib(4)
@@ -24,8 +23,8 @@ class Halton(DigitalNetAnyBases):
             t               63
             n_limit         2^(32)
             entropy         7
-        
-        Replications of independent randomizations 
+
+        Replications of independent randomizations
 
         >>> x = Halton(3,seed=7,replications=2)(4)
         >>> x.shape
@@ -41,15 +40,15 @@ class Halton(DigitalNetAnyBases):
                 [0.89132308, 0.12030255, 0.35715804],
                 [0.04025218, 0.44304244, 0.10724799]]])
 
-        Unrandomized Halton 
+        Unrandomized Halton
 
         >>> Halton(2,randomize="FALSE",seed=7)(4,warn=False)
         array([[0.        , 0.        ],
                [0.5       , 0.33333333],
                [0.25      , 0.66666667],
                [0.75      , 0.11111111]])
-        
-        All randomizations 
+
+        All randomizations
 
         >>> Halton(2,randomize="LMS DP",seed=7)(4)
         array([[0.83790457, 0.89981478],
@@ -86,8 +85,8 @@ class Halton(DigitalNetAnyBases):
                [0.85362988, 0.72066823],
                [0.10362988, 0.05400156],
                [0.60362988, 0.498446  ]])
-        
-        Replications of randomizations 
+
+        Replications of randomizations
 
         >>> Halton(3,randomize="LMS DP",seed=7,replications=2)(4)
         array([[[0.70988236, 0.18180876, 0.54073621],
@@ -150,20 +149,20 @@ class Halton(DigitalNetAnyBases):
                 [0.34111023, 0.84596814, 0.0292313 ],
                 [0.71866903, 0.23852281, 0.80431142]]])
 
-    **References:**
-    
-    1.  Marius Hofert and Christiane Lemieux.  
-        qrng: (Randomized) Quasi-Random Number Generators.  
-        R package version 0.0-7. (2019).  
-        [https://CRAN.R-project.org/package=qrng](https://CRAN.R-project.org/package=qrng).
-        
-    2.  A. B. Owen.  
-        A randomized Halton algorithm in R.  
-        [arXiv:1706.02808](https://arxiv.org/abs/1706.02808) [stat.CO]. 2017. 
+    **References: **
 
-    3.  A. B. Owen and Z. Pan.  
-        Gain coefficients for scrambled Halton points.  
-        [arXiv:2308.08035](https://arxiv.org/abs/2308.08035) [stat.CO]. 2023. 
+    1.  Marius Hofert and Christiane Lemieux.
+        qrng: (Randomized) Quasi-Random Number Generators.
+        R package version 0.0-7. (2019).
+        [https://CRAN.R-project.org/package=qrng](https://CRAN.R-project.org/package=qrng).
+
+    2.  A. B. Owen.
+        A randomized Halton algorithm in R.
+        [arXiv:1706.02808](https://arxiv.org/abs/1706.02808) [stat.CO]. 2017.
+
+    3.  A. B. Owen and Z. Pan.
+        Gain coefficients for scrambled Halton points.
+        [arXiv:2308.08035](https://arxiv.org/abs/2308.08035) [stat.CO]. 2023.
     """
 
     DEFAULT_GENERATING_MATRICES = "HALTON"

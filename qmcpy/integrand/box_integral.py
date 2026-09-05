@@ -5,10 +5,10 @@ import numpy as np
 
 
 class BoxIntegral(AbstractIntegrand):
-    r"""
-    Box integral from [1], see also
+    r"""Box integral from [1], see also
 
-    $$B_s(\boldsymbol{t}) = \left(\sum_{j=1}^d t_j^2 \right)^{s/2}, \qquad \boldsymbol{T} \sim \mathcal{U}[0,1]^d.$$
+    $$B_s(\boldsymbol{t}) = \left(\sum_{j=1}^d t_j^2 \right)^{s/2}, \qquad
+    \boldsymbol{T} \sim \mathcal{U}[0,1]^d.$$
 
     Examples:
         Scalar `s`
@@ -55,7 +55,7 @@ class BoxIntegral(AbstractIntegrand):
         array([[1.        , 0.76519118, 0.66666666],
                [0.62718785, 0.62224086, 0.64273341]])
 
-    **References:**
+    **References: **
 
     1.  D.H. Bailey, J.M. Borwein, R.E. Crandall, Box integrals.
         Journal of Computational and Applied Mathematics, Volume 206, Issue 1, 2007, Pages 196-208, ISSN 0377-0427.
@@ -67,11 +67,13 @@ class BoxIntegral(AbstractIntegrand):
     def __init__(self, sampler, s=1):
         r"""
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.
-            s (Union[float, np.ndarray]): `s` parameter or parameters. The output shape of `g` is the shape of `s`.
+            s (Union[float, np.ndarray]): `s` parameter or parameters. The
+                output shape of `g` is the shape of `s`.
         """
         self.parameters = ["s"]
         self.s = np.array(s)

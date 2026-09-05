@@ -41,7 +41,7 @@ class _IterationHistoryTable(object):
 
     @property
     def _column_names(self):
-        """Return the ordered column names stored in the table. """
+        """Return the ordered column names stored in the table."""
         return _ITERATION_HISTORY_COLUMNS
 
     @property
@@ -86,15 +86,15 @@ class _IterationHistoryTable(object):
         return len(self) - 1
 
     def _mark_printed(self, index, printed=True):
-        """Update whether a stored row is marked as printed. """
+        """Update whether a stored row is marked as printed."""
         self._columns["printed"][index] = bool(printed)
 
     def _row(self, index):
-        """Return one row as a dictionary. """
+        """Return one row as a dictionary."""
         return {column: self._columns[column][index] for column in self._column_names}
 
     def _rows(self):
-        """Return all rows as dictionaries. """
+        """Return all rows as dictionaries."""
         return [self._row(index) for index in range(len(self))]
 
     def _to_dict(self):
@@ -457,8 +457,8 @@ class _IterationTraceLogger(object):
             stopping_criterion: Stopping criterion instance. The logger reads
                 the optional attributes ``trace_iterations`` (bool),
                 ``trace_label`` (str), ``verbose`` (bool), ``trace_print``
-                (bool), and the internal ``_trace_store_*`` flags to
-                configure storage and live printing.
+                (bool), and the internal ``_trace_store_*`` flags to configure
+                storage and live printing.
         """
         requested_trace_iterations = bool(
             getattr(stopping_criterion, "trace_iterations", False)
@@ -511,7 +511,9 @@ class _IterationTraceLogger(object):
             )
 
     def _would_be_throttled(self, iter_count):
-        """Return True if an ITER row with this count would be suppressed by throttling."""
+        """Return True if an ITER row with this count would be suppressed by
+        throttling.
+        """
         if self.verbose:
             return False
         if iter_count is None or iter_count <= _THROTTLE_ITER_THRESHOLD:
@@ -521,13 +523,14 @@ class _IterationTraceLogger(object):
 
     @staticmethod
     def _state_signature(data):
-        """Return a hashable snapshot of the data fields used to detect duplicate rows.
+        """Return a hashable snapshot of the data fields used to detect
+        duplicate rows.
 
         Args:
             data (object): Integration state object.
 
         Returns:
-            tuple: ``(n_min, n_total, m, xfull.shape)``.
+            ``(n_min, n_total, m, xfull.shape)``.
         """
         xfull = getattr(data, "xfull", None)
         return (
@@ -544,7 +547,8 @@ class _IterationTraceLogger(object):
             self.header_printed = True
 
     def _get_visible_columns(self, data, row=None):
-        """Return the ordered list of column names to display, inferred from data.
+        """Return the ordered list of column names to display, inferred from
+        data.
 
         The result is cached after the first call so all rows share the same
         columns.
@@ -554,10 +558,9 @@ class _IterationTraceLogger(object):
                 optional columns are present.
 
         Returns:
-            tuple[str, ...]: Column names from the set ``{'stage', 'iter',
-                'solution', 'bound_diff', 'comb_bound_diff',
-                'bound_half_width', 'bias_estimate', 'n_min', 'n_total',
-                'm', 'xfull.shape'}``.
+            Column names from the set ``{'stage', 'iter', 'solution',
+            'bound_diff', 'comb_bound_diff', 'bound_half_width',
+            'bias_estimate', 'n_min', 'n_total', 'm', 'xfull.shape'}``.
         """
         if self.visible_columns is not None:
             return self.visible_columns
@@ -571,13 +574,13 @@ class _IterationTraceLogger(object):
         Args:
             stage (str): Row label, e.g. ``"ITER"`` or ``"RESUME"``.
             data (object): Integration state object.
-            step_value (int | None, optional): Value to assign to ``data.m``
-                before printing. Defaults to None.
-            increment (bool, optional): If True, advance the internal iteration
-                counter and assign the new value to ``data._iter_count``.
-                Defaults to False.
-            iter_value (int | None, optional): Explicit iteration count to
-                display (overrides ``increment``). Defaults to None.
+            step_value (int | None): Value to assign to ``data.m`` before
+                printing. Defaults to None.
+            increment (bool): If True, advance the internal iteration counter
+                and assign the new value to ``data._iter_count``. Defaults to
+                False.
+            iter_value (int | None): Explicit iteration count to display
+                (overrides ``increment``). Defaults to None.
         """
         if not self.enabled:
             return
@@ -623,7 +626,8 @@ class _IterationTraceLogger(object):
             self.table_header_printed = True
 
     def resume(self, data, step_value=None):
-        """Emit a RESUME row and snapshot the current state for duplicate suppression.
+        """Emit a RESUME row and snapshot the current state for duplicate
+        suppression.
 
         Reads ``data._iter_count`` to restore the iteration counter so that the
         next :meth:`iteration` call continues counting from the right number.
@@ -632,8 +636,8 @@ class _IterationTraceLogger(object):
 
         Args:
             data (object): Integration state object from the resume checkpoint.
-            step_value (int | None, optional): Value to assign to ``data.m``
-                before printing. Defaults to None.
+            step_value (int | None): Value to assign to ``data.m`` before
+                printing. Defaults to None.
         """
         self._seed_history_from_resume(data)
         previous_iter_count = getattr(data, "_iter_count", None)
@@ -669,14 +673,14 @@ class _IterationTraceLogger(object):
     def iteration(self, data, step_value=None):
         """Emit an ITER row, unless state is unchanged since the last resume.
 
-        If :meth:`resume` was just called and the data state has not changed
+        If: meth:`resume` was just called and the data state has not changed
         (same ``n_total``, ``n_min``, ``m``, and ``xfull.shape``), the row is
         suppressed to avoid a duplicate log entry.
 
         Args:
             data (object): Current integration state object.
-            step_value (int | None, optional): Value to assign to ``data.m``
-                before printing. Defaults to None.
+            step_value (int | None): Value to assign to ``data.m`` before
+                printing. Defaults to None.
         """
         current_signature = self._state_signature(data)
         if (
@@ -720,7 +724,9 @@ class _IterationTraceLogger(object):
         self._last_printed_iter_count = self._last_iter_count
 
     def finalize(self):
-        """Force-print the last ITER row if throttling suppressed it, then clear snapshot."""
+        """Force-print the last ITER row if throttling suppressed it, then
+        clear snapshot.
+        """
         self._flush_last_if_suppressed()
         # DataFrame is built lazily in get_iteration_log() to avoid pandas
         # construction overhead on every integrate() call when tracing is off.
@@ -748,13 +754,12 @@ def _print_diagnostic(
         label (str): Stage label shown in the first column.
         data (object): Integration state carrying fields such as ``solution``,
             ``n_total``, ``n_min``, ``m``, and ``xfull``.
-        table_header (bool, optional): Whether to print the compact table
-            header before the row. Defaults to False.
-        verbose (bool, optional): Whether to print every ``ITER`` row.
-            Defaults to True. If False, the current iteration-log throttling
-            rules are applied.
-        visible_columns (tuple[str, ...] | list[str] | None, optional): Ordered
-            columns to print. Defaults to all supported columns.
+        table_header (bool): Whether to print the compact table header before
+            the row. Defaults to False.
+        verbose (bool): Whether to print every ``ITER`` row. Defaults to True.
+            If False, the current iteration-log throttling rules are applied.
+        visible_columns (tuple[str, ...] | list[str] | None): Ordered columns
+            to print. Defaults to all supported columns.
     """
     row = _extract_diagnostic_row(data)
     iter_display = row["iter"]

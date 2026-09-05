@@ -10,9 +10,9 @@ import numpy as np
 
 
 class CubQMCLatticeG(AbstractCubQMCLDG):
-    r"""
-    Quasi-Monte Carlo stopping criterion using rank-1 lattice cubature
-    with guarantees for cones of functions with a predictable decay in the Fourier coefficients.
+    r"""Quasi-Monte Carlo stopping criterion using rank-1 lattice cubature
+    with guarantees for cones of functions with a predictable decay in the
+    Fourier coefficients.
 
     Examples:
         >>> k = Keister(Lattice(seed=7))
@@ -158,7 +158,7 @@ class CubQMCLatticeG(AbstractCubQMCLDG):
             n_limit         2^(20)
             entropy         7
 
-    **References:**
+    **References: **
 
     1.  Lluis Antoni Jimenez Rugama and Fred J. Hickernell.
         "Adaptive multidimensional integration based on rank-1 lattices,"
@@ -192,7 +192,9 @@ class CubQMCLatticeG(AbstractCubQMCLDG):
             rel_tol (np.ndarray): Relative error tolerance.
             n_init (int): Initial number of samples.
             n_limit (int): Maximum number of samples.
-            error_fun (Union[str, callable]): Function mapping the approximate solution, absolute error tolerance, and relative error tolerance to the current error bound.
+            error_fun (Union[str, callable]): Function mapping the approximate
+                solution, absolute error tolerance, and relative error
+                tolerance to the current error bound.
 
                 - `'EITHER'`, the default, requires the approximation error must be below either the absolue *or* relative tolerance.
                     Equivalent to setting
@@ -204,9 +206,12 @@ class CubQMCLatticeG(AbstractCubQMCLDG):
                     ```python
                     error_fun = lambda sv,abs_tol,rel_tol: np.minimum(abs_tol,abs(sv)*rel_tol)
                     ```
-            fudge (function): Positive function multiplying the finite sum of the Fourier coefficients specified in the cone of functions.
-            check_cone (bool): Whether or not to check if the function falls in the cone.
-            ptransform (str): Periodization transform, see the options in `AbstractIntegrand.f`.
+            fudge (function): Positive function multiplying the finite sum of
+                the Fourier coefficients specified in the cone of functions.
+            check_cone (bool): Whether or not to check if the function falls in
+                the cone.
+            ptransform (str): Periodization transform, see the options in
+                `AbstractIntegrand.f`.
         """
         super(CubQMCLatticeG, self).__init__(
             integrand,

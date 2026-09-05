@@ -6,10 +6,11 @@ from ..util import ParameterError
 
 
 class Ishigami(AbstractIntegrand):
-    r"""
-    Ishigami function in $d=3$ dimensions from [1] and [https://www.sfu.ca/~ssurjano/ishigami.html](https://www.sfu.ca/~ssurjano/ishigami.html).
+    r"""Ishigami function in $d=3$ dimensions from [1] and
+    [https://www.sfu.ca/~ssurjano/ishigami.html](https://www.sfu.ca/~ssurjano/ishigami.html).
 
-    $$g(\boldsymbol{t}) = (1+bt_2^4)\sin(t_0)+a\sin^2(t_1), \qquad \boldsymbol{T} = (T_0,T_1,T_2) \sim \mathcal{U}(-\pi,\pi)^3.$$
+    $$g(\boldsymbol{t}) = (1+bt_2^4)\sin(t_0)+a\sin^2(t_1), \qquad
+    \boldsymbol{T} = (T_0,T_1,T_2) \sim \mathcal{U}(-\pi,\pi)^3.$$
 
     Examples:
         >>> integrand = Ishigami(DigitalNetB2(3,seed=7))
@@ -44,7 +45,7 @@ class Ishigami(AbstractIntegrand):
         >>> print("%.4f"%muhats.mean())
         3.4646
 
-    **References:**
+    **References: **
 
     1.  Ishigami, T., & Homma, T.
         An importance quantification technique in uncertainty analysis for computer models.
@@ -55,7 +56,8 @@ class Ishigami(AbstractIntegrand):
     def __init__(self, sampler, a=7, b=0.1):
         r"""
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.

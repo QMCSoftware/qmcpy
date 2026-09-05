@@ -5,10 +5,13 @@ from ..discrete_distribution import DigitalNetB2
 
 
 class FourBranch2d(AbstractIntegrand):
-    r"""
-    Four Branch function in $d=2$.
+    r"""Four Branch function in $d=2$.
 
-    $$g(\boldsymbol{t}) = \min \begin{cases} 3+0.1(t_0-t_1)^2-\frac{t_0-t_1}{\sqrt{2}} \\ 3+0.1(t_0-t_1)^2+\frac{t_0-t_1}{\sqrt{2}} \\ t_0-t_1 + 7/\sqrt{2} \\ t_1-t_0 + 7/\sqrt{2}\end{cases}, \qquad \boldsymbol{T}=(T_0,T_1) \sim \mathcal{U}[-8,8]^2.$$
+    $$g(\boldsymbol{t}) = \min \begin{cases}
+    3+0.1(t_0-t_1)^2-\frac{t_0-t_1}{\sqrt{2}} \\
+    3+0.1(t_0-t_1)^2+\frac{t_0-t_1}{\sqrt{2}} \\ t_0-t_1 + 7/\sqrt{2} \\
+    t_1-t_0 + 7/\sqrt{2}\end{cases}, \qquad \boldsymbol{T}=(T_0,T_1) \sim
+    \mathcal{U}[-8,8]^2.$$
 
     Examples:
         >>> integrand = FourBranch2d(DigitalNetB2(2,seed=7))
@@ -44,7 +47,8 @@ class FourBranch2d(AbstractIntegrand):
     def __init__(self, sampler):
         r"""
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.

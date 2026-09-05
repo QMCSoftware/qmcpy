@@ -62,17 +62,19 @@ class AbstractDiscreteDistribution(object):
             n (Union[None, int]): Number of points to generate.
             n_min (Union[None, int]): Starting index of sequence.
             n_max (Union[None, int]): Final index of sequence.
-            return_binary (bool): Only used for `DigitalNetB2`.
-                If `True`, *only* return the integer representation `x_integer` of base 2 digital net.
+            return_binary (bool): Only used for `DigitalNetB2`. If `True`,
+                *only* return the integer representation `x_integer` of base 2
+                digital net.
             warn (bool): If `False`, disable warnings when generating samples.
 
         Returns:
-            x (np.ndarray): Samples from the sequence.
+            Samples from the sequence.
 
-                - If `replications` is `None` then this will be of size (`n_max`-`n_min`) $\times$ `dimension`
-                - If `replications` is a positive int, then `x` will be of size `replications` $\times$ (`n_max`-`n_min`) $\times$ `dimension`
+            - If `replications` is `None` then this will be of size (`n_max`-`n_min`) $\times$ `dimension`
+            - If `replications` is a positive int, then `x` will be of size `replications` $\times$ (`n_max`-`n_min`) $\times$ `dimension`
 
-                Note that if `return_binary=True` then `x` is returned where `x` are integer representations of the digital net points.
+            Note that if `return_binary=True` then `x` is returned where `x`
+            are integer representations of the digital net points.
         """
         return self.gen_samples(
             n=n, n_min=n_min, n_max=n_max, return_binary=return_binary, warn=warn
@@ -123,19 +125,21 @@ class AbstractDiscreteDistribution(object):
         raise MethodImplementationError(self, "_gen_samples")
 
     def spawn(self, s=1, dimensions=None):
-        r"""
-        Spawn new instances of the current discrete distribution but with new seeds and dimensions.
-        Used by multi-level QMC algorithms which require different seeds and dimensions on each level.
+        r"""Spawn new instances of the current discrete distribution but with
+        new seeds and dimensions. Used by multi-level QMC algorithms which
+        require different seeds and dimensions on each level.
 
-        Note:
-            Use `replications` instead of using `spawn` when possible, e.g., when spawning copies which all have the same dimension.
+        Notes:
+            Use `replications` instead of using `spawn` when possible, e.g.,
+            when spawning copies which all have the same dimension.
 
         Args:
             s (int): Number of copies to spawn
-            dimensions (np.ndarray): Length `s` array of dimensions for each copy. Defaults to the current dimension.
+            dimensions (np.ndarray): Length `s` array of dimensions for each
+                copy. Defaults to the current dimension.
 
         Returns:
-            spawned_discrete_distribs (list): Discrete distributions with new seeds and dimensions.
+            Discrete distributions with new seeds and dimensions.
         """
         s = int(s)
         if s <= 0:
@@ -171,14 +175,18 @@ class AbstractDiscreteDistribution(object):
 
 
 class AbstractLDDiscreteDistribution(AbstractDiscreteDistribution):
-    """Low discrepancy sequence. Alias for `AbstractDiscreteDistribution` used for compatibility checks."""
+    """Low discrepancy sequence. Alias for `AbstractDiscreteDistribution`
+    used for compatibility checks.
+    """
 
     def __repr__(self):
         return super().__repr__("AbstractLDDiscreteDistribution")
 
 
 class AbstractIIDDiscreteDistribution(AbstractDiscreteDistribution):
-    """IID sequence. Alias for `AbstractDiscreteDistribution` used for compatibility checks."""
+    """IID sequence. Alias for `AbstractDiscreteDistribution` used for
+    compatibility checks.
+    """
 
     def __repr__(self):
         return super().__repr__("AbstractIIDDiscreteDistribution")

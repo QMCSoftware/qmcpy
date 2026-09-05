@@ -1,9 +1,7 @@
 import torch
 
 def _check_inputs(x, gamma=None):
-    """
-    x: (B, N, d) in [0,1]
-    gamma: (d,) nonnegative weights (optional)
+    """x: (B, N, d) in [0,1] gamma: (d,) nonnegative weights (optional)
     """
     if x.dim() != 3:
         raise ValueError(f"x must be (batch,N,d); got {tuple(x.shape)}")

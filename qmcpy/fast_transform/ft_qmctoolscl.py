@@ -20,10 +20,11 @@ def _parse_ft_input(x):
 
 
 def fftbr_qmctoolscl(x):
-    r"""
-    QMCToolsCL implementation of the 1 dimensional Bit-Reversed-Order (BRO) Fast Fourier Transform (FFT) along the last dimension.
-    Requires the last dimension of x is already in BRO, so we can skip the first step of the decimation-in-time FFT.
-    Requires the size of the last dimension is a power of 2.
+    r"""QMCToolsCL implementation of the 1 dimensional Bit-Reversed-Order
+    (BRO) Fast Fourier Transform (FFT) along the last dimension. Requires the
+    last dimension of x is already in BRO, so we can skip the first step of the
+    decimation-in-time FFT. Requires the size of the last dimension is a power
+    of 2.
 
     Examples:
         >>> rng = np.random.Generator(np.random.SFC64(11))
@@ -39,7 +40,7 @@ def fftbr_qmctoolscl(x):
         x (np.ndarray): Array of samples at which to run BRO-FFT.
 
     Returns:
-        y (np.ndarray): BRO-FFT values.
+        BRO-FFT values.
     """
     x, shape, d, n, n_half = _parse_ft_input(x)
     if n <= 1:
@@ -54,10 +55,11 @@ def fftbr_qmctoolscl(x):
 
 
 def ifftbr_qmctoolscl(x):
-    r"""
-    QMCToolsCL implementation of the 1 dimensional Bit-Reversed-Order (BRO) Inverse Fast Fourier Transform (IFFT) along the last dimension.
-    Outputs an array in bit-reversed order, so we can skip the last step of the decimation-in-time IFFT.
-    Requires the size of the last dimension is a power of 2.
+    r"""QMCToolsCL implementation of the 1 dimensional Bit-Reversed-Order
+    (BRO) Inverse Fast Fourier Transform (IFFT) along the last dimension.
+    Outputs an array in bit-reversed order, so we can skip the last step of the
+    decimation-in-time IFFT. Requires the size of the last dimension is a power
+    of 2.
 
     Examples:
         >>> rng = np.random.Generator(np.random.SFC64(11))
@@ -73,7 +75,7 @@ def ifftbr_qmctoolscl(x):
         x (np.ndarray): Array of samples at which to run BRO-IFFT.
 
     Returns:
-        y (np.ndarray): BRO-IFFT values.
+        BRO-IFFT values.
     """
     x, shape, d, n, n_half = _parse_ft_input(x)
     if n <= 1:
@@ -88,9 +90,9 @@ def ifftbr_qmctoolscl(x):
 
 
 def fwht_qmctoolscl(x):
-    r"""
-    QMCToolsCL implementation of the 1 dimensional Fast Walsh Hadamard Transform (FWHT) along the last dimension.
-    Requires the size of the last dimension is a power of 2.
+    r"""QMCToolsCL implementation of the 1 dimensional Fast Walsh Hadamard
+    Transform (FWHT) along the last dimension. Requires the size of the last
+    dimension is a power of 2.
 
     Examples:
         >>> rng = np.random.Generator(np.random.SFC64(11))
@@ -104,7 +106,7 @@ def fwht_qmctoolscl(x):
         x (np.ndarray): Array of samples at which to run FWHT.
 
     Returns:
-        y (np.ndarray): FWHT values.
+        FWHT values.
     """
     x, shape, d, n, n_half = _parse_ft_input(x)
     if n <= 1:

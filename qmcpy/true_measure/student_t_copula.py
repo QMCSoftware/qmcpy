@@ -13,19 +13,18 @@ import scipy.stats as stats
 
 
 class StudentTCopula(AbstractCopula):
-    r"""
-    Student-t copula transform with user supplied univariate marginals.
+    r"""Student-t copula transform with user supplied univariate marginals.
 
-    This TrueMeasure uses the same marginal workflow as ``GaussianCopula``,
-    but builds dependent uniforms through a multivariate Student-t copula with
+    This TrueMeasure uses the same marginal workflow as ``GaussianCopula``, but
+    builds dependent uniforms through a multivariate Student-t copula with
     correlation matrix ``correlation`` and degrees of freedom ``df``.
 
-    The transform uses the inverse Rosenblatt construction for the
-    multivariate Student-t distribution. This is equivalent in distribution to
-    the standard correlated-normal plus shared chi-square scaling construction,
-    but it only needs d deterministic uniforms from the base QMCPy sampler.
-    It is not the incorrect shortcut of applying univariate ``t.ppf``, a
-    Cholesky factor, and then univariate ``t.cdf``.
+    The transform uses the inverse Rosenblatt construction for the multivariate
+    Student-t distribution. This is equivalent in distribution to the standard
+    correlated-normal plus shared chi-square scaling construction, but it only
+    needs d deterministic uniforms from the base QMCPy sampler. It is not the
+    incorrect shortcut of applying univariate ``t.ppf``, a Cholesky factor, and
+    then univariate ``t.cdf``.
 
     Examples:
         >>> import numpy as np
@@ -66,7 +65,7 @@ class StudentTCopula(AbstractCopula):
         >>> StudentTCopula(DigitalNetB2(2, seed=7), marginals=marginals, correlation=corr, df=1)(4).shape
         (4, 2)
 
-    **References:**
+    **References: **
 
     1.  Roger B. Nelsen. *An Introduction to Copulas*. Second Edition,
         Springer Series in Statistics, Springer, 2006.
@@ -95,7 +94,8 @@ class StudentTCopula(AbstractCopula):
             marginals (list): Length d list of SciPy-like univariate
                 distributions implementing a quantile function, called ``ppf``
                 in SciPy.
-            correlation (np.ndarray): d x d positive definite correlation matrix.
+            correlation (np.ndarray): d x d positive definite correlation
+                matrix.
             df (float): Positive Student-t degrees of freedom.
         """
         self.parameters = ["marginals", "correlation", "df"]
@@ -120,8 +120,7 @@ class StudentTCopula(AbstractCopula):
         return df
 
     def _dependent_t_samples(self, u):
-        """
-        Map independent uniforms to a multivariate Student-t sample.
+        """Map independent uniforms to a multivariate Student-t sample.
 
         A direct scale-mixture construction would need d normal uniforms plus
         one extra chi-square uniform for the shared radial scale. Since

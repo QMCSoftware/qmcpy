@@ -4,11 +4,10 @@ from .torch_numpy_ops import get_npt
 
 
 def k4sumterm(x, t, cutoff=1e-8):
-    r"""
-    $$K_4(x) = \sum_{a=0}^{t-1} \frac{x_a}{2^{3a}}$$
+    r"""$$K_4(x) = \sum_{a=0}^{t-1} \frac{x_a}{2^{3a}}$$
 
-    where $x_a$ is the bit at index $a$ in the binary expansion of $x$
-    e.g. $x = 6$ with $t=3$ has $(x_0,x_1,x_2) = (1,1,0)$
+    where $x_a$ is the bit at index $a$ in the binary expansion of $x$ e.g. $x
+    = 6$ with $t=3$ has $(x_0,x_1,x_2) = (1,1,0)$
 
     Examples:
         >>> t = 3
@@ -35,7 +34,7 @@ def k4sumterm(x, t, cutoff=1e-8):
         t (int): Number of bits in each integer.
 
     Returns:
-        y (Union[np.ndarray torch.Tensor]): The $K_4$ sum term.
+        The $K_4$ sum term.
     """
     total = 0.0
     for a in range(0, t):
@@ -66,16 +65,17 @@ WEIGHTEDWALSHFUNCSZEROS = {
 
 
 def weighted_walsh_funcs(alpha, xb, t):
-    r"""
-    Weighted walsh functions
+    r"""Weighted walsh functions
 
     $$\sum_{k=0}^\infty \mathrm{wal}_k(x) 2^{-\mu_\alpha(k)}$$
 
-    where $\mathrm{wal}_k$ is the $k^\text{th}$ Walsh function
-    and $\mu_\alpha$ is the Dick weight function which sums the first $\alpha$ largest indices of $1$ bits in the binary expansion of $k$
-    e.g. $k=13=1101_2$ has 1-bit indexes $(4,3,1)$ so
+    where $\mathrm{wal}_k$ is the $k^\text{th}$ Walsh function and $\mu_\alpha$
+    is the Dick weight function which sums the first $\alpha$ largest indices
+    of $1$ bits in the binary expansion of $k$ e.g. $k=13=1101_2$ has 1-bit
+    indexes $(4,3,1)$ so
 
-    $$\mu_1(k) = 4, \mu_2(k) = 4+3, \mu_3(k) = 4+3+1 = \mu_4(k) = \mu_5(k) = \dots$$
+    $$\mu_1(k) = 4, \mu_2(k) = 4+3, \mu_3(k) = 4+3+1 = \mu_4(k) = \mu_5(k) =
+    \dots$$
 
     Examples:
         >>> t = 3
@@ -114,21 +114,22 @@ def weighted_walsh_funcs(alpha, xb, t):
 
     Args:
         alpha (int): Weighted walsh functions order.
-        xb (Union[np.ndarray, torch.Tensor]): Integer points at which to evaluate the weighted Walsh function.
+        xb (Union[np.ndarray, torch.Tensor]): Integer points at which to
+            evaluate the weighted Walsh function.
         t (int): Number of bits in each integer in xb.
 
     Returns:
-        y (Union[np.ndarray, torch.Tensor]): Weighted Walsh function values.
+        Weighted Walsh function values.
 
-    **References:**
+    **References: **
 
-    1.  Dick, Josef.
-        "Walsh spaces containing smooth functions and quasi–Monte Carlo rules of arbitrary high order."
-        SIAM Journal on Numerical Analysis 46.3 (2008): 1519-1553.
+        1.  Dick, Josef.
+            "Walsh spaces containing smooth functions and quasi–Monte Carlo rules of arbitrary high order."
+            SIAM Journal on Numerical Analysis 46.3 (2008): 1519-1553.
 
-    2.  Dick, Josef.
-        "The decay of the Walsh coefficients of smooth functions."
-        Bulletin of the Australian Mathematical Society 80.3 (2009): 430-453.
+        2.  Dick, Josef.
+            "The decay of the Walsh coefficients of smooth functions."
+            Bulletin of the Australian Mathematical Society 80.3 (2009): 430-453.
     """
     assert isinstance(alpha, int)
     assert alpha in WEIGHTEDWALSHFUNCSPOS, (
@@ -154,8 +155,8 @@ def weighted_walsh_funcs(alpha, xb, t):
 
 
 def to_bin(x, t):
-    r"""
-    Convert floating point representations of digital net samples in base $b=2$ to binary representations.
+    r"""Convert floating point representations of digital net samples in base
+    $b=2$ to binary representations.
 
     Examples:
         >>> xf = np.random.Generator(np.random.PCG64(7)).uniform(low=0,high=1,size=(5))
@@ -178,11 +179,14 @@ def to_bin(x, t):
 
 
     Args:
-        x (Union[np.ndarray, torch.Tensor]): floating point representation of samples.
-        t (int): number of bits in binary represtnations. Typically `dnb2.t` where `isinstance(dnb2,DigitalNetB2)`.
+        x (Union[np.ndarray, torch.Tensor]): floating point representation of
+            samples.
+        t (int): number of bits in binary represtnations. Typically `dnb2.t`
+            where `isinstance(dnb2,DigitalNetB2)`.
 
     Returns:
-        xb (Unioin[np.ndarray,torch.Tensor]): binary representation of samples with `dtype` either `np.uint64` or `torch.int64`.
+        binary representation of samples with `dtype` either `np.uint64` or
+        `torch.int64`.
     """
     npt = get_npt(x)
     if npt == np:
@@ -202,8 +206,8 @@ def to_bin(x, t):
 
 
 def to_float(x, t):
-    r"""
-    Convert binary representations of digital net samples in base $b=2$ to floating point representations.
+    r"""Convert binary representations of digital net samples in base $b=2$ to
+    floating point representations.
 
     Examples:
         >>> xb = np.arange(8,dtype=np.uint64)
@@ -218,11 +222,13 @@ def to_float(x, t):
         tensor([0.0000, 0.1250, 0.2500, 0.3750, 0.5000, 0.6250, 0.7500, 0.8750])
 
     Args:
-        x (Union[np.ndarray, torch.Tensor]): binary representation of samples with `dtype` either `np.uint64` or `torch.int64`.
-        t (int): number of bits in binary represtnations. Typically `dnb2.t` where `isinstance(dnb2,DigitalNetB2)`.
+        x (Union[np.ndarray, torch.Tensor]): binary representation of samples
+            with `dtype` either `np.uint64` or `torch.int64`.
+        t (int): number of bits in binary represtnations. Typically `dnb2.t`
+            where `isinstance(dnb2,DigitalNetB2)`.
 
     Returns:
-        xf (Unioin[np.ndarray,torch.Tensor]): floating point representation of samples.
+        floating point representation of samples.
     """
     npt = get_npt(x)
     if npt == np:  # npt==torch
@@ -242,8 +248,8 @@ def to_float(x, t):
 
 
 def bin_from_numpy_to_torch(xb):
-    r"""
-    Convert `numpy.uint64` to `torch.int64`, useful for converting binary samples from `DigitalNetB2` to torch representations.
+    r"""Convert `numpy.uint64` to `torch.int64`, useful for converting binary
+    samples from `DigitalNetB2` to torch representations.
 
     Examples:
         >>> xb = np.arange(8,dtype=np.uint64)
@@ -253,10 +259,11 @@ def bin_from_numpy_to_torch(xb):
         tensor([0, 1, 2, 3, 4, 5, 6, 7])
 
     Args:
-        xb (Union[np.ndarray]): binary representation of samples with `dtype=np.uint64`
+        xb (Union[np.ndarray]): binary representation of samples with
+            `dtype=np.uint64`
 
     Returns:
-        xbtorch (Unioin[torch.Tensor]): binary representation of samples with `dtype=torch.int64`.
+        binary representation of samples with `dtype=torch.int64`.
     """
     assert xb.dtype == np.uint64
     assert xb.max() <= (2**63 - 1), "require all xb < 2^63"

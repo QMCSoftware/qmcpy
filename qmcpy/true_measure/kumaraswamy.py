@@ -7,8 +7,8 @@ import numpy as np
 
 
 class Kumaraswamy(AbstractTrueMeasure):
-    r"""
-    Kumaraswamy distribution as described in [https://en.wikipedia.org/wiki/Kumaraswamy_distribution](https://en.wikipedia.org/wiki/Kumaraswamy_distribution).
+    r"""Kumaraswamy distribution as described in
+    [https://en.wikipedia.org/wiki/Kumaraswamy_distribution](https://en.wikipedia.org/wiki/Kumaraswamy_distribution).
 
     Examples:
         >>> true_measure = Kumaraswamy(DigitalNetB2(2,seed=7),a=[1,2],b=[3,4])
@@ -53,7 +53,8 @@ class Kumaraswamy(AbstractTrueMeasure):
     def __init__(self, sampler, a=2, b=2):
         r"""
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.
@@ -95,19 +96,17 @@ class Kumaraswamy(AbstractTrueMeasure):
         assert self.alpha.shape == (self.d,) and self.beta.shape == (self.d,)
 
     def _compute_moments(self):
-        r"""
-        Compute the marginal mean and variance of each coordinate.
+        r"""Compute the marginal mean and variance of each coordinate.
 
         The Kumaraswamy raw moments are $M_n = b\,B(1 + n/a, b)$ [1], so the
-        mean is $M_1$ and the variance is $M_2 - M_1^2$. Forming that difference
-        directly causes cancellation error once the variance is small relative
-        to $M_1^2$ (e.g. large $a$).
+        mean is $M_1$ and the variance is $M_2 - M_1^2$. Forming that
+        difference directly causes cancellation error once the variance is
+        small relative to $M_1^2$ (e.g. large $a$).
 
         Instead, with the log-moment function $K(r) = \log M_r$,
 
-        $$\text{mean} = e^{K(1)}, \qquad
-          \operatorname{Var}[X] = \text{mean}^2\,(e^{q} - 1), \qquad
-          q = K(2) - 2K(1).$$
+        $$\text{mean} = e^{K(1)}, \qquad \operatorname{Var}[X] =
+        \text{mean}^2\,(e^{q} - 1), \qquad q = K(2) - 2K(1).$$
 
         Each log-moment is available in closed form via the log-Beta function
         [2], $K(r) = \log b + \ln B(1 + r/a, b)$, so ``mean`` and $q$ are
@@ -119,7 +118,7 @@ class Kumaraswamy(AbstractTrueMeasure):
         Every operation is elementwise on the per-coordinate parameters $a$ and
         $b$, so ``mean`` and ``variance`` are returned as length-``d`` arrays.
 
-        **References:**
+        **References: **
 
         1.  Kumaraswamy distribution. Wikipedia.
             [https://en.wikipedia.org/wiki/Kumaraswamy_distribution](https://en.wikipedia.org/wiki/Kumaraswamy_distribution).
@@ -135,7 +134,7 @@ class Kumaraswamy(AbstractTrueMeasure):
             [https://numpy.org/doc/stable/reference/generated/numpy.expm1.html](https://numpy.org/doc/stable/reference/generated/numpy.expm1.html).
 
         Returns:
-            tuple: Length ``d`` arrays ``(mean, variance)``.
+            Length ``d`` arrays ``(mean, variance)``.
         """
         inv_a = 1.0 / self.alpha
         beta = self.beta

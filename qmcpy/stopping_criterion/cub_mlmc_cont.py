@@ -90,8 +90,9 @@ class CubMLMCCont(AbstractCubMLMC):
         Args:
             integrand (AbstractIntegrand): The integrand.
             abs_tol (np.ndarray): Absolute error tolerance.
-            rmse_tol (np.ndarray): Root mean squared error tolerance.
-                If supplied, then absolute tolerance and alpha are ignored in favor of the rmse tolerance.
+            rmse_tol (np.ndarray): Root mean squared error tolerance. If
+                supplied, then absolute tolerance and alpha are ignored in
+                favor of the rmse tolerance.
             n_init (int): Initial number of samples.
             n_limit (int): Maximum number of samples.
             inflate (float): Coarser tolerance multiplication factor $\geq 1$.
@@ -165,17 +166,17 @@ class CubMLMCCont(AbstractCubMLMC):
         """Run (or continue) the continuation-MLMC integration.
 
         Args:
-            resume (Data, optional): Checkpoint returned by a previous
-                ``integrate()`` call.  The new tolerance may be tighter *or*
-                looser than the one used when the checkpoint was created.
-                With a tighter tolerance the algorithm picks up the tolerance
-                ladder from ``max(checkpoint_rmse_tol, target_rmse_tol)`` and
-                continues down to ``target_rmse_tol``.  With a looser tolerance
-                the first step immediately converges on the existing samples
-                and no additional ladder steps are needed.
+            resume (Data): Checkpoint returned by a previous ``integrate()``
+                call.  The new tolerance may be tighter *or* looser than the
+                one used when the checkpoint was created. With a tighter
+                tolerance the algorithm picks up the tolerance ladder from
+                ``max(checkpoint_rmse_tol, target_rmse_tol)`` and continues
+                down to ``target_rmse_tol``.  With a looser tolerance the first
+                step immediately converges on the existing samples and no
+                additional ladder steps are needed.
 
         Returns:
-            tuple: ``(solution, data)``.
+            ``(solution, data)``.
         """
         self._active_t_start = t_start = time()
         self._active_trace = trace = self._make_trace_logger()
@@ -261,8 +262,10 @@ class CubMLMCCont(AbstractCubMLMC):
             ).sum()
 
     def _replay_resume_exactly(self, checkpoint, t_start=None, resume_provenance=None):
-        """Ensure iteration number in `replay_iter_count` same in LOOSE-last and RESUMED-first iterations, 
-            by simply saving `level_rep_sums` and `level_n_increments`."""
+        """Ensure iteration number in `replay_iter_count` same in LOOSE-last
+        and RESUMED-first iterations, by simply saving `level_rep_sums` and
+        `level_n_increments`.
+        """
         shadow_trace = self._active_trace = None
         try:
             shadow = self._construct_data()

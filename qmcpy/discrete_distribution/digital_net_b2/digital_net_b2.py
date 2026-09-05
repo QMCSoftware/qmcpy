@@ -9,10 +9,9 @@ from copy import deepcopy
 import platform
 
 class DigitalNetB2(AbstractLDDiscreteDistribution):
-    r"""
-    Low discrepancy digital net in base 2.
+    r"""Low discrepancy digital net in base 2.
 
-    Note:
+    Notes:
         - Digital net sample sizes should be powers of $2$ e.g. $1$, $2$, $4$, $8$, $16$, $\dots$.
         - The first point of an unrandomized digital nets is the origin.
         - `Sobol` is an alias for `DigitalNetB2`.
@@ -21,7 +20,8 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
             - Pass in `generating_matrices` *without* interlacing and supply `alpha`>1 to apply interlacing, or
             - Pass in `generating_matrices` *with* interlacing and set `alpha=1` to avoid additional interlacing
 
-            i.e. do *not* pass in interlaced `generating_matrices` and set `alpha>1`, this will apply additional interlacing.
+            i.e. do *not* pass in interlaced `generating_matrices` and set
+            `alpha>1`, this will apply additional interlacing.
 
     Examples:
         >>> discrete_distrib = DigitalNetB2(2,seed=7)
@@ -69,7 +69,8 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
         array([[0.25, 0.75],
                [0.75, 0.25]])
 
-        Generating matrices from [https://github.com/QMCSoftware/LDData/tree/main/dnet](https://github.com/QMCSoftware/LDData/tree/main/dnet)
+        Generating matrices from
+        [https://github.com/QMCSoftware/LDData/tree/main/dnet](https://github.com/QMCSoftware/LDData/tree/main/dnet)
 
         >>> DigitalNetB2(dimension=3,randomize=False,generating_matrices="mps.nx_s5_alpha2_m32.txt")(8,warn=False)
         array([[0.        , 0.        , 0.        ],
@@ -172,7 +173,7 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
                 [0.94219959, 0.39172304, 0.20285965],
                 [0.19716391, 0.64741585, 0.92494554]]])
 
-    **References:**
+    **References: **
 
     1.  Marius Hofert and Christiane Lemieux.
         qrng: (Randomized) Quasi-Random Number Generators (2019).
@@ -236,8 +237,10 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
                 - If an `int` is passed in, use generating vector components at indices 0,...,`dimension`-1.
                 - If an `np.ndarray` is passed in, use generating vector components at these indices.
 
-            replications (int): Number of independent randomizations of a pointset.
-            seed (Union[None, int, np.random.SeedSeq): Seed the random number generator for reproducibility.
+            replications (int): Number of independent randomizations of a
+                pointset.
+            seed (Union[None, int, np.random.SeedSeq): Seed the random number
+            generator for reproducibility.
             randomize (str): Options are
 
                 - `'LMS DS'`: Linear matrix scramble with digital shift.
@@ -246,19 +249,28 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
                 - `'NUS'`: Nested uniform scrambling. Also known as Owen scrambling.
                 - `'FALSE'`: No randomization. In this case the first point will be the origin.
 
-            generating_matrices (Union[str, np.ndarray, int]): Specify the generating matrices.
+            generating_matrices (Union[str, np.ndarray, int]): Specify the
+                generating matrices.
 
                 - A `str` should be the name (or path) of a file from the LDData repo at [https://github.com/QMCSoftware/LDData/tree/main/dnet](https://github.com/QMCSoftware/LDData/tree/main/dnet).
                 - An `np.ndarray` of integers with shape $(d,m_\mathrm{max})$ or $(r,d,m_\mathrm{max})$ where $d$ is the number of dimensions, $r$ is the number of replications, and $2^{m_\mathrm{max}}$ is the maximum number of supported points. Setting `msb=False` will flip the bits of ints in the generating matrices.
 
-            order (str): `'RADICAL INVERSE'`, or `'GRAY'` ordering. See the doctest example above.
-            t (int): Number of bits in integer represetation of points *after* randomization. The number of bits in the generating matrices is inferred based on the largest value.
-            alpha (int): Interlacing factor for higher order nets.
-                When `alpha`>1, interlacing is performed regardless of the generating matrices,
-                i.e., for `alpha`>1 do *not* pass in generating matrices which are already interlaced.
-                The Note for this class contains more info.
-            msb (bool): Flag for Most Significant Bit (MSB) vs Least Significant Bit (LSB) integer representations in generating matrices. If `msb=False` (LSB order), then integers in generating matrices will be bit-reversed.
-            _verbose (bool): If `True`, print linear matrix scrambling matrices.
+            order (str): `'RADICAL INVERSE'`, or `'GRAY'` ordering. See the
+                doctest example above.
+            t (int): Number of bits in integer represetation of points *after*
+                randomization. The number of bits in the generating matrices is
+                inferred based on the largest value.
+            alpha (int): Interlacing factor for higher order nets. When
+                `alpha`>1, interlacing is performed regardless of the
+                generating matrices, i.e., for `alpha`>1 do *not* pass in
+                generating matrices which are already interlaced. The Note for
+                this class contains more info.
+            msb (bool): Flag for Most Significant Bit (MSB) vs Least
+                Significant Bit (LSB) integer representations in generating
+                matrices. If `msb=False` (LSB order), then integers in
+                generating matrices will be bit-reversed.
+            _verbose (bool): If `True`, print linear matrix scrambling
+                matrices.
         """
         if graycode is not None:
             order = "GRAY" if graycode else "RADICAL INVERSE"

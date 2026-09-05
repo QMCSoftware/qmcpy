@@ -14,8 +14,8 @@ import warnings
 
 
 class CubMCCLTVec(AbstractStoppingCriterion):
-    r"""
-    IID Monte Carlo stopping criterion stopping criterion based on the Central Limit Theorem with doubling sample sizes.
+    r"""IID Monte Carlo stopping criterion stopping criterion based on the
+    Central Limit Theorem with doubling sample sizes.
 
     Examples:
         >>> k = Keister(IIDStdUniform(seed=7))
@@ -175,7 +175,9 @@ class CubMCCLTVec(AbstractStoppingCriterion):
             rel_tol (np.ndarray): Relative error tolerance.
             n_init (int): Initial number of samples.
             n_limit (int): Maximum number of samples.
-            error_fun (Union[str, callable]): Function mapping the approximate solution, absolute error tolerance, and relative error tolerance to the current error bound.
+            error_fun (Union[str, callable]): Function mapping the approximate
+                solution, absolute error tolerance, and relative error
+                tolerance to the current error bound.
 
                 - `'EITHER'`, the default, requires the approximation error must be below either the absolue *or* relative tolerance.
                     Equivalent to setting
@@ -187,7 +189,8 @@ class CubMCCLTVec(AbstractStoppingCriterion):
                     ```python
                     error_fun = lambda sv,abs_tol,rel_tol: np.minimum(abs_tol,abs(sv)*rel_tol)
                     ```
-            inflate (float): Inflation factor $\geq 1$ to multiply by the variance estimate to make it more conservative.
+            inflate (float): Inflation factor $\geq 1$ to multiply by the
+                variance estimate to make it more conservative.
             alpha (np.ndarray): Uncertainty level in $(0,1)$.
         """
         self.parameters = [

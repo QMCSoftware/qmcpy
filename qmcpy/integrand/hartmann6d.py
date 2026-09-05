@@ -5,8 +5,9 @@ from ..discrete_distribution import DigitalNetB2
 
 
 class Hartmann6d(AbstractIntegrand):
-    r"""
-    Wrapper around [`BoTorch`'s implementation of the Augmented Hartmann function](https://botorch.readthedocs.io/en/stable/test_functions.html#botorch.test_functions.multi_fidelity.AugmentedHartmann) in dimension $d=6$.
+    r"""Wrapper around [`BoTorch`'s implementation of the Augmented Hartmann
+    function](https://botorch.readthedocs.io/en/stable/test_functions.html#botorch.test_functions.multi_fidelity.AugmentedHartmann)
+    in dimension $d=6$.
 
     Examples:
         >>> integrand = Hartmann6d(DigitalNetB2(6,seed=7))
@@ -29,7 +30,7 @@ class Hartmann6d(AbstractIntegrand):
                               (3, 3) 0.08333333333333333
                               (4, 4) 0.08333333333333333
                               (5, 5) 0.08333333333333333
-                             
+
         With independent replications
 
         >>> integrand = Hartmann6d(DigitalNetB2(6,seed=7,replications=2**4))
@@ -46,7 +47,8 @@ class Hartmann6d(AbstractIntegrand):
     def __init__(self, sampler):
         r"""
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.

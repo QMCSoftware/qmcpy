@@ -20,19 +20,27 @@ def plot_proj(
 ):
     """
     Args:
-        sampler (DiscreteDistribution,TrueMeasure): The generator of samples to be plotted.
-        n (Union[int, list]): The number of samples or a list of samples(used for extensibility) to be plotted.
-        d_horizontal (Union[int, list]): The dimension or list of dimensions to be plotted on the horizontal axes.
-        d_vertical (Union[int, list]): The dimension or list of dimensions to be plotted on the vertical axes.
-        math_ind (bool): Setting to `True` will enable user to pass in math indices.
+        sampler (DiscreteDistribution, TrueMeasure): The generator of samples
+            to be plotted.
+        n (Union[int, list]): The number of samples or a list of samples(used
+            for extensibility) to be plotted.
+        d_horizontal (Union[int, list]): The dimension or list of dimensions to
+            be plotted on the horizontal axes.
+        d_vertical (Union[int, list]): The dimension or list of dimensions to
+            be plotted on the vertical axes.
+        math_ind (bool): Setting to `True` will enable user to pass in math
+            indices.
         marker_size (float): The marker size (typographic points are 1/72 in.).
         figfac (float): The figure size factor.
         fig_title (str): The title of the figure.
-        axis_pad (float): The padding of the axis so that points on the boundaries can be seen.
+        axis_pad (float): The padding of the axis so that points on the
+            boundaries can be seen.
         want_grid (bool): Setting to `True` will enable grid on the plot.
         font_family (str): The font family of the plot.
-        where_title (float): the position of the title on the plot. Default value is 1.
-        **kwargs (dict): Additional keyword arguments passed to `matplotlib.pyplot.scatter`.
+        where_title (float): the position of the title on the plot. Default
+            value is 1.
+        **kwargs (dict): Additional keyword arguments passed to
+            `matplotlib.pyplot.scatter`.
     """
     try:
         import matplotlib.pyplot as plt

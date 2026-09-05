@@ -14,8 +14,7 @@ from scipy.stats import norm
 
 
 class GaussianCopula(AbstractCopula):
-    r"""
-    Gaussian copula transform with user supplied univariate marginals.
+    r"""Gaussian copula transform with user supplied univariate marginals.
 
     This TrueMeasure separates the dependence model from the marginal
     distributions:
@@ -26,9 +25,9 @@ class GaussianCopula(AbstractCopula):
     4. apply each marginal quantile function.
 
     SciPy calls the quantile function ``ppf``. The marginal objects must expose
-    this method. If they also expose
-    ``cdf`` and ``pdf`` or ``logpdf``, then ``_weight`` computes the Gaussian
-    copula joint density. Otherwise weights are treated as one with a warning.
+    this method. If they also expose ``cdf`` and ``pdf`` or ``logpdf``, then
+    ``_weight`` computes the Gaussian copula joint density. Otherwise weights
+    are treated as one with a warning.
 
     Examples:
         >>> import numpy as np
@@ -65,7 +64,7 @@ class GaussianCopula(AbstractCopula):
         >>> GaussianCopula(DigitalNetB2(1, seed=7), marginals=[stats.norm()], correlation=[[1.0]])(4).shape
         (4, 1)
 
-    **References:**
+    **References: **
 
     1.  Roger B. Nelsen. *An Introduction to Copulas*. Second Edition,
         Springer Series in Statistics, Springer, 2006.
@@ -84,7 +83,8 @@ class GaussianCopula(AbstractCopula):
             marginals (list): Length d list of SciPy-like univariate
                 distributions implementing a quantile function, called ``ppf``
                 in SciPy.
-            correlation (np.ndarray): d x d positive definite correlation matrix.
+            correlation (np.ndarray): d x d positive definite correlation
+                matrix.
         """
         self.parameters = ["marginals", "correlation"]
         super(GaussianCopula, self).__init__(sampler=sampler, marginals=marginals)

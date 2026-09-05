@@ -6,10 +6,10 @@ from scipy.special import gamma
 
 
 class Keister(AbstractIntegrand):
-    r"""
-    Keister function from [1].
+    r"""Keister function from [1].
 
-    $$f(\boldsymbol{t}) = \pi^{d/2} \cos(\lVert \boldsymbol{t} \rVert_2) \qquad \boldsymbol{T} \sim \mathcal{N}(\boldsymbol{0},\mathsf{I}/2).$$
+    $$f(\boldsymbol{t}) = \pi^{d/2} \cos(\lVert \boldsymbol{t} \rVert_2) \qquad
+    \boldsymbol{T} \sim \mathcal{N}(\boldsymbol{0},\mathsf{I}/2).$$
 
     Examples:
         >>> integrand = Keister(DigitalNetB2(2,seed=7))
@@ -37,7 +37,7 @@ class Keister(AbstractIntegrand):
         >>> print("%.4f"%muhats.mean())
         1.8024
 
-    **References:**
+    **References: **
 
     1.  B. D. Keister.
         Multidimensional Quadrature Algorithms.
@@ -47,7 +47,8 @@ class Keister(AbstractIntegrand):
     def __init__(self, sampler):
         r"""
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.
@@ -69,14 +70,14 @@ class Keister(AbstractIntegrand):
 
     @classmethod
     def get_exact_value(self, d):
-        """
-        Compute the exact analytic value of the Keister integral with dimension $d$.
+        """Compute the exact analytic value of the Keister integral with
+        dimension $d$.
 
         Args:
             d (int): Dimension.
 
         Returns:
-            mean (float): Exact value of the integral.
+            Exact value of the integral.
         """
         cosinteg = np.zeros(shape=(d))
         cosinteg[0] = np.sqrt(np.pi) / (2 * np.exp(1 / 4))

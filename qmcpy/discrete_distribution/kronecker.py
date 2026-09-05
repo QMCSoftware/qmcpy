@@ -55,18 +55,18 @@ def _suzuki_generating_vector(dimension):
     return 2 ** (np.arange(1, dimension + 1) / (dimension + 1))
 
 class Kronecker(AbstractLDDiscreteDistribution):
-    r"""
-    Kronecker sequence (additive recurrence sequence) for quasi-Monte Carlo.
+    r"""Kronecker sequence (additive recurrence sequence) for quasi-Monte
+    Carlo.
 
-    A Kronecker sequence is defined by
-    $$
-    \boldsymbol{x}_i =  i \boldsymbol{\alpha} + \boldsymbol{\delta} \bmod \boldsymbol{1} \in [0,1)^d, \quad i = 0,1,2,\dots,
-    $$
-    where $\boldsymbol{\alpha} \in \mathbb{R}^d$ is a generating vector and $\boldsymbol{\delta} \in [0,1)^d$
-    is an optional shift. The fractional part is taken componentwise.
+    A Kronecker sequence is defined by $$ \boldsymbol{x}_i =  i
+    \boldsymbol{\alpha} + \boldsymbol{\delta} \bmod \boldsymbol{1} \in [0,1)^d,
+    \quad i = 0,1,2,\dots, $$ where $\boldsymbol{\alpha} \in \mathbb{R}^d$ is a
+    generating vector and $\boldsymbol{\delta} \in [0,1)^d$ is an optional
+    shift. The fractional part is taken componentwise.
 
     These sequences are simple, extensible low-discrepancy sequences when
-    $\boldsymbol{\alpha}$ has components that are irrational and well-distributed.
+    $\boldsymbol{\alpha}$ has components that are irrational and
+    well-distributed.
 
     Notes:
         - The Kronecker sequence is fully extensible in $n$ (no restriction to powers of 2).
@@ -89,7 +89,7 @@ class Kronecker(AbstractLDDiscreteDistribution):
             randomize       SHIFT
             gen_vec_source  CBC
             entropy         7
-        
+
         Replications of independent randomizations
 
         >>> x = Kronecker(3,seed=7,replications=2)(4)
@@ -111,23 +111,24 @@ class Kronecker(AbstractLDDiscreteDistribution):
         <BLANKLINE>
                [[0.49700422, 0.41789272, 0.80339779],
                 [0.91944141, 0.77848924, 0.15206993]]])
-        
-        Switch from CBC to Richtmyer generating vector when the dimension is too large.
+
+        Switch from CBC to Richtmyer generating vector when the dimension is
+        too large.
 
         >>> Kronecker(15,seed=7,warn=False)(4).shape
         (4, 15)
         >>> Kronecker(15,replications=2,seed=7,warn=False)(4).shape
         (2, 4, 15)
 
-        CBC unrandomized 
-        
+        CBC unrandomized
+
         >>> Kronecker(3,generating_vector="CBC",randomize=False)(4)
         array([[0.        , 0.        , 0.        ],
                [0.42243719, 0.36059652, 0.34867214],
                [0.84487437, 0.72119304, 0.69734427],
                [0.26731156, 0.08178956, 0.04601641]])
-        
-        Richtmyer construction 
+
+        Richtmyer construction
 
         >>> Kronecker(3,generating_vector="RICHTMYER",randomize=False)(4)
         array([[0.        , 0.        , 0.        ],
@@ -145,7 +146,7 @@ class Kronecker(AbstractLDDiscreteDistribution):
                 [0.48055697, 0.16080129, 0.57818947],
                 [0.89477054, 0.8928521 , 0.81425745]]])
 
-        Suzuki construction 
+        Suzuki construction
 
         >>> Kronecker(3,generating_vector="SUZUKI",randomize=False)(4)
         array([[0.        , 0.        , 0.        ],
@@ -181,7 +182,7 @@ class Kronecker(AbstractLDDiscreteDistribution):
                 [0.77841423, 0.32842712, 0.96358566],
                 [0.96762135, 0.74264069, 0.64537849]]])
 
-        Custom generating vectors 
+        Custom generating vectors
 
         >>> Kronecker(3,generating_vector=2**(np.arange(1,4)/(3 + 1)),randomize=False)(4)
         array([[0.        , 0.        , 0.        ],
@@ -199,8 +200,8 @@ class Kronecker(AbstractLDDiscreteDistribution):
                 [0.84133696, 0.11091324, 0.78784635],
                 [0.03054408, 0.5251268 , 0.46963918],
                 [0.21975119, 0.93934037, 0.15143201]]])
-                
-        Subset dimensions 
+
+        Subset dimensions
 
         >>> Kronecker([0,2],generating_vector=2**(np.arange(1,4)/(3 + 1)),randomize=False)(4)
         array([[0.        , 0.        ],
@@ -211,7 +212,7 @@ class Kronecker(AbstractLDDiscreteDistribution):
     **References**
 
     1.  Richtmyer, R. D. (1951). "The evaluation of definite integrals and a quasi-Monte Carlo method."
-    
+
     2.  Niederreiter, H. (1992). *Random Number Generation and Quasi-Monte Carlo Methods*.
     """
 
@@ -230,23 +231,27 @@ class Kronecker(AbstractLDDiscreteDistribution):
 
                 - If an `int` is passed in, use generating vector components at indices 0,...,`dimension`-1.
                 - If an `np.ndarray` is passed in, use generating vector components at these indices.
-            
+
             replications (int): Number of independent randomizations.
-            seed (Union[None, int, np.random.SeedSeq): Seed the random number generator for reproducibility.
+            seed (Union[None, int, np.random.SeedSeq): Seed the random number
+            generator for reproducibility.
             randomize (str): Options are
 
                 - `'SHIFT'`: use `shift` if supplied, otherwise use a random shift $\boldsymbol{\delta} \sim \mathrm{Uniform}([0,1)^d)$.
                 - `'FALSE'`: zero shift.
-            
-            generating_vector (Union[str,np.ndarray]): Generating vector $\boldsymbol{\alpha}$.
-                
+
+            generating_vector (Union[str,np.ndarray]): Generating vector
+                $\boldsymbol{\alpha}$.
+
                 - `"CBC"`: uses the first $d$ components of a known good Component-by-Component (CBC) generating vector.
                 - `"RICHTMYER"`: uses $\boldsymbol{\alpha}_j = \sqrt{p_j} \bmod 1$, where $p_j$ are primes. This is the classical Richtmyer construction.
                 - `"SUZUKI"`: uses a deterministic construction $\boldsymbol{\alpha}_j = 2^{j/(d+1)}$.
                 - np.array: user-specified generating vector.
 
-            shift (np.ndarray): Shift vector $\boldsymbol{\delta}$. If `randomize=True`, this is ignored and a random shift is generated. Otherwise, a fixed shift is used.
-            warn (bool): If False, suppress warnings during construction 
+            shift (np.ndarray): Shift vector $\boldsymbol{\delta}$. If
+                `randomize=True`, this is ignored and a random shift is
+                generated. Otherwise, a fixed shift is used.
+            warn (bool): If False, suppress warnings during construction
         """
         self.parameters = ["randomize", "gen_vec_source"]
         self.input_generating_vector = generating_vector

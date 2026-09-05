@@ -3,8 +3,8 @@ from ..util import ParameterError
 
 
 class DummySampler(AbstractLDDiscreteDistribution):
-    r"""
-    Placeholder discrete distribution for constructing true-measure marginals.
+    r"""Placeholder discrete distribution for constructing true-measure
+    marginals.
 
     ``DummySampler`` is useful when a true measure is needed only for its
     dimension, transform, range, and weight behavior. QMCPy's current
