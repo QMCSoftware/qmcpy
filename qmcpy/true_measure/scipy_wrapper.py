@@ -1,4 +1,4 @@
-from .abstract_true_measure import AbstractTrueMeasure
+from .abstract_true_measure import AbstractTrueMeasure, _clip_unit_interval
 from ..util import DimensionError, ParameterError
 from ..discrete_distribution.abstract_discrete_distribution import (
     AbstractDiscreteDistribution,
@@ -107,8 +107,7 @@ class _MVNAdapter:
             )
 
         # Clip so we never hit exactly 0 or 1 inside norm.ppf.
-        eps = np.finfo(float).eps
-        u_clip = np.clip(u, eps, 1.0 - eps)
+        u_clip = _clip_unit_interval(u)
 
         # Map to i.i.d. standard normals.
         z = scipy.stats.norm.ppf(u_clip)
@@ -455,6 +454,7 @@ class SciPyWrapper(AbstractTrueMeasure):
         if self._is_joint:
             return self._joint.transform(x)
 
+        x = _clip_unit_interval(x)
         t = np.empty_like(x, dtype=float)
         for j in range(self.d):
             t[..., j] = self.sds[j].ppf(x[..., j])

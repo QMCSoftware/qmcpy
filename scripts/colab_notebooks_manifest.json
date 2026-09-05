@@ -44,6 +44,7 @@
   "demos/talk_paper_demos/Sorokin_random_LD_seq_QMC_fast_kernel_methods_2026/Sorokin_random_LD_seq_QMC_fast_kernel_methods_2026.ipynb",
   "demos/talk_paper_demos/pydata_chi_2023.ipynb",
   "demos/talk_paper_demos/why_add_q_to_mc_blog/why_add_q_to_mc_blog.ipynb",
+  "demos/true_measure_domain_inclusion.ipynb",
   "demos/vectorized_qmc.ipynb",
   "demos/vectorized_qmc_bayes.ipynb"
  ],

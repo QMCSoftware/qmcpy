@@ -12,11 +12,13 @@ from qmcpy import (
     Lebesgue,
     MaternGP,
     SciPyWrapper,
+    StudentT,
     Uniform,
     ZeroInflatedExpUniform,
 )
-from qmcpy.util import DimensionError, ParameterError
+from qmcpy.util import DimensionError, ParameterError, ParameterWarning
 import numpy as np
+import re
 import scipy.stats
 from scipy.sparse import issparse
 import unittest
@@ -47,6 +49,12 @@ class TestTrueMeasure(unittest.TestCase):
         cases = [
             ("exact equality", [[0, 1]], [[0, 1]], True),
             ("strict finite inclusion", [[0.25, 0.75]], [[0, 1]], True),
+            (
+                "compatible unbounded interval",
+                [[-np.inf, np.inf]],
+                [[-np.inf, np.inf]],
+                True,
+            ),
             ("infinite domain", [[-5, 5]], [[-np.inf, np.inf]], True),
             ("positive half-line", [[1, 3]], [[0, np.inf]], True),
             ("lower-bound failure", [[-0.1, 0.75]], [[0, 1]], False),
@@ -67,6 +75,12 @@ class TestTrueMeasure(unittest.TestCase):
                 "broadcast domain",
                 [[0.1, 0.8], [0.2, 0.9]],
                 [[0, 1]],
+                True,
+            ),
+            (
+                "broadcast transform range",
+                [[0.25, 0.75]],
+                [[0, 1], [-1, 2]],
                 True,
             ),
             (
@@ -157,6 +171,8 @@ class TestTrueMeasure(unittest.TestCase):
         self.assertTrue(np.isfinite(samples).all())
 
     def test_recursive_transform_applies_each_layer(self):
+        # This records current recursive execution only; it does not assert
+        # correctness of nominal range or moment metadata.
         points = np.array([[0.1], [0.25], [0.5], [0.75], [0.9]])
 
         uniform_inner = Uniform(
@@ -182,7 +198,7 @@ class TestTrueMeasure(unittest.TestCase):
         cases = [
             ("1(a) Uniform -> Uniform", uniform_inner, uniform_outer),
             (
-                "1(b)/1(c) Uniform -> Kumaraswamy",
+                "1(b) Uniform -> Kumaraswamy",
                 kumaraswamy_inner,
                 kumaraswamy_outer,
             ),
@@ -209,6 +225,104 @@ class TestTrueMeasure(unittest.TestCase):
                 if name.startswith("1(d)"):
                     np.testing.assert_array_equal(inner.range, outer.domain)
 
+    def test_unrandomized_inverse_cdf_paths_are_finite(self):
+        cases = [
+            (
+                "JohnsonsSU",
+                JohnsonsSU(DigitalNetB2(1, randomize="FALSE")),
+            ),
+            (
+                "BrownianMotion BrownianBridge",
+                BrownianMotion(
+                    DigitalNetB2(2, randomize="FALSE"),
+                    decomp_type="BROWNIANBRIDGE",
+                ),
+            ),
+            (
+                "SciPyWrapper marginal",
+                SciPyWrapper(
+                    DigitalNetB2(1, randomize="FALSE"),
+                    scipy.stats.norm(),
+                ),
+            ),
+            (
+                "SciPyWrapper MVN",
+                SciPyWrapper(
+                    DigitalNetB2(2, randomize="FALSE"),
+                    scipy.stats.multivariate_normal(
+                        mean=[0.0, 0.0],
+                        cov=[[1.0, 0.5], [0.5, 1.0]],
+                    ),
+                ),
+            ),
+            (
+                "StudentT",
+                StudentT(
+                    DigitalNetB2(2, randomize="FALSE"),
+                    loc=[0.0, 0.0],
+                    shape=[[1.0, 0.25], [0.25, 1.0]],
+                    df=5,
+                ),
+            ),
+        ]
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", ParameterWarning)
+            for name, measure in cases:
+                with self.subTest(name=name):
+                    samples = measure.gen_samples(2)
+                    self.assertTrue(np.isfinite(samples).all())
+
+    def test_inverse_cdf_clipping_preserves_interior_values(self):
+        endpoints_1d = np.array([[0.0], [1.0]])
+        points_1d = np.array([[0.1], [0.25], [0.5], [0.75], [0.9]])
+
+        johnsons_su = JohnsonsSU(DigitalNetB2(1, seed=7))
+        self.assertTrue(np.isfinite(johnsons_su._transform(endpoints_1d)).all())
+        johnsons_expected = johnsons_su._lam * np.sinh(
+            (scipy.stats.norm.ppf(points_1d) - johnsons_su._gamma)
+            / johnsons_su._delta
+        ) + johnsons_su._xi
+        np.testing.assert_allclose(
+            johnsons_su._transform(points_1d),
+            johnsons_expected,
+            rtol=0,
+            atol=0,
+        )
+
+        scipy_wrapper = SciPyWrapper(DigitalNetB2(1, seed=7), scipy.stats.norm())
+        self.assertTrue(np.isfinite(scipy_wrapper._transform(endpoints_1d)).all())
+        np.testing.assert_allclose(
+            scipy_wrapper._transform(points_1d),
+            scipy.stats.norm.ppf(points_1d),
+            rtol=0,
+            atol=0,
+        )
+
+        points_2d = np.array(
+            [[0.1, 0.25], [0.25, 0.5], [0.5, 0.75], [0.75, 0.9]]
+        )
+        brownian_bridge = BrownianMotion(
+            DigitalNetB2(2, seed=7),
+            decomp_type="BROWNIANBRIDGE",
+        )
+        endpoints_2d = np.array([[0.0, 0.0], [1.0, 1.0]])
+        self.assertTrue(
+            np.isfinite(brownian_bridge._transform(endpoints_2d)).all()
+        )
+        bridge_normals = scipy.stats.norm.ppf(points_2d)
+        bridge_expected = (
+            brownian_bridge.drift_time_vec_plus_init
+            + np.sqrt(brownian_bridge.diffusion)
+            * brownian_bridge._bridge_transform(bridge_normals)
+        )[..., brownian_bridge._output_order]
+        np.testing.assert_allclose(
+            brownian_bridge._transform(points_2d),
+            bridge_expected,
+            rtol=0,
+            atol=0,
+        )
+
     def test_out_of_domain_chain_preserves_deferred_errors(self):
         inner = Uniform(
             DigitalNetB2(1, seed=7), lower_bound=-0.1, upper_bound=0.75
@@ -218,13 +332,17 @@ class TestTrueMeasure(unittest.TestCase):
         self.assertTrue(incompatible.sub_compatibility_error)
         with self.assertRaisesRegex(
             ParameterError,
-            "The sub-transform range must be contained within the transform domain.",
+            re.escape(
+                "The sub-transform range must be contained within the transform domain."
+            ),
         ):
             incompatible.gen_samples(8)
 
         with self.assertRaisesRegex(
             ParameterError,
-            "The sub-sub-transform range must be contained within the sub-transform domain.",
+            re.escape(
+                "The nested sub-transform range must be contained within its transform domain."
+            ),
         ):
             Kumaraswamy(incompatible)
 
@@ -898,6 +1016,26 @@ class TestBernoulliCont(unittest.TestCase):
         np.testing.assert_allclose(weights[1:4], expected_in_support)
         self.assertTrue(np.all(weights >= 0))
 
+    def test_weight_support_mask_handles_dimensions_and_batches(self):
+        bernoulli = BernoulliCont(
+            DigitalNetB2(2, seed=7),
+            lam=[0.9, 0.8],
+        )
+        points = np.array(
+            [
+                [[0.0, 0.0], [0.5, 0.5], [1.0, 1.0]],
+                [[-0.1, 0.5], [0.5, 1.1], [0.25, 0.75]],
+            ]
+        )
+
+        weights = bernoulli._weight(points)
+
+        self.assertEqual(weights.shape, (2, 3))
+        self.assertTrue(np.all(weights[0] > 0))
+        np.testing.assert_allclose(weights[1, :2], 0.0)
+        self.assertGreater(weights[1, 2], 0.0)
+        self.assertTrue(np.all(weights >= 0))
+
 
 class TestUniformTriangle(unittest.TestCase):
     """Tests for UniformTriangle and _UniformTriangleAdapter."""
@@ -980,7 +1118,7 @@ class TestGaussian(unittest.TestCase):
 
     def test_unrandomized_direct_and_composed_samples_are_finite(self):
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+            warnings.simplefilter("ignore", ParameterWarning)
             direct = Gaussian(
                 DigitalNetB2(1, randomize="FALSE")
             ).gen_samples(2)
@@ -1447,7 +1585,6 @@ class TestBrownianMotion(unittest.TestCase):
 
     def test_brownian_bridge_warning_for_non_power_of_2(self):
         """BrownianBridge issues ParameterWarning for suboptimal d but still produces valid output."""
-        from qmcpy.util import ParameterWarning
         with self.assertWarns(ParameterWarning):
             bm = BrownianMotion(DigitalNetB2(6, seed=self.seed), decomp_type='BrownianBridge')
         samples = bm.gen_samples(4)

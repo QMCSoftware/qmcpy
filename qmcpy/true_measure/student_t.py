@@ -2,6 +2,7 @@ import numpy as np
 import scipy.stats as stats
 
 from ..util import ParameterError, DimensionError
+from .abstract_true_measure import _clip_unit_interval
 from .scipy_wrapper import SciPyWrapper
 
 
@@ -39,8 +40,7 @@ class _StudentTAdapter:
 
     @staticmethod
     def _clip_u(u):
-        eps = np.finfo(float).eps
-        return np.clip(u, eps, 1.0 - eps)
+        return _clip_unit_interval(u)
 
     def transform(self, u):
         u = np.asarray(u, dtype=float)

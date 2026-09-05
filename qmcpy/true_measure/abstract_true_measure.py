@@ -19,12 +19,12 @@ class AbstractTrueMeasure(object):
         if not hasattr(self, "domain"):
             raise ParameterError(
                 prefix
-                + "self.domain, 2xd ndarray of domain lower bounds (first col) and upper bounds (second col)"
+                + "self.domain, (d, 2) ndarray of domain lower bounds (first col) and upper bounds (second col)"
             )
         if not hasattr(self, "range"):
             raise ParameterError(
                 prefix
-                + "self.range, 2xd ndarray of range lower bounds (first col) and upper bounds (second col)"
+                + "self.range, (d, 2) ndarray of range lower bounds (first col) and upper bounds (second col)"
             )
         if not hasattr(self, "parameters"):
             self.parameters = []
@@ -156,7 +156,7 @@ class AbstractTrueMeasure(object):
                 self.sub_compatibility_error = True
             if self.transform.sub_compatibility_error:
                 raise ParameterError(
-                    "The sub-sub-transform range must be contained within the sub-transform domain."
+                    "The nested sub-transform range must be contained within its transform domain."
                 )
         else:
             raise ParameterError(
