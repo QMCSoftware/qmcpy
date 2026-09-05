@@ -1,4 +1,4 @@
-from .abstract_true_measure import AbstractTrueMeasure
+from .abstract_true_measure import AbstractTrueMeasure, _clip_unit_interval
 from ..util import DimensionError, ParameterError
 from ..discrete_distribution import DigitalNetB2
 import numpy as np
@@ -158,6 +158,7 @@ class Gaussian(AbstractTrueMeasure):
         self._mvn_scipy_cache = value
 
     def _transform(self, x):
+        x = _clip_unit_interval(x)
         return self.mu + np.einsum("...ij,kj->...ik", norm.ppf(x), self.a)
 
     def _weight(self, t):
