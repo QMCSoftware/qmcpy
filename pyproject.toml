@@ -201,6 +201,7 @@ includes = [
     "qmcpy/discrete_distribution/generating_params/korobov_p2_table.npz",
     "qmcpy/discrete_distribution/digital_net_b2/generating_matrices/*.npy",
     "qmcpy/discrete_distribution/lattice/generating_vectors/*.npy",
+    "qmcpy/discrete_distribution/kronecker/generating_vectors/*.txt",
     "qmcpy/util/qmcpy.mplstyle",
     ]
 excludes = []
