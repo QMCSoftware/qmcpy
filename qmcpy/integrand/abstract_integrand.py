@@ -66,7 +66,8 @@ class AbstractIntegrand(object):
             self.parameters = []
         if not hasattr(self, "multilevel"):
             self.multilevel = False
-        assert isinstance(self.multilevel, bool)
+        if not (isinstance(self.multilevel, bool)):
+            raise AssertionError
         if not hasattr(self, "max_level"):
             self.max_level = np.inf
         if not hasattr(self, "discrete_distrib"):
@@ -231,8 +232,10 @@ class AbstractIntegrand(object):
         if periodization_transform in ["C1", "C1SIN", "C2SIN", "C3SIN"]:
             xp[xp <= 0] = self.EPS
             xp[xp >= 1] = 1 - self.EPS
-        assert wp.shape == batch_shape
-        assert xp.shape == x.shape
+        if not (wp.shape == batch_shape):
+            raise AssertionError
+        if not (xp.shape == x.shape):
+            raise AssertionError
         # function evaluation with chain rule
         i = (None,) * d_indv_ndim + (...,)
         if self.true_measure == self.true_measure.transform:
@@ -240,25 +243,33 @@ class AbstractIntegrand(object):
             xtf = self.true_measure._jacobian_transform_r(
                 xp, return_weights=False
             )  # get transformed samples, equivalent to self.true_measure._transform_r(x)
-            assert xtf.shape == xp.shape
+            if not (xtf.shape == xp.shape):
+                raise AssertionError
             y = self._g(xtf, *args, **kwargs)
         else:  # using importance sampling --> need to compute pdf, jacobian(s), and weight explicitly
             pdf = self.discrete_distrib.pdf(xp)  # pdf of samples
-            assert pdf.shape == batch_shape
+            if not (pdf.shape == batch_shape):
+                raise AssertionError
             xtf, jacobians = self.true_measure.transform._jacobian_transform_r(
                 xp, return_weights=True
             )  # compute recursive transform+jacobian
-            assert xtf.shape == xp.shape
-            assert jacobians.shape == batch_shape
+            if not (xtf.shape == xp.shape):
+                raise AssertionError
+            if not (jacobians.shape == batch_shape):
+                raise AssertionError
             weight = self.true_measure._weight(xtf)  # weight based on the true measure
-            assert weight.shape == batch_shape
+            if not (weight.shape == batch_shape):
+                raise AssertionError
             gvals = self._g(xtf, *args, **kwargs)
-            assert gvals.shape == (self.d_indv + batch_shape)
+            if not (gvals.shape == (self.d_indv + batch_shape)):
+                raise AssertionError
             y = gvals * weight[i] / pdf[i] * jacobians[i]
-        assert y.shape == (self.d_indv + batch_shape)
+        if not (y.shape == (self.d_indv + batch_shape)):
+            raise AssertionError
         # account for periodization weight
         y = y * wp[i]
-        assert y.shape == (self.d_indv + batch_shape)
+        if not (y.shape == (self.d_indv + batch_shape)):
+            raise AssertionError
         return y
 
     def _g(self, t, *args, **kwargs):
@@ -275,10 +286,11 @@ class AbstractIntegrand(object):
         else:
             y = self._g2(t, comb_args=(args, kwargs))
         expected_y_shape = self.d_indv + t.shape[:-1]
-        assert y.shape == expected_y_shape, "expected y.shape to be %s but got %s" % (
-            str(expected_y_shape),
-            str(y.shape),
-        )
+        if not (y.shape == expected_y_shape):
+            raise AssertionError("expected y.shape to be %s but got %s" % (
+                str(expected_y_shape),
+                str(y.shape),
+            ))
         return y
 
     def _g2(self, t, comb_args=((), {})):

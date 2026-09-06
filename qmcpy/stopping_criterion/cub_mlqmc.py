@@ -107,7 +107,8 @@ class CubMLQMC(AbstractCubMLQMC):
         else:  # use absolute tolerance
             self.rmse_tol = float(abs_tol) / norm.ppf(1 - alpha / 2)
         self.alpha = alpha
-        assert 0 < self.alpha < 1
+        if not (0 < self.alpha < 1):
+            raise AssertionError
         self.n_init = n_init
         self.n_limit = n_limit
         self.levels_min = levels_min
@@ -121,7 +122,8 @@ class CubMLQMC(AbstractCubMLQMC):
             allow_vectorized_integrals=False,
         )
         self.replications = self.discrete_distrib.replications
-        assert self.replications >= 4, "require at least 4 replications"
+        if not (self.replications >= 4):
+            raise AssertionError("require at least 4 replications")
 
     def _validate_resume(self, data):
         self._validate_resume_data(data, required_fields=self._RESUME_REQUIRED_FIELDS)

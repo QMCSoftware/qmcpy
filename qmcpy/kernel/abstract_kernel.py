@@ -31,7 +31,8 @@ class AbstractKernel(object):
     def __init__(self, d, torchify, device, compile_call, compile_call_kwargs):
         super().__init__()
         # dimension
-        assert d % 1 == 0 and d > 0, "dimension d must be a positive int"
+        if not (d % 1 == 0 and d > 0):
+            raise AssertionError("dimension d must be a positive int")
         self.d = d
         # torchify
         self.torchify = torchify
@@ -51,7 +52,8 @@ class AbstractKernel(object):
             self.nptkwargs = {}
         self.batch_param_names = []
         if compile_call:
-            assert self.torchify, "compile_call requires torchify is True"
+            if not (self.torchify):
+                raise AssertionError("compile_call requires torchify is True")
             import torch
 
             self.compiled_parsed___call__ = torch.compile(
@@ -102,20 +104,24 @@ class AbstractKernel(object):
         Returns:
             Shape `y.shape=(x0+x1).shape[:-1]` kernel evaluations.
         """
-        assert isinstance(x0, self.nptarraytype)
-        assert isinstance(x0, self.nptarraytype)
-        assert (
+        if not (isinstance(x0, self.nptarraytype)):
+            raise AssertionError
+        if not (isinstance(x0, self.nptarraytype)):
+            raise AssertionError
+        if not (
             x0.shape[-1] == self.d
-        ), "the size of the last dimension of x0 must equal d=%d, got x0.shape=%s" % (
-            self.d,
-            str(tuple(x0.shape)),
-        )
-        assert (
+        ):
+            raise AssertionError("the size of the last dimension of x0 must equal d=%d, got x0.shape=%s" % (
+                self.d,
+                str(tuple(x0.shape)),
+            ))
+        if not (
             x1.shape[-1] == self.d
-        ), "the size of the last dimension of x1 must equal d=%d, got x1.shape=%s" % (
-            self.d,
-            str(tuple(x1.shape)),
-        )
+        ):
+            raise AssertionError("the size of the last dimension of x1 must equal d=%d, got x1.shape=%s" % (
+                self.d,
+                str(tuple(x1.shape)),
+            ))
         if beta0 is None:
             beta0 = self.npt.zeros((1, self.d), dtype=int, **self.nptkwargs)
         if beta1 is None:
@@ -126,37 +132,43 @@ class AbstractKernel(object):
             beta1 = self.nptarray(beta1)
         beta0 = self.npt.atleast_2d(beta0)
         beta1 = self.npt.atleast_2d(beta1)
-        assert (
+        if not (
             beta0.ndim == 2 and beta1.ndim == 2
-        ), "beta0 and beta1 must both be 2 dimensional"
+        ):
+            raise AssertionError("beta0 and beta1 must both be 2 dimensional")
         p = beta0.shape[0]
-        assert beta0.shape == (
+        if not (beta0.shape == (
             p,
             self.d,
-        ), "expected beta0.shape=(%d,%d) but got beta0.shape=%s" % (
+        )):
+            raise AssertionError("expected beta0.shape=(%d,%d) but got beta0.shape=%s" % (
+                p,
+                self.d,
+                str(tuple(beta0.shape)),
+            ))
+        if not (beta1.shape == (
             p,
             self.d,
-            str(tuple(beta0.shape)),
-        )
-        assert beta1.shape == (
-            p,
-            self.d,
-        ), "expected beta1.shape=(%d,%d) but got beta1.shape=%s" % (
-            p,
-            self.d,
-            str(tuple(beta1.shape)),
-        )
-        assert (beta0 % 1 == 0).all() and (beta0 >= 0).all(), "require int beta0 >= 0"
-        assert (beta1 % 1 == 0).all() and (beta1 >= 0).all(), "require int beta1 >= 0"
+        )):
+            raise AssertionError("expected beta1.shape=(%d,%d) but got beta1.shape=%s" % (
+                p,
+                self.d,
+                str(tuple(beta1.shape)),
+            ))
+        if not ((beta0 % 1 == 0).all() and (beta0 >= 0).all()):
+            raise AssertionError("require int beta0 >= 0")
+        if not ((beta1 % 1 == 0).all() and (beta1 >= 0).all()):
+            raise AssertionError("require int beta1 >= 0")
         if c is None:
             c = self.npt.ones(p, **self.nptkwargs)
         if not isinstance(c, self.nptarraytype):
             c = self.nptarray(c)
         c = self.npt.atleast_1d(c)
-        assert c.shape == (p,), "expected c.shape=(%d,) but got c.shape=%s" % (
-            p,
-            str(tuple(c.shape)),
-        )
+        if not (c.shape == (p,)):
+            raise AssertionError("expected c.shape=(%d,) but got c.shape=%s" % (
+                p,
+                str(tuple(c.shape)),
+            ))
         if not self.AUTOGRADKERNEL:
             batch_params = self.get_batch_params(max(x0.ndim - 1, x1.ndim - 1))
             k = self.compiled_parsed___call__(
@@ -169,7 +181,8 @@ class AbstractKernel(object):
                     x0, x1, batch_params, **kwargs
                 )
             else:  # requires autograd, so self.npt=torch
-                assert self.torchify, "autograd requires torchify=True"
+                if not (self.torchify):
+                    raise AssertionError("autograd requires torchify=True")
                 import torch
 
                 incoming_grad_enabled = torch.is_grad_enabled()
@@ -275,15 +288,18 @@ class AbstractKernel(object):
             Shape `y.shape=x.shape[:-1]` integral kernel evaluations.
         """
         if self.npt == np:
-            assert isinstance(x, np.ndarray)
+            if not (isinstance(x, np.ndarray)):
+                raise AssertionError
         else:  # self.npt==torch
-            assert isinstance(x, self.npt.Tensor)
-        assert (
+            if not (isinstance(x, self.npt.Tensor)):
+                raise AssertionError
+        if not (
             x.shape[-1] == self.d
-        ), "the size of the last dimension of x must equal d=%d, got x.shape=%s" % (
-            self.d,
-            str(tuple(x.shape)),
-        )
+        ):
+            raise AssertionError("the size of the last dimension of x must equal d=%d, got x.shape=%s" % (
+                self.d,
+                str(tuple(x.shape)),
+            ))
         batch_params = self.get_batch_params(x.ndim - 1)
         return self.parsed_single_integral_01d(x, batch_params)
 

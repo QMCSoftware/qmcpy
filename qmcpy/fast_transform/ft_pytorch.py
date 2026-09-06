@@ -40,7 +40,8 @@ def fftbr_torch(x):
         BRO-FFT values.
     """
     n = x.size(-1)
-    assert n & (n - 1) == 0  # require n is a power of 2
+    if not (n & (n - 1) == 0):  # require n is a power of 2
+        raise AssertionError
     m = int(np.log2(n))
     shape = list(x.shape)
     ndim = x.ndim
@@ -91,7 +92,8 @@ def ifftbr_torch(x):
         BRO-IFFT values.
     """
     n = x.size(-1)
-    assert n & (n - 1) == 0  # require n is a power of 2
+    if not (n & (n - 1) == 0):  # require n is a power of 2
+        raise AssertionError
     m = int(np.log2(n))
     shape = list(x.shape)
     ndim = x.ndim
@@ -109,7 +111,8 @@ def _fwht_torch(x):
     n = x.size(-1)
     if n <= 1:
         return y
-    assert n & (n - 1) == 0  # require n is a power of 2
+    if not (n & (n - 1) == 0):  # require n is a power of 2
+        raise AssertionError
     m = int(np.log2(n))
     it = torch.arange(n, dtype=torch.int64, device=x.device).reshape(
         [2] * m

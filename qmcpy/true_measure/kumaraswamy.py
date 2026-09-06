@@ -93,7 +93,8 @@ class Kumaraswamy(AbstractTrueMeasure):
             covariance=diags(variance, format="dia"),
         )
         super(Kumaraswamy, self).__init__()
-        assert self.alpha.shape == (self.d,) and self.beta.shape == (self.d,)
+        if not (self.alpha.shape == (self.d,) and self.beta.shape == (self.d,)):
+            raise AssertionError
 
     def _compute_moments(self):
         r"""Compute the marginal mean and variance of each coordinate.

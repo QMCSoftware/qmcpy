@@ -122,24 +122,30 @@ class MaternGP(Gaussian):
             raise ParameterError("points must be a one or two dimensional np.ndarray.")
         if points.ndim == 1:
             points = points[:, None]
-        assert (
+        if not (
             points.ndim == 2 and points.shape[0] == sampler.d
-        ), "points should be a two dimension array with the number of points equal to the dimension of the sampler"
+        ):
+            raise AssertionError("points should be a two dimension array with the number of points equal to the dimension of the sampler")
         mean = np.array(mean)
         if mean.size == 1:
             mean = mean.item() * np.ones(sampler.d)
-        assert mean.shape == (sampler.d,), "mean should be a length d vector"
-        assert np.isscalar(nu) and nu > 0, "nu should be a positive scalar"
+        if not (mean.shape == (sampler.d,)):
+            raise AssertionError("mean should be a length d vector")
+        if not (np.isscalar(nu) and nu > 0):
+            raise AssertionError("nu should be a positive scalar")
         length_scale = np.array(length_scale)
         if length_scale.size == 1:
             length_scale = length_scale.item() * np.ones(sampler.d)
-        assert (
+        if not (
             length_scale.shape == (sampler.d,) and (length_scale > 0).all()
-        ), "length_scale should be a vector with length equal to the dimension of the sampler"
-        assert (
+        ):
+            raise AssertionError("length_scale should be a vector with length equal to the dimension of the sampler")
+        if not (
             np.isscalar(variance) and variance > 0
-        ), "variance should be a positive scalar"
-        assert np.isscalar(nugget) and nugget > 0, "nugget should be a positive scalar"
+        ):
+            raise AssertionError("variance should be a positive scalar")
+        if not (np.isscalar(nugget) and nugget > 0):
+            raise AssertionError("nugget should be a positive scalar")
         self.points = points
         self.length_scale = length_scale
         self.nu = nu

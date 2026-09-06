@@ -137,8 +137,10 @@ class CubMLQMCCont(AbstractCubMLQMC):
         self._active_trace = None
         self.alpha = alpha
         self.inflate = inflate
-        assert self.inflate >= 1
-        assert 0 < self.alpha < 1
+        if not (self.inflate >= 1):
+            raise AssertionError
+        if not (0 < self.alpha < 1):
+            raise AssertionError
         # QMCPy Objs
         self.integrand = integrand
         self.true_measure = self.integrand.true_measure
@@ -148,7 +150,8 @@ class CubMLQMCCont(AbstractCubMLQMC):
             allow_vectorized_integrals=False,
         )
         self.replications = self.discrete_distrib.replications
-        assert self.replications >= 4, "require at least 4 replications"
+        if not (self.replications >= 4):
+            raise AssertionError("require at least 4 replications")
 
     def _validate_resume(self, data):
         self._validate_resume_data(data, required_fields=self._RESUME_REQUIRED_FIELDS)

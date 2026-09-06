@@ -52,7 +52,8 @@ class Sin1d(AbstractIntegrand):
         """
         self.sampler = sampler
         self.k = k
-        assert self.sampler.d == 1
+        if not (self.sampler.d == 1):
+            raise AssertionError
         self.true_measure = Uniform(
             self.sampler, lower_bound=0, upper_bound=2 * self.k * np.pi
         )

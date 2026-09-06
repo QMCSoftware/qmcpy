@@ -222,16 +222,22 @@ class DigitalNetAnyBases(AbstractLDDiscreteDistribution):
                 raise ParameterError("must supply bases_generating_matrices")
         else:
             self.type_bases_generating_matrices = "CUSTOM"
-            assert len(bases_generating_matrices)==2
+            if not (len(bases_generating_matrices)==2):
+                raise AssertionError
             bases,generating_matrices = bases_generating_matrices
-            assert isinstance(generating_matrices,np.ndarray)
-            assert generating_matrices.ndim==3 or generating_matrices.ndim==4
+            if not (isinstance(generating_matrices,np.ndarray)):
+                raise AssertionError
+            if not (generating_matrices.ndim==3 or generating_matrices.ndim==4):
+                raise AssertionError
             d_limit = generating_matrices.shape[1]
             if np.isscalar(bases):
-                assert bases>0
-                assert bases%1==0
+                if not (bases>0):
+                    raise AssertionError
+                if not (bases%1==0):
+                    raise AssertionError
                 bases = int(bases)*np.ones(d_limit,dtype=int)
-            assert bases.ndim==1 or bases.ndim==2
+            if not (bases.ndim==1 or bases.ndim==2):
+                raise AssertionError
         self.input_t = deepcopy(t)
         self.input_bases_generating_matrices = deepcopy(bases_generating_matrices)
         super(DigitalNetAnyBases,self).__init__(dimension,replications,seed,d_limit,n_lim)
@@ -242,16 +248,22 @@ class DigitalNetAnyBases(AbstractLDDiscreteDistribution):
         if self.randomize=="OWEN": self.randomize = "NUS"
         if self.randomize=="NONE": self.randomize = "FALSE"
         if self.randomize=="NO": self.randomize = "FALSE"
-        assert self.randomize in ["LMS DP","LMS DS","LMS","DP","DS","NUS","QRNG","FALSE"]
+        if not (self.randomize in ["LMS DP","LMS DS","LMS","DP","DS","NUS","QRNG","FALSE"]):
+            raise AssertionError
         if self.randomize=="QRNG":
-            assert self.type_bases_generating_matrices=="HALTON", "QRNG randomization is only applicable for the Halton generator."
-            assert self.replications==1, "QRNG requires replications=1"
+            if not (self.type_bases_generating_matrices=="HALTON"):
+                raise AssertionError("QRNG randomization is only applicable for the Halton generator.")
+            if not (self.replications==1):
+                raise AssertionError("QRNG requires replications=1")
             self.randu_d_32 = self.rng.uniform(size=(self.d,32))
         self.alpha = alpha
-        assert self.alpha>=1
-        assert self.alpha%1==0
+        if not (self.alpha>=1):
+            raise AssertionError
+        if not (self.alpha%1==0):
+            raise AssertionError
         if self.alpha>1:
-            assert (self.dvec==np.arange(self.d)).all(), "digital interlacing requires dimension is an int"
+            if not ((self.dvec==np.arange(self.d)).all()):
+                raise AssertionError("digital interlacing requires dimension is an int")
         self.dtalpha = self.alpha*self.d
         if self.type_bases_generating_matrices=="HALTON":
             self.bases = self.all_primes[self.dvec][None,:]
@@ -261,7 +273,8 @@ class DigitalNetAnyBases(AbstractLDDiscreteDistribution):
             self.t = self.m_max if self.m_max>t else t
             self.C = qmctoolscl.gdn_get_halton_generating_matrix(np.uint64(1),np.uint64(self.d),np.uint64(self._t_curr))
         elif self.type_bases_generating_matrices=="FAURE":
-            assert (self.dvec==np.arange(self.d)).all(), "Faure requires dimension is an int"
+            if not ((self.dvec==np.arange(self.d)).all()):
+                raise AssertionError("Faure requires dimension is an int")
             p = self.all_primes[np.argmax(self.all_primes>=self.d)]
             self.bases = p*np.ones((1,self.dtalpha),dtype=np.uint64)
             self.m_max = int(np.ceil(np.log(self.n_limit)/np.log(p)))
@@ -283,14 +296,16 @@ class DigitalNetAnyBases(AbstractLDDiscreteDistribution):
         else:
             self.bases = bases.astype(np.uint64)
             if self.bases.ndim==1: self.bases = self.bases[None,:]
-            assert self.bases.shape[1]>=self.dtalpha
+            if not (self.bases.shape[1]>=self.dtalpha):
+                raise AssertionError
             if self.alpha==1:
                 self.bases = self.bases[:,self.dvec]
             else:
                 self.bases = self.bases[:,:self.dtalpha]
             self.C = generating_matrices.astype(np.uint64)
             if self.C.ndim==3: self.C = self.C[None,:,:,:]
-            assert self.C.shape[1]>=self.dtalpha
+            if not (self.C.shape[1]>=self.dtalpha):
+                raise AssertionError
             if self.alpha==1:
                 self.C = self.C[:,self.dvec,:,:]
             else:
@@ -298,20 +313,29 @@ class DigitalNetAnyBases(AbstractLDDiscreteDistribution):
             self.m_max,self._t_curr = self.C.shape[-2:]
             if t is None: t = int(np.ceil(-np.log(2**(-63))/np.log(self.bases.min())))
             self.t = self.m_max if self.m_max>t else t
-            assert (0<=self.C).all()
-            assert (self.C<self.bases[:,:,None,None]).all()
+            if not ((0<=self.C).all()):
+                raise AssertionError
+            if not ((self.C<self.bases[:,:,None,None]).all()):
+                raise AssertionError
             self.C = np.ascontiguousarray(self.C)
             self.bases = np.ascontiguousarray(self.bases)
         if self.alpha>1:
-            assert (self.bases==self.bases[0,0]).all(), "alpha>1 performs digital interlacing which requires the same base across dimensions and replications."
+            if not ((self.bases==self.bases[0,0]).all()):
+                raise AssertionError("alpha>1 performs digital interlacing which requires the same base across dimensions and replications.")
             if warn and self.m_max!=self._t_curr:
                 warnings.warn("Digital interlacing is often performed on generating matrices with the number of columns (m_max = %d) equal to the number of rows (_t_curr = %d), but this is not the case. Ensure you are NOT setting alpha>1 when generating matrices are already interlaced."%(self.m_max,self._t_curr),ParameterWarning)
-        assert self.bases.ndim==2
-        assert self.bases.shape[-1]==self.dtalpha
-        assert self.bases.shape[0]==1 or self.bases.shape[0]==self.replications
-        assert self.C.ndim==4
-        assert self.C.shape[-3:]==(self.dtalpha,self.m_max,self._t_curr)
-        assert self.C.shape[0]==1 or self.C.shape[0]==self.replications
+        if not (self.bases.ndim==2):
+            raise AssertionError
+        if not (self.bases.shape[-1]==self.dtalpha):
+            raise AssertionError
+        if not (self.bases.shape[0]==1 or self.bases.shape[0]==self.replications):
+            raise AssertionError
+        if not (self.C.ndim==4):
+            raise AssertionError
+        if not (self.C.shape[-3:]==(self.dtalpha,self.m_max,self._t_curr)):
+            raise AssertionError
+        if not (self.C.shape[0]==1 or self.C.shape[0]==self.replications):
+            raise AssertionError
         r_b = self.bases.shape[0]
         r_C = self.C.shape[0]
         if self.randomize=="FALSE":
@@ -358,9 +382,12 @@ class DigitalNetAnyBases(AbstractLDDiscreteDistribution):
                 new_seeds = self._base_seed.spawn(self.replications*self.dtalpha)
                 self.rngs = np.array([np.random.Generator(np.random.SFC64(new_seeds[j])) for j in range(self.replications*self.dtalpha)]).reshape(self.replications,self.dtalpha)
                 self.root_nodes = np.array([qmctoolscl.NUSNode_gdn() for i in range(self.replications*self.dtalpha)]).reshape(self.replications,self.dtalpha)
-        assert self.C.ndim==4 and (self.C.shape[0]==1 or self.C.shape[0]==self.replications) and self.C.shape[1]==(self.dtalpha if self.randomize=="NUS" else self.d) and self.C.shape[2]==self.m_max and self.C.shape[3]==self._t_curr
-        assert self.bases.ndim==2 and (self.bases.shape[0]==1 or self.bases.shape[0]==self.replications) and self.bases.shape[1]==(self.dtalpha if self.randomize=="NUS" else self.d)
-        assert 0<self._t_curr<=self.t<=64
+        if not (self.C.ndim==4 and (self.C.shape[0]==1 or self.C.shape[0]==self.replications) and self.C.shape[1]==(self.dtalpha if self.randomize=="NUS" else self.d) and self.C.shape[2]==self.m_max and self.C.shape[3]==self._t_curr):
+            raise AssertionError
+        if not (self.bases.ndim==2 and (self.bases.shape[0]==1 or self.bases.shape[0]==self.replications) and self.bases.shape[1]==(self.dtalpha if self.randomize=="NUS" else self.d)):
+            raise AssertionError
+        if not (0<self._t_curr<=self.t<=64):
+            raise AssertionError
         if self.randomize=="FALSE": assert self.C.shape[0]==self.replications, "randomize='FALSE' but replications = %d does not equal the number of sets of generating vectors %d"%(self.replications,self.C.shape[0])
         if warn and (self.bases==2).all():
             warnings.warn("It is more efficient to use DigitalNetB2 instead of DigitalNetAnyBases when all bases are 2")

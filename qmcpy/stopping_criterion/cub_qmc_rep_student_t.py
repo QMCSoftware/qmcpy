@@ -253,7 +253,8 @@ class CubQMCRepStudentT(AbstractStoppingCriterion):
         # Set Attributes
         self.n_init = int(n_init)
         self.n_limit = int(n_limit)
-        assert isinstance(error_fun, str) or callable(error_fun)
+        if not (isinstance(error_fun, str) or callable(error_fun)):
+            raise AssertionError
         if isinstance(error_fun, str):
             if error_fun.upper() == "EITHER":
                 error_fun = lambda sv, abs_tol, rel_tol: np.maximum(
@@ -268,8 +269,10 @@ class CubQMCRepStudentT(AbstractStoppingCriterion):
         self.error_fun = error_fun
         self.alpha = alpha
         self.inflate = float(inflate)
-        assert self.inflate >= 1
-        assert 0 < self.alpha < 1
+        if not (self.inflate >= 1):
+            raise AssertionError
+        if not (0 < self.alpha < 1):
+            raise AssertionError
         # QMCPy Objs
         self.integrand = integrand
         self.true_measure = self.integrand.true_measure
@@ -278,12 +281,14 @@ class CubQMCRepStudentT(AbstractStoppingCriterion):
             allowed_distribs=[AbstractLDDiscreteDistribution],
             allow_vectorized_integrals=True,
         )
-        assert (
+        if not (
             self.integrand.discrete_distrib.replications > 1
-        ), "Require the discrete distribution has replications>1"
-        assert (
+        ):
+            raise AssertionError("Require the discrete distribution has replications>1")
+        if not (
             self.integrand.discrete_distrib.randomize != "FALSE"
-        ), "Require discrete distribution is randomized"
+        ):
+            raise AssertionError("Require discrete distribution is randomized")
         self.alphas_indv, _ = self._compute_indv_alphas(
             np.full(self.integrand.d_comb, self.alpha)
         )
@@ -429,7 +434,8 @@ class CubQMCRepStudentT(AbstractStoppingCriterion):
         self.integrand.true_measure.discrete_distrib = self.discrete_distrib
 
     def set_tolerance(self, abs_tol=None, rel_tol=None, rmse_tol=None):
-        assert rmse_tol is None, "rmse_tol not supported by this stopping criterion."
+        if not (rmse_tol is None):
+            raise AssertionError("rmse_tol not supported by this stopping criterion.")
         if abs_tol is not None:
             self.abs_tol = abs_tol
             self.abs_tols = np.full(self.integrand.d_comb, self.abs_tol)

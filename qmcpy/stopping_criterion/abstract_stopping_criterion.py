@@ -649,7 +649,8 @@ class AbstractStoppingCriterion(object):
         if isinstance(self.cv, AbstractIntegrand):
             self.cv = [self.cv]
             self.cv_mu = self.cv_mu[None, ...]
-        assert isinstance(self.cv, list), "cv must be a list of AbstractIntegrand objects"
+        if not (isinstance(self.cv, list)):
+            raise AssertionError("cv must be a list of AbstractIntegrand objects")
         for cv in self.cv:
             if (
                 (not isinstance(cv, AbstractIntegrand))

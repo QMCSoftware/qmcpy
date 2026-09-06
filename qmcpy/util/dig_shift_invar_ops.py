@@ -131,13 +131,16 @@ def weighted_walsh_funcs(alpha, xb, t):
             "The decay of the Walsh coefficients of smooth functions."
             Bulletin of the Australian Mathematical Society 80.3 (2009): 430-453.
     """
-    assert isinstance(alpha, int)
-    assert alpha in WEIGHTEDWALSHFUNCSPOS, (
-        "alpha = %d not in WEIGHTEDWALSHFUNCSPOS" % alpha
-    )
-    assert alpha in WEIGHTEDWALSHFUNCSZEROS, (
-        "alpha = %d not in WEIGHTEDWALSHFUNCSZEROS" % alpha
-    )
+    if not (isinstance(alpha, int)):
+        raise AssertionError
+    if not (alpha in WEIGHTEDWALSHFUNCSPOS):
+        raise AssertionError(
+            "alpha = %d not in WEIGHTEDWALSHFUNCSPOS" % alpha
+        )
+    if not (alpha in WEIGHTEDWALSHFUNCSZEROS):
+        raise AssertionError(
+            "alpha = %d not in WEIGHTEDWALSHFUNCSZEROS" % alpha
+        )
     if isinstance(xb, np.ndarray):
         np_or_torch = np
         y = np.ones(xb.shape)
@@ -265,8 +268,10 @@ def bin_from_numpy_to_torch(xb):
     Returns:
         binary representation of samples with `dtype=torch.int64`.
     """
-    assert xb.dtype == np.uint64
-    assert xb.max() <= (2**63 - 1), "require all xb < 2^63"
+    if not (xb.dtype == np.uint64):
+        raise AssertionError
+    if not (xb.max() <= (2**63 - 1)):
+        raise AssertionError("require all xb < 2^63")
     import torch
 
     return torch.from_numpy(xb.astype(np.int64))

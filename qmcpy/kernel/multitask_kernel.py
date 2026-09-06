@@ -362,7 +362,8 @@ class KernelMultiTask(AbstractKernel):
                 `requires_grad=True` for `diag`.
             method (str): `"LOW RANK"` or "CHOLESKY"
         """
-        assert isinstance(base_kernel, AbstractKernel)
+        if not (isinstance(base_kernel, AbstractKernel)):
+            raise AssertionError
         super().__init__(
             d=base_kernel.d,
             torchify=base_kernel.torchify,
@@ -372,13 +373,15 @@ class KernelMultiTask(AbstractKernel):
         )
         self.base_kernel = base_kernel
         self.AUTOGRADKERNEL = base_kernel.AUTOGRADKERNEL
-        assert np.isscalar(num_tasks) and num_tasks % 1 == 0
+        if not (np.isscalar(num_tasks) and num_tasks % 1 == 0):
+            raise AssertionError
         self.num_tasks = num_tasks
-        assert (
+        if not (
             np.isscalar(rank_factor)
             and rank_factor % 1 == 0
             and 0 <= rank_factor <= self.num_tasks
-        )
+        ):
+            raise AssertionError
         self.method = str(method).upper().replace("_", " ").strip()
         if self.method == "LOW RANK":
             if shape_factor is None:
@@ -409,7 +412,8 @@ class KernelMultiTask(AbstractKernel):
         )
         self.tfs_factor = tfs_factor
         if self.method == "LOW RANK":
-            assert self.raw_factor.shape[-2] == self.num_tasks
+            if not (self.raw_factor.shape[-2] == self.num_tasks):
+                raise AssertionError
         self.raw_diag = self.parse_assign_param(
             pname="diag",
             param=diag,

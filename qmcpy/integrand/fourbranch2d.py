@@ -54,7 +54,8 @@ class FourBranch2d(AbstractIntegrand):
                 - a true measure by which to compose a transform.
         """
         self.sampler = sampler
-        assert self.sampler.d == 2
+        if not (self.sampler.d == 2):
+            raise AssertionError
         self.true_measure = Uniform(self.sampler, lower_bound=-8, upper_bound=8)
         super(FourBranch2d, self).__init__(
             dimension_indv=(), dimension_comb=(), parallel=False

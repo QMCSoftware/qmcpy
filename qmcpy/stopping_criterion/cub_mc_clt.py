@@ -168,13 +168,16 @@ class CubMCCLT(AbstractStoppingCriterion):
         self.rel_tol = rel_tol
         self.n_init = n_init
         self.n_limit = n_limit
-        assert self.n_limit > (
+        if not (self.n_limit > (
             2 * self.n_init
-        ), "require n_limit is at least twic as much as n_init"
+        )):
+            raise AssertionError("require n_limit is at least twic as much as n_init")
         self.alpha = alpha
         self.inflate = inflate
-        assert self.inflate >= 1
-        assert 0 < self.alpha < 1
+        if not (self.inflate >= 1):
+            raise AssertionError
+        if not (0 < self.alpha < 1):
+            raise AssertionError
         # QMCPy Objs
         self.integrand = integrand
         self.true_measure = self.integrand.true_measure
@@ -183,13 +186,15 @@ class CubMCCLT(AbstractStoppingCriterion):
             allowed_distribs=[AbstractIIDDiscreteDistribution],
             allow_vectorized_integrals=True,
         )
-        assert self.integrand.d_indv == ()
+        if not (self.integrand.d_indv == ()):
+            raise AssertionError
         # control variates
         self._init_control_variates(control_variates, control_variate_means)
         if self.ncv > 0:
-            assert self.cv_mu.shape == (
+            if not (self.cv_mu.shape == (
                 (self.ncv,) + self.integrand.d_indv
-            ), "Control variate means should have shape (len(control variates),d_indv)."
+            )):
+                raise AssertionError("Control variate means should have shape (len(control variates),d_indv).")
             self.parameters += ["cv", "cv_mu"]
         self.z_star = -norm.ppf(self.alpha / 2.0)
 
@@ -276,7 +281,8 @@ class CubMCCLT(AbstractStoppingCriterion):
         return data.solution, data
 
     def set_tolerance(self, abs_tol=None, rel_tol=None, rmse_tol=None):
-        assert rmse_tol is None, "rmse_tol not supported by this stopping criterion."
+        if not (rmse_tol is None):
+            raise AssertionError("rmse_tol not supported by this stopping criterion.")
         if abs_tol is not None:
             self.abs_tol = abs_tol
         if rel_tol is not None:

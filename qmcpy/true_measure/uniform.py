@@ -95,7 +95,8 @@ class Uniform(AbstractTrueMeasure):
             (self.a.reshape((self.d, 1)), self.b.reshape((self.d, 1)))
         )
         super(Uniform, self).__init__()
-        assert self.a.shape == (self.d,) and self.b.shape == (self.d,)
+        if not (self.a.shape == (self.d,) and self.b.shape == (self.d,)):
+            raise AssertionError
 
     def _transform(self, x):
         return x * self.delta + self.a

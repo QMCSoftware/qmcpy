@@ -86,12 +86,13 @@ class JohnsonsSU(AbstractTrueMeasure):
         if not ((self._delta > 0).all() and (self._lam > 0).all()):
             raise ParameterError("delta and lam must be all be positive")
         super(JohnsonsSU, self).__init__()
-        assert (
+        if not (
             self._gamma.shape == (self.d,)
             and self._xi.shape == (self.d,)
             and self._delta.shape == (self.d,)
             and self._lam.shape == (self.d,)
-        )
+        ):
+            raise AssertionError
 
     def _transform(self, x):
         return self._lam * np.sinh((norm.ppf(x) - self._gamma) / self._delta) + self._xi

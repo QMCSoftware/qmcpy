@@ -15,7 +15,8 @@ def _parse_ft_input(x):
         n = shape[-1]
         x = x.reshape(-1, n)
         d = x.shape[0]
-    assert (n & (n - 1)) == 0  # require n is 0 or a power of 2
+    if not ((n & (n - 1)) == 0):  # require n is 0 or a power of 2
+        raise AssertionError
     return x, shape, d, n, n // 2
 
 

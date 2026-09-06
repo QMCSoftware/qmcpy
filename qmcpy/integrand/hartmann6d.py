@@ -54,7 +54,8 @@ class Hartmann6d(AbstractIntegrand):
                 - a true measure by which to compose a transform.
         """
         self.sampler = sampler
-        assert self.sampler.d == 6
+        if not (self.sampler.d == 6):
+            raise AssertionError
         self.true_measure = Uniform(self.sampler, lower_bound=0, upper_bound=1)
         super(Hartmann6d, self).__init__(
             dimension_indv=(), dimension_comb=(), parallel=False

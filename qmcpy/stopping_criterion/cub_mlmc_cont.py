@@ -141,8 +141,10 @@ class CubMLMCCont(AbstractCubMLMC):
         self._active_trace = None
         self.alpha = alpha
         self.inflate = inflate
-        assert self.inflate >= 1
-        assert 0 < self.alpha < 1
+        if not (self.inflate >= 1):
+            raise AssertionError
+        if not (0 < self.alpha < 1):
+            raise AssertionError
         super(CubMLMCCont, self).__init__(
             allowed_distribs=[AbstractIIDDiscreteDistribution],
             allow_vectorized_integrals=False,

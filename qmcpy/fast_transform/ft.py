@@ -26,7 +26,8 @@ def fftbr(x):
         BRO-FFT values.
     """
     n = x.shape[-1]
-    assert n & (n - 1) == 0  # require n is a power of 2
+    if not (n & (n - 1) == 0):  # require n is a power of 2
+        raise AssertionError
     m = int(np.log2(n))
     shape = list(x.shape)
     ndim = x.ndim
@@ -63,7 +64,8 @@ def ifftbr(x):
         BRO-IFFT values.
     """
     n = x.shape[-1]
-    assert n & (n - 1) == 0  # require n is a power of 2
+    if not (n & (n - 1) == 0):  # require n is a power of 2
+        raise AssertionError
     m = int(np.log2(n))
     shape = list(x.shape)
     ndim = x.ndim
@@ -98,7 +100,8 @@ def fwht(x):
     n = x.shape[-1]
     if n <= 1:
         return y
-    assert n & (n - 1) == 0  # require n is a power of 2
+    if not (n & (n - 1) == 0):  # require n is a power of 2
+        raise AssertionError
     m = int(np.log2(n))
     it = np.arange(n, dtype=np.int64).reshape(
         [2] * m

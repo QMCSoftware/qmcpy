@@ -72,7 +72,8 @@ class Gaussian(AbstractTrueMeasure):
         self._parse_gaussian_params(mean, covariance, decomp_type)
         self.range = np.array([[-np.inf, np.inf]])
         super(Gaussian, self).__init__()
-        assert self.mu.shape == (self.d,) and self.a.shape == (self.d, self.d)
+        if not (self.mu.shape == (self.d,) and self.a.shape == (self.d, self.d)):
+            raise AssertionError
 
     def _parse_gaussian_params(self, mean, covariance, decomp_type, lazy_decomp=False):
         self.decomp_type = decomp_type.upper()

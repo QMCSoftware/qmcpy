@@ -144,7 +144,8 @@ class AbstractTrueMeasure(object):
         self, n=None, n_min=None, n_max=None, return_weights=False, warn=True
     ):
         x = self.discrete_distrib(n=n, n_min=n_min, n_max=n_max, warn=warn)
-        assert isinstance(return_weights, bool)
+        if not (isinstance(return_weights, bool)):
+            raise AssertionError
         return self._jacobian_transform_r(x=x, return_weights=return_weights)
 
     def _jacobian_transform_r(self, x, return_weights):

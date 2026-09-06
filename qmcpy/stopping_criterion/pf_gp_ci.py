@@ -58,13 +58,15 @@ class SuggesterSimple(Suggester):
     def __init__(self, sampler):
         self.sampler = sampler
         if isinstance(self.sampler, AbstractTrueMeasure):
-            assert (self.sampler.range == [0, 1]).all()
+            if not ((self.sampler.range == [0, 1]).all()):
+                raise AssertionError
         self.n_min = 0
         super(SuggesterSimple, self).__init__()
 
     def suggest(self, n, d, gp, rng, **kwargs):
         n_max = self.n_min + n
-        assert d == self.sampler.d
+        if not (d == self.sampler.d):
+            raise AssertionError
         try:
             x = self.sampler(n_min=self.n_min, n_max=n_max)
         except TypeError:
@@ -252,23 +254,29 @@ class PFGPCI(AbstractStoppingCriterion):
         self.failure_above_threshold = failure_above_threshold
         self.abs_tol = abs_tol
         self.alpha = alpha
-        assert 0 < self.alpha < 1
+        if not (0 < self.alpha < 1):
+            raise AssertionError
         self.n_init = n_init
         self.init_samples = init_samples is not None
         if self.init_samples:
             self.x_init, self.y_init = init_samples
-            assert self.x_init.ndim == 2 and self.y_init.ndim == 1
-            assert self.x_init.shape[1] == self.d and len(self.y_init) == len(
+            if not (self.x_init.ndim == 2 and self.y_init.ndim == 1):
+                raise AssertionError
+            if not (self.x_init.shape[1] == self.d and len(self.y_init) == len(
                 self.x_init
-            )
-            assert self.n_init == len(self.x_init)
+            )):
+                raise AssertionError
+            if not (self.n_init == len(self.x_init)):
+                raise AssertionError
             self.ytf_init = self._affine_tf(self.y_init)
         self.batch_sampler = batch_sampler
         self.n_batch = n_batch
         self.n_limit = n_limit
-        assert self.n_limit >= self.n_init
+        if not (self.n_limit >= self.n_init):
+            raise AssertionError
         self.n_approx = n_approx
-        assert (self.n_approx + self.n_init) <= 2**32
+        if not ((self.n_approx + self.n_init) <= 2**32):
+            raise AssertionError
         self.gpytorch_prior_mean = gpytorch_prior_mean
         self.gpytorch_prior_cov = gpytorch_prior_cov
         self.gpytorch_likelihood = gpytorch_likelihood

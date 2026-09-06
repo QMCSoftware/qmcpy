@@ -77,7 +77,8 @@ class BoxIntegral(AbstractIntegrand):
         """
         self.parameters = ["s"]
         self.s = np.array(s)
-        assert self.s.size > 0
+        if not (self.s.size > 0):
+            raise AssertionError
         self.sampler = sampler
         self.true_measure = Uniform(self.sampler)
         self.s_over_2 = self.s / 2

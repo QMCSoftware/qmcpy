@@ -121,7 +121,8 @@ class CubMLMC(AbstractCubMLMC):
         else:  # use absolute tolerance
             self.rmse_tol = float(abs_tol) / norm.ppf(1 - alpha / 2)
         self.alpha = alpha
-        assert 0 < self.alpha < 1
+        if not (0 < self.alpha < 1):
+            raise AssertionError
         self.n_init = n_init
         self.n_limit = n_limit
         self.levels_min = levels_min

@@ -362,7 +362,8 @@ class SciPyWrapper(AbstractTrueMeasure):
         self.range = np.asarray(ranges)
         self._is_joint = False
 
-        assert len(self.sds) == self.d
+        if not (len(self.sds) == self.d):
+            raise AssertionError
 
     def _sanity_check_univariate(self, dist):
         """Light sanity check for a custom 1D distribution.

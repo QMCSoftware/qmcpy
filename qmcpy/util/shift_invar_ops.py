@@ -18,9 +18,11 @@ class Polynomial:
             e.g. coeffs = [a, b, c] corresponds to the quadratic polynomial
             a*x**2 + b*x + c
         """
-        assert isinstance(coeffs, list)
+        if not (isinstance(coeffs, list)):
+            raise AssertionError
         self.order = len(coeffs)
-        assert self.order >= 1
+        if not (self.order >= 1):
+            raise AssertionError
         self.coeffs = coeffs
 
     def __call__(self, x):
@@ -108,8 +110,10 @@ def bernoulli_poly(n, x):
     Returns:
         Bernoulli polynomial values.
     """
-    assert isinstance(n, int)
-    assert n in BERNOULLIPOLYSDICT, "n = %d not in BERNOULLIPOLYSDICT" % n
+    if not (isinstance(n, int)):
+        raise AssertionError
+    if not (n in BERNOULLIPOLYSDICT):
+        raise AssertionError("n = %d not in BERNOULLIPOLYSDICT" % n)
     bpoly = BERNOULLIPOLYSDICT[n]
     y = bpoly(x)
     return y

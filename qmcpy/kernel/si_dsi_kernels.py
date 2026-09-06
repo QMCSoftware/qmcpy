@@ -402,8 +402,10 @@ class KernelShiftInvar(AbstractSIDSIKernel):
             tfs_weights=tfs_weights,
             requires_grad_weights=requires_grad_weights,
         )
-        assert self.alpha.shape == (self.d,)
-        assert all(int(alphaj) in BERNOULLIPOLYSDICT for alphaj in self.alpha)
+        if not (self.alpha.shape == (self.d,)):
+            raise AssertionError
+        if not (all(int(alphaj) in BERNOULLIPOLYSDICT for alphaj in self.alpha)):
+            raise AssertionError
         if self.torchify:
             import torch
 
@@ -415,9 +417,10 @@ class KernelShiftInvar(AbstractSIDSIKernel):
         p = len(beta0)
         betasum = beta0 + beta1
         order = 2 * self.alpha - betasum
-        assert (
+        if not ((
             2 <= order
-        ).all(), "order must all be at least 2, but got order = %s" % str(order)
+        ).all()):
+            raise AssertionError("order must all be at least 2, but got order = %s" % str(order))
         coeffs = (-1) ** (self.alpha + beta1 + 1) * self.npt.exp(
             2 * self.alpha * np.log(2 * np.pi) - self.lgamma(order + 1)
         )
@@ -628,7 +631,8 @@ class KernelShiftInvarCombined(AbstractSIDSIKernel):
             tfs_weights=tfs_weights,
             requires_grad_weights=requires_grad_weights,
         )
-        assert self.alpha.shape[-2:] == (4, d)
+        if not (self.alpha.shape[-2:] == (4, d)):
+            raise AssertionError
         if self.torchify:
             import torch
 
@@ -642,9 +646,10 @@ class KernelShiftInvarCombined(AbstractSIDSIKernel):
 
     def get_per_dim_components(self, x0, x1, beta0, beta1):
         p = len(beta0)
-        assert (beta0 == 0).all() and (
+        if not ((beta0 == 0).all() and (
             beta1 == 0
-        ).all(), "KernelDSICombined does not support derivatives"
+        ).all()):
+            raise AssertionError("KernelDSICombined does not support derivatives")
         delta = (x0 - x1) % 1
         kparts = [None] * 4
         kparts[0] = bernoulli_poly(1, delta)
@@ -898,9 +903,11 @@ class KernelDigShiftInvar(AbstractSIDSIKernel):
             tfs_weights=tfs_weights,
             requires_grad_weights=requires_grad_weights,
         )
-        assert self.alpha.shape == (self.d,)
+        if not (self.alpha.shape == (self.d,)):
+            raise AssertionError
         self.set_t(t)
-        assert all(1 <= int(alphaj) <= 4 for alphaj in self.alpha)
+        if not (all(1 <= int(alphaj) <= 4 for alphaj in self.alpha)):
+            raise AssertionError
 
     @property
     def t(self):
@@ -912,11 +919,14 @@ class KernelDigShiftInvar(AbstractSIDSIKernel):
         if t is None:
             self._t = t
         else:
-            assert t % 1 == 0
+            if not (t % 1 == 0):
+                raise AssertionError
             if self.torchify:
-                assert 0 <= t <= 63  # torch only supports torch.int64
+                if not (0 <= t <= 63):  # torch only supports torch.int64
+                    raise AssertionError
             else:
-                assert 0 <= t <= 64  # numpy supports np.uint64
+                if not (0 <= t <= 64):  # numpy supports np.uint64
+                    raise AssertionError
             self._t = t
 
     def get_per_dim_components(self, x0, x1, beta0, beta1):
@@ -926,13 +936,15 @@ class KernelDigShiftInvar(AbstractSIDSIKernel):
         p = len(beta0)
         betasum = beta0 + beta1
         order = self.alpha - betasum
-        assert (1 <= order).all() and (order <= 4).all(), (
-            "order must all be between 2 and 4, but got order = %s. Try increasing alpha"
-            % str(order)
-        )
-        assert not (
+        if not ((1 <= order).all() and (order <= 4).all()):
+            raise AssertionError(
+                "order must all be between 2 and 4, but got order = %s. Try increasing alpha"
+                % str(order)
+            )
+        if not (not (
             (order == 1) * (self.alpha > 1)
-        ).any(), "taking the derivative of the order 2 digitally shift invariant kernel is not supported"
+        ).any()):
+            raise AssertionError("taking the derivative of the order 2 digitally shift invariant kernel is not supported")
         ind = 1.0 * (betasum > 0)
         delta = x0 ^ x1
         kparts = [None] * p
@@ -1194,20 +1206,24 @@ class KernelDigShiftInvarAdaptiveAlpha(AbstractSIDSIKernel):
         if t is None:
             self._t = t
         else:
-            assert t % 1 == 0
+            if not (t % 1 == 0):
+                raise AssertionError
             if self.torchify:
-                assert 0 <= t <= 63  # torch only supports torch.int64
+                if not (0 <= t <= 63):  # torch only supports torch.int64
+                    raise AssertionError
             else:
-                assert 0 <= t <= 64  # numpy supports np.uint64
+                if not (0 <= t <= 64):  # numpy supports np.uint64
+                    raise AssertionError
             self._t = t
 
     def get_per_dim_components(self, x0, x1, beta0, beta1):
         t = self.t
         x0 = to_bin(x0, t)
         x1 = to_bin(x1, t)
-        assert (beta0 == 0).all() and (
+        if not ((beta0 == 0).all() and (
             beta1 == 0
-        ).all(), "KernelDigShiftInvarAdaptiveAlpha does not support taking derivatives"
+        ).all()):
+            raise AssertionError("KernelDigShiftInvarAdaptiveAlpha does not support taking derivatives")
         p = len(beta0)
         delta = x0 ^ x1
         flog2delta = self.npt.zeros(delta.shape, **self.nptkwargs)  # should be -inf
@@ -1429,7 +1445,8 @@ class KernelDigShiftInvarCombined(AbstractSIDSIKernel):
             requires_grad_weights=requires_grad_weights,
         )
         self.set_t(t)
-        assert self.alpha.shape[-2:] == (4, d)
+        if not (self.alpha.shape[-2:] == (4, d)):
+            raise AssertionError
 
     @property
     def t(self):
@@ -1441,11 +1458,14 @@ class KernelDigShiftInvarCombined(AbstractSIDSIKernel):
         if t is None:
             self._t = t
         else:
-            assert t % 1 == 0
+            if not (t % 1 == 0):
+                raise AssertionError
             if self.torchify:
-                assert 0 <= t <= 63  # torch only supports torch.int64
+                if not (0 <= t <= 63):  # torch only supports torch.int64
+                    raise AssertionError
             else:
-                assert 0 <= t <= 64  # numpy supports np.uint64
+                if not (0 <= t <= 64):  # numpy supports np.uint64
+                    raise AssertionError
             self._t = t
 
     def get_per_dim_components(self, x0, x1, beta0, beta1):
@@ -1453,9 +1473,10 @@ class KernelDigShiftInvarCombined(AbstractSIDSIKernel):
         x0 = to_bin(x0, t)
         x1 = to_bin(x1, t)
         p = len(beta0)
-        assert (beta0 == 0).all() and (
+        if not ((beta0 == 0).all() and (
             beta1 == 0
-        ).all(), "KernelDSICombined does not support derivatives"
+        ).all()):
+            raise AssertionError("KernelDSICombined does not support derivatives")
         delta = x0 ^ x1
         kparts = [None] * 4
         flog2deltaj = -self.npt.inf * self.npt.ones(delta.shape, **self.nptkwargs)

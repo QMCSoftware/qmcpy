@@ -315,34 +315,40 @@ class FinancialOption(AbstractIntegrand):
         if self.level is not None:
             self.multilevel = True
             self.parameters += ["level", "d_coarsest"]
-            assert np.isscalar(self.level) and self.level % 1 == 0
-            assert (
+            if not (np.isscalar(self.level) and self.level % 1 == 0):
+                raise AssertionError
+            if not (
                 np.isscalar(self.d_coarsest)
                 and self.d_coarsest % 1 == 0
                 and d_coarsest > 0
                 and np.log2(d_coarsest) % 1 == 0
-            ), "d_coarsest must be an integer power of 2"
+            ):
+                raise AssertionError("d_coarsest must be an integer power of 2")
             self.level = int(self.level)
             self.d_coarsest = int(self.d_coarsest)
-            assert (
+            if not (
                 self.sampler.d == self.d_coarsest * 2**self.level
-            ), "the dimension of the sampler must equal d_coarsest*2^level = %d" % (
-                d_coarsest * 2**self.level
-            )
+            ):
+                raise AssertionError("the dimension of the sampler must equal d_coarsest*2^level = %d" % (
+                    d_coarsest * 2**self.level
+                ))
             self.cost = self.d_coarsest * 2**self.level
             dim_shape = (2,)
         else:
             self.multilevel = False
             dim_shape = ()
         self.call_put = str(call_put).upper()
-        assert self.call_put in ["CALL", "PUT"], "invalid call_put = %s" % self.call_put
+        if not (self.call_put in ["CALL", "PUT"]):
+            raise AssertionError("invalid call_put = %s" % self.call_put)
         self.option = str(option).upper()
         self.asian_mean = str(asian_mean).upper()
         self.asian_mean_quadrature_rule = str(asian_mean_quadrature_rule).upper()
         self.barrier_in_out = str(barrier_in_out).upper()
-        assert np.isscalar(barrier_price)
+        if not (np.isscalar(barrier_price)):
+            raise AssertionError
         self.barrier_price = float(barrier_price)
-        assert np.isscalar(digital_payout) and digital_payout > 0
+        if not (np.isscalar(digital_payout) and digital_payout > 0):
+            raise AssertionError
         self.digital_payout = float(digital_payout)
         if self.option == "EUROPEAN":
             self.payoff = (
@@ -352,13 +358,15 @@ class FinancialOption(AbstractIntegrand):
             )
         elif self.option == "ASIAN":
             self.parameters += ["asian_mean"]
-            assert self.asian_mean in ["ARITHMETIC", "GEOMETRIC"], (
-                "invalid asian_mean = %s" % self.asian_mean
-            )
-            assert self.asian_mean_quadrature_rule in ["TRAPEZOIDAL", "RIGHT"], (
-                "invalid asian_mean_quadrature_rule = %s"
-                % self.asian_mean_quadrature_rule
-            )
+            if not (self.asian_mean in ["ARITHMETIC", "GEOMETRIC"]):
+                raise AssertionError(
+                    "invalid asian_mean = %s" % self.asian_mean
+                )
+            if not (self.asian_mean_quadrature_rule in ["TRAPEZOIDAL", "RIGHT"]):
+                raise AssertionError(
+                    "invalid asian_mean_quadrature_rule = %s"
+                    % self.asian_mean_quadrature_rule
+                )
             if self.asian_mean == "ARITHMETIC":
                 if self.asian_mean_quadrature_rule == "TRAPEZOIDAL":
                     self.payoff = (
@@ -627,10 +635,11 @@ class FinancialOption(AbstractIntegrand):
                     term2 / denom
                 )
         elif self.option == "ASIAN":
-            assert (
+            if not (
                 self.asian_mean == "GEOMETRIC"
                 and self.asian_mean_quadrature_rule == "RIGHT"
-            ), "exact value for Asian options only implemented for self.asian_mean=='GEOMETRIC' and self.asian_mean_quadrature_rule=='RIGHT'"
+            ):
+                raise AssertionError("exact value for Asian options only implemented for self.asian_mean=='GEOMETRIC' and self.asian_mean_quadrature_rule=='RIGHT'")
             Tbar = (1 + 1 / self.d) * self.t_final / 2
             sigmabar = self.volatility * np.sqrt((2 + 1 / self.d) / 3)
             rbar = self.interest_rate + (sigmabar**2 - self.volatility**2) / 2
@@ -658,9 +667,10 @@ class FinancialOption(AbstractIntegrand):
             Exact value of the integral.
         """
         if self.option == "ASIAN":
-            assert (
+            if not (
                 self.asian_mean == "GEOMETRIC"
-            ), "get_exact_value_inf_dim for the Asian option only available for self.asian_mean=='GEOMETRIC'"
+            ):
+                raise AssertionError("get_exact_value_inf_dim for the Asian option only available for self.asian_mean=='GEOMETRIC'")
             sigma_g = self.volatility / np.sqrt(3)
             b = 1 / 2 * (self.interest_rate - 1 / 2 * sigma_g**2)
             d1 = (

@@ -168,7 +168,8 @@ class KorobovLattice(AbstractLDDiscreteDistribution):
             self.randomize = "FALSE"
         if self.randomize == "NO":
             self.randomize = "FALSE"
-        assert self.randomize in ["SHIFT", "FALSE"]
+        if not (self.randomize in ["SHIFT", "FALSE"]):
+            raise AssertionError
         if self.randomize not in ("SHIFT", "FALSE"):
             raise ParameterError(
             f"randomize must be one of 'SHIFT', 'TRUE', 'FALSE', 'NONE', or 'NO' (case-insensitive), got {randomize!r}."

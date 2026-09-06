@@ -86,7 +86,8 @@ class Ishigami(AbstractIntegrand):
     @staticmethod
     def _exact_sensitivity_indices(indices, a, b):
         a, b = np.atleast_1d(a), np.atleast_1d(b)
-        assert a.shape == b.shape and a.ndim == 1 and b.ndim == 1
+        if not (a.shape == b.shape and a.ndim == 1 and b.ndim == 1):
+            raise AssertionError
         mu = a / 2
         m2 = 1 / 2 + 3 / 8 * a**2 + np.pi**4 / 5 * b + np.pi**8 / 18 * b**2
         tau_closed = {
@@ -125,7 +126,8 @@ class Ishigami(AbstractIntegrand):
         x = np.atleast_2d(x)
         n = len(x)
         a, b = np.atleast_1d(a), np.atleast_1d(b)
-        assert x.ndim == 2 and x.shape == (n, 3) and a.shape == (1,) and b.shape == (1,)
+        if not (x.ndim == 2 and x.shape == (n, 3) and a.shape == (1,) and b.shape == (1,)):
+            raise AssertionError
         x0, x1, x2 = x[:, 0], x[:, 1], x[:, 2]
         fus = {
             repr([]): a / 2,

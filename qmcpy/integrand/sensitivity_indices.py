@@ -125,7 +125,8 @@ class SensitivityIndices(AbstractIntegrand):
         self.parameters = ["indices"]
         self.integrand = integrand
         self.dtilde = self.integrand.d
-        assert self.dtilde > 1, "SensitivityIndices does not make sense for d=1"
+        if not (self.dtilde > 1):
+            raise AssertionError("SensitivityIndices does not make sense for d=1")
         self.indices = indices
         if isinstance(self.indices, str) and self.indices == "singletons":
             self.indices = np.eye(self.dtilde, dtype=bool)
@@ -139,14 +140,16 @@ class SensitivityIndices(AbstractIntegrand):
                     idxs_r[i, comb] = True
                 self.indices = np.vstack([self.indices, idxs_r])
         self.indices = np.atleast_1d(self.indices)
-        assert (
+        if not (
             self.indices.dtype == bool
             and self.indices.ndim >= 1
             and self.indices.shape[-1] == self.dtilde
-        )
-        assert (
+        ):
+            raise AssertionError
+        if not (
             not (self.indices == self.indices[..., 0, None]).all(-1).any()
-        ), "indices cannot include the emptyset or the set of all dimensions"
+        ):
+            raise AssertionError("indices cannot include the emptyset or the set of all dimensions")
         self.not_indices = ~self.indices
         # sensitivity_index
         self.true_measure = self.integrand.true_measure
@@ -168,7 +171,8 @@ class SensitivityIndices(AbstractIntegrand):
             del kwargs["compute_flags"]
         else:
             compute_flags = np.ones(self.d_indv, dtype=bool)
-        assert compute_flags.shape == self.d_indv
+        if not (compute_flags.shape == self.d_indv):
+            raise AssertionError
         z = x[..., self.dtilde :]
         x = x[..., : self.dtilde]
         v = np.zeros_like(x)

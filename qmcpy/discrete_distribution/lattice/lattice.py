@@ -196,7 +196,8 @@ class Lattice(AbstractLDDiscreteDistribution):
             n_limit = 1048576
         elif isinstance(generating_vector, str):
             self.gen_vec_source = generating_vector
-            assert generating_vector[-4:] == ".txt"
+            if not (generating_vector[-4:] == ".txt"):
+                raise AssertionError
             local_root = dirname(abspath(__file__)) + "/generating_vectors/"
             repos = DataSource()
             if repos.exists(local_root + generating_vector):
@@ -254,11 +255,13 @@ class Lattice(AbstractLDDiscreteDistribution):
             n_limit = int(2**m_max)
             d_limit = int(gen_vec.shape[-1])
         elif isinstance(generating_vector, int):
-            assert 1 < generating_vector < 27, "int generating vector out of range"
+            if not (1 < generating_vector < 27):
+                raise AssertionError("int generating vector out of range")
             n_limit = 2**generating_vector
-            assert isinstance(
+            if not (isinstance(
                 dimension, int
-            ), "random generating vector requires int dimension"
+            )):
+                raise AssertionError("random generating vector requires int dimension")
             d_limit = dimension
         else:
             raise ParameterError(
@@ -281,20 +284,23 @@ class Lattice(AbstractLDDiscreteDistribution):
                     + 1,
                 ]
             ).copy()
-        assert isinstance(gen_vec, np.ndarray)
+        if not (isinstance(gen_vec, np.ndarray)):
+            raise AssertionError
         gen_vec = np.atleast_2d(gen_vec)
-        assert (
+        if not (
             gen_vec.ndim == 2
             and gen_vec.shape[1] >= self.d
             and (gen_vec.shape[0] == 1 or gen_vec.shape[0] == self.replications)
-        ), "invalid gen_vec.shape = %s" % str(gen_vec.shape)
+        ):
+            raise AssertionError("invalid gen_vec.shape = %s" % str(gen_vec.shape))
         self.gen_vec = gen_vec[:, self.dvec].copy()
         self.order = str(order).upper().strip().replace("_", " ")
         if self.order == "GRAY CODE":
             self.order = "GRAY"
         if self.order == "NATURAL":
             self.order = "RADICAL INVERSE"
-        assert self.order in ["LINEAR", "RADICAL INVERSE", "GRAY"]
+        if not (self.order in ["LINEAR", "RADICAL INVERSE", "GRAY"]):
+            raise AssertionError
         self.randomize = str(randomize).upper()
         if self.randomize == "TRUE":
             self.randomize = "SHIFT"
@@ -302,14 +308,16 @@ class Lattice(AbstractLDDiscreteDistribution):
             self.randomize = "FALSE"
         if self.randomize == "NO":
             self.randomize = "FALSE"
-        assert self.randomize in ["SHIFT", "FALSE"]
+        if not (self.randomize in ["SHIFT", "FALSE"]):
+            raise AssertionError
         if self.randomize == "SHIFT":
             self.shift = self.rng.uniform(size=(self.replications, self.d))
         if self.randomize == "FALSE":
-            assert self.gen_vec.shape[0] == self.replications, (
-                "randomize='FALSE' but replications = %d does not equal the number of sets of generating vectors %d"
-                % (self.replications, self.gen_vec.shape[0])
-            )
+            if not (self.gen_vec.shape[0] == self.replications):
+                raise AssertionError(
+                    "randomize='FALSE' but replications = %d does not equal the number of sets of generating vectors %d"
+                    % (self.replications, self.gen_vec.shape[0])
+                )
 
     def _gen_samples(self, n_min, n_max, return_binary, warn):
         if return_binary:
@@ -325,14 +333,16 @@ class Lattice(AbstractLDDiscreteDistribution):
         n_start = np.uint64(n_min)
         x = np.empty((r_x, n, d), dtype=np.float64)
         if self.order == "LINEAR":
-            assert (
+            if not (
                 r_x == 1
-            ), "lattice linear currently requires there be only 1 generating matrix"
+            ):
+                raise AssertionError("lattice linear currently requires there be only 1 generating matrix")
             x = self._gail_linear(n_min, n_max)[None, :, :]
         elif self.order == "RADICAL INVERSE":
-            assert (n_min == 0 or (n_min & (n_min - 1)) == 0) and (
+            if not ((n_min == 0 or (n_min & (n_min - 1)) == 0) and (
                 n_max == 0 or (n_max & (n_max - 1)) == 0
-            ), "lattice in natural order requires n_min and n_max be 0 or powers of 2"
+            )):
+                raise AssertionError("lattice in natural order requires n_min and n_max be 0 or powers of 2")
             _ = qmctoolscl.lat_gen_natural(
                 r_x, n, d, n_start, self.gen_vec, x, backend="c"
             )
@@ -341,7 +351,8 @@ class Lattice(AbstractLDDiscreteDistribution):
                 r_x, n, d, n_start, self.gen_vec, x, backend="c"
             )
         else:
-            assert False, "invalid lattice order"
+            if not (False):
+                raise AssertionError("invalid lattice order")
         if self.randomize == "FALSE":
             xr = x
         elif self.randomize == "SHIFT":

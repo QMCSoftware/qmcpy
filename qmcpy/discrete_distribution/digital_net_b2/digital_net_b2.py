@@ -330,7 +330,8 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
             gen_mats = gen_mats >> compat_shift
         elif isinstance(generating_matrices, str):
             self.gen_mats_source = generating_matrices
-            assert generating_matrices[-4:] == ".txt"
+            if not (generating_matrices[-4:] == ".txt"):
+                raise AssertionError
             local_root = dirname(abspath(__file__)) + "/generating_matrices/"
             repos = DataSource()
             if repos.exists(local_root + generating_matrices):
@@ -374,7 +375,8 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
             contents = [line.split("#", 1)[0] for line in contents if line[0] != "#"]
             datafile.close()
             msb = True
-            assert int(contents[0]) == 2, "DigitalNetB2 requires base=2 "  # base 2
+            if not (int(contents[0]) == 2):  # base 2
+                raise AssertionError("DigitalNetB2 requires base=2 ")
             d_limit = int(contents[1])
             n_limit = int(contents[2])
             self._t_curr = int(contents[3])
@@ -393,17 +395,20 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
             )[None, :]
         elif isinstance(generating_matrices, np.ndarray):
             self.gen_mats_source = "custom"
-            assert generating_matrices.ndim == 2 or generating_matrices.ndim == 3
+            if not (generating_matrices.ndim == 2 or generating_matrices.ndim == 3):
+                raise AssertionError
             gen_mats = (
                 generating_matrices[None, :, :]
                 if generating_matrices.ndim == 2
                 else generating_matrices
             )
-            assert isinstance(
+            if not (isinstance(
                 msb, bool
-            ), "when generating_matrices is a np.ndarray you must set either msb=True (for most significant bit ordering) or msb=False (for least significant bit ordering which will require a bit reversal)"
+            )):
+                raise AssertionError("when generating_matrices is a np.ndarray you must set either msb=True (for most significant bit ordering) or msb=False (for least significant bit ordering which will require a bit reversal)")
             gen_mat_max = gen_mats.max()
-            assert gen_mat_max > 0, "generating matrix must have positive ints"
+            if not (gen_mat_max > 0):
+                raise AssertionError("generating matrix must have positive ints")
             self._t_curr = int(np.ceil(np.log2(gen_mat_max + 1)))
             d_limit = gen_mats.shape[1]
             n_limit = int(2 ** (gen_mats.shape[2]))
@@ -414,12 +419,13 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
         super(DigitalNetB2, self).__init__(
             dimension, replications, seed, d_limit, n_limit
         )
-        assert (
+        if not (
             gen_mats.ndim == 3
             and gen_mats.shape[1] >= self.d
             and (gen_mats.shape[0] == 1 or gen_mats.shape[0] == self.replications)
             and gen_mats.shape[2] > 0
-        ), "invalid gen_mats.shape = %s" % str(gen_mats.shape)
+        ):
+            raise AssertionError("invalid gen_mats.shape = %s" % str(gen_mats.shape))
         self.m_max = int(gen_mats.shape[-1])
         if isinstance(generating_matrices, np.ndarray) and (not msb):
             qmctoolscl.dnb2_gmat_lsb_to_msb(
@@ -436,18 +442,23 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
             self.order = "GRAY"
         if self.order == "NATURAL":
             self.order = "RADICAL INVERSE"
-        assert self.order in ["RADICAL INVERSE", "GRAY"]
-        assert isinstance(t, int) and t > 0
-        assert self._t_curr <= t <= 64, (
-            "t must no more than 64 and no less than %d (the number of bits used to represent the generating matrices)"
-            % (self._t_curr)
-        )
-        assert isinstance(alpha, int) and alpha > 0
+        if not (self.order in ["RADICAL INVERSE", "GRAY"]):
+            raise AssertionError
+        if not (isinstance(t, int) and t > 0):
+            raise AssertionError
+        if not (self._t_curr <= t <= 64):
+            raise AssertionError(
+                "t must no more than 64 and no less than %d (the number of bits used to represent the generating matrices)"
+                % (self._t_curr)
+            )
+        if not (isinstance(alpha, int) and alpha > 0):
+            raise AssertionError
         self.alpha = alpha
         if self.alpha > 1:
-            assert (
+            if not ((
                 self.dvec == np.arange(self.d)
-            ).all(), "digital interlacing requires dimension is an int"
+            ).all()):
+                raise AssertionError("digital interlacing requires dimension is an int")
             if self.m_max != self._t_curr:
                 warnings.warn(
                     "Digital interlacing is often performed on matrices with the number of columns (m_max = %d) equal to the number of bits in each int (%d), but this is not the case. Ensure you are NOT setting alpha>1 when generating matrices are already interlaced."
@@ -464,7 +475,8 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
             self.randomize = "FALSE"
         if self.randomize == "NO":
             self.randomize = "FALSE"
-        assert self.randomize in ["LMS DS", "LMS", "DS", "NUS", "FALSE"]
+        if not (self.randomize in ["LMS DS", "LMS", "DS", "NUS", "FALSE"]):
+            raise AssertionError
         self.dtalpha = self.alpha * self.d
         if self.randomize == "FALSE":
             if self.alpha == 1:
@@ -627,19 +639,23 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
             raise ParameterError("self.randomize parsing error")
         self.gen_mats = np.ascontiguousarray(self.gen_mats)
         gen_mat_max = self.gen_mats.max()
-        assert gen_mat_max > 0, "generating matrix must have positive ints"
-        assert self._t_curr == int(np.ceil(np.log2(gen_mat_max + 1)))
-        assert (
+        if not (gen_mat_max > 0):
+            raise AssertionError("generating matrix must have positive ints")
+        if not (self._t_curr == int(np.ceil(np.log2(gen_mat_max + 1)))):
+            raise AssertionError
+        if not (
             0 < self._t_curr <= self.t <= 64
-        ), "invalid 0 <= self._t_curr (%d) <= self.t (%d) <= 64" % (
-            self._t_curr,
-            self.t,
-        )
+        ):
+            raise AssertionError("invalid 0 <= self._t_curr (%d) <= self.t (%d) <= 64" % (
+                self._t_curr,
+                self.t,
+            ))
         if self.randomize == "FALSE":
-            assert self.gen_mats.shape[0] == self.replications, (
-                "randomize='FALSE' but replications = %d does not equal the number of sets of generating matrices %d"
-                % (self.replications, self.gen_mats.shape[0])
-            )
+            if not (self.gen_mats.shape[0] == self.replications):
+                raise AssertionError(
+                    "randomize='FALSE' but replications = %d does not equal the number of sets of generating matrices %d"
+                    % (self.replications, self.gen_mats.shape[0])
+                )
 
     def _try_gen_samples_float(self, r, n, d, n_start, mmax, r_x, return_binary):
         if return_binary or "NUS" in self.randomize:

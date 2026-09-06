@@ -51,7 +51,8 @@ class Multimodal2d(AbstractIntegrand):
                 - a true measure by which to compose a transform.
         """
         self.sampler = sampler
-        assert self.sampler.d == 2
+        if not (self.sampler.d == 2):
+            raise AssertionError
         self.true_measure = Uniform(
             self.sampler, lower_bound=[-4, -3], upper_bound=[7, 8]
         )
