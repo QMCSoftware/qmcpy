@@ -98,7 +98,7 @@ class ProductMeasure(AbstractTrueMeasure):
     (4, 3)
     """
 
-    def __init__(self, sampler, marginals):
+    def __init__(self, sampler, marginals) -> None:
         """Initialize a product measure from one sampler and several
         marginals.
 

@@ -158,14 +158,14 @@ class DigitalNetAnyBases(AbstractLDDiscreteDistribution):
 
     def __init__(self,
                  dimension = 1,
-                 replications = None,
+                 replications: int = None,
                  seed = None,
-                 randomize = 'LMS DP',
+                 randomize: str = 'LMS DP',
                  bases_generating_matrices = None,
-                 t = None,
-                 alpha = 1,
-                 n_lim = 2**32,
-                 warn = True):
+                 t: int = None,
+                 alpha: int = 1,
+                 n_lim: int = 2**32,
+                 warn: bool = True) -> None:
         r"""
         Args:
             dimension (Union[int,np.ndarray]): Dimension of the generator.

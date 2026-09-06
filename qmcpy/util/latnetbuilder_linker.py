@@ -2,7 +2,7 @@ from ..util import NotYetImplemented
 import numpy as np
 
 
-def latnetbuilder_linker(lnb_dir="./", out_dir="./", fout_prefix="lnb4qmcpy"):
+def latnetbuilder_linker(lnb_dir: str = "./", out_dir: str = "./", fout_prefix: str = "lnb4qmcpy"):
     """
     Args:
         lnb_dir (str): relative path to directory where `outputMachine.txt` is

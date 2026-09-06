@@ -85,7 +85,7 @@ class MPMC(AbstractLDDiscreteDistribution):
         pretrained_local_dir=None,
         pretrained_base_url='https://github.com/QMCSoftware/LDData/tree/main/pregenerated_pointsets/mpmc',
         prompt_on_missing=True,
-    ):
+    ) -> None:
         self.mimics = 'StdUniform'
         self.low_discrepancy = True
 

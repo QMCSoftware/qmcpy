@@ -84,15 +84,15 @@ class CubMLQMCCont(AbstractCubMLQMC):
         integrand,
         abs_tol=0.05,
         rmse_tol=None,
-        n_init=256,
+        n_init: int = 256,
         n_limit=1e10,
-        inflate=100 ** (1 / 9),
+        inflate: float = 100 ** (1 / 9),
         alpha=0.01,
-        levels_min=2,
-        levels_max=10,
-        n_tols=10,
-        theta_init=0.5,
-    ):
+        levels_min: int = 2,
+        levels_max: int = 10,
+        n_tols: int = 10,
+        theta_init: float = 0.5,
+    ) -> None:
         r"""
         Args:
             integrand (AbstractIntegrand): The integrand.
@@ -186,7 +186,7 @@ class CubMLQMCCont(AbstractCubMLQMC):
                 additional ladder steps are needed.
 
         Returns:
-            ``(solution, data)``.
+            tuple: ``(solution, data)``.
         """
         self._active_t_start = t_start = time()
         self._active_trace = trace = self._make_trace_logger()

@@ -110,7 +110,7 @@ class SensitivityIndices(AbstractIntegrand):
         [https://artowen.su.domains/mc/A-anova.pdf](https://artowen.su.domains/mc/A-anova.pdf).
     """
 
-    def __init__(self, integrand, indices="singletons"):
+    def __init__(self, integrand: AbstractIntegrand, indices: np.ndarray = "singletons") -> None:
         r"""
         Args:
             integrand (AbstractIntegrand): Integrand to find sensitivity

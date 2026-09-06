@@ -3,7 +3,7 @@ import scipy.fft
 import itertools
 
 
-def fftbr(x):
+def fftbr(x: np.ndarray):
     r"""1 dimensional Bit-Reversed-Order (BRO) Fast Fourier Transform (FFT)
     along the last dimension. Requires the last dimension of x is already in
     BRO, so we can skip the first step of the decimation-in-time FFT. Requires
@@ -41,7 +41,7 @@ def fftbr(x):
     return scipy.fft.fft(xr, norm="ortho")
 
 
-def ifftbr(x):
+def ifftbr(x: np.ndarray):
     r"""1 dimensional Bit-Reversed-Order (BRO) Inverse Fast Fourier Transform
     (IFFT) along the last dimension. Outputs an array in bit-reversed order, so
     we can skip the last step of the decimation-in-time IFFT. Requires the size
@@ -78,7 +78,7 @@ def ifftbr(x):
     return xr
 
 
-def fwht(x):
+def fwht(x: np.ndarray):
     r"""1 dimensional Fast Walsh Hadamard Transform (FWHT) along the last
     dimension. Requires the size of the last dimension is a power of 2.
 
@@ -116,7 +116,7 @@ def fwht(x):
     return y
 
 
-def omega_fwht(m):
+def omega_fwht(m: int):
     r"""A useful when efficiently updating FWHT values after doubling the
     sample size.
 
@@ -143,7 +143,7 @@ def omega_fwht(m):
     return np.ones(2**m)
 
 
-def omega_fftbr(m):
+def omega_fftbr(m: int):
     r"""A useful when efficiently updating FFT values after doubling the
     sample size.
 

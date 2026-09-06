@@ -44,7 +44,7 @@ class Keister(AbstractIntegrand):
         Computers in Physics, 10, pp. 119-122, 1996.
     """
 
-    def __init__(self, sampler):
+    def __init__(self, sampler) -> None:
         r"""
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
@@ -69,7 +69,7 @@ class Keister(AbstractIntegrand):
         return Keister(sampler=sampler)
 
     @classmethod
-    def get_exact_value(self, d):
+    def get_exact_value(self, d: int):
         """Compute the exact analytic value of the Keister integral with
         dimension $d$.
 

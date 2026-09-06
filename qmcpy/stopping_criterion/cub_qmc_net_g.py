@@ -218,17 +218,17 @@ class CubQMCNetG(AbstractCubQMCLDG):
     def __init__(
         self,
         integrand,
-        abs_tol=1e-2,
-        rel_tol=0.0,
-        n_init=2**10,
-        n_limit=2**35,
+        abs_tol: np.ndarray = 1e-2,
+        rel_tol: np.ndarray = 0.0,
+        n_init: int = 2**10,
+        n_limit: int = 2**35,
         error_fun="EITHER",
         fudge=_default_fudge,
-        check_cone=False,
-        control_variates=None,
-        control_variate_means=None,
-        update_cv_coeffs=False,
-    ):
+        check_cone: bool = False,
+        control_variates: list = None,
+        control_variate_means: np.ndarray = None,
+        update_cv_coeffs: bool = False,
+    ) -> None:
         r"""
         Args:
             integrand (AbstractIntegrand): The integrand.

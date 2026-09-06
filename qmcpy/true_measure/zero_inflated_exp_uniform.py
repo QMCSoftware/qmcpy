@@ -180,7 +180,7 @@ class ZeroInflatedExpUniform(SciPyWrapper):
     True
     """
 
-    def __init__(self, sampler, p_zero=0.4, lam=1.5, y_split=None):
+    def __init__(self, sampler, p_zero=0.4, lam=1.5, y_split=None) -> None:
         if y_split is not None:
             warnings.warn(
                 "`y_split` is deprecated. The 2D zero-inflated "

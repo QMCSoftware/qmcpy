@@ -3,12 +3,12 @@ import numpy as np
 
 def mlmc_test(
     integrand,
-    n = 20000,
-    l = 8,
-    n_init = 200,
-    rmse_tols = np.array([.005, 0.01, 0.02, 0.05, 0.1]),
-    levels_min = 2,
-    levels_max = 10,
+    n: int = 20000,
+    l: int = 8,
+    n_init: int = 200,
+    rmse_tols: np.ndarray = np.array([.005, 0.01, 0.02, 0.05, 0.1]),
+    levels_min: int = 2,
+    levels_max: int = 10,
     ):
     r"""Multilevel Monte Carlo test routine.
 

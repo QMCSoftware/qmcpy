@@ -3,7 +3,7 @@ import numpy as np
 import itertools
 
 
-def fftbr_torch(x):
+def fftbr_torch(x: torch.Tensor):
     r"""Torch implementation of the 1 dimensional Bit-Reversed-Order (BRO)
     Fast Fourier Transform (FFT) along the last dimension. Requires the last
     dimension of x is already in BRO, so we can skip the first step of the
@@ -55,7 +55,7 @@ def fftbr_torch(x):
     return torch.fft.fft(xr, norm="ortho")
 
 
-def ifftbr_torch(x):
+def ifftbr_torch(x: torch.Tensor):
     r"""Torch implementation of the 1 dimensional Bit-Reversed-Order (BRO)
     Inverse Fast Fourier Transform (IFFT) along the last dimension. Outputs an
     array in bit-reversed order, so we can skip the last step of the
@@ -139,7 +139,7 @@ class _FWHTB2Ortho(torch.autograd.Function):
         return _fwht_torch(dx)
 
 
-def fwht_torch(x):
+def fwht_torch(x: torch.Tensor):
     r"""Torch implementation of the 1 dimensional Fast Walsh Hadamard
     Transform (FWHT) along the last dimension. Requires the size of the last
     dimension is a power of 2.
@@ -173,7 +173,7 @@ def fwht_torch(x):
     return _FWHTB2Ortho.apply(x)
 
 
-def omega_fwht_torch(m, device=None):
+def omega_fwht_torch(m: int, device=None):
     r"""Torch implementation useful when efficiently updating FWHT values
     after doubling the sample size.
 
@@ -202,7 +202,7 @@ def omega_fwht_torch(m, device=None):
     return torch.ones(2**m, device=device)
 
 
-def omega_fftbr_torch(m, device=None):
+def omega_fftbr_torch(m: int, device=None):
     r"""Torch implementation useful when efficiently updating FFT values after
     doubling the sample size.
 

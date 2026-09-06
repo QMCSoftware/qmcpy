@@ -137,11 +137,11 @@ class KorobovLattice(AbstractLDDiscreteDistribution):
     """
     def __init__(
             self,
-            dimension=1,
-            replications=None,
+            dimension: int = 1,
+            replications: int = None,
             seed=None,
-            randomize="SHIFT",
-        ):
+            randomize: str = "SHIFT",
+        ) -> None:
         r"""
         Args:
             dimension (int): Dimension of the samples. Must be between 1 and

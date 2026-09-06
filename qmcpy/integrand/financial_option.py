@@ -239,22 +239,22 @@ class FinancialOption(AbstractIntegrand):
     def __init__(
         self,
         sampler,
-        option="ASIAN",
-        call_put="CALL",
-        volatility=0.5,
-        start_price=30,
-        strike_price=35,
-        interest_rate=0,
-        t_final=1,
-        decomp_type="PCA",
+        option: str = "ASIAN",
+        call_put: str = "CALL",
+        volatility: float = 0.5,
+        start_price: float = 30,
+        strike_price: float = 35,
+        interest_rate: float = 0,
+        t_final: float = 1,
+        decomp_type: str = "PCA",
         level=None,
         d_coarsest=2,
-        asian_mean="ARITHMETIC",
-        asian_mean_quadrature_rule="TRAPEZOIDAL",
-        barrier_in_out="IN",
-        barrier_price=38,
-        digital_payout=10,
-    ):
+        asian_mean: str = "ARITHMETIC",
+        asian_mean_quadrature_rule: str = "TRAPEZOIDAL",
+        barrier_in_out: str = "IN",
+        barrier_price: float = 38,
+        digital_payout: float = 10,
+    ) -> None:
         r"""
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
@@ -724,7 +724,7 @@ def _eurogbmprice(S0, r, T, sigma, K):
 
 
 class AsianOption(FinancialOption):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         """Deprecated, please use FinancialOption"""
         if "option" in kwargs:
             raise ParameterError("please do not pass 'option' to AsianOption")
@@ -732,7 +732,7 @@ class AsianOption(FinancialOption):
 
 
 class EuropeanOption(FinancialOption):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         """Deprecated, please use FinancialOption"""
         if "option" in kwargs:
             raise ParameterError("please do not pass 'option' to EuropeanOption")
@@ -740,7 +740,7 @@ class EuropeanOption(FinancialOption):
 
 
 class BarrierOption(FinancialOption):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         """Deprecated, please use FinancialOption"""
         if "option" in kwargs:
             raise ParameterError("please do not pass 'option' to BarrierOption")
@@ -748,7 +748,7 @@ class BarrierOption(FinancialOption):
 
 
 class LookbackOption(FinancialOption):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         """Deprecated, please use FinancialOption"""
         if "option" in kwargs:
             raise ParameterError("please do not pass 'option' to LookbackOption")
@@ -756,7 +756,7 @@ class LookbackOption(FinancialOption):
 
 
 class DigitalOption(FinancialOption):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         """Deprecated, please use FinancialOption"""
         if "option" in kwargs:
             raise ParameterError("please do not pass 'option' to DigitalOption")

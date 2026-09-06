@@ -141,13 +141,13 @@ class Lattice(AbstractLDDiscreteDistribution):
     def __init__(
         self,
         dimension=1,
-        replications=None,
+        replications: int = None,
         seed=None,
-        randomize="SHIFT",
+        randomize: str = "SHIFT",
         generating_vector="kuo.lattice-33002-1024-1048576.9125.txt",
-        order="RADICAL INVERSE",
-        m_max=None,
-    ):
+        order: str = "RADICAL INVERSE",
+        m_max: int = None,
+    ) -> None:
         r"""
         Args:
             dimension (Union[int, np.ndarray]): Dimension of the generator.

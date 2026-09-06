@@ -24,7 +24,7 @@ class AbstractCopula(AbstractTrueMeasure):
     transform.
     """
 
-    def __init__(self, sampler, marginals):
+    def __init__(self, sampler, marginals) -> None:
         self.domain = np.array([[0, 1]])
         self._parse_sampler(sampler)
 
@@ -41,14 +41,14 @@ class AbstractCopula(AbstractTrueMeasure):
         """
         raise MethodImplementationError(self, "_transform_to_uniform")
 
-    def copula_transform(self, u) -> np.ndarray:
+    def copula_transform(self, u: np.ndarray) -> np.ndarray:
         r"""Apply only the copula layer ``U -> V``.
 
         Args:
             u (np.ndarray): Independent uniform points on ``[0,1]^d``.
 
         Returns:
-            Dependent uniform points on ``[0,1]^d``.
+            np.ndarray: Dependent uniform points on ``[0,1]^d``.
         """
         return self._transform_to_uniform(u)
 

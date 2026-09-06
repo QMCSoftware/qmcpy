@@ -66,15 +66,15 @@ class MaternGP(Gaussian):
 
     def __init__(
         self,
-        sampler,
-        points,
-        length_scale=1.0,
-        nu=1.5,
-        variance=1.0,
-        mean=0.0,
-        nugget=1e-6,
-        decomp_type="PCA",
-    ):
+        sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure],
+        points: np.ndarray,
+        length_scale: Union[float, np.ndarray] = 1.0,
+        nu: float = 1.5,
+        variance: float = 1.0,
+        mean: Union[float, np.ndarray] = 0.0,
+        nugget: float = 1e-6,
+        decomp_type: str = "PCA",
+    ) -> None:
         r"""
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):

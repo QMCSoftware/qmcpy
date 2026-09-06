@@ -41,7 +41,7 @@ class Multimodal2d(AbstractIntegrand):
         -0.7366
     """
 
-    def __init__(self, sampler):
+    def __init__(self, sampler) -> None:
         r"""
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):

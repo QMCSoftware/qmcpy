@@ -102,7 +102,7 @@ class FrankCopula(AbstractCopula):
         [doi:10.1016/j.jmva.2012.02.019](https://doi.org/10.1016/j.jmva.2012.02.019).
     """
 
-    def __init__(self, sampler, marginals, theta):
+    def __init__(self, sampler, marginals: list, theta: float) -> None:
         r"""
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):

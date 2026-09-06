@@ -86,7 +86,7 @@ class StudentTCopula(AbstractCopula):
         "Weights will be treated as 1."
     )
 
-    def __init__(self, sampler, marginals, correlation, df):
+    def __init__(self, sampler, marginals: list, correlation: np.ndarray, df: float) -> None:
         r"""
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):

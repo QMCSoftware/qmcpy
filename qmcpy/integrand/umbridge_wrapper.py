@@ -66,7 +66,7 @@ class UMBridgeWrapper(AbstractIntegrand):
         [['-1.59e-08', '1.49e-04', '1.49e-04'], ['8.20e-06', '-1.38e-04'], ['-8.14e-06']]
     """
 
-    def __init__(self, true_measure, model, config=None, parallel=False):
+    def __init__(self, true_measure, model, config: dict = None, parallel: int = False) -> None:
         """
         Args:
             true_measure (AbstractTrueMeasure): The true measure.
@@ -143,7 +143,7 @@ class UMBridgeWrapper(AbstractIntegrand):
             parallel=self.parallel,
         )
 
-    def to_umbridge_out_sizes(self, x):
+    def to_umbridge_out_sizes(self, x: np.ndarray):
         """Convert a data attribute to `UM-Bridge` output sized list of
         lists.
 

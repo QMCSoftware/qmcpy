@@ -6,10 +6,10 @@ from ..util import _univ_repr
 
 class Data(object):
 
-    def __init__(self, parameters):
+    def __init__(self, parameters) -> None:
         self.parameters = parameters
 
-    def save(self, path, compress=False, overwrite=False):
+    def save(self, path, compress: bool = False, overwrite: bool = False):
         """Save this Data object to disk using pickle.
 
         Warnings:

@@ -49,7 +49,7 @@ class Uniform(AbstractTrueMeasure):
                 [1.37943573, 1.10241448, 1.13481488]]])
     """
 
-    def __init__(self, sampler, lower_bound=0, upper_bound=1):
+    def __init__(self, sampler, lower_bound=0, upper_bound=1) -> None:
         r"""
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):

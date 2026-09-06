@@ -216,20 +216,20 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
     def __init__(
         self,
         dimension=1,
-        replications=None,
+        replications: int = None,
         seed=None,
-        randomize="LMS DS",
+        randomize: str = "LMS DS",
         generating_matrices="joe_kuo.6.21201.txt",
-        order="RADICAL INVERSE",
-        t=63,
-        alpha=1,
-        msb=None,
-        _verbose=False,
+        order: str = "RADICAL INVERSE",
+        t: int = 63,
+        alpha: int = 1,
+        msb: bool = None,
+        _verbose: bool = False,
         # deprecated
         graycode=None,
         t_max=None,
         t_lms=None,
-    ):
+    ) -> None:
         r"""
         Args:
             dimension (Union[int, np.ndarray]): Dimension of the generator.

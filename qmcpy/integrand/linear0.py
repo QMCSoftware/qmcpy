@@ -28,7 +28,7 @@ class Linear0(AbstractIntegrand):
         -9.8203e-05
     """
 
-    def __init__(self, sampler):
+    def __init__(self, sampler) -> None:
         r"""
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):

@@ -105,7 +105,7 @@ class StudentT(SciPyWrapper):
     """Convenience true measure: multivariate Student t.
     """
 
-    def __init__(self, sampler, loc, shape, df):
+    def __init__(self, sampler, loc, shape, df) -> None:
         super().__init__(
             sampler=sampler,
             scipy_distribs=_StudentTAdapter(loc=loc, shape=shape, df=df),

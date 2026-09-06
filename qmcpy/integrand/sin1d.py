@@ -39,7 +39,7 @@ class Sin1d(AbstractIntegrand):
         7.0800e-04
     """
 
-    def __init__(self, sampler, k=1):
+    def __init__(self, sampler, k: float = 1) -> None:
         r"""
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):

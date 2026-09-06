@@ -26,7 +26,7 @@ class MethodImplementationError(Exception):
     implemented in the child class.
     """
 
-    def __init__(self, subclass, method_name):
+    def __init__(self, subclass, method_name) -> None:
         s_f = (
             "%s does not have an implementation of the  %s method. "
             + "See superclass for method description."

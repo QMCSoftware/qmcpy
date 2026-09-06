@@ -33,8 +33,8 @@ class BayesianLRCoeffs(AbstractIntegrand):
     """
 
     def __init__(
-        self, sampler, feature_array, response_vector, prior_mean=0, prior_covariance=10
-    ):
+        self, sampler, feature_array: np.ndarray, response_vector: np.ndarray, prior_mean: np.ndarray = 0, prior_covariance: np.ndarray = 10
+    ) -> None:
         r"""
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):

@@ -59,11 +59,13 @@ ASSERT_DIFF_BASE ?= develop
 ASSERT_EXCEPTION ?= AssertionError
 ASSERT_CONVERT_ARGS ?=
 
-check_assert_codemod_dependency:
+check_libcst_dependency:
 	@$(PYTHON) -c "import libcst" 2>/dev/null || { \
 		echo 'Missing LibCST. Install the test tools with: $(PYTHON) -m pip install -e ".[test]"'; \
 		exit 127; \
 	}
+
+check_assert_codemod_dependency: check_libcst_dependency
 
 convert_asserts: check_assert_codemod_dependency
 	$(PYTHON) scripts/convert_asserts.py --exception "$(ASSERT_EXCEPTION)" $(ASSERT_CONVERT_ARGS) $(ASSERT_PATH)
@@ -84,6 +86,10 @@ DOCSTRING_FORMAT_ARGS ?= --docstring-style google --fix-rst-backticks=False --in
 DOCSTRING_TYPE_PATH ?= qmcpy
 DOCSTRING_TYPE_DIFF_BASE ?= develop
 DOCSTRING_TYPE_ARGS ?=
+PUBLIC_API_TYPE_PATH ?= qmcpy
+PUBLIC_API_TYPE_DIFF_BASE ?= develop
+PUBLIC_API_ANNOTATE_ARGS ?=
+DOCSTRING_SYNC_ARGS ?=
 # Two-part docstring check for public APIs under qmcpy/:
 #  1. scripts/check_docstring.py -- formatting: a one-line summary before the
 #     first section, no NumPy-style "-----" section underlines, a blank line
@@ -133,6 +139,18 @@ add_docstring_arg_types_changed:
 
 check_docstring_arg_types_changed:
 	$(PYTHON) scripts/add_docstring_arg_types.py --diff "$(DOCSTRING_TYPE_DIFF_BASE)" --check $(DOCSTRING_TYPE_ARGS)
+
+annotate_public_api_types_changed: check_libcst_dependency
+	$(PYTHON) -m scripts.annotate_public_api_types --diff "$(PUBLIC_API_TYPE_DIFF_BASE)" --root "$(PUBLIC_API_TYPE_PATH)" $(PUBLIC_API_ANNOTATE_ARGS)
+
+sync_docstring_types_changed:
+	$(PYTHON) scripts/add_docstring_arg_types.py --diff "$(PUBLIC_API_TYPE_DIFF_BASE)" --root "$(PUBLIC_API_TYPE_PATH)" --include-outputs --overwrite-existing $(DOCSTRING_SYNC_ARGS)
+
+check_public_api_types_changed: check_libcst_dependency
+	@status=0; \
+	$(PYTHON) -m scripts.annotate_public_api_types --diff "$(PUBLIC_API_TYPE_DIFF_BASE)" --root "$(PUBLIC_API_TYPE_PATH)" --check $(PUBLIC_API_ANNOTATE_ARGS) || status=$$?; \
+	$(PYTHON) scripts/add_docstring_arg_types.py --diff "$(PUBLIC_API_TYPE_DIFF_BASE)" --root "$(PUBLIC_API_TYPE_PATH)" --include-outputs --overwrite-existing --check $(DOCSTRING_SYNC_ARGS) || { code=$$?; if [ $$code -gt $$status ]; then status=$$code; fi; }; \
+	exit $$status
 
 # Same checks as check_docstring, but only on qmcpy/*.py files that changed
 # relative to DOCSTRING_BASE (committed, staged/unstaged, and untracked).

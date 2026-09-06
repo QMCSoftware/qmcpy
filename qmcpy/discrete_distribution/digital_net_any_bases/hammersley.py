@@ -66,12 +66,12 @@ class Hammersley(DigitalNetAnyBases):
     """
 
     def __init__(self,
-                 dimension=1,
+                 dimension: int = 1,
                  seed=None,
                  t=None,
-                 n_lim=2**32,
+                 n_lim: int = 2**32,
                  warn = True
-                ):
+                ) -> None:
         r"""
         Args:
             dimension (int): Dimension of the samples. Must be a scalar `int`

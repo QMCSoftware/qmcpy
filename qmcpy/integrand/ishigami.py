@@ -53,7 +53,7 @@ class Ishigami(AbstractIntegrand):
         Proceedings, First International Symposium on (pp. 398-403). IEEE.
     """
 
-    def __init__(self, sampler, a=7, b=0.1):
+    def __init__(self, sampler, a: float = 7, b: float = 0.1) -> None:
         r"""
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):

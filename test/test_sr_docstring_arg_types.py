@@ -61,11 +61,14 @@ class TestAddDocstringArgTypes(unittest.TestCase):
     def test_check_mode_reports_without_writing(self):
         path = self._write(
             '''
-            def scale(x: int):
+            def scale(x: int) -> int:
                 """Scale x.
 
                 Args:
                     x: Value to scale.
+
+                Returns:
+                    Scaled value.
                 """
                 return 2 * x
             '''
@@ -74,10 +77,13 @@ class TestAddDocstringArgTypes(unittest.TestCase):
 
         output = StringIO()
         with redirect_stdout(output):
-            status = add_docstring_arg_types.main(["--check", str(path)])
+            status = add_docstring_arg_types.main(
+                ["--check", "--include-outputs", str(path)]
+            )
 
         self.assertEqual(status, 1)
         self.assertIn("1 file(s) would change", output.getvalue())
+        self.assertIn("1 output type update(s)", output.getvalue())
         self.assertEqual(path.read_text(encoding="utf-8"), original)
 
     def test_preserves_existing_type_unless_overwrite_is_requested(self):
@@ -164,6 +170,83 @@ class TestAddDocstringArgTypes(unittest.TestCase):
         self.assertFalse(result.changed)
         self.assertEqual(result.updates, [])
         self.assertEqual(path.read_text(encoding="utf-8"), original)
+
+    def test_adds_return_type_when_output_sync_is_requested(self):
+        path = self._write(
+            '''
+            def norm(x: float) -> float:
+                """Compute a norm.
+
+                Args:
+                    x: Input value.
+
+                Returns:
+                    Computed norm.
+                """
+                return abs(x)
+            '''
+        )
+
+        result = add_docstring_arg_types.update_file(path, include_outputs=True)
+        source = path.read_text(encoding="utf-8")
+
+        self.assertTrue(result.changed)
+        self.assertIn("x (float): Input value.", source)
+        self.assertIn("float: Computed norm.", source)
+        self.assertEqual(
+            [update.section for update in result.updates],
+            ["Args", "Returns"],
+        )
+
+    def test_replaces_existing_output_type_only_when_requested(self):
+        path = self._write(
+            '''
+            def norm(x) -> float:
+                """Compute a norm.
+
+                Returns:
+                    int: Computed norm.
+                """
+                return abs(x)
+            '''
+        )
+
+        result = add_docstring_arg_types.update_file(path, include_outputs=True)
+        self.assertFalse(result.changed)
+        self.assertIn("int: Computed norm.", path.read_text(encoding="utf-8"))
+
+        result = add_docstring_arg_types.update_file(
+            path,
+            include_outputs=True,
+            overwrite_existing=True,
+        )
+        self.assertTrue(result.changed)
+        self.assertIn("float: Computed norm.", path.read_text(encoding="utf-8"))
+
+    def test_extracts_item_type_for_yields_section(self):
+        path = self._write(
+            '''
+            from typing import Iterator
+
+            def indices(n: int) -> Iterator[int]:
+                """Yield indices.
+
+                Args:
+                    n: Number of indices.
+
+                Yields:
+                    Next index.
+                """
+                yield from range(n)
+            '''
+        )
+
+        result = add_docstring_arg_types.update_file(path, include_outputs=True)
+        source = path.read_text(encoding="utf-8")
+
+        self.assertTrue(result.changed)
+        self.assertIn("n (int): Number of indices.", source)
+        self.assertIn("int: Next index.", source)
 
 
 if __name__ == "__main__":

@@ -183,16 +183,16 @@ class CubQMCBayesLatticeG(AbstractCubBayesLDG):
     def __init__(
         self,
         integrand,
-        abs_tol=1e-2,
-        rel_tol=0,
-        n_init=2**8,
-        n_limit=2**22,
+        abs_tol: np.ndarray = 1e-2,
+        rel_tol: np.ndarray = 0,
+        n_init: int = 2**8,
+        n_limit: int = 2**22,
         error_fun="EITHER",
-        alpha=0.01,
-        ptransform="C1SIN",
-        errbd_type="MLE",
-        order=2,
-    ):
+        alpha: np.ndarray = 0.01,
+        ptransform: str = "C1SIN",
+        errbd_type: str = "MLE",
+        order: int = 2,
+    ) -> None:
         r"""
         Args:
             integrand (AbstractIntegrand): The integrand.

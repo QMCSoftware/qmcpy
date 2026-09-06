@@ -8,7 +8,7 @@ from scipy import sparse
 
 class AbstractTrueMeasure(object):
 
-    def __init__(self):
+    def __init__(self) -> None:
         prefix = "A concrete implementation of TrueMeasure must have "
         if not hasattr(self, "domain"):
             raise ParameterError(
@@ -201,7 +201,7 @@ class AbstractTrueMeasure(object):
             self, "weight. Try a different true measure with a _weight method."
         )
 
-    def spawn(self, s=1, dimensions=None):
+    def spawn(self, s: int = 1, dimensions: np.ndarray = None):
         r"""Spawn new instances of the current true measure but with new seeds
         and dimensions. Used by multi-level QMC algorithms which require
         different seeds and dimensions on each level.

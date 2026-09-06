@@ -50,7 +50,7 @@ class Kumaraswamy(AbstractTrueMeasure):
                 [0.37253319, 0.45379743, 0.63366422]]])
     """
 
-    def __init__(self, sampler, a=2, b=2):
+    def __init__(self, sampler, a=2, b=2) -> None:
         r"""
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):

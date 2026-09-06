@@ -64,7 +64,7 @@ class BoxIntegral(AbstractIntegrand):
         [https://www.davidhbailey.com/dhbpapers/boxintegrals.pdf](https://www.davidhbailey.com/dhbpapers/boxintegrals.pdf)
     """
 
-    def __init__(self, sampler, s=1):
+    def __init__(self, sampler, s=1) -> None:
         r"""
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):

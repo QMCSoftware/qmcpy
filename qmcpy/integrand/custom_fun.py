@@ -88,7 +88,7 @@ class CustomFun(AbstractIntegrand):
         array([3.83e-03, -6.78e-03, -1.56e-03, -5.65e-04])
     """
 
-    def __init__(self, true_measure, g, dimension_indv=(), parallel=False):
+    def __init__(self, true_measure, g, dimension_indv: tuple = (), parallel: int = False) -> None:
         """
         Args:
             true_measure (AbstractTrueMeasure): The true measure.

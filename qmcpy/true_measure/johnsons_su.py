@@ -41,7 +41,7 @@ class JohnsonsSU(AbstractTrueMeasure):
                 [ 1.57765245,  1.00275   ,  1.64972468]]])
     """
 
-    def __init__(self, sampler, gamma=1, xi=1, delta=2, lam=2):
+    def __init__(self, sampler, gamma=1, xi=1, delta=2, lam=2) -> None:
         r"""
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):

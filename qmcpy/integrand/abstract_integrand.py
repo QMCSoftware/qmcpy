@@ -12,7 +12,7 @@ from itertools import repeat
 
 class AbstractIntegrand(object):
 
-    def __init__(self, dimension_indv, dimension_comb, parallel, threadpool=False):
+    def __init__(self, dimension_indv: tuple, dimension_comb: tuple, parallel: int, threadpool: bool = False) -> None:
         r"""
         Args:
             dimension_indv (tuple): Individual solution shape.
@@ -110,7 +110,7 @@ class AbstractIntegrand(object):
         y = self.f(x)
         return y
 
-    def g(self, t, *args, **kwargs):
+    def g(self, t: np.ndarray, *args: tuple, **kwargs: dict):
         r"""*Abstract method* implementing the integrand as a function of the
         true measure.
 
@@ -135,7 +135,7 @@ class AbstractIntegrand(object):
         """
         raise MethodImplementationError(self, "g")
 
-    def f(self, x, *args, **kwargs):
+    def f(self, x: np.ndarray, *args: tuple, **kwargs: dict):
         r"""Function to evaluate the transformed integrand as a function of
         the discrete distribution. Automatically applies the transformation
         determined by the true measure.
@@ -306,7 +306,7 @@ class AbstractIntegrand(object):
                 raise e
         return y
 
-    def bound_fun(self, bound_low, bound_high):
+    def bound_fun(self, bound_low: np.ndarray, bound_high: np.ndarray):
         """Compute the bounds on the combined function based on bounds for
         the individual functions.
 
@@ -335,7 +335,7 @@ class AbstractIntegrand(object):
             )
         return bound_low, bound_high
 
-    def dependency(self, comb_flags):
+    def dependency(self, comb_flags: np.ndarray):
         """Takes a vector of indicators of weather of not the error bound is
         satisfied for combined integrands and returns flags for individual
         integrands.
@@ -361,7 +361,7 @@ class AbstractIntegrand(object):
             else np.tile((comb_flags == False).any(), self.d_indv)
         )
 
-    def spawn(self, levels):
+    def spawn(self, levels: np.ndarray):
         r"""Spawn new instances of the current integrand at different levels
         with new seeds. Used by multi-level QMC algorithms which require
         integrands at multiple levels.
@@ -387,7 +387,7 @@ class AbstractIntegrand(object):
             spawned_integrand[l] = self._spawn(level, tm_spawns[l])
         return spawned_integrand
 
-    def dimension_at_level(self, level):
+    def dimension_at_level(self, level: int):
         """*Abstract method* which returns the dimension of the generator
         required for a given level.
 

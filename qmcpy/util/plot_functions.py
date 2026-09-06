@@ -8,15 +8,15 @@ def plot_proj(
     n=64,
     d_horizontal=1,
     d_vertical=2,
-    math_ind=True,
-    marker_size=5,
-    figfac=5,
-    fig_title="Projection of Samples",
-    axis_pad=0,
-    want_grid=True,
-    font_family="sans-serif",
-    where_title=1,
-    **kwargs
+    math_ind: bool = True,
+    marker_size: float = 5,
+    figfac: float = 5,
+    fig_title: str = "Projection of Samples",
+    axis_pad: float = 0,
+    want_grid: bool = True,
+    font_family: str = "sans-serif",
+    where_title: float = 1,
+    **kwargs: dict
 ):
     """
     Args:

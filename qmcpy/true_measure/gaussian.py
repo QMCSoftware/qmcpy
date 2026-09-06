@@ -48,7 +48,7 @@ class Gaussian(AbstractTrueMeasure):
                 [ 1.1844196 ,  0.44964332,  1.27760936]]])
     """
 
-    def __init__(self, sampler, mean=0.0, covariance=1.0, decomp_type="PCA"):
+    def __init__(self, sampler, mean: Union[float, np.ndarray] = 0.0, covariance: Union[float, np.ndarray] = 1.0, decomp_type: str = "PCA") -> None:
         """
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):

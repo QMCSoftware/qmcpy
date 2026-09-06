@@ -127,16 +127,16 @@ class CubMCCLT(AbstractStoppingCriterion):
 
     def __init__(
         self,
-        integrand,
-        abs_tol=1e-2,
-        rel_tol=0.0,
-        n_init=1024,
-        n_limit=2**30,
-        inflate=1.2,
-        alpha=0.01,
-        control_variates=None,
-        control_variate_means=None,
-    ):
+        integrand: AbstractIntegrand,
+        abs_tol: np.ndarray = 1e-2,
+        rel_tol: np.ndarray = 0.0,
+        n_init: int = 1024,
+        n_limit: int = 2**30,
+        inflate: float = 1.2,
+        alpha: np.ndarray = 0.01,
+        control_variates: list = None,
+        control_variate_means: np.ndarray = None,
+    ) -> None:
         r"""
         Args:
             integrand (AbstractIntegrand): The integrand.

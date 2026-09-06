@@ -28,7 +28,7 @@ class AbstractKernel(object):
             instance = super().__new__(cls)
         return instance
 
-    def __init__(self, d, torchify, device, compile_call, compile_call_kwargs):
+    def __init__(self, d, torchify, device, compile_call, compile_call_kwargs) -> None:
         super().__init__()
         # dimension
         if not (d % 1 == 0 and d > 0):
@@ -349,20 +349,20 @@ class AbstractKernelScaleLengthscales(AbstractKernel):
 
     def __init__(
         self,
-        d,
+        d: int,
         scale=1.0,
         lengthscales=1.0,
-        shape_scale=None,
-        shape_lengthscales=None,
+        shape_scale: list = None,
+        shape_lengthscales: list = None,
         tfs_scale=(tf_exp_eps_inv, tf_exp_eps),
         tfs_lengthscales=(tf_exp_eps_inv, tf_exp_eps),
-        torchify=False,
-        requires_grad_scale=True,
-        requires_grad_lengthscales=True,
+        torchify: bool = False,
+        requires_grad_scale: bool = True,
+        requires_grad_lengthscales: bool = True,
         device="cpu",
-        compile_call=False,
-        compile_call_kwargs=None,
-    ):
+        compile_call: bool = False,
+        compile_call_kwargs: dict = None,
+    ) -> None:
         r"""
         Args:
             d (int): Dimension.

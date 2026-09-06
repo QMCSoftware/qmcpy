@@ -328,19 +328,19 @@ class KernelMultiTask(AbstractKernel):
 
     def __init__(
         self,
-        base_kernel,
-        num_tasks,
+        base_kernel: AbstractKernel,
+        num_tasks: int,
         factor=1.0,
         diag=1.0,
-        shape_factor=None,
-        shape_diag=None,
+        shape_factor: list = None,
+        shape_diag: list = None,
         tfs_factor=(tf_identity, tf_identity),
         tfs_diag=(tf_exp_eps_inv, tf_exp_eps),
-        requires_grad_factor=True,
-        requires_grad_diag=True,
+        requires_grad_factor: bool = True,
+        requires_grad_diag: bool = True,
         rank_factor=1,
-        method="LOW RANK",
-    ):
+        method: str = "LOW RANK",
+    ) -> None:
         r"""
         Args:
             base_kernel (AbstractKernel): $K_{\mathrm{base}}$.
@@ -555,7 +555,7 @@ class KernelMultiTaskDerivs(KernelMultiTask):
         self,
         base_kernel,
         num_tasks,
-    ):
+    ) -> None:
         super().__init__(
             base_kernel=base_kernel,
             num_tasks=num_tasks,

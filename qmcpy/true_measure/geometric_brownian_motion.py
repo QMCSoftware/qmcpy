@@ -50,14 +50,14 @@ class GeometricBrownianMotion(BrownianMotion):
     def __init__(
         self,
         sampler,
-        t_final=1,
-        initial_value=1,
-        drift=0,
-        diffusion=1,
-        decomp_type="PCA",
-        lazy_load=True,
-        lazy_decomp=True,
-    ):
+        t_final: float = 1,
+        initial_value: float = 1,
+        drift: float = 0,
+        diffusion: float = 1,
+        decomp_type: str = "PCA",
+        lazy_load: bool = True,
+        lazy_decomp: bool = True,
+    ) -> None:
         r"""
         Args:
             sampler (DiscreteDistribution/TrueMeasure): A discrete distribution
@@ -309,7 +309,7 @@ class GeometricBrownianMotion(BrownianMotion):
         return normal_pdf * jacobian
 
     def gen_samples(
-        self, n=None, n_min=None, n_max=None, return_weights=False, warn=True
+        self, n=None, n_min=None, n_max=None, return_weights: bool = False, warn: bool = True
     ) -> Union[ndarray, Tuple[ndarray, ndarray]]:
         """Generate GBM samples using the parent's transform pipeline.
 
@@ -321,6 +321,6 @@ class GeometricBrownianMotion(BrownianMotion):
             warn (bool): whether to warn about sample generation
 
         Returns:
-            GBM samples, optionally with weights if return_weights=True
+            Union[ndarray, Tuple[ndarray, ndarray]]: GBM samples, optionally with weights if return_weights=True
         """
         return super().gen_samples(n=n, n_min=n_min, n_max=n_max, return_weights=return_weights, warn=warn)

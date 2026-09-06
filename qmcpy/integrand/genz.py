@@ -54,7 +54,7 @@ class Genz(AbstractIntegrand):
         0.7200
     """
 
-    def __init__(self, sampler, kind_func="OSCILLATORY", kind_coeff=1):
+    def __init__(self, sampler, kind_func: str = "OSCILLATORY", kind_coeff: int = 1) -> None:
         """
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):

@@ -75,7 +75,7 @@ class AcceptanceRejection(AbstractTrueMeasure):
         qmcpy.util.exceptions_warnings.ParameterError: n_min > 0 but no prior call was made. Call gen_samples with n_min=0 first.
     """
 
-    def __init__(self, sampler, target_density, upper_bound, density_integral, max_retries=4):
+    def __init__(self, sampler, target_density, upper_bound, density_integral, max_retries=4) -> None:
         self.parameters = ['target_dim', 'upper_bound', 'density_integral', 'acceptance_rate']
         self.domain = np.array([[0, 1]])
         self._parse_sampler(sampler)
@@ -104,7 +104,7 @@ class AcceptanceRejection(AbstractTrueMeasure):
         self._driver_offset = None
         super(AcceptanceRejection, self).__init__()
 
-    def gen_samples(self, n=None, n_min=None, n_max=None, return_weights=False, warn=True):
+    def gen_samples(self, n: int = None, n_min: int = None, n_max: int = None, return_weights: bool = False, warn: bool = True):
         """Generate accepted samples from the target density.
 
         Unlike other TrueMeasures, this method cannot be decomposed into a
@@ -290,7 +290,7 @@ class AcceptanceRejectionReal(AbstractTrueMeasure):
     """
 
     def __init__(self, sampler, target_density, inv_cdfs, H_func,
-                 upper_bound, density_integral, max_retries=4):
+                 upper_bound, density_integral, max_retries=4) -> None:
         self.parameters = ['target_dim', 'upper_bound', 'density_integral', 'acceptance_rate']
         self.domain = np.array([[0, 1]])
         self._parse_sampler(sampler)
@@ -320,7 +320,7 @@ class AcceptanceRejectionReal(AbstractTrueMeasure):
         self._driver_offset = None
         super(AcceptanceRejectionReal, self).__init__()
 
-    def gen_samples(self, n=None, n_min=None, n_max=None, return_weights=False, warn=True):
+    def gen_samples(self, n: int = None, n_min: int = None, n_max: int = None, return_weights: bool = False, warn: bool = True):
         """Generate accepted samples from the target density on R^d.
 
         Unlike other TrueMeasures, this method cannot be decomposed into a

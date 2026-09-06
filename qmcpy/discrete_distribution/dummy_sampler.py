@@ -28,7 +28,7 @@ class DummySampler(AbstractLDDiscreteDistribution):
     qmcpy.util.exceptions_warnings.ParameterError: DummySampler is only a construction placeholder for ProductMeasure child true measures and cannot generate samples.
     """
 
-    def __init__(self, dimension=1, replications=None, seed=None, warn=True):
+    def __init__(self, dimension=1, replications=None, seed=None, warn=True) -> None:
         # Keep the same constructor as other discrete distributions.
         del warn
 

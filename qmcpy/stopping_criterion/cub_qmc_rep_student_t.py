@@ -205,14 +205,14 @@ class CubQMCRepStudentT(AbstractStoppingCriterion):
     def __init__(
         self,
         integrand,
-        abs_tol=1e-2,
-        rel_tol=0.0,
-        n_init=256.0,
-        n_limit=2**30,
+        abs_tol: np.ndarray = 1e-2,
+        rel_tol: np.ndarray = 0.0,
+        n_init: int = 256.0,
+        n_limit: int = 2**30,
         error_fun="EITHER",
-        inflate=1,
-        alpha=0.01,
-    ):
+        inflate: float = 1,
+        alpha: np.ndarray = 0.01,
+    ) -> None:
         r"""
         Args:
             integrand (AbstractIntegrand): The integrand.

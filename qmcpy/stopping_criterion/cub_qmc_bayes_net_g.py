@@ -192,14 +192,14 @@ class CubQMCBayesNetG(AbstractCubBayesLDG):
     def __init__(
         self,
         integrand,
-        abs_tol=1e-2,
-        rel_tol=0,
-        n_init=2**8,
-        n_limit=2**22,
+        abs_tol: np.ndarray = 1e-2,
+        rel_tol: np.ndarray = 0,
+        n_init: int = 2**8,
+        n_limit: int = 2**22,
         error_fun="EITHER",
-        alpha=0.01,
-        errbd_type="MLE",
-    ):
+        alpha: np.ndarray = 0.01,
+        errbd_type: str = "MLE",
+    ) -> None:
         r"""
         Args:
             integrand (AbstractIntegrand): The integrand.

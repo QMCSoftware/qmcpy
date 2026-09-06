@@ -81,12 +81,12 @@ class CubMLQMC(AbstractCubMLQMC):
         integrand,
         abs_tol=0.05,
         rmse_tol=None,
-        n_init=256,
+        n_init: int = 256,
         n_limit=1e10,
         alpha=0.01,
-        levels_min=2,
-        levels_max=10,
-    ):
+        levels_min: int = 2,
+        levels_max: int = 10,
+    ) -> None:
         r"""
         Args:
             integrand (AbstractIntegrand): The integrand.
@@ -234,7 +234,7 @@ class CubMLQMC(AbstractCubMLQMC):
                 no new sampling.
 
         Returns:
-            ``(solution, data)``.
+            tuple: ``(solution, data)``.
         """
         t_start = time()
         resume_provenance = self._capture_resume_provenance(resume)

@@ -10,7 +10,7 @@ class Polynomial:
     >>> assert np.allclose(y,y_true,atol=1e-12)
     """
 
-    def __init__(self, coeffs):
+    def __init__(self, coeffs) -> None:
         """Polynomial evaluation with Horner's rule
 
         Args:
@@ -54,7 +54,7 @@ BERNOULLIPOLYSDICT = {
 }
 
 
-def bernoulli_poly(n, x):
+def bernoulli_poly(n: int, x):
     r"""$n^\text{th}$ Bernoulli polynomial
 
     Examples:

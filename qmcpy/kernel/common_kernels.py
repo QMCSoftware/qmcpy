@@ -457,24 +457,24 @@ class KernelRationalQuadratic(AbstractKernelScaleLengthscales):
 
     def __init__(
         self,
-        d,
+        d: int,
         scale=1.0,
         lengthscales=1.0,
         alpha=1.0,
-        shape_scale=None,
-        shape_lengthscales=None,
-        shape_alpha=None,
+        shape_scale: list = None,
+        shape_lengthscales: list = None,
+        shape_alpha: list = None,
         tfs_scale=(tf_exp_eps_inv, tf_exp_eps),
         tfs_lengthscales=(tf_exp_eps_inv, tf_exp_eps),
         tfs_alpha=(tf_exp_eps_inv, tf_exp_eps),
-        torchify=False,
-        requires_grad_scale=True,
-        requires_grad_lengthscales=True,
-        requires_grad_alpha=True,
+        torchify: bool = False,
+        requires_grad_scale: bool = True,
+        requires_grad_lengthscales: bool = True,
+        requires_grad_alpha: bool = True,
         device="cpu",
-        compile_call=False,
-        compile_call_kwargs=None,
-    ):
+        compile_call: bool = False,
+        compile_call_kwargs: dict = None,
+    ) -> None:
         r"""
         Args:
             d (int): Dimension.

@@ -176,15 +176,15 @@ class CubQMCLatticeG(AbstractCubQMCLDG):
     def __init__(
         self,
         integrand,
-        abs_tol=1e-2,
-        rel_tol=0.0,
-        n_init=2**10,
-        n_limit=2**30,
+        abs_tol: np.ndarray = 1e-2,
+        rel_tol: np.ndarray = 0.0,
+        n_init: int = 2**10,
+        n_limit: int = 2**30,
         error_fun="EITHER",
         fudge=_default_fudge,
-        check_cone=False,
-        ptransform="BAKER",
-    ):
+        check_cone: bool = False,
+        ptransform: str = "BAKER",
+    ) -> None:
         r"""
         Args:
             integrand (AbstractIntegrand): The integrand.

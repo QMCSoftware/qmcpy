@@ -44,7 +44,7 @@ class FourBranch2d(AbstractIntegrand):
         -2.5042
     """
 
-    def __init__(self, sampler):
+    def __init__(self, sampler) -> None:
         r"""
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):

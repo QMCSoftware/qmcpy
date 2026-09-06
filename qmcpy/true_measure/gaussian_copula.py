@@ -75,7 +75,7 @@ class GaussianCopula(AbstractCopula):
         [arXiv:1508.03483](https://arxiv.org/abs/1508.03483).
     """
 
-    def __init__(self, sampler, marginals, correlation):
+    def __init__(self, sampler, marginals: list, correlation: np.ndarray) -> None:
         r"""
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):

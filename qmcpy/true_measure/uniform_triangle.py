@@ -58,5 +58,5 @@ class UniformTriangle(SciPyWrapper):
     True
     """
 
-    def __init__(self, sampler):
+    def __init__(self, sampler) -> None:
         super().__init__(sampler=sampler, scipy_distribs=_UniformTriangleAdapter())

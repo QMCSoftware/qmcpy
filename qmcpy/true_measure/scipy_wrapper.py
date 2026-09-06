@@ -175,7 +175,7 @@ class SciPyWrapper(AbstractTrueMeasure):
         (4, 2)
     """
 
-    def __init__(self, sampler, scipy_distribs):
+    def __init__(self, sampler, scipy_distribs) -> None:
         """Parameters ---------- sampler : AbstractDiscreteDistribution Low
         discrepancy or iid sampler in dimension d, living on [0,1)^d.
         scipy_distribs:

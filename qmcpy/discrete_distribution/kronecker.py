@@ -219,13 +219,13 @@ class Kronecker(AbstractLDDiscreteDistribution):
 
     def __init__(self,
         dimension=1,
-        replications=None,
+        replications: int = None,
         seed=None,
-        randomize="SHIFT",
+        randomize: str = "SHIFT",
         generating_vector="CBC",
-        shift=None,
-        warn=True,
-    ):
+        shift: np.ndarray = None,
+        warn: bool = True,
+    ) -> None:
         r"""
         Args:
             dimension (Union[int, np.ndarray]): Dimension of the generator.

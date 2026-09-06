@@ -11,7 +11,7 @@ class TriangularDistribution:
     ppf and pdf for SciPyWrapper custom-marginal usage.
     """
 
-    def __init__(self, c=0.5, loc=0.0, scale=1.0):
+    def __init__(self, c=0.5, loc=0.0, scale=1.0) -> None:
         c = float(c)
         loc = float(loc)
         scale = float(scale)
@@ -58,7 +58,7 @@ class TriangularDistribution:
 class Triangular(SciPyWrapper):
     """Convenience TrueMeasure wrapper around TriangularDistribution."""
 
-    def __init__(self, sampler, c=0.5, loc=0.0, scale=1.0):
+    def __init__(self, sampler, c=0.5, loc=0.0, scale=1.0) -> None:
         super().__init__(
             sampler=sampler,
             scipy_distribs=TriangularDistribution(c=c, loc=loc, scale=scale),

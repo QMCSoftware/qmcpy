@@ -40,7 +40,7 @@ class AbstractSIDSIKernel(AbstractKernelScaleLengthscales):
         shape_weights,
         tfs_weights,
         requires_grad_weights,
-    ):
+    ) -> None:
         # alias lengthscales with weights
         if weights is not None:
             if lengthscales is not None:
@@ -317,25 +317,25 @@ class KernelShiftInvar(AbstractSIDSIKernel):
 
     def __init__(
         self,
-        d,
+        d: int,
         scale=1.0,
         lengthscales=None,
         alpha=2,
-        shape_scale=None,
-        shape_lengthscales=None,
+        shape_scale: list = None,
+        shape_lengthscales: list = None,
         tfs_scale=None,
         tfs_lengthscales=None,
-        torchify=False,
-        requires_grad_scale=None,
-        requires_grad_lengthscales=None,
+        torchify: bool = False,
+        requires_grad_scale: bool = None,
+        requires_grad_lengthscales: bool = None,
         device="cpu",
-        compile_call=False,
-        compile_call_kwargs=None,
+        compile_call: bool = False,
+        compile_call_kwargs: dict = None,
         weights=None,
-        shape_weights=None,
+        shape_weights: list = None,
         tfs_weights=None,
-        requires_grad_weights=None,
-    ):
+        requires_grad_weights: bool = None,
+    ) -> None:
         r"""
         Args:
             d (int): Dimension.
@@ -537,28 +537,28 @@ class KernelShiftInvarCombined(AbstractSIDSIKernel):
 
     def __init__(
         self,
-        d,
+        d: int,
         scale=1.0,
         lengthscales=None,
         alpha=1,
-        shape_scale=None,
-        shape_lengthscales=None,
-        shape_alpha=None,
+        shape_scale: list = None,
+        shape_lengthscales: list = None,
+        shape_alpha: list = None,
         tfs_scale=None,
         tfs_lengthscales=None,
         tfs_alpha=None,
-        torchify=False,
-        requires_grad_scale=None,
-        requires_grad_lengthscales=None,
-        requires_grad_alpha=None,
+        torchify: bool = False,
+        requires_grad_scale: bool = None,
+        requires_grad_lengthscales: bool = None,
+        requires_grad_alpha: bool = None,
         device="cpu",
-        compile_call=False,
-        compile_call_kwargs=None,
+        compile_call: bool = False,
+        compile_call_kwargs: dict = None,
         weights=None,
-        shape_weights=None,
+        shape_weights: list = None,
         tfs_weights=None,
-        requires_grad_weights=None,
-    ):
+        requires_grad_weights: bool = None,
+    ) -> None:
         r"""
         Args:
             d (int): Dimension.
@@ -815,26 +815,26 @@ class KernelDigShiftInvar(AbstractSIDSIKernel):
 
     def __init__(
         self,
-        d,
-        t=None,
+        d: int,
+        t: int = None,
         scale=1.0,
         lengthscales=None,
         alpha=2,
-        shape_scale=None,
-        shape_lengthscales=None,
+        shape_scale: list = None,
+        shape_lengthscales: list = None,
         tfs_scale=None,
         tfs_lengthscales=None,
-        torchify=False,
-        requires_grad_scale=None,
-        requires_grad_lengthscales=None,
+        torchify: bool = False,
+        requires_grad_scale: bool = None,
+        requires_grad_lengthscales: bool = None,
         device="cpu",
-        compile_call=False,
-        compile_call_kwargs=None,
+        compile_call: bool = False,
+        compile_call_kwargs: dict = None,
         weights=None,
-        shape_weights=None,
+        shape_weights: list = None,
         tfs_weights=None,
-        requires_grad_weights=None,
-    ):
+        requires_grad_weights: bool = None,
+    ) -> None:
         r"""
         Args:
             d (int): Dimension.
@@ -1096,29 +1096,29 @@ class KernelDigShiftInvarAdaptiveAlpha(AbstractSIDSIKernel):
 
     def __init__(
         self,
-        d,
-        t=None,
+        d: int,
+        t: int = None,
         scale=1.0,
         lengthscales=None,
         alpha=1,
-        shape_scale=None,
-        shape_lengthscales=None,
-        shape_alpha=None,
+        shape_scale: list = None,
+        shape_lengthscales: list = None,
+        shape_alpha: list = None,
         tfs_scale=None,
         tfs_lengthscales=None,
         tfs_alpha=None,
-        torchify=False,
-        requires_grad_scale=None,
-        requires_grad_lengthscales=None,
-        requires_grad_alpha=None,
+        torchify: bool = False,
+        requires_grad_scale: bool = None,
+        requires_grad_lengthscales: bool = None,
+        requires_grad_alpha: bool = None,
         device="cpu",
-        compile_call=False,
-        compile_call_kwargs=None,
+        compile_call: bool = False,
+        compile_call_kwargs: dict = None,
         weights=None,
-        shape_weights=None,
+        shape_weights: list = None,
         tfs_weights=None,
-        requires_grad_weights=None,
-    ):
+        requires_grad_weights: bool = None,
+    ) -> None:
         r"""
         Args:
             d (int): Dimension.
@@ -1350,29 +1350,29 @@ class KernelDigShiftInvarCombined(AbstractSIDSIKernel):
 
     def __init__(
         self,
-        d,
-        t=None,
+        d: int,
+        t: int = None,
         scale=1.0,
         lengthscales=None,
         alpha=1.0,
-        shape_scale=None,
-        shape_lengthscales=None,
-        shape_alpha=None,
+        shape_scale: list = None,
+        shape_lengthscales: list = None,
+        shape_alpha: list = None,
         tfs_scale=None,
         tfs_lengthscales=None,
         tfs_alpha=None,
-        torchify=False,
-        requires_grad_scale=None,
-        requires_grad_lengthscales=None,
-        requires_grad_alpha=None,
+        torchify: bool = False,
+        requires_grad_scale: bool = None,
+        requires_grad_lengthscales: bool = None,
+        requires_grad_alpha: bool = None,
         device="cpu",
-        compile_call=False,
-        compile_call_kwargs=None,
+        compile_call: bool = False,
+        compile_call_kwargs: dict = None,
         weights=None,
-        shape_weights=None,
+        shape_weights: list = None,
         tfs_weights=None,
-        requires_grad_weights=None,
-    ):
+        requires_grad_weights: bool = None,
+    ) -> None:
         r"""
         Args:
             d (int): Dimension.

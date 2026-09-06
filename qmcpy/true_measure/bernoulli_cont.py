@@ -37,7 +37,7 @@ class BernoulliCont(AbstractTrueMeasure):
                 [0.6345258 , 0.60241448, 0.84822692]]])
     """
 
-    def __init__(self, sampler, lam=1 / 2):
+    def __init__(self, sampler, lam=1 / 2) -> None:
         r"""
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):

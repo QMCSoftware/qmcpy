@@ -3,7 +3,7 @@ from .exceptions_warnings import ParameterError
 from .torch_numpy_ops import get_npt
 
 
-def k4sumterm(x, t, cutoff=1e-8):
+def k4sumterm(x, t: int, cutoff=1e-8):
     r"""$$K_4(x) = \sum_{a=0}^{t-1} \frac{x_a}{2^{3a}}$$
 
     where $x_a$ is the bit at index $a$ in the binary expansion of $x$ e.g. $x
@@ -64,7 +64,7 @@ WEIGHTEDWALSHFUNCSZEROS = {
 }
 
 
-def weighted_walsh_funcs(alpha, xb, t):
+def weighted_walsh_funcs(alpha: int, xb, t: int):
     r"""Weighted walsh functions
 
     $$\sum_{k=0}^\infty \mathrm{wal}_k(x) 2^{-\mu_\alpha(k)}$$
@@ -157,7 +157,7 @@ def weighted_walsh_funcs(alpha, xb, t):
     return y
 
 
-def to_bin(x, t):
+def to_bin(x, t: int):
     r"""Convert floating point representations of digital net samples in base
     $b=2$ to binary representations.
 
@@ -208,7 +208,7 @@ def to_bin(x, t):
             raise ParameterError("x.dtype must be float or int, got %s" % str(x.dtype))
 
 
-def to_float(x, t):
+def to_float(x, t: int):
     r"""Convert binary representations of digital net samples in base $b=2$ to
     floating point representations.
 

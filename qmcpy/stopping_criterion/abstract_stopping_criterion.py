@@ -25,7 +25,7 @@ class AbstractStoppingCriterion(object):
     _RESUME_FORMAT_VERSION = 1  # Increment when checkpoint format changes in a non-backwards-compatible way
     _ITERATION_LOG_VIEWS = ("all", "current", "without_resume", "stage_last")
 
-    def __init__(self, allowed_distribs, allow_vectorized_integrals):
+    def __init__(self, allowed_distribs: list, allow_vectorized_integrals: bool) -> None:
         """Initialize a stopping criterion base class.
 
         Args:
@@ -81,7 +81,7 @@ class AbstractStoppingCriterion(object):
                 object is preserved. Defaults to None.
 
         Returns:
-            Approximation to the integral with shape ``integrand.d_comb`` and
+            tuple: Approximation to the integral with shape ``integrand.d_comb`` and
             the corresponding data object.
         """
         raise MethodImplementationError(self, "integrate")
@@ -123,10 +123,10 @@ class AbstractStoppingCriterion(object):
     def get_iteration_log(
         self,
         history=None,
-        printed_only=True,
-        drop_empty_columns=True,
-        formatted=True,
-        view="all",
+        printed_only: bool = True,
+        drop_empty_columns: bool = True,
+        formatted: bool = True,
+        view: str = "all",
     ) -> "pandas.DataFrame":
         """Return the latest iteration log as a pandas DataFrame.
 
@@ -146,7 +146,7 @@ class AbstractStoppingCriterion(object):
                 stage.
 
         Returns:
-            DataFrame representation of the iteration log.
+            pandas.DataFrame: DataFrame representation of the iteration log.
         """
         self._validate_iteration_log_view(view)
         use_cache = (
@@ -204,7 +204,7 @@ class AbstractStoppingCriterion(object):
         positions = positions[positions >= 0]
         return log_df.loc[non_resume_indices[positions]].reset_index(drop=True)
 
-    def format_iteration_log(self, history=None, printed_only=True, include_header=True) -> str:
+    def format_iteration_log(self, history=None, printed_only: bool = True, include_header: bool = True) -> str:
         """Return the iteration log as formatted text.
 
         Args:
@@ -217,7 +217,7 @@ class AbstractStoppingCriterion(object):
                 before the table. Defaults to True.
 
         Returns:
-            Formatted iteration log text.
+            str: Formatted iteration log text.
         """
         if history is None:
             history = getattr(self, "iteration_history", None)
@@ -228,7 +228,7 @@ class AbstractStoppingCriterion(object):
             include_header=include_header,
         )
 
-    def print_iteration_log(self, history=None, printed_only=True, include_header=True, file=None) -> None:
+    def print_iteration_log(self, history=None, printed_only: bool = True, include_header: bool = True, file=None) -> None:
         """Print the iteration log for the latest run or supplied history.
 
         Args:

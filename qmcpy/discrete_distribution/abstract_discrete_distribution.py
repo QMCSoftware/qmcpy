@@ -8,7 +8,7 @@ import numpy as np
 
 class AbstractDiscreteDistribution(object):
 
-    def __init__(self, dimension, replications, seed, d_limit, n_limit):
+    def __init__(self, dimension, replications, seed, d_limit, n_limit) -> None:
         self.mimics = "StdUniform"
         if not hasattr(self, "parameters"):
             self.parameters = []
@@ -124,7 +124,7 @@ class AbstractDiscreteDistribution(object):
     def _gen_samples(self, *args, **kwargs):
         raise MethodImplementationError(self, "_gen_samples")
 
-    def spawn(self, s=1, dimensions=None):
+    def spawn(self, s: int = 1, dimensions: np.ndarray = None):
         r"""Spawn new instances of the current discrete distribution but with
         new seeds and dimensions. Used by multi-level QMC algorithms which
         require different seeds and dimensions on each level.

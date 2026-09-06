@@ -49,7 +49,7 @@ class IIDStdUniform(AbstractIIDDiscreteDistribution):
                 [0.6171181 , 0.1239209 , 0.16809479]]])
     """
 
-    def __init__(self, dimension=1, replications=None, seed=None):
+    def __init__(self, dimension: int = 1, replications=None, seed=None) -> None:
         r"""
         Args:
             dimension (int): Dimension of the samples.

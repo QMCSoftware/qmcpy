@@ -35,7 +35,7 @@ class Lebesgue(AbstractTrueMeasure):
                                                   (1, 1) 0.08333333333333333
     """
 
-    def __init__(self, sampler):
+    def __init__(self, sampler: AbstractTrueMeasure) -> None:
         r"""
         Args:
             sampler (AbstractTrueMeasure): A true measure by which to compose a

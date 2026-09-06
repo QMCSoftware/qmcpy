@@ -139,16 +139,16 @@ class BrownianMotion(Gaussian):
     def __init__(
         self,
         sampler,
-        t_final=1,
-        initial_value=0,
-        drift=0,
-        diffusion=1,
-        decomp_type="PCA",
-        lazy_decomp=True,
+        t_final: float = 1,
+        initial_value: float = 0,
+        drift: int = 0,
+        diffusion: int = 1,
+        decomp_type: str = "PCA",
+        lazy_decomp: bool = True,
         monitoring_times=None,
-        bridge_vdc_gray_ordering=True,
-        bridge_output_order='increasing',
-    ):
+        bridge_vdc_gray_ordering: bool = True,
+        bridge_output_order: str = 'increasing',
+    ) -> None:
         r"""
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):

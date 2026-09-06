@@ -23,7 +23,7 @@ class Suggester(object):
 
 
 class PFSampleErrorDensityAR(Suggester):
-    def __init__(self, verbose=False):
+    def __init__(self, verbose=False) -> None:
         self.verbose = verbose
         super(PFSampleErrorDensityAR, self).__init__()
 
@@ -55,7 +55,7 @@ class PFSampleErrorDensityAR(Suggester):
 
 
 class SuggesterSimple(Suggester):
-    def __init__(self, sampler):
+    def __init__(self, sampler) -> None:
         self.sampler = sampler
         if isinstance(self.sampler, AbstractTrueMeasure):
             if not ((self.sampler.range == [0, 1]).all()):
@@ -166,21 +166,21 @@ class PFGPCI(AbstractStoppingCriterion):
     def __init__(
         self,
         integrand,
-        failure_threshold,
-        failure_above_threshold,
-        abs_tol=5e-3,
-        n_init=64,
-        n_limit=1000,
-        alpha=1e-2,
-        init_samples=None,
+        failure_threshold: float,
+        failure_above_threshold: bool,
+        abs_tol: float = 5e-3,
+        n_init: float = 64,
+        n_limit: int = 1000,
+        alpha: float = 1e-2,
+        init_samples: float = None,
         batch_sampler=PFSampleErrorDensityAR(),
-        n_batch=4,
-        n_approx=2**20,
-        gpytorch_prior_mean=gpytorch.means.ZeroMean(),
-        gpytorch_prior_cov=gpytorch.kernels.ScaleKernel(
+        n_batch: int = 4,
+        n_approx: int = 2**20,
+        gpytorch_prior_mean: gpytorch.means = gpytorch.means.ZeroMean(),
+        gpytorch_prior_cov: gpytorch.kernels = gpytorch.kernels.ScaleKernel(
             gpytorch.kernels.MaternKernel(nu=2.5)
         ),
-        gpytorch_likelihood=gpytorch.likelihoods.GaussianLikelihood(
+        gpytorch_likelihood: gpytorch.likelihoods = gpytorch.likelihoods.GaussianLikelihood(
             noise_constraint=gpytorch.constraints.Interval(1e-12, 1e-8)
         ),
         gpytorch_marginal_log_likelihood_func=lambda likelihood, gpyt_model: gpytorch.mlls.ExactMarginalLogLikelihood(
@@ -189,12 +189,12 @@ class PFGPCI(AbstractStoppingCriterion):
         torch_optimizer_func=lambda gpyt_model: torch.optim.Adam(
             gpyt_model.parameters(), lr=0.1
         ),
-        gpytorch_train_iter=100,
-        gpytorch_use_gpu=False,
-        verbose=False,
-        n_ref_approx=2**22,
-        seed_ref_approx=None,
-    ):
+        gpytorch_train_iter: int = 100,
+        gpytorch_use_gpu: bool = False,
+        verbose: int = False,
+        n_ref_approx: int = 2**22,
+        seed_ref_approx: int = None,
+    ) -> None:
         """
         Args:
             integrand (AbstractIntegrand): The integrand.
@@ -427,7 +427,7 @@ class PFGPCIData(Data):
         gpytorch_use_gpu,
         verbose,
         approx_true_solution,
-    ):
+    ) -> None:
         self.stopping_crit = stopping_crit
         self.integrand = integrand
         self.true_measure = true_measure
