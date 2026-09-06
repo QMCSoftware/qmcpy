@@ -95,6 +95,10 @@ Several reviews focused on avoidable cleanup that is easy to catch before reques
 - Remove unused imports, trailing whitespace, and other style-only churn before requesting review.
 - Use explicit runtime exceptions such as `ParameterError` for invalid user inputs instead of relying on `assert` statements in production code.
 
+For a mechanical first pass, `make check_asserts_changed` reports standalone assertions in production Python files changed relative to `ASSERT_DIFF_BASE` (default `develop`) and returns nonzero when conversions are available. `make convert_asserts_changed` uses the open-source [LibCST](https://libcst.readthedocs.io/) codemod library to convert those assertions to explicit `AssertionError` raises while preserving comments and formatting. Use `make convert_asserts ASSERT_PATH=path/to/file.py` for a specific file or directory.
+
+`AssertionError` is the conservative default because it preserves the original exception class and message while making validation active under `python -O`. For a reviewed set of input checks, a developer may select an exception already imported by every target file, for example `make convert_asserts ASSERT_PATH=path/to/file.py ASSERT_EXCEPTION=ParameterError`. The tool does not infer whether a condition represents invalid input, a dimension mismatch, or an internal invariant; choose `ParameterError`, `DimensionError`, `ValueError`, or another public exception only after reviewing the API contract. Assertions sharing a semicolon-delimited line with another statement, or appearing in a one-line compound suite such as `if condition: assert invariant`, are reported but skipped. Always inspect the complete diff and run the focused tests after conversion.
+
 ## Add Demos or Blogs as Notebooks
 
 User-facing methods, new workflows, and mathematically important additions should usually come with an executable notebook.

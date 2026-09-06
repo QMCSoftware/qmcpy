@@ -1,10 +1,13 @@
+# Prefer an active environment, then the repository's conventional qmcpy Conda
+# environment, before falling back to a system interpreter. Override with
+# ``make PYTHON=/path/to/python <target>`` when needed.
+PYTHON ?= $(shell command -v python 2>/dev/null || { [ -n "$$CONDA_PREFIX" ] && command -v "$$CONDA_PREFIX/bin/python" 2>/dev/null; } || { command -v conda >/dev/null 2>&1 && conda run -n qmcpy python -c 'import sys; print(sys.executable)' 2>/dev/null; } || command -v python3 2>/dev/null)
 # Emit pytest-xdist argument if available; can be overridden on the make command line
-PYTEST_XDIST ?= $(shell python scripts/pytest_xdist.py 2>/dev/null)
+PYTEST_XDIST ?= $(shell $(PYTHON) scripts/pytest_xdist.py 2>/dev/null)
 PYTEST ?=
-PYTHON ?= python3
 SMOKE_CODE_CELLS ?= 2
 WITH_MPMC ?= 0
-HAS_MPMC ?= $(shell python -c "import importlib.util; mods=('torch','pyg_lib','torch_geometric'); print(int(all(importlib.util.find_spec(m) is not None for m in mods)))" 2>/dev/null || echo 0)
+HAS_MPMC ?= $(shell $(PYTHON) -c "import importlib.util; mods=('torch','pyg_lib','torch_geometric'); print(int(all(importlib.util.find_spec(m) is not None for m in mods)))" 2>/dev/null || echo 0)
 
 # set environment variable for documentation
 export JUPYTER_PLATFORM_DIRS=1
@@ -50,6 +53,26 @@ TEST_STYLE_PATH ?= test
 # (e.g. STRICT=--strict make check_test_style).
 check_test_style:
 	@$(PYTHON) scripts/check_test_style.py $(TEST_STYLE_PATH) $(STRICT)
+
+ASSERT_PATH ?= qmcpy
+ASSERT_DIFF_BASE ?= develop
+ASSERT_EXCEPTION ?= AssertionError
+ASSERT_CONVERT_ARGS ?=
+
+check_assert_codemod_dependency:
+	@$(PYTHON) -c "import libcst" 2>/dev/null || { \
+		echo 'Missing LibCST. Install the test tools with: $(PYTHON) -m pip install -e ".[test]"'; \
+		exit 127; \
+	}
+
+convert_asserts: check_assert_codemod_dependency
+	$(PYTHON) scripts/convert_asserts.py --exception "$(ASSERT_EXCEPTION)" $(ASSERT_CONVERT_ARGS) $(ASSERT_PATH)
+
+convert_asserts_changed: check_assert_codemod_dependency
+	$(PYTHON) scripts/convert_asserts.py --diff "$(ASSERT_DIFF_BASE)" --exception "$(ASSERT_EXCEPTION)" $(ASSERT_CONVERT_ARGS)
+
+check_asserts_changed: check_assert_codemod_dependency
+	$(PYTHON) scripts/convert_asserts.py --diff "$(ASSERT_DIFF_BASE)" --exception "$(ASSERT_EXCEPTION)" --check $(ASSERT_CONVERT_ARGS)
 
 DOCSTRING_PATH ?= qmcpy
 DOCSTRING_BASE ?= origin/develop
@@ -138,7 +161,7 @@ check_docstring_changed:
 doctests_minimal: ensure_artifacts
 	@mkdir -p $(DOCTEST_COV_DIR)/minimal
 	COVERAGE_FILE=$(DOCTEST_COV_DIR)/minimal/.coverage \
-	python -m pytest $(PYTEST_XDIST) -x --cov qmcpy/ --cov-report term --cov-report json:$(DOCTEST_COV_DIR)/minimal/coverage.json --no-header --cov-append \
+	$(PYTHON) -m pytest $(PYTEST_XDIST) -x --cov qmcpy/ --cov-report term --cov-report json:$(DOCTEST_COV_DIR)/minimal/coverage.json --no-header --cov-append \
 		--doctest-modules qmcpy/ \
 		--ignore qmcpy/fast_transform/ft_pytorch.py \
 		--ignore qmcpy/stopping_criterion/pf_gp_ci.py \
@@ -153,7 +176,7 @@ doctests_minimal: ensure_artifacts
 doctests_torch: ensure_artifacts
 	@mkdir -p $(DOCTEST_COV_DIR)/torch
 	COVERAGE_FILE=$(DOCTEST_COV_DIR)/torch/.coverage \
-	python -m pytest $(PYTEST_XDIST) -x --cov qmcpy/ --cov-report term --cov-report json:$(DOCTEST_COV_DIR)/torch/coverage.json --no-header --cov-append \
+	$(PYTHON) -m pytest $(PYTEST_XDIST) -x --cov qmcpy/ --cov-report term --cov-report json:$(DOCTEST_COV_DIR)/torch/coverage.json --no-header --cov-append \
 		--doctest-modules qmcpy/fast_transform/ft_pytorch.py \
 		--doctest-modules qmcpy/kernel/*.py \
 		--doctest-modules qmcpy/util/dig_shift_invar_ops.py \
@@ -162,26 +185,26 @@ doctests_torch: ensure_artifacts
 doctests_gpytorch: ensure_artifacts
 	@mkdir -p $(DOCTEST_COV_DIR)/gpytorch
 	COVERAGE_FILE=$(DOCTEST_COV_DIR)/gpytorch/.coverage \
-	python -m pytest $(PYTEST_XDIST) -x --cov qmcpy/ --cov-report term --cov-report json:$(DOCTEST_COV_DIR)/gpytorch/coverage.json --no-header --cov-append \
+	$(PYTHON) -m pytest $(PYTEST_XDIST) -x --cov qmcpy/ --cov-report term --cov-report json:$(DOCTEST_COV_DIR)/gpytorch/coverage.json --no-header --cov-append \
 		--doctest-modules qmcpy/stopping_criterion/pf_gp_ci.py \
 
 doctests_botorch: ensure_artifacts
 	@mkdir -p $(DOCTEST_COV_DIR)/botorch
 	COVERAGE_FILE=$(DOCTEST_COV_DIR)/botorch/.coverage \
-	python -m pytest $(PYTEST_XDIST) -x --cov qmcpy/ --cov-report term --cov-report json:$(DOCTEST_COV_DIR)/botorch/coverage.json --no-header --cov-append \
+	$(PYTHON) -m pytest $(PYTEST_XDIST) -x --cov qmcpy/ --cov-report term --cov-report json:$(DOCTEST_COV_DIR)/botorch/coverage.json --no-header --cov-append \
 		--doctest-modules qmcpy/integrand/hartmann6d.py \
 
 doctests_mpmc:
 	@mkdir -p $(DOCTEST_COV_DIR)/mpmc
 	COVERAGE_FILE=$(DOCTEST_COV_DIR)/mpmc/.coverage \
-	python -m pytest $(PYTEST_XDIST) -x --cov qmcpy/ --cov-report term --cov-report json:$(DOCTEST_COV_DIR)/mpmc/coverage.json --no-header --cov-append \
+	$(PYTHON) -m pytest $(PYTEST_XDIST) -x --cov qmcpy/ --cov-report term --cov-report json:$(DOCTEST_COV_DIR)/mpmc/coverage.json --no-header --cov-append \
 		--doctest-modules qmcpy/discrete_distribution/mpmc/*.py \
 
 doctests_umbridge: ensure_artifacts # https://github.com/UM-Bridge/umbridge/issues/96
 	@mkdir -p $(DOCTEST_COV_DIR)/umbridge
 	@docker --version
 	COVERAGE_FILE=$(DOCTEST_COV_DIR)/umbridge/.coverage \
-	python -m pytest $(PYTEST_XDIST) -x --cov qmcpy/ --cov-report term --cov-report json:$(DOCTEST_COV_DIR)/umbridge/coverage.json --no-header --cov-append \
+	$(PYTHON) -m pytest $(PYTEST_XDIST) -x --cov qmcpy/ --cov-report term --cov-report json:$(DOCTEST_COV_DIR)/umbridge/coverage.json --no-header --cov-append \
 		--doctest-modules qmcpy/integrand/umbridge_wrapper.py \
 
 doctests_markdown:
@@ -201,13 +224,8 @@ doctests: doctests_markdown doctests_minimal doctests_torch doctests_gpytorch do
 ##########################################################
 unittests: ensure_artifacts
 	@mkdir -p $(UNIT_COV_DIR)
-	@PYTHON_BIN=$$(command -v python 2>/dev/null || { [ -n "$$CONDA_PREFIX" ] && command -v "$$CONDA_PREFIX/bin/python" 2>/dev/null; } || { command -v conda >/dev/null 2>&1 && conda run -n qmcpy python -c 'import sys; print(sys.executable)' 2>/dev/null; } || command -v python3 2>/dev/null); \
-	if [ -z "$$PYTHON_BIN" ]; then \
-		echo "No Python interpreter found (tried: python, $$CONDA_PREFIX/bin/python, python3)."; \
-		exit 127; \
-	fi; \
-	COVERAGE_FILE=$(UNIT_COV_DIR)/.coverage \
-	"$$PYTHON_BIN" -m pytest $(PYTEST_XDIST) -x $(PYTEST_EXTRA_ARGS) \
+	@COVERAGE_FILE=$(UNIT_COV_DIR)/.coverage \
+	$(PYTHON) -m pytest $(PYTEST_XDIST) -x $(PYTEST_EXTRA_ARGS) \
 		--cov=qmcpy \
 		--cov-report term \
 		--cov-report json:$(UNIT_COV_DIR)/coverage.json \
@@ -221,7 +239,7 @@ unittests: ensure_artifacts
 unittests_core: ensure_artifacts
 	@mkdir -p $(UNIT_COV_DIR)
 	COVERAGE_FILE=$(UNIT_COV_DIR)/.coverage \
-	python -m pytest $(PYTEST_XDIST) $(PYTEST_EXTRA_ARGS) \
+	$(PYTHON) -m pytest $(PYTEST_XDIST) $(PYTEST_EXTRA_ARGS) \
 		--cov=qmcpy \
 		--cov-report term \
 		--cov-report json:$(UNIT_COV_DIR)/coverage.json \
@@ -236,7 +254,7 @@ tests_no_docker_no_mpmc: doctests_no_docker_no_mpmc unittests coverage
 ##########################################################
 generate_booktests:
 	@echo "\nGenerating missing booktest files..."
-	cd test/booktests/ && python generate_test.py --check-missing
+	cd test/booktests/ && $(PYTHON) generate_test.py --check-missing
 
 check_colab_notebooks:  # faster
 	$(PYTHON) -m scripts.check_colab_notebooks --strict
@@ -345,11 +363,11 @@ booktests_no_docker: check_booktests generate_booktests clean_local_only_files e
 	if [ -z "$(TESTS)" ]; then \
 		PYTHONWARNINGS="ignore::UserWarning,ignore::DeprecationWarning,ignore::FutureWarning,ignore::ImportWarning" \
 		COVERAGE_FILE=../../$(BOOKTEST_COV_DIR)/.coverage \
-		python -W ignore -m coverage run --append --source=../../qmcpy/ -m unittest discover -s . -p "*.py" -v --failfast; \
+		$(PYTHON) -W ignore -m coverage run --append --source=../../qmcpy/ -m unittest discover -s . -p "*.py" -v --failfast; \
 	else \
 		PYTHONWARNINGS="ignore::UserWarning,ignore::DeprecationWarning,ignore::FutureWarning,ignore::ImportWarning" \
 		COVERAGE_FILE=../../$(BOOKTEST_COV_DIR)/.coverage \
-		python -W ignore -m coverage run --append --source=../../qmcpy/ -m unittest $(TESTS) -v --failfast; \
+		$(PYTHON) -W ignore -m coverage run --append --source=../../qmcpy/ -m unittest $(TESTS) -v --failfast; \
 	fi && \
 	cd ../..
 
@@ -359,7 +377,7 @@ booktests_parallel_no_docker: check_booktests generate_booktests clean_local_onl
 	cd test/booktests/ && \
 	rm -fr *.eps *.jpg *.pdf *.png *.part *.txt *.log && rm -fr logs && rm -fr runinfo prob_failure_gp_ci_plots && \
 	PYTHONWARNINGS="ignore::UserWarning,ignore::DeprecationWarning,ignore::FutureWarning,ignore::ImportWarning" \
-	python parsl_test_runner.py $(TESTS) -v --failfast && \
+	$(PYTHON) parsl_test_runner.py $(TESTS) -v --failfast && \
 	cd ../..
 
 # Windows-compatible parallel booktests using pytest-xdist instead of Parsl
@@ -368,7 +386,7 @@ booktests_parallel_pytest: check_booktests generate_booktests clean_local_only_f
 	cd test/booktests/ && \
 	PYTHONWARNINGS="ignore::UserWarning,ignore::DeprecationWarning,ignore::FutureWarning,ignore::ImportWarning" \
 	COVERAGE_FILE=../../$(BOOKTEST_COV_DIR)/.coverage \
-	python -W ignore -m pytest $(PYTEST_XDIST) $(PYTEST) -v tb_*.py \
+	$(PYTHON) -W ignore -m pytest $(PYTEST_XDIST) $(PYTEST) -v tb_*.py \
 		--cov=qmcpy \
 		--cov-append \
 		--cov-report=term \
@@ -395,19 +413,23 @@ tests_no_docker:
 # Fast test target: run doctests, unittests, booktests concurrently
 tests_fast:
 	@echo "Running fast tests: doctests and unittests concurrently (splitting CPU cores)."
-	@make clean_local_only_files clean_coverage && \
+	@set -e; \
+	$(MAKE) clean_local_only_files clean_coverage; \
 	if [ "$(WITH_MPMC)" = "1" ] || [ "$(HAS_MPMC)" = "1" ]; then \
 		DOCTESTS_TARGET=doctests_no_docker; \
 		UNITTESTS_ARGS=""; \
 	else \
 		DOCTESTS_TARGET=doctests_no_docker_no_mpmc; \
 		UNITTESTS_ARGS="--ignore=test/test_dd_mpmc.py"; \
-	fi && \
-	set -e && \
-	$(MAKE) $$DOCTESTS_TARGET & \
-	$(MAKE) unittests PYTEST_EXTRA_ARGS="$$UNITTESTS_ARGS" & \
-	$(MAKE) booktests_parallel_no_docker  & \
-	wait
+	fi; \
+	$(MAKE) $$DOCTESTS_TARGET & doctests_pid=$$!; \
+	$(MAKE) unittests PYTEST_EXTRA_ARGS="$$UNITTESTS_ARGS" & unittests_pid=$$!; \
+	$(MAKE) booktests_parallel_no_docker & booktests_pid=$$!; \
+	status=0; \
+	wait $$doctests_pid || status=$$?; \
+	wait $$unittests_pid || status=$$?; \
+	wait $$booktests_pid || status=$$?; \
+	exit $$status
 	$(MAKE) coverage
 
 ##########################################################
@@ -422,7 +444,7 @@ coverage: ensure_artifacts # https://github.com/marketplace/actions/coverage-bad
 	@echo "============================================================"
 	@echo ""
 	COVERAGE_FILE=$(UNIT_COV_DIR)/.coverage \
-	python -m coverage report -m
+	$(PYTHON) -m coverage report -m
 
 combine-coverage-local: ensure_artifacts  # Combine coverage files and build reports locally (NOT official)
 	@echo "Combining coverage files from $(COV_DIR)/ into coverage-data/ and generating reports"
@@ -441,7 +463,7 @@ combine-coverage-local: ensure_artifacts  # Combine coverage files and build rep
 		echo "No coverage data found. Run tests first (e.g., make unittests / make doctests / make booktests_*)"; \
 		exit 1; \
 	fi; \
-	python scripts/combine_coverage.py --dir coverage-data --outdir coverage_html --keep
+	$(PYTHON) scripts/combine_coverage.py --dir coverage-data --outdir coverage_html --keep
 
 coverage_html: ensure_artifacts
 	@mkdir -p $(UNIT_COV_DIR)/html
@@ -452,7 +474,7 @@ coverage_html: ensure_artifacts
 	@echo "============================================================"
 	@echo ""
 	COVERAGE_FILE=$(UNIT_COV_DIR)/.coverage \
-	python -m coverage html -d $(UNIT_COV_DIR)/html
+	$(PYTHON) -m coverage html -d $(UNIT_COV_DIR)/html
 
 delcoverage:
 	@rm -f .coverage coverage.json test/booktests/.coverage
@@ -515,7 +537,7 @@ copydocs:  # mkdocs only looks for content in the docs/ folder, so we have to co
 	@./scripts/render_paper_for_mkdocs.sh
 	@cp test/booktests/README.md docs/booktests.md
 	@cp test/README.md docs/tests.md
-	@python scripts/make_qmc_software_page.py
+	@$(PYTHON) scripts/make_qmc_software_page.py
 	@mkdir -p docs/stats
 	@cp stats/pypi_downloads.md docs/stats/pypi_downloads.md
 	@cp docs/assets/logos/qmcpy_logo.png docs/apple-touch-icon.png
@@ -538,19 +560,19 @@ docnouml: copydocs runmkdocserve
 
 check_links: copydocs  # internal links + anchors only; fast, no network, safe for CI
 	@NO_MKDOCS_2_WARNING=1 mkdocs build -q -d site
-	@python scripts/check_links.py site
+	@$(PYTHON) scripts/check_links.py site
 
 check_links_external: copydocs  # also checks http/https links; slow and network-flaky, run locally
 	@NO_MKDOCS_2_WARNING=1 mkdocs build -q -d site
-	@python scripts/check_links.py site --external
+	@$(PYTHON) scripts/check_links.py site --external
 
 # The targets above check links inside the new site; these check the other
 # direction -- already-published URLs that would 404 after the next deploy.
 check_removed_urls: copydocs  # fetches the deployed sitemap.xml; needs network
-	@python scripts/check_removed_urls.py
+	@$(PYTHON) scripts/check_removed_urls.py
 
 check_removed_urls_verify: copydocs  # also HTTP-checks every redirect target
-	@python scripts/check_removed_urls.py --verify-redirects
+	@$(PYTHON) scripts/check_removed_urls.py --verify-redirects
 
 ##########################################################
 # PEP8
@@ -583,7 +605,7 @@ pep8: update_pep8_badge
 update_pep8_badge:
 	@mkdir -p $(LOG_DIR) docs/assets
 	@make check_pep8 > $(LOG_DIR)/pylint.out
-	@python3 scripts/update_pep8_badge.py $(LOG_DIR)/pylint.out docs/assets/pep8-badge.json docs/assets/pep8-badge.svg
+	@$(PYTHON) scripts/update_pep8_badge.py $(LOG_DIR)/pylint.out docs/assets/pep8-badge.json docs/assets/pep8-badge.svg
 
 
 ##########################################################
