@@ -159,5 +159,7 @@ def mlmc_test(
         mlmc_cost = sum(nl*cl)
         idx = np.minimum(len(var2),len(nl))-1
         std_cost = var2[idx]*cl[-1] / ((1.-theta)*rmse_tols[i]**2)
-        print('    %-15.3e%-15.3e%-15.3e%-15.3e%-15.2f%s'\
-            %(rmse_tols[i], p, mlmc_cost, std_cost, std_cost/mlmc_cost,''.join('%-13d'%nli for nli in nl)))
+        output = '    %-15.3e%-15.3e%-15.3e%-15.3e%-15.2f%s' \
+            % (rmse_tols[i], p, mlmc_cost, std_cost, std_cost/mlmc_cost,
+               ''.join('%-13d' % nli for nli in nl))
+        print(output.rstrip())
