@@ -84,7 +84,16 @@ def main(argv):
     positional = [a for a in argv if not a.startswith("-")]
     test_dir = Path(positional[0]) if positional else Path("test")
 
-    files = sorted(test_dir.glob("test_*.py", recurse_symlinks=True))
+    # Recursive: a misnamed/bare-function test file placed in a subdirectory
+    # should still be caught. test/booktests/ is excluded -- it has its own
+    # separate, documented naming convention (tb_*.py, generated from
+    # demos/) and isn't meant to comply with the test_<area>_*.py convention
+    # this script enforces; test/booktests/test_runtimes.py in particular
+    # isn't a test at all, just a runtime-estimates data module that happens
+    # to start with "test_".
+    files = sorted(
+        f for f in test_dir.rglob("test_*.py") if "booktests" not in f.parts
+    )
     if not files:
         print(f"no test_*.py files under {test_dir}/", file=sys.stderr)
         return 1
