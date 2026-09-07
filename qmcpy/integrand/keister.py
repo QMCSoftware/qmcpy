@@ -69,7 +69,7 @@ class Keister(AbstractIntegrand):
         return Keister(sampler=sampler)
 
     @classmethod
-    def get_exact_value(self, d: int):
+    def get_exact_value(cls, d: int):
         """Compute the exact analytic value of the Keister integral with
         dimension $d$.
 

@@ -189,7 +189,7 @@ def to_bin(x, t: int):
 
     Returns:
         Union[np.ndarray, torch.Tensor]: binary representation of samples with `dtype` either `np.uint64` or
-        `torch.int64`.
+            `torch.int64`.
     """
     npt = get_npt(x)
     if npt == np:

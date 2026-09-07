@@ -504,7 +504,7 @@ class KernelMultiTask(AbstractKernel):
 
         Returns:
             Union[np.ndarray, torch.Tensor]: Kernel evaluations with batched shape, see the doctests for
-            examples.
+                examples.
         """
         kmat_x = self.base_kernel.__call__(x0, x1, beta0, beta1, c)
         return self._parsed__call__(task0, task1, kmat_x)

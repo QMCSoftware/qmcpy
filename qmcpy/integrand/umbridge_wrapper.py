@@ -154,7 +154,7 @@ class UMBridgeWrapper(AbstractIntegrand):
 
         Returns:
             list: List of lists with sub-list lengths specified by
-            `model.get_output_sizes(self.config)`.
+                `model.get_output_sizes(self.config)`.
         """
         return [
             x[..., self.d_out_umbridge[j] : self.d_out_umbridge[j + 1]].tolist()

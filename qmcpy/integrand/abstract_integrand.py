@@ -98,8 +98,6 @@ class AbstractIntegrand(object):
 
                 - If `replications` is `None` then this will be of size (`n_max`-`n_min`) $\times$ `dimension`
                 - If `replications` is a positive int, then `t` will be of size `replications` $\times$ (`n_max`-`n_min`) $\times$ `dimension`
-            weights (np.ndarray): Only returned when `return_weights=True`. The
-            Jacobian weights for the transformation
         """
         return self.gen_samples(n=n, n_min=n_min, n_max=n_max, warn=warn)
 
@@ -131,7 +129,7 @@ class AbstractIntegrand(object):
 
         Returns:
             np.ndarray: function evaluations with shape `(*batch_shape, *dimension_indv)`
-            where `dimension_indv` is the shape of the function outputs.
+                where `dimension_indv` is the shape of the function outputs.
         """
         raise MethodImplementationError(self, "g")
 
@@ -168,7 +166,7 @@ class AbstractIntegrand(object):
 
         Returns:
             np.ndarray: function evaluations with shape `(*batch_shape, *dimension_indv)`
-            where `dimension_indv` is the shape of the function outputs.
+                where `dimension_indv` is the shape of the function outputs.
         """
         if "periodization_transform" in kwargs:
             periodization_transform = kwargs["periodization_transform"]
@@ -320,9 +318,8 @@ class AbstractIntegrand(object):
                 shape `integrand.d_indv`.
 
         Returns:
-            np.ndarray: Lower bounds on combined estimates with shape `integrand.d_comb`.
-            comb_bound_high (np.ndarray): Upper bounds on combined estimates
-            with shape `integrand.d_comb`.
+            tuple[np.ndarray, np.ndarray]: Lower and upper bounds on the
+                combined estimates, respectively, each with shape `integrand.d_comb`.
         """
         if self.d_indv != self.d_comb:
             raise ParameterError(
@@ -353,7 +350,7 @@ class AbstractIntegrand(object):
 
         Returns:
             np.ndarray: Flags of shape `integrand.d_indv` indicating whether the individual
-            integrands require additional sampling.
+                integrands require additional sampling.
         """
         return (
             comb_flags

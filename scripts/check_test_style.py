@@ -64,18 +64,31 @@ def _subclasses_testcase(node):
 
 
 def classify(path):
-    """Return (has_testcase_class, has_test_callables)."""
+    """Return (has_testcase_class, has_bare_top_level_test, has_any_test).
+
+    ``has_bare_top_level_test`` only looks at module-level functions, so a
+    file with a proper TestCase class that *also* has a stray top-level
+    ``def test_*():`` still flags the violation instead of being masked by
+    the class. ``has_any_test`` still walks the whole tree, to distinguish a
+    file with no tests at all from one whose tests just aren't bare/top-level
+    (e.g. methods on a non-TestCase class).
+    """
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-    nodes = list(ast.walk(tree))
     has_class = any(
-        isinstance(n, ast.ClassDef) and _subclasses_testcase(n) for n in nodes
+        isinstance(n, ast.ClassDef) and _subclasses_testcase(n)
+        for n in ast.walk(tree)
     )
-    has_tests = any(
+    has_bare_top_level_test = any(
         isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
         and n.name.startswith("test_")
-        for n in nodes
+        for n in tree.body
     )
-    return has_class, has_tests
+    has_any_test = any(
+        isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and n.name.startswith("test_")
+        for n in ast.walk(tree)
+    )
+    return has_class, has_bare_top_level_test, has_any_test
 
 
 def main(argv):
@@ -100,10 +113,15 @@ def main(argv):
 
     class_based, function_based, no_tests = [], [], []
     for f in files:
-        has_class, has_tests = classify(f)
-        if has_class:
+        has_class, has_bare_top_level_test, has_any_test = classify(f)
+        if has_bare_top_level_test:
+            # Flagged regardless of has_class: a stray top-level `def
+            # test_*():` violates the convention even in a file that also
+            # has a proper TestCase class.
+            function_based.append(f)
+        elif has_class:
             class_based.append(f)
-        elif has_tests:
+        elif has_any_test:
             function_based.append(f)
         else:
             no_tests.append(f)
@@ -138,7 +156,7 @@ def main(argv):
     elif not quiet:
         print("  no misnamed test files found")
 
-    return 1 if (strict and (function_based or misnamed)) else 0
+    return 1 if (strict and (function_based or misnamed or no_tests)) else 0
 
 
 if __name__ == "__main__":

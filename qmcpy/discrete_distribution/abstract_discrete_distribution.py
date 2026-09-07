@@ -70,11 +70,11 @@ class AbstractDiscreteDistribution(object):
         Returns:
             np.ndarray: Samples from the sequence.
 
-            - If `replications` is `None` then this will be of size (`n_max`-`n_min`) $\times$ `dimension`
-            - If `replications` is a positive int, then `x` will be of size `replications` $\times$ (`n_max`-`n_min`) $\times$ `dimension`
+                - If `replications` is `None` then this will be of size (`n_max`-`n_min`) $\times$ `dimension`
+                - If `replications` is a positive int, then `x` will be of size `replications` $\times$ (`n_max`-`n_min`) $\times$ `dimension`
 
-            Note that if `return_binary=True` then `x` is returned where `x`
-            are integer representations of the digital net points.
+                Note that if `return_binary=True` then `x` is returned where `x`
+                are integer representations of the digital net points.
         """
         return self.gen_samples(
             n=n, n_min=n_min, n_max=n_max, return_binary=return_binary, warn=warn

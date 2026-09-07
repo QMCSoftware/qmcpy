@@ -133,8 +133,8 @@ class AbstractTrueMeasure(object):
 
                 - If `replications` is `None` then this will be of size (`n_max`-`n_min`) $\times$ `dimension`
                 - If `replications` is a positive int, then `t` will be of size `replications` $\times$ (`n_max`-`n_min`) $\times$ `dimension`
-            weights (np.ndarray): Only returned when `return_weights=True`. The
-            Jacobian weights for the transformation
+            np.ndarray: Jacobian weights, returned as the second result only
+                when `return_weights=True`.
         """
         return self.gen_samples(
             n=n, n_min=n_min, n_max=n_max, return_weights=return_weights, warn=warn

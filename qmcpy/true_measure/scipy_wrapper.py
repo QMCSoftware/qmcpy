@@ -176,19 +176,22 @@ class SciPyWrapper(AbstractTrueMeasure):
     """
 
     def __init__(self, sampler, scipy_distribs) -> None:
-        """Parameters ---------- sampler : AbstractDiscreteDistribution Low
-        discrepancy or iid sampler in dimension d, living on [0,1)^d.
-        scipy_distribs:
-            One of the following:
+        """Wrap one or more SciPy distributions as a QMCPy true measure.
 
-            - A single SciPy 1D continuous frozen distribution.
-            - A list of such frozen distributions (independent marginals).
-            - A custom 1D distribution object with ``ppf`` and ``pdf`` or
-              ``logpdf`` methods.
-            - A joint object with:
-                * ``transform(u)`` method
-                * optional ``logpdf(x)`` method
-                * ``dim`` or ``dimension`` attribute (otherwise ``sampler.d``).
+        Args:
+            sampler (AbstractDiscreteDistribution): Low discrepancy or iid
+                sampler in dimension d, living on [0,1)^d.
+            scipy_distribs (Union[scipy.stats.rv_frozen, list, object]): One
+                of the following:
+
+                - A single SciPy 1D continuous frozen distribution.
+                - A list of such frozen distributions (independent marginals).
+                - A custom 1D distribution object with ``ppf`` and ``pdf`` or
+                  ``logpdf`` methods.
+                - A joint object with:
+                    * ``transform(u)`` method
+                    * optional ``logpdf(x)`` method
+                    * ``dim`` or ``dimension`` attribute (otherwise ``sampler.d``).
         """
         self.domain = np.array([[0.0, 1.0]])
 
