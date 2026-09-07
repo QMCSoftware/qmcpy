@@ -84,7 +84,7 @@ def main(argv):
     positional = [a for a in argv if not a.startswith("-")]
     test_dir = Path(positional[0]) if positional else Path("test")
 
-    files = sorted(test_dir.glob("test_*.py"))
+    files = sorted(test_dir.glob("test_*.py", recurse_symlinks=True))
     if not files:
         print(f"no test_*.py files under {test_dir}/", file=sys.stderr)
         return 1

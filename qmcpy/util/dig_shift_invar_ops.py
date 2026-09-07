@@ -119,7 +119,7 @@ def weighted_walsh_funcs(alpha: int, xb, t: int):
         t (int): Number of bits in each integer in xb.
 
     Returns:
-        Weighted Walsh function values.
+        Union[np.ndarray, torch.Tensor]: Weighted Walsh function values.
 
     **References: **
 
@@ -188,7 +188,7 @@ def to_bin(x, t: int):
             where `isinstance(dnb2,DigitalNetB2)`.
 
     Returns:
-        binary representation of samples with `dtype` either `np.uint64` or
+        Union[np.ndarray, torch.Tensor]: binary representation of samples with `dtype` either `np.uint64` or
         `torch.int64`.
     """
     npt = get_npt(x)
@@ -231,7 +231,7 @@ def to_float(x, t: int):
             where `isinstance(dnb2,DigitalNetB2)`.
 
     Returns:
-        floating point representation of samples.
+        Union[np.ndarray, torch.Tensor]: floating point representation of samples.
     """
     npt = get_npt(x)
     if npt == np:  # npt==torch
@@ -266,7 +266,7 @@ def bin_from_numpy_to_torch(xb):
             `dtype=np.uint64`
 
     Returns:
-        binary representation of samples with `dtype=torch.int64`.
+        Union[torch.Tensor]: binary representation of samples with `dtype=torch.int64`.
     """
     if not (xb.dtype == np.uint64):
         raise AssertionError

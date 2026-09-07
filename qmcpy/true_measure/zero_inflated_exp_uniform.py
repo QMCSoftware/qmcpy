@@ -286,7 +286,7 @@ class ZeroInflatedExpUniform(SciPyWrapper):
             [https://en.wikipedia.org/wiki/Law_of_total_variance](https://en.wikipedia.org/wiki/Law_of_total_variance).
 
         Returns:
-            Length ``1`` arrays ``(mean, variance)``.
+            tuple: Length ``1`` arrays ``(mean, variance)``.
         """
         p = self.p_zero
         lam = self.lam

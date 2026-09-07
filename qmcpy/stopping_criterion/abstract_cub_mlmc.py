@@ -129,7 +129,7 @@ class AbstractCubMLMC(AbstractStoppingCriterion):
         """Build a fresh Data object for a new MLMC integration run.
 
         Returns:
-            Initialised with zero sample counts and warm-up allocation.
+            Data: Initialised with zero sample counts and warm-up allocation.
         """
         data = Data(
             parameters=[

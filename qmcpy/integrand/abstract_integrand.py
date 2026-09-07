@@ -130,7 +130,7 @@ class AbstractIntegrand(object):
                 computation.
 
         Returns:
-            function evaluations with shape `(*batch_shape, *dimension_indv)`
+            np.ndarray: function evaluations with shape `(*batch_shape, *dimension_indv)`
             where `dimension_indv` is the shape of the function outputs.
         """
         raise MethodImplementationError(self, "g")
@@ -167,7 +167,7 @@ class AbstractIntegrand(object):
                 - `'C3SIN'`: Sidi $C^3$ transform $\psi(x) = (12\pi x-8\sin(2 \pi x) + \sin(4 \pi x))/(12 \pi)$.
 
         Returns:
-            function evaluations with shape `(*batch_shape, *dimension_indv)`
+            np.ndarray: function evaluations with shape `(*batch_shape, *dimension_indv)`
             where `dimension_indv` is the shape of the function outputs.
         """
         if "periodization_transform" in kwargs:
@@ -352,7 +352,7 @@ class AbstractIntegrand(object):
                 approximated.
 
         Returns:
-            Flags of shape `integrand.d_indv` indicating whether the individual
+            np.ndarray: Flags of shape `integrand.d_indv` indicating whether the individual
             integrands require additional sampling.
         """
         return (

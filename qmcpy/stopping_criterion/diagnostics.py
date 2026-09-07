@@ -530,7 +530,7 @@ class _IterationTraceLogger(object):
             data (object): Integration state object.
 
         Returns:
-            ``(n_min, n_total, m, xfull.shape)``.
+            tuple: ``(n_min, n_total, m, xfull.shape)``.
         """
         xfull = getattr(data, "xfull", None)
         return (
@@ -558,7 +558,7 @@ class _IterationTraceLogger(object):
                 optional columns are present.
 
         Returns:
-            Column names from the set ``{'stage', 'iter', 'solution',
+            tuple[str, ...]: Column names from the set ``{'stage', 'iter', 'solution',
             'bound_diff', 'comb_bound_diff', 'bound_half_width',
             'bias_estimate', 'n_min', 'n_total', 'm', 'xfull.shape'}``.
         """

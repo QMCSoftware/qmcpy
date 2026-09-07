@@ -153,7 +153,7 @@ class UMBridgeWrapper(AbstractIntegrand):
                 `umbridge.HTTPModel`.
 
         Returns:
-            List of lists with sub-list lengths specified by
+            list: List of lists with sub-list lengths specified by
             `model.get_output_sizes(self.config)`.
         """
         return [

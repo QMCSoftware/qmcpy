@@ -27,7 +27,7 @@ class Data(object):
                 file.
 
         Returns:
-            The final path the file was written to (may differ from *path* when
+            str: The final path the file was written to (may differ from *path* when
             ``compress=True`` appends ``.gz``).
 
         Raises:
@@ -61,7 +61,7 @@ class Data(object):
                 ``.gz`` are decompressed automatically.
 
         Returns:
-            The loaded Data object.
+            Data: The loaded Data object.
         """
         path = str(path)
         open_fn = gzip.open if path.endswith(".gz") else open

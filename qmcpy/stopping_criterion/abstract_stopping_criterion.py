@@ -243,7 +243,7 @@ class AbstractStoppingCriterion(object):
                 ``sys.stdout`` when None.
 
         Returns:
-            This method writes output to ``file``.
+            None: This method writes output to ``file``.
         """
         if history is None:
             history = getattr(self, "iteration_history", None)
@@ -401,7 +401,7 @@ class AbstractStoppingCriterion(object):
             saved: Value from the resume checkpoint.
 
         Returns:
-            True when the two values are considered equal.
+            bool: True when the two values are considered equal.
         """
         if self._is_sparse(current) or self._is_sparse(saved):
             if self._is_sparse(current) != self._is_sparse(saved):
@@ -588,7 +588,7 @@ class AbstractStoppingCriterion(object):
                 callable with signature ``(sv, abs_tol, rel_tol) -> tol``.
 
         Returns:
-            The resolved callable and its canonical string key (``'EITHER'`` or
+            tuple[callable, str or None]: The resolved callable and its canonical string key (``'EITHER'`` or
             ``'BOTH'``), or ``None`` when the input was already a callable.
 
         Raises:
@@ -639,7 +639,7 @@ class AbstractStoppingCriterion(object):
                 variate.
 
         Returns:
-            Number of control variates (``self.ncv``).
+            int: Number of control variates (``self.ncv``).
 
         Raises:
             ParameterError: If any control variate is incompatible.
@@ -698,7 +698,7 @@ class AbstractStoppingCriterion(object):
                 with shape ``integrand.d_comb``.
 
         Returns:
-            ``(alphas_indv, identity_dependency)`` where *alphas_indv* has
+            tuple[np.ndarray, bool]: ``(alphas_indv, identity_dependency)`` where *alphas_indv* has
             shape ``integrand.d_indv`` and *identity_dependency* is True when
             each combined output depends on exactly its matching individual
             output.

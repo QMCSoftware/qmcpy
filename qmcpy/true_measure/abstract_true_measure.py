@@ -195,7 +195,7 @@ class AbstractTrueMeasure(object):
             x (np.ndarray): n x d  matrix of samples
 
         Returns:
-            length n vector of weights at locations of x
+            np.ndarray: length n vector of weights at locations of x
         """
         raise MethodImplementationError(
             self, "weight. Try a different true measure with a _weight method."
@@ -216,7 +216,7 @@ class AbstractTrueMeasure(object):
                 copy. Defaults to the current dimension.
 
         Returns:
-            True measure with new seeds and dimensions.
+            list: True measure with new seeds and dimensions.
         """
         sampler = self.discrete_distrib if self.transform == self else self.transform
         sampler_spawns = sampler.spawn(s=s, dimensions=dimensions)

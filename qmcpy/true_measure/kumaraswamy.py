@@ -135,7 +135,7 @@ class Kumaraswamy(AbstractTrueMeasure):
             [https://numpy.org/doc/stable/reference/generated/numpy.expm1.html](https://numpy.org/doc/stable/reference/generated/numpy.expm1.html).
 
         Returns:
-            Length ``d`` arrays ``(mean, variance)``.
+            tuple: Length ``d`` arrays ``(mean, variance)``.
         """
         inv_a = 1.0 / self.alpha
         beta = self.beta

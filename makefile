@@ -637,13 +637,15 @@ MARKDOWN_UNWRAP_PATH ?= $(FORMAT_PATH)
 
 format:
 	$(MAKE) flatten_qmcpy_imports
-	@echo ""
+	@echo "---"
 	$(MAKE) markdown-unwrap MARKDOWN_UNWRAP_PATH="$(MARKDOWN_UNWRAP_PATH)"
-	@echo ""
+	@echo "---"
 	$(MAKE) rm_trailing_whitespace FORMAT_PATH="$(FORMAT_PATH)"
-	@echo ""
+	@echo "---"
 	$(MAKE) harden_colab_notebook
-	@echo ""
+	@echo "---"
+	$(MAKE) check_test_style
+	@echo "---"
 	$(MAKE) check_docstring_changed
 
 flatten_qmcpy_imports:

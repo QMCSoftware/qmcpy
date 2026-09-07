@@ -503,7 +503,7 @@ class KernelMultiTask(AbstractKernel):
                 coefficients of derivatives.
 
         Returns:
-            Kernel evaluations with batched shape, see the doctests for
+            Union[np.ndarray, torch.Tensor]: Kernel evaluations with batched shape, see the doctests for
             examples.
         """
         kmat_x = self.base_kernel.__call__(x0, x1, beta0, beta1, c)
