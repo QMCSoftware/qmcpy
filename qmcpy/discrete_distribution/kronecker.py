@@ -315,7 +315,9 @@ class Kronecker(AbstractLDDiscreteDistribution):
             self.randomize = "FALSE"
         if not (self.randomize in ["SHIFT", "FALSE"]):
             raise AssertionError
-        if shift is not None: assert self.randomize=="SHIFT", "require randomize='SHIFT' when shift is not None"
+        if shift is not None:
+            if not (self.randomize=="SHIFT"):
+                raise AssertionError("require randomize='SHIFT' when shift is not None")
         if self.randomize=="SHIFT":
             if shift is not None:
                 self.shift = np.atleast_2d(shift).astype(float)

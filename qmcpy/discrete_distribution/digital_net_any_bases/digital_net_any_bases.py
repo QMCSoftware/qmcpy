@@ -388,7 +388,9 @@ class DigitalNetAnyBases(AbstractLDDiscreteDistribution):
             raise AssertionError
         if not (0<self._t_curr<=self.t<=64):
             raise AssertionError
-        if self.randomize=="FALSE": assert self.C.shape[0]==self.replications, "randomize='FALSE' but replications = %d does not equal the number of sets of generating vectors %d"%(self.replications,self.C.shape[0])
+        if self.randomize=="FALSE":
+            if not (self.C.shape[0]==self.replications):
+                raise AssertionError("randomize='FALSE' but replications = %d does not equal the number of sets of generating vectors %d"%(self.replications,self.C.shape[0]))
         if warn and (self.bases==2).all():
             warnings.warn("It is more efficient to use DigitalNetB2 instead of DigitalNetAnyBases when all bases are 2")
         self.warn = warn
