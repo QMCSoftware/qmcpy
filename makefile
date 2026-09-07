@@ -108,6 +108,17 @@ check_docstring:
 	@echo ""
 	@$(PYDOCLINT) $(PYDOCLINT_ARGS) $(DOCSTRING_PATH) $(if $(STRICT),,|| true)
 
+# Ratchet gate: check_docstring/pydoclint/annotate_public_api_types are
+# informational (existing backlog is large, see PR #613 review F9/F10), but
+# this fails if a change increases any of their full-tree violation counts
+# above scripts/baseline_counts.json. Run with --update after intentionally
+# reducing (or, with justification, increasing) one of the counts.
+check_baseline:
+	@$(PYTHON) scripts/check_baseline.py
+
+check_baseline_update:
+	@$(PYTHON) scripts/check_baseline.py --update
+
 format_google_docstrings:
 	@command -v "$(DOCSTRING_FORMATTER)" >/dev/null 2>&1 || { \
 		echo "Missing $(DOCSTRING_FORMATTER). Install with: $(PYTHON) -m pip install format-docstring"; \
