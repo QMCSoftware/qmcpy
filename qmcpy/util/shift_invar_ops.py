@@ -108,7 +108,7 @@ def bernoulli_poly(n: int, x):
             Bernoulli polynomial.
 
     Returns:
-        Bernoulli polynomial values.
+        Union[np.ndarray, torch.Tensor]: Bernoulli polynomial values.
     """
     if not (isinstance(n, int)):
         raise AssertionError

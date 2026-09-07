@@ -102,7 +102,7 @@ class AbstractKernel(object):
                 coefficients of derivatives.
             kwargs (dict): keyword arguments to parsed call
         Returns:
-            Shape `y.shape=(x0+x1).shape[:-1]` kernel evaluations.
+            Union[np.ndarray, torch.Tensor]: Shape `y.shape=(x0+x1).shape[:-1]` kernel evaluations.
         """
         if not (isinstance(x0, self.nptarraytype)):
             raise AssertionError
@@ -285,7 +285,7 @@ class AbstractKernel(object):
                 input to kernel with
 
         Returns:
-            Shape `y.shape=x.shape[:-1]` integral kernel evaluations.
+            Union[np.ndarray, torch.Tensor]: Shape `y.shape=x.shape[:-1]` integral kernel evaluations.
         """
         if self.npt == np:
             if not (isinstance(x, np.ndarray)):
@@ -314,7 +314,7 @@ class AbstractKernel(object):
         \mathrm{d} \boldsymbol{z}.$$
 
         Returns:
-            Double integral kernel evaluations.
+            Union[np.ndarray, torch.Tensor]: Double integral kernel evaluations.
         """
         raise MethodImplementationError(self, "double_integral_01d")
 

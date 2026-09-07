@@ -77,7 +77,7 @@ class Keister(AbstractIntegrand):
             d (int): Dimension.
 
         Returns:
-            Exact value of the integral.
+            float: Exact value of the integral.
         """
         cosinteg = np.zeros(shape=(d))
         cosinteg[0] = np.sqrt(np.pi) / (2 * np.exp(1 / 4))

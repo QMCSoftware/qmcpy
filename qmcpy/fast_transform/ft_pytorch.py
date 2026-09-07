@@ -37,7 +37,7 @@ def fftbr_torch(x: torch.Tensor):
         x (torch.Tensor): Array of samples at which to run BRO-FFT.
 
     Returns:
-        BRO-FFT values.
+        torch.Tensor: BRO-FFT values.
     """
     n = x.size(-1)
     if not (n & (n - 1) == 0):  # require n is a power of 2
@@ -89,7 +89,7 @@ def ifftbr_torch(x: torch.Tensor):
         x (torch.Tensor): Array of samples at which to run BRO-IFFT.
 
     Returns:
-        BRO-IFFT values.
+        torch.Tensor: BRO-IFFT values.
     """
     n = x.size(-1)
     if not (n & (n - 1) == 0):  # require n is a power of 2
@@ -168,7 +168,7 @@ def fwht_torch(x: torch.Tensor):
         x (torch.Tensor): Array of samples at which to run FWHT.
 
     Returns:
-        FWHT values.
+        torch.Tensor: FWHT values.
     """
     return _FWHTB2Ortho.apply(x)
 
@@ -195,7 +195,7 @@ def omega_fwht_torch(m: int, device=None):
         m (int): Size $2^m$ output.
 
     Returns:
-        $\left(1\right)_{k=0}^{2^m}$.
+        np.ndarray: $\left(1\right)_{k=0}^{2^m}$.
     """
     if device is None:
         device = "cpu"
@@ -224,7 +224,7 @@ def omega_fftbr_torch(m: int, device=None):
         m (int): Size $2^m$ output.
 
     Returns:
-        $\left(e^{- \pi \mathrm{i} k / 2^m}\right)_{k=0}^{2^m}$.
+        np.ndarray: $\left(e^{- \pi \mathrm{i} k / 2^m}\right)_{k=0}^{2^m}$.
     """
     if device is None:
         device = "cpu"

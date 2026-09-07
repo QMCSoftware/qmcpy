@@ -525,7 +525,7 @@ class KernelMultiTask(AbstractKernel):
                 input to kernel with
 
         Returns:
-            Shape `y.shape=x.shape[:-1]` integral kernel evaluations.
+            Union[np.ndarray, torch.Tensor]: Shape `y.shape=x.shape[:-1]` integral kernel evaluations.
         """
         kint_x = self.base_kernel.single_integral_01d(x)
         return self._parsed__call__(task0, task1, kint_x)
@@ -544,7 +544,7 @@ class KernelMultiTask(AbstractKernel):
                 $i_1$.
 
         Returns:
-            Double integral kernel evaluations.
+            Union[np.ndarray, torch.Tensor]: Double integral kernel evaluations.
         """
         kint_x = self.base_kernel.double_integral_01d()
         return self._parsed__call__(task0, task1, kint_x)

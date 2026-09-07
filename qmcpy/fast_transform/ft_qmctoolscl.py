@@ -41,7 +41,7 @@ def fftbr_qmctoolscl(x: np.ndarray):
         x (np.ndarray): Array of samples at which to run BRO-FFT.
 
     Returns:
-        BRO-FFT values.
+        np.ndarray: BRO-FFT values.
     """
     x, shape, d, n, n_half = _parse_ft_input(x)
     if n <= 1:
@@ -76,7 +76,7 @@ def ifftbr_qmctoolscl(x: np.ndarray):
         x (np.ndarray): Array of samples at which to run BRO-IFFT.
 
     Returns:
-        BRO-IFFT values.
+        np.ndarray: BRO-IFFT values.
     """
     x, shape, d, n, n_half = _parse_ft_input(x)
     if n <= 1:
@@ -107,7 +107,7 @@ def fwht_qmctoolscl(x: np.ndarray):
         x (np.ndarray): Array of samples at which to run FWHT.
 
     Returns:
-        FWHT values.
+        np.ndarray: FWHT values.
     """
     x, shape, d, n, n_half = _parse_ft_input(x)
     if n <= 1:

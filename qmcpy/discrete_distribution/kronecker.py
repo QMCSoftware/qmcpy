@@ -234,8 +234,8 @@ class Kronecker(AbstractLDDiscreteDistribution):
                 - If an `np.ndarray` is passed in, use generating vector components at these indices.
 
             replications (int): Number of independent randomizations.
-            seed (Union[None, int, np.random.SeedSeq): Seed the random number
-            generator for reproducibility.
+            seed (Union[None, int, np.random.SeedSequence]): Seed the random
+                number generator for reproducibility.
             randomize (str): Options are
 
                 - `'SHIFT'`: use `shift` if supplied, otherwise use a random shift $\boldsymbol{\delta} \sim \mathrm{Uniform}([0,1)^d)$.

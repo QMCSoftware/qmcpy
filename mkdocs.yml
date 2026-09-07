@@ -131,6 +131,7 @@ plugins:
             docstring_style: google
             docstring_options:
               ignore_init_summary: false
+              returns_named_value: false  # idiomatic Google style: `Type: description`, no invented name
             merge_init_into_class: true
   - glightbox:
       touchNavigation: true

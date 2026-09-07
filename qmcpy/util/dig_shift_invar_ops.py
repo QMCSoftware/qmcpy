@@ -34,7 +34,7 @@ def k4sumterm(x, t: int, cutoff=1e-8):
         t (int): Number of bits in each integer.
 
     Returns:
-        The $K_4$ sum term.
+        Union[np.ndarray, torch.Tensor]: The $K_4$ sum term.
     """
     total = 0.0
     for a in range(0, t):

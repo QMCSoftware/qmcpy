@@ -11,7 +11,7 @@ def _univ_repr(qmc_object, abc_class_name, attributes):
         attributes (list): list of attributes to include
 
     Returns:
-        string representation of this qmcpy object
+        str: string representation of this qmcpy object
 
     Notes:
         print(qmc_object) is equivalent to print(qmc_object.__repr__()). See an

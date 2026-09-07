@@ -300,7 +300,7 @@ class MPMC(AbstractLDDiscreteDistribution):
     def _train(self, args: SimpleNamespace):
         """
         Returns:
-            shape `(nbatch, nsamples, dim)`
+            np.ndarray: shape `(nbatch, nsamples, dim)`
         """
         model = MPMC_net(
             dim=args.dim, nhid=args.nhid, nlayers=args.nlayers,

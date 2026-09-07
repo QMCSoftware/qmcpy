@@ -130,7 +130,7 @@ class AcceptanceRejection(AbstractTrueMeasure):
                 after all retries.
 
         Returns:
-            Shape (n, target_dim).
+            np.ndarray: Shape (n, target_dim).
             weights (np.ndarray): Shape (n,). Only returned when
                 return_weights=True.
         """
@@ -346,7 +346,7 @@ class AcceptanceRejectionReal(AbstractTrueMeasure):
                 after all retries.
 
         Returns:
-            Shape (n, target_dim).
+            np.ndarray: Shape (n, target_dim).
             weights (np.ndarray): Shape (n,). Only returned when
                 return_weights=True.
         """

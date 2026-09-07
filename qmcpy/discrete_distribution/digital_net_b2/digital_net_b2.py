@@ -239,8 +239,8 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
 
             replications (int): Number of independent randomizations of a
                 pointset.
-            seed (Union[None, int, np.random.SeedSeq): Seed the random number
-            generator for reproducibility.
+            seed (Union[None, int, np.random.SeedSequence]): Seed the random
+                number generator for reproducibility.
             randomize (str): Options are
 
                 - `'LMS DS'`: Linear matrix scramble with digital shift.

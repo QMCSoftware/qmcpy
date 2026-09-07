@@ -94,7 +94,7 @@ class AbstractIntegrand(object):
             warn (bool): If `False`, disable warnings when generating samples.
 
         Returns:
-            Samples from the sequence.
+            np.ndarray: Samples from the sequence.
 
                 - If `replications` is `None` then this will be of size (`n_max`-`n_min`) $\times$ `dimension`
                 - If `replications` is a positive int, then `t` will be of size `replications` $\times$ (`n_max`-`n_min`) $\times$ `dimension`
@@ -320,7 +320,7 @@ class AbstractIntegrand(object):
                 shape `integrand.d_indv`.
 
         Returns:
-            Lower bounds on combined estimates with shape `integrand.d_comb`.
+            np.ndarray: Lower bounds on combined estimates with shape `integrand.d_comb`.
             comb_bound_high (np.ndarray): Upper bounds on combined estimates
             with shape `integrand.d_comb`.
         """
@@ -374,7 +374,7 @@ class AbstractIntegrand(object):
             levels (np.ndarray): Levels at which to spawn new integrands.
 
         Returns:
-            Integrands with new true measures and discrete distributions.
+            list: Integrands with new true measures and discrete distributions.
         """
         levels = np.array([levels]) if np.isscalar(levels) else np.array(levels)
         if (levels > self.max_level).any():
@@ -398,7 +398,7 @@ class AbstractIntegrand(object):
             level (int): Level at which to return the dimension.
 
         Returns:
-            Dimension at the given input level.
+            int: Dimension at the given input level.
         """
         return self.d
 

@@ -129,7 +129,7 @@ class AbstractTrueMeasure(object):
             warn (bool): If `False`, disable warnings when generating samples.
 
         Returns:
-            Samples from the sequence.
+            np.ndarray: Samples from the sequence.
 
                 - If `replications` is `None` then this will be of size (`n_max`-`n_min`) $\times$ `dimension`
                 - If `replications` is a positive int, then `t` will be of size `replications` $\times$ (`n_max`-`n_min`) $\times$ `dimension`

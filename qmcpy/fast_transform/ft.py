@@ -23,7 +23,7 @@ def fftbr(x: np.ndarray):
         x (np.ndarray): Array of samples at which to run BRO-FFT.
 
     Returns:
-        BRO-FFT values.
+        np.ndarray: BRO-FFT values.
     """
     n = x.shape[-1]
     if not (n & (n - 1) == 0):  # require n is a power of 2
@@ -61,7 +61,7 @@ def ifftbr(x: np.ndarray):
         x (np.ndarray): Array of samples at which to run BRO-IFFT.
 
     Returns:
-        BRO-IFFT values.
+        np.ndarray: BRO-IFFT values.
     """
     n = x.shape[-1]
     if not (n & (n - 1) == 0):  # require n is a power of 2
@@ -94,7 +94,7 @@ def fwht(x: np.ndarray):
         x (np.ndarray): Array of samples at which to run FWHT.
 
     Returns:
-        FWHT values.
+        np.ndarray: FWHT values.
     """
     y = x.copy() + 0.0
     n = x.shape[-1]
@@ -138,7 +138,7 @@ def omega_fwht(m: int):
         m (int): Size $2^m$ output.
 
     Returns:
-        $\left(1\right)_{k=0}^{2^m}$.
+        np.ndarray: $\left(1\right)_{k=0}^{2^m}$.
     """
     return np.ones(2**m)
 
@@ -165,6 +165,6 @@ def omega_fftbr(m: int):
         m (int): Size $2^m$ output.
 
     Returns:
-        $\left(e^{- \pi \mathrm{i} k / 2^m}\right)_{k=0}^{2^m}$.
+        np.ndarray: $\left(e^{- \pi \mathrm{i} k / 2^m}\right)_{k=0}^{2^m}$.
     """
     return np.exp(-np.pi * 1j * np.arange(2**m) / 2**m)

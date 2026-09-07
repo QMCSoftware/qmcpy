@@ -605,7 +605,7 @@ class FinancialOption(AbstractIntegrand):
         - `option='ASIAN'` with `asian_mean='GEOMETRIC'` and `asian_mean_quadrature_rule='RIGHT'`
 
         Returns:
-            Exact value of the integral.
+            float: Exact value of the integral.
         """
         if self.option == "EUROPEAN":
             denom = self.volatility * np.sqrt(self.t_final)
@@ -664,7 +664,7 @@ class FinancialOption(AbstractIntegrand):
         - `option='ASIAN'` with `asian_mean='GEOMETRIC'`
 
         Returns:
-            Exact value of the integral.
+            float: Exact value of the integral.
         """
         if self.option == "ASIAN":
             if not (
