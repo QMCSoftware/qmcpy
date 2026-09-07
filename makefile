@@ -79,6 +79,7 @@ check_asserts_changed: check_assert_codemod_dependency
 DOCSTRING_PATH ?= qmcpy
 DOCSTRING_BASE ?= origin/develop
 PYDOCLINT ?= pydoclint
+PYDOCLINT_ARGS ?= -q
 DOCSTRING_FORMATTER ?= format-docstring
 DOCSTRING_FORMAT_PATH ?= qmcpy
 DOCSTRING_FORMAT_DIFF_BASE ?= develop
