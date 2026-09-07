@@ -655,10 +655,16 @@ format:
 	$(MAKE) rm_trailing_whitespace FORMAT_PATH="$(FORMAT_PATH)"
 	@echo "---"
 	$(MAKE) harden_colab_notebook
-	@echo "---"
+
+# Report-only: same conventions alltests.yml's "Check test-suite conventions"
+# step gates on, for running locally. Unlike `format`, nothing here writes to
+# the codebase.
+check:
 	$(MAKE) check_test_style
 	@echo "---"
 	$(MAKE) check_docstring_changed
+	@echo "---"
+	$(MAKE) check_baseline
 
 flatten_qmcpy_imports:
 	$(PYTHON) scripts/flatten_qmcpy_imports.py
