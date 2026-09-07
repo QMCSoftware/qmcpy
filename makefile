@@ -166,8 +166,8 @@ check_docstring_changed:
 	if [ -z "$$changed_files" ]; then \
 		echo "No changed qmcpy/*.py files relative to $(DOCSTRING_BASE)."; \
 	else \
-		echo "Checking docstrings on changed qmcpy files relative to $(DOCSTRING_BASE):"; \
-		printf '%s\n' "$$changed_files"; \
+		file_count=$$(printf '%s\n' "$$changed_files" | wc -l | tr -d ' '); \
+		echo "Checking docstrings on $$file_count changed qmcpy file(s) relative to $(DOCSTRING_BASE)."; \
 		$(PYTHON) scripts/check_docstring.py $$changed_files $(CHECK_DOCSTRING_ARGS) $(STRICT); \
 		echo ""; \
 		$(PYDOCLINT) $(PYDOCLINT_ARGS) $$changed_files $(if $(STRICT),,|| true); \
