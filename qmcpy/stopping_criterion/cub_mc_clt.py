@@ -207,6 +207,23 @@ class CubMCCLT(AbstractStoppingCriterion):
         return y - ((ycv - self.cv_mu[:, None]) * self.beta[:, None]).sum(0)
 
     def integrate(self, resume=None):
+        """Determine the samples needed to satisfy the target tolerance.
+
+        Draws an initial `self.n_init` samples to estimate the standard
+        deviation, then uses the CLT-based normal quantile (`self.z_star`,
+        inflated by `self.inflate`) to size and draw a second, final batch,
+        producing a symmetric confidence-interval bound on the integral.
+
+        Args:
+            resume (Data): Unsupported; must be `None`, as `CubMCCLT` cannot
+                resume a prior checkpoint.
+
+        Returns:
+            tuple: Approximation to the integral and the corresponding data object.
+
+        Raises:
+            ParameterError: If `resume` is not `None`.
+        """
         t_start = time()
         trace = self._make_trace_logger()
         if resume is not None:
@@ -282,6 +299,16 @@ class CubMCCLT(AbstractStoppingCriterion):
         return data.solution, data
 
     def set_tolerance(self, abs_tol=None, rel_tol=None, rmse_tol=None):
+        """Update the stopping criterion's target tolerance.
+
+        Args:
+            abs_tol (float): Absolute error tolerance.
+            rel_tol (float): Relative error tolerance.
+            rmse_tol (float): Unsupported; must be `None`.
+
+        Raises:
+            AssertionError: If `rmse_tol` is supplied.
+        """
         if not (rmse_tol is None):
             raise AssertionError("rmse_tol not supported by this stopping criterion.")
         if abs_tol is not None:

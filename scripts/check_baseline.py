@@ -28,7 +28,13 @@ BASELINE_PATH = Path(__file__).resolve().parent / "baseline_counts.json"
 CHECKS = {
     "check_docstring": {
         "cmd": [sys.executable, "scripts/check_docstring.py", "qmcpy"],
-        "pattern": re.compile(r"^\d+ file\(s\) scanned: (\d+) issue\(s\) across \d+ file\(s\)", re.M),
+        # check_docstring.py's summary line reads either "N issue(s) across
+        # M file(s)" or, once N reaches zero, "no issues in M file(s)" --
+        # match both so the ratchet keeps working after a check is fully fixed.
+        "pattern": re.compile(
+            r"^\d+ file\(s\) scanned: (?:(\d+) issue\(s\) across|no issues in) \d+ file\(s\)",
+            re.M,
+        ),
     },
     "pydoclint": {
         "cmd": ["pydoclint", "-q", "qmcpy"],
@@ -49,7 +55,7 @@ def run_check(spec):
     match = spec["pattern"].search(output)
     if match is None:
         raise RuntimeError(f"could not parse a count from output of {spec['cmd']}")
-    return int(match.group(1))
+    return int(match.group(1) or 0)
 
 
 def main(argv):

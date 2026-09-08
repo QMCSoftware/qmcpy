@@ -372,6 +372,21 @@ class Lattice(AbstractLDDiscreteDistribution):
         return x
 
     def calculate_y(self, m_low, m_high, y):
+        """Refine 1D interval midpoints from level `m_low` up to `m_high`.
+
+        At each level, interleaves the current midpoints `y` with the new
+        midpoints introduced at that level, doubling the length of `y` each
+        step. Used internally by `_gail_linear` to build up linear-order
+        lattice coordinates level-by-level.
+
+        Args:
+            m_low (int): Starting level (`y` must already hold the midpoints for this level).
+            m_high (int): Final level (exclusive) to refine up to.
+            y (np.ndarray): Interval midpoints at level `m_low`, shape `(2**(m_low-1), 1)`.
+
+        Returns:
+            np.ndarray: Interval midpoints at level `m_high`, shape `(2**(m_high-1), 1)`.
+        """
         for m in range(m_low, m_high):
             n = 2**m
             y_next = np.arange(1 / n, 1, 2 / n).reshape((int(n / 2), 1))

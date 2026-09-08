@@ -9,6 +9,13 @@ from ..util.transforms import (
 
 
 class AbstractKernel(object):
+    """Abstract base class for QMCPy kernels.
+
+    Concrete kernels subclass this and implement `parsed___call__` and
+    `parsed_single_integral_01d` (and optionally `double_integral_01d`);
+    `AbstractKernel` handles NumPy/PyTorch backend dispatch, batched
+    parameters, and `torch.compile` wiring.
+    """
 
     def __new__(cls, *args, **kwargs):
         if (
@@ -64,6 +71,10 @@ class AbstractKernel(object):
 
     @property
     def nbdim(self):
+        """int: Number of batch dimensions this kernel's output carries,
+        beyond the sample dimensions. Determined by calling the kernel on
+        empty inputs and inspecting the output's number of dimensions.
+        """
         empty = self.npt.empty((0, self.d), **self.nptkwargs)
         v = self.__call__(empty, empty)
         nbdim = v.ndim - 1
@@ -71,9 +82,20 @@ class AbstractKernel(object):
 
     @property
     def batch_params(self):
+        """dict: This kernel's batched parameters (e.g. `scale`,
+        `lengthscales`), keyed by name, at their natural (unbroadcast) shapes.
+        """
         return {pname: getattr(self, pname) for pname in self.batch_param_names}
 
     def get_batch_params(self, ndim):
+        """Return `batch_params` with each value reshaped to broadcast against `ndim` extra dimensions.
+
+        Args:
+            ndim (int): Number of leading sample dimensions to broadcast against.
+
+        Returns:
+            dict: `batch_params`, each value passed through `insert_batch_dims(value, ndim, -1)`.
+        """
         return {
             pname: insert_batch_dims(batch_param, ndim, -1)
             for pname, batch_param in self.batch_params.items()
@@ -272,6 +294,11 @@ class AbstractKernel(object):
         return k
 
     def parsed___call__(self, *args, **kwargs):
+        """*Abstract method* computing the kernel on already-validated,
+        batch-parsed inputs. Called by `__call__` after input validation and
+        batch-parameter preparation; subclasses implement the actual kernel
+        formula here.
+        """
         raise MethodImplementationError(self, "parsed___call__")
 
     def single_integral_01d(self, x):
@@ -304,6 +331,10 @@ class AbstractKernel(object):
         return self.parsed_single_integral_01d(x, batch_params)
 
     def parsed_single_integral_01d(self, x, batch_params):
+        """*Abstract method* computing `single_integral_01d` on already-
+        validated inputs with batch parameters prepared. Called by
+        `single_integral_01d`; subclasses implement the actual formula here.
+        """
         raise MethodImplementationError(self, "parsed_single_integral_01d")
 
     def double_integral_01d(self):
@@ -319,6 +350,18 @@ class AbstractKernel(object):
         raise MethodImplementationError(self, "double_integral_01d")
 
     def rel_pairwise_dist_func(self, x0, x1, lengthscales):
+        r"""Lengthscale-normalized pairwise distance $\lVert x_0-x_1\rVert / (\sqrt{2}\boldsymbol{\gamma})$.
+
+        A common building block for stationary/RBF-style kernels.
+
+        Args:
+            x0 (Union[np.ndarray, torch.Tensor]): First input, shape `(...,d)`.
+            x1 (Union[np.ndarray, torch.Tensor]): Second input, shape `(...,d)`.
+            lengthscales (Union[np.ndarray, torch.Tensor]): Lengthscales $\boldsymbol{\gamma}$.
+
+        Returns:
+            Union[np.ndarray, torch.Tensor]: Normalized pairwise distances, shape `(...,)`.
+        """
         return self.npt.linalg.norm((x0 - x1) / (np.sqrt(2) * lengthscales), 2, -1)
 
     def parse_assign_param(
@@ -331,6 +374,23 @@ class AbstractKernel(object):
         endsize_ops,
         constraints,
     ):
+        """Validate, transform, and store a kernel hyperparameter.
+
+        Thin wrapper around `qmcpy.util.transforms.parse_assign_param` that
+        fills in this kernel's backend (`torchify`, `npt`, `nptkwargs`).
+
+        Args:
+            pname (str): Name of the parameter (for error messages).
+            param (Union[float, np.ndarray, torch.Tensor]): The raw user-supplied parameter value.
+            shape_param (list): Shape to broadcast `param` to when it is scalar.
+            requires_grad_param (bool): If `True` and `torchify`, set `requires_grad=True`.
+            tfs_param (Tuple[callable, callable]): `(to_raw, from_raw)` transform pair.
+            endsize_ops (list): Allowed sizes for the parameter's trailing dimension.
+            constraints (list): Named constraints to enforce (e.g. `["POSITIVE"]`).
+
+        Returns:
+            Union[np.ndarray, torch.Tensor]: The raw (unconstrained) parameter value to store.
+        """
         return parse_assign_param(
             pname=pname,
             param=param,
@@ -346,6 +406,12 @@ class AbstractKernel(object):
 
 
 class AbstractKernelScaleLengthscales(AbstractKernel):
+    """Abstract base class for kernels parameterized by a scale and lengthscales.
+
+    Adds `scale` and `lengthscales` hyperparameters (each stored internally
+    in an unconstrained "raw" form and exposed via a positivity-preserving
+    transform) on top of `AbstractKernel`.
+    """
 
     def __init__(
         self,
@@ -428,8 +494,15 @@ class AbstractKernelScaleLengthscales(AbstractKernel):
 
     @property
     def scale(self):
+        """Union[np.ndarray, torch.Tensor]: The scaling factor $S$, computed
+        from the raw (unconstrained) stored value via `tfs_scale`'s inverse transform.
+        """
         return self.tfs_scale[1](self.raw_scale)
 
     @property
     def lengthscales(self):
+        """Union[np.ndarray, torch.Tensor]: The lengthscales
+        $\\boldsymbol{\\gamma}$, computed from the raw (unconstrained) stored
+        value via `tfs_lengthscales`'s inverse transform.
+        """
         return self.tfs_lengthscales[1](self.raw_lengthscales)

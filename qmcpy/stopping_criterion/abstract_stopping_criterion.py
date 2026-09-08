@@ -22,6 +22,16 @@ if TYPE_CHECKING:
 
 
 class AbstractStoppingCriterion(object):
+    """Abstract base class for QMCPy stopping criteria.
+
+    A stopping criterion drives adaptive sampling for a given `integrand`
+    until an error tolerance is met, via `integrate`. Concrete stopping
+    criteria (e.g. `CubQMCNetG`, `CubMCCLT`) implement `integrate` and
+    `set_tolerance`; this base class handles shared bookkeeping: checkpoint
+    resume/save, iteration logging, and validating the integrand/true
+    measure/discrete distribution combination.
+    """
+
     _RESUME_FORMAT_VERSION = 1  # Increment when checkpoint format changes in a non-backwards-compatible way
     _ITERATION_LOG_VIEWS = ("all", "current", "without_resume", "stage_last")
 

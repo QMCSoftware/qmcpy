@@ -341,22 +341,23 @@ class Kronecker(AbstractLDDiscreteDistribution):
         return points
 
     def periodic_discrepancy(self, n, k_tilde=None, gamma=None):
-        # """
-        # Calculates the discrepancy for a periodic kernel.
+        """Calculate the discrepancy for a periodic kernel.
 
-        # Args:
-        #     n (int): the number of sample points
-        #     k_tilde (Tuple[function, float]): the function takes in 2 arguments: the sample points and the coordinate weights.
-        #         The float is the integral over the unit hypercube.
-        #     gamma (np.ndarray): shape (1xd)
+        Args:
+            n (int): The number of sample points.
+            k_tilde (Tuple[callable, float]): A `(function, integral)` pair
+                where the function takes the sample points and coordinate
+                weights and returns kernel values, and `integral` is that
+                function's integral over the unit hypercube.
+            gamma (np.ndarray): Coordinate weights, shape `(d,)`.
 
-        # Returns:
-        #     discrep (np.ndarray): discrepancy
+        Returns:
+            np.ndarray: The discrepancy.
 
-        # Notes:
-        #     - If k_tilde is not specified, the second Bernoulli polynomial is used.
-        #     - If gamma is not specified, the coordinate weights will be just all ones.
-        # """
+        Note:
+            - If `k_tilde` is not specified, the second Bernoulli polynomial is used.
+            - If `gamma` is not specified, the coordinate weights are all ones.
+        """
         if gamma is None:
             gamma = np.ones(self.d)
 
@@ -367,7 +368,18 @@ class Kronecker(AbstractLDDiscreteDistribution):
 
 
     def wssd_discrepancy(self, n, weights, k_tilde = None, gamma = None):
-        # calculates the weighted sum of square discrepancy
+        """Calculate the weighted sum of squared discrepancies.
+
+        Args:
+            n (int): The number of sample points.
+            weights (np.ndarray): Weights applied to each squared discrepancy
+                before summing.
+            k_tilde (Tuple[callable, float]): Same as in `periodic_discrepancy`.
+            gamma (np.ndarray): Coordinate weights, shape `(d,)`.
+
+        Returns:
+            np.ndarray: The weighted sum of squared discrepancies.
+        """
         if gamma is None:
             gamma = np.ones(self.d)
 

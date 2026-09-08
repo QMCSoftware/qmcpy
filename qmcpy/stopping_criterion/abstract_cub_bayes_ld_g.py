@@ -12,6 +12,16 @@ from scipy.stats import t as tnorm
 
 
 class AbstractCubBayesLDG(AbstractStoppingCriterion):
+    """Abstract base class for guaranteed Bayesian low-discrepancy QMC stopping criteria.
+
+    Implements the fast-transform Bayesian cubature error bound shared by
+    concrete lattice/digital-net Bayesian stopping criteria: doubling sample
+    counts each iteration, maintaining the running transform coefficients
+    (`_ytildefull`), and fitting the kernel hyperparameter
+    (`objective_function`, `_stopping_criterion`) to derive a
+    credible-interval error bound.
+    """
+
     _RESUME_REQUIRED_FIELDS = (
         "solution", "comb_bound_low", "comb_bound_high", "comb_bound_diff", "comb_flags", "n", "n_max", "xfull", "yfull"
     )
@@ -189,10 +199,24 @@ class AbstractCubBayesLDG(AbstractStoppingCriterion):
         if isinstance(self.error_fun, str):
             self.error_fun, _ = self._resolve_error_fun(self.error_fun)
 
-    # objective function to estimate parameter theta
-    # MLE : Maximum likelihood estimation
-    # GCV : Generalized cross validation
     def objective_function(self, theta, xun, ftilde):
+        """Compute the Bayesian cubature loss used to fit the kernel parameter theta.
+
+        Evaluates either the negative log marginal likelihood (MLE) or the
+        generalized cross validation (GCV) loss, per `self.errbd_type`, along
+        with the kernel eigenvalues and RKHS norm needed by the error bound.
+
+        Args:
+            theta (float): Kernel hyperparameter to evaluate the loss at.
+            xun (np.ndarray): Unique ordered node locations.
+            ftilde (np.ndarray): Fast-transformed function values at `xun`.
+
+        Returns:
+            float: Loss value (MLE or GCV, per `self.errbd_type`).
+            np.ndarray: Kernel eigenvalues `vec_lambda`.
+            np.ndarray: Ring eigenvalues `vec_lambda_ring`, used by the error bound.
+            float: RKHS norm estimate of the fitted function.
+        """
         n = len(ftilde)
         fudge = 100 * np.finfo(float).eps
         # if type(theta) != np.ndarray:
@@ -254,10 +278,22 @@ class AbstractCubBayesLDG(AbstractStoppingCriterion):
         )
         return loss, vec_lambda, vec_lambda_ring, RKHS_norm
 
-    # Computes modified kernel Km1 = K - 1
-    # Useful to avoid cancellation error in the computation of (1 - n/\lambda_1)
     @staticmethod
     def kernel_t(aconst, Bern):
+        r"""Compute the modified kernel ``Km1 = K - 1`` from Bernoulli polynomial values.
+
+        Working with ``Km1`` rather than ``K`` directly avoids cancellation
+        error when later computing $1 - n/\lambda_1$.
+
+        Args:
+            aconst (Union[float, np.ndarray]): Kernel parameter theta, scalar
+                or per-dimension array.
+            Bern (np.ndarray): Bernoulli polynomial values, shape ``(n, d)``.
+
+        Returns:
+            np.ndarray: ``Km1``, the kernel minus one.
+            np.ndarray: ``K``, the full kernel (``1 + Km1``).
+        """
         d = np.size(Bern, 1)
         if type(aconst) != np.ndarray:
             theta = np.ones((d, 1)) * aconst
@@ -278,11 +314,16 @@ class AbstractCubBayesLDG(AbstractStoppingCriterion):
         K = Kj
         return [Km1, K]
 
-    # prints debug message if the given variable is Inf, Nan or complex, etc
-    # Example: alertMsg(x, 'Inf', 'Imag')
-    #          prints if variable 'x' is either Infinite or Imaginary
     @staticmethod
     def alert_msg(*args):
+        """Print a debug message if a variable contains NaN, Inf, or complex values.
+
+        Args:
+            *args (tuple): The variable to check, followed by one or more of
+                ``"Nan"``, ``"Inf"``, ``"Imag"`` naming which conditions to
+                report. Example: `alert_msg(x, "Inf", "Imag")` prints if `x`
+                contains infinite or imaginary values.
+        """
         varargin = args
         nargin = len(varargin)
         if nargin > 1:
@@ -308,6 +349,23 @@ class AbstractCubBayesLDG(AbstractStoppingCriterion):
                     print("unknown type check requested !")
 
     def integrate(self, resume=None):
+        """Determine the samples needed to satisfy the target tolerance.
+
+        Doubles the sample count each iteration, updates the running fast
+        transform (`_ytildefull`), and for each not-yet-converged output
+        calls `_stopping_criterion` to fit the Bayesian kernel hyperparameter
+        and derive a credible-interval bound on the integral. Stops once
+        every combined output is within tolerance or `self.n_limit` would be
+        exceeded.
+
+        Args:
+            resume (Data): Existing integration state to resume from, if
+                supported. Defaults to None.
+
+        Returns:
+            tuple: Approximation to the integral with shape ``integrand.d_comb``
+                and the corresponding data object.
+        """
         t_start = time()
         resume_provenance = self._capture_resume_provenance(resume)
         first_resume_iter = False
@@ -450,6 +508,18 @@ class AbstractCubBayesLDG(AbstractStoppingCriterion):
             raise ParameterError("resume data n_total must be a power of 2.")
 
     def set_tolerance(self, abs_tol=None, rel_tol=None, rmse_tol=None):
+        """Update the stopping criterion's target tolerance.
+
+        Args:
+            abs_tol (float): Absolute error tolerance, broadcast to
+                `self.abs_tols` with shape `integrand.d_comb`.
+            rel_tol (float): Relative error tolerance, broadcast to
+                `self.rel_tols` with shape `integrand.d_comb`.
+            rmse_tol (float): Unsupported; must be `None`.
+
+        Raises:
+            AssertionError: If `rmse_tol` is supplied.
+        """
         if not (rmse_tol is None):
             raise AssertionError("rmse_tol not supported by this stopping criterion.")
         if abs_tol is not None:

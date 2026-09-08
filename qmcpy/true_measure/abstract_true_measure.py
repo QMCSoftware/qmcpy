@@ -7,6 +7,15 @@ from scipy import sparse
 
 
 class AbstractTrueMeasure(object):
+    """Abstract base class for QMCPy true measures.
+
+    A true measure composes a transform (`self.transform`) on top of a
+    sampler (an `AbstractDiscreteDistribution`, or another
+    `AbstractTrueMeasure` for recursive composition), mapping unit-cube
+    samples to samples from the target measure. Concrete measures (e.g.
+    `Gaussian`, `Uniform`) set `self.domain`, `self.range`, and implement the
+    transform/weight/moment logic this base class exposes.
+    """
 
     def __init__(self) -> None:
         prefix = "A concrete implementation of TrueMeasure must have "
@@ -64,18 +73,34 @@ class AbstractTrueMeasure(object):
 
     @property
     def mean(self):
+        """Union[float, np.ndarray]: The measure's mean, set via `_set_moments`.
+        A Python `float` for univariate (`d == 1`) measures, otherwise a
+        read-only array.
+        """
         return self._scalar_if_univariate(self._mean)
 
     @property
     def variance(self):
+        """Union[float, np.ndarray]: The measure's variance, set via
+        `_set_moments`. A Python `float` for univariate (`d == 1`) measures,
+        otherwise a read-only array.
+        """
         return self._scalar_if_univariate(self._variance)
 
     @property
     def standard_deviation(self):
+        """Union[float, np.ndarray]: The measure's standard deviation, set
+        via `_set_moments`. A Python `float` for univariate (`d == 1`)
+        measures, otherwise a read-only array.
+        """
         return self._scalar_if_univariate(self._standard_deviation)
 
     @property
     def covariance(self):
+        """Union[np.ndarray, scipy.sparse.spmatrix]: The measure's
+        covariance, set via `_set_moments`. Read-only; sparse covariances
+        are returned as-is, dense ones as a read-only view.
+        """
         covariance = self._covariance
         if sparse.issparse(covariance):
             return covariance
@@ -143,6 +168,9 @@ class AbstractTrueMeasure(object):
     def gen_samples(
         self, n=None, n_min=None, n_max=None, return_weights=False, warn=True
     ):
+        r"""Generate samples from the measure. Called by `__call__`; see its
+        docstring for the full `Args:`/`Returns:` description.
+        """
         x = self.discrete_distrib(n=n, n_min=n_min, n_max=n_max, warn=warn)
         if not (isinstance(return_weights, bool)):
             raise AssertionError

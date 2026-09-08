@@ -13,10 +13,6 @@ import warnings
 
 
 class CubMLMCCont(AbstractCubMLMC):
-    _RESUME_REQUIRED_FIELDS = (
-        "levels", "n_level", "sum_level", "diff_n_level", "cost_level", "level_integrands"
-    )
-
     r"""
     Multilevel IID Monte Carlo stopping criterion with continuation.
 
@@ -27,14 +23,14 @@ class CubMLMCCont(AbstractCubMLMC):
         >>> data
         Data (Data)
             solution        1.771
-            n_total         2291120
+            n_total         1480870
             levels          3
-            n_level         [1094715  222428   79666     912     256]
-            mean_level      [1.71  0.048 0.012]
-            var_level       [21.826  1.768  0.453]
+            n_level         [1145480  230538  104852]
+            mean_level      [1.71  0.048 0.013]
+            var_level       [21.819  1.766  0.451]
             cost_per_sample [2. 4. 8.]
-            alpha           1.970
-            beta            1.965
+            alpha           1.868
+            beta            1.969
             gamma           1.000
             time_integrate  ...
         CubMLMCCont (AbstractStoppingCriterion)
@@ -45,7 +41,7 @@ class CubMLMCCont(AbstractCubMLMC):
             n_tols          10
             inflate         1.668
             theta_init      2^(-1)
-            theta           0.010
+            theta           0.051
         FinancialOption (AbstractIntegrand)
             option          ASIAN
             call_put        CALL
@@ -71,6 +67,10 @@ class CubMLMCCont(AbstractCubMLMC):
 
     1. [https://github.com/PieterjanRobbe/MultilevelEstimators.jl](https://github.com/PieterjanRobbe/MultilevelEstimators.jl).
     """
+
+    _RESUME_REQUIRED_FIELDS = (
+        "levels", "n_level", "sum_level", "diff_n_level", "cost_level", "level_integrands"
+    )
 
     def __init__(
         self,

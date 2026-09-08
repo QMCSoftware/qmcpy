@@ -299,9 +299,21 @@ class CubQMCBayesNetG(AbstractCubBayesLDG):
 
         return vec_lambda, vec_lambda_ring, lambda_factor
 
-    # Builds High order walsh kernel function
     @staticmethod
     def BuildKernelFunc(order):
+        """Build a 1-D high-order Walsh kernel function.
+
+        Args:
+            order (int): Smoothness order of the digital-net Walsh kernel;
+                1, 2, or 3.
+
+        Returns:
+            callable: Function mapping an array of 1-D coordinates to the
+                corresponding Walsh kernel values.
+
+        Raises:
+            NotYetImplemented: If `order` is not 1, 2, or 3.
+        """
         # a1 = @(x)(-np.floor(np.log2(x)))
         def a1(x):
             out = -np.floor(np.log2(x + np.finfo(float).eps))

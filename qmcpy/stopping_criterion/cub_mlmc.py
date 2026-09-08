@@ -13,10 +13,6 @@ import warnings
 
 
 class CubMLMC(AbstractCubMLMC):
-    _RESUME_REQUIRED_FIELDS = (
-        "levels", "n_level", "sum_level", "diff_n_level", "cost_level", "level_integrands"
-    )
-
     """
     Multilevel IID Monte Carlo stopping criterion.
 
@@ -27,7 +23,7 @@ class CubMLMC(AbstractCubMLMC):
         >>> data
         Data (Data)
             solution        1.785
-            n_total         3577556
+            n_total         3199033
             levels          2^(2)
             n_level         [2438191  490331  207606   62905]
             mean_level      [1.715 0.053 0.013 0.003]
@@ -72,6 +68,10 @@ class CubMLMC(AbstractCubMLMC):
 
     2. [http://people.maths.ox.ac.uk/~gilesm/mlmc/#MATLAB](http://people.maths.ox.ac.uk/~gilesm/mlmc/#MATLAB).
     """
+
+    _RESUME_REQUIRED_FIELDS = (
+        "levels", "n_level", "sum_level", "diff_n_level", "cost_level", "level_integrands"
+    )
 
     def __init__(
         self,

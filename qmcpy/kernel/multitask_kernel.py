@@ -431,20 +431,33 @@ class KernelMultiTask(AbstractKernel):
 
     @property
     def nbdim_base(self):
+        """int: `nbdim` of the wrapped `base_kernel` (cached after first access)."""
         if self._nbdim_base is None:
             self._nbdim_base = self.base_kernel.nbdim
         return self._nbdim_base
 
     @property
     def factor(self):
+        """Union[np.ndarray, torch.Tensor]: Low-rank/Cholesky factor used to
+        build the task covariance matrix `taskmat`, computed from the raw
+        stored value via `tfs_factor`'s inverse transform.
+        """
         return self.tfs_factor[1](self.raw_factor)
 
     @property
     def diag(self):
+        """Union[np.ndarray, torch.Tensor]: Diagonal term added to the task
+        covariance matrix `taskmat`, computed from the raw stored value via
+        `tfs_diag`'s inverse transform.
+        """
         return self.tfs_diag[1](self.raw_diag)
 
     @property
     def taskmat(self):
+        """Union[np.ndarray, torch.Tensor]: The `(num_tasks, num_tasks)` task
+        covariance matrix, built from `factor` and `diag` using either the
+        `"LOW RANK"` or `"CHOLESKY"` parameterization (see `method`).
+        """
         factor = self.factor
         diag = self.diag
         if self.method == "LOW RANK":
@@ -552,6 +565,13 @@ class KernelMultiTask(AbstractKernel):
 
 
 class KernelMultiTaskDerivs(KernelMultiTask):
+    """`KernelMultiTask` specialized for taking derivatives across tasks.
+
+    Fixes the task covariance matrix to the identity (`factor=1.0`,
+    `diag=0.0`, both non-trainable), so tasks are treated as independent and
+    the multi-task kernel reduces to `base_kernel` applied per task.
+    """
+
     def __init__(
         self,
         base_kernel,

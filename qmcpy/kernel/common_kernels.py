@@ -8,10 +8,24 @@ import scipy.special
 
 
 class AbstractKernelGaussianSE(AbstractKernelScaleLengthscales):
+    """Abstract base class for Gaussian / squared-exponential-family kernels.
+
+    Provides the analytic `[0,1]^d` single and double integrals shared by
+    this whole kernel family; subclasses need only implement `parsed___call__`.
+    """
 
     AUTOGRADKERNEL = True
 
     def parsed_single_integral_01d(self, x, batch_params):
+        """Analytic single integral of the Gaussian/SE-family kernel over `[0,1]^d`.
+
+        Args:
+            x (Union[np.ndarray, torch.Tensor]): Points, shape `(...,d)`.
+            batch_params (dict): Batch-broadcast `scale`/`lengthscales`, from `get_batch_params`.
+
+        Returns:
+            Union[np.ndarray, torch.Tensor]: Shape `(...,)` integral kernel evaluations.
+        """
         s = batch_params["scale"][..., 0]
         l = batch_params["lengthscales"]
         norm_class = (
@@ -26,6 +40,11 @@ class AbstractKernelGaussianSE(AbstractKernelScaleLengthscales):
         return kint
 
     def double_integral_01d(self):
+        """Analytic double integral of the Gaussian/SE-family kernel over `[0,1]^d x [0,1]^d`.
+
+        Returns:
+            Union[np.ndarray, torch.Tensor]: Double integral kernel evaluations.
+        """
         erf = self.npt.erf if self.torchify else scipy.special.erf
         s = self.scale[..., 0]
         l = self.lengthscales
@@ -261,6 +280,9 @@ class KernelGaussian(AbstractKernelGaussianSE):
     """
 
     def parsed___call__(self, x0, x1, batch_params):
+        """Gaussian / squared exponential kernel evaluation via a direct
+        elementwise formula; see the class docstring for the formula.
+        """
         scale = batch_params["scale"][..., 0]
         lengthscales = batch_params["lengthscales"]
         k = scale * self.npt.exp(
@@ -359,6 +381,9 @@ class KernelSquaredExponential(AbstractKernelGaussianSE):
     """
 
     def parsed___call__(self, x0, x1, batch_params):
+        """Gaussian / squared exponential kernel evaluation via the pairwise
+        distance function; see the class docstring for the formula.
+        """
         scale = batch_params["scale"][..., 0]
         lengthscales = batch_params["lengthscales"]
         rdists = self.rel_pairwise_dist_func(x0, x1, lengthscales)
@@ -547,9 +572,13 @@ class KernelRationalQuadratic(AbstractKernelScaleLengthscales):
 
     @property
     def alpha(self):
+        """Union[np.ndarray, torch.Tensor]: The shape/mixture parameter
+        $\alpha$, computed from the raw stored value via `tfs_alpha`'s inverse transform.
+        """
         return self.tfs_alpha[1](self.raw_alpha)
 
     def parsed___call__(self, x0, x1, batch_params):
+        """Rational quadratic kernel evaluation; see the class docstring for the formula."""
         scale = batch_params["scale"][..., 0]
         lengthscales = batch_params["lengthscales"]
         alpha = batch_params["alpha"][..., 0]
@@ -648,6 +677,7 @@ class KernelMatern12(AbstractKernelScaleLengthscales):
     AUTOGRADKERNEL = True
 
     def parsed___call__(self, x0, x1, batch_params):
+        """Matern 1/2 (exponential) kernel evaluation; see the class docstring for the formula."""
         scale = batch_params["scale"][..., 0]
         lengthscales = batch_params["lengthscales"]
         rdists = self.rel_pairwise_dist_func(x0, x1, lengthscales)
@@ -745,6 +775,7 @@ class KernelMatern32(AbstractKernelScaleLengthscales):
     AUTOGRADKERNEL = True
 
     def parsed___call__(self, x0, x1, batch_params):
+        """Matern 3/2 kernel evaluation; see the class docstring for the formula."""
         scale = batch_params["scale"][..., 0]
         lengthscales = batch_params["lengthscales"]
         rdists = self.rel_pairwise_dist_func(x0, x1, lengthscales)
@@ -843,6 +874,7 @@ class KernelMatern52(AbstractKernelScaleLengthscales):
     AUTOGRADKERNEL = True
 
     def parsed___call__(self, x0, x1, batch_params):
+        """Matern 5/2 kernel evaluation; see the class docstring for the formula."""
         scale = batch_params["scale"][..., 0]
         lengthscales = batch_params["lengthscales"]
         rdists = self.rel_pairwise_dist_func(x0, x1, lengthscales)

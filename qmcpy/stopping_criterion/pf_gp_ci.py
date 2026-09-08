@@ -19,15 +19,45 @@ import gpytorch
 
 
 class Suggester(object):
+    """Base class for future-sample suggestion schemes used by `PFGPCI`.
+
+    Subclasses implement `suggest` to propose the next batch of sample
+    locations, typically concentrated near the estimated failure boundary.
+    """
+
     pass
 
 
 class PFSampleErrorDensityAR(Suggester):
+    """Suggest new samples via acceptance-rejection on the GP error density.
+
+    Draws uniform candidates and accepts them with probability proportional
+    to the current GP's misclassification-error density, concentrating new
+    samples near the estimated failure boundary.
+    """
+
     def __init__(self, verbose=False) -> None:
         self.verbose = verbose
         super(PFSampleErrorDensityAR, self).__init__()
 
     def suggest(self, n, d, gp, rng, efficiency, pct=0.5):
+        """Draw `n` new sample locations via acceptance-rejection.
+
+        Args:
+            n (int): Number of samples to return.
+            d (int): Dimension of the sampling domain.
+            gp (ExactGPyTorchRegressionModel): Current GP surrogate, used to
+                evaluate the error density at candidate points.
+            rng (numpy.random.Generator): Random number generator for
+                candidate draws.
+            efficiency (float): Estimated acceptance rate, used to size each
+                batch of candidate draws.
+            pct (float): Target probability of accepting at least `n` points
+                within one candidate batch.
+
+        Returns:
+            np.ndarray: `n` accepted sample locations, shape `(n, d)`.
+        """
         if self.verbose:
             print(
                 "\tAR sampling with efficiency %.1e, expect %d draws: "
@@ -55,6 +85,13 @@ class PFSampleErrorDensityAR(Suggester):
 
 
 class SuggesterSimple(Suggester):
+    """Suggest new samples by drawing the next block from a fixed sampler.
+
+    Wraps an `AbstractTrueMeasure`/`AbstractDiscreteDistribution` (or any
+    callable with the same interface) and advances through it sequentially,
+    ignoring the current GP state.
+    """
+
     def __init__(self, sampler) -> None:
         self.sampler = sampler
         if isinstance(self.sampler, AbstractTrueMeasure):
@@ -64,6 +101,23 @@ class SuggesterSimple(Suggester):
         super(SuggesterSimple, self).__init__()
 
     def suggest(self, n, d, gp, rng, **kwargs):
+        """Draw the next `n` sample locations from `self.sampler`.
+
+        Args:
+            n (int): Number of samples to return.
+            d (int): Dimension of the sampling domain; must match
+                `self.sampler.d`.
+            gp (ExactGPyTorchRegressionModel): Unused; accepted for
+                interface compatibility with other `Suggester`
+                implementations.
+            rng (numpy.random.Generator): Unused; accepted for interface
+                compatibility with other `Suggester` implementations.
+            **kwargs: Unused; accepted for interface compatibility with
+                other `Suggester` implementations.
+
+        Returns:
+            np.ndarray: `n` sample locations, shape `(n, d)`.
+        """
         n_max = self.n_min + n
         if not (d == self.sampler.d):
             raise AssertionError
@@ -311,6 +365,31 @@ class PFGPCI(AbstractStoppingCriterion):
         )
 
     def integrate(self, seed=None, refit=False, resume=None):
+        """Determine the samples needed to satisfy the target tolerance.
+
+        Draws an initial batch (`self.n_init` points, or `init_samples` if
+        supplied), fits a GP surrogate, then repeatedly draws
+        `self.n_batch` more points via `self.batch_sampler`, updates the GP,
+        and refines the credible-interval bound on the probability of
+        failure. Stops once the bound is within `self.abs_tol` or
+        `self.n_limit` would be exceeded.
+
+        Args:
+            seed (int): Seed for the internal `DigitalNetB2` sampler used to
+                approximate the solution and (if `init_samples` was not
+                supplied) draw the initial batch.
+            refit (bool): If `True`, refit the GP hyperparameters from
+                scratch every batch rather than only on the first batch.
+            resume (Data): Unsupported; must be `None`, as `PFGPCI` cannot
+                resume a prior checkpoint.
+
+        Returns:
+            tuple: Approximation to the probability of failure
+                and the corresponding data object.
+
+        Raises:
+            ParameterError: If `resume` is not `None`.
+        """
         t0 = time.time()
         trace = self._make_trace_logger()
         if resume is not None:
@@ -471,6 +550,19 @@ class PFGPCIData(Data):
         )
 
     def update_data(self, batch_count, xdraw, ydrawtf):
+        """Fold one new batch of samples into the GP surrogate and credible interval.
+
+        Refits the GP from scratch (on the first batch, or every batch if
+        `self.refit`), otherwise incrementally adds the new data to the
+        existing GP. Recomputes the probability-of-failure estimate and its
+        credible interval from the updated surrogate.
+
+        Args:
+            batch_count (int): Index of this batch (0 for the initial batch).
+            xdraw (np.ndarray): New sample locations, shape `(n_new, d)`.
+            ydrawtf (np.ndarray): Affine-transformed integrand values at
+                `xdraw` (positive indicates failure), shape `(n_new,)`.
+        """
         self.n_batch.append(len(xdraw))
         self.x, self.y = np.vstack([self.x, xdraw]), np.hstack([self.y, ydrawtf])
         if batch_count == 0 or self.refit:
@@ -530,6 +622,14 @@ class PFGPCIData(Data):
         )
 
     def get_results_dict(self):
+        """Collect the per-iteration history as arrays.
+
+        Returns:
+            dict: Per-iteration `"iter"`, `"n_sum"` (cumulative sample
+            count), `"n_batch"`, `"error_bounds"`, `"ci_low"`, `"ci_high"`,
+            and `"solutions"` arrays; plus `"solutions_ref"`, `"error_ref"`,
+            and `"in_ci"` if `self.approx_true_solution`.
+        """
         df = {
             "iter": np.arange(len(self.n_sum)),
             "n_sum": self.n_sum,
@@ -548,6 +648,17 @@ class PFGPCIData(Data):
         return df
 
     def plot(self, trace_only=False, **kwargs):
+        """Plot the convergence trace, plus a per-batch GP diagnostic panel if `d` is 1 or 2.
+
+        Args:
+            trace_only (bool): If `True` (or if `d` is not 1 or 2, or no GP
+                has been fit yet), plot only the convergence trace.
+            **kwargs: Passed through to `plot_1d`/`plot_2d` when a
+                per-batch diagnostic panel is drawn.
+
+        Returns:
+            matplotlib.figure.Figure: The assembled figure.
+        """
         from matplotlib import pyplot
 
         if self.d == 1 and not trace_only and self.saved_gps != []:
@@ -606,6 +717,19 @@ class PFGPCIData(Data):
         return fig
 
     def plot_1d(self, meshticks=1025, ci_percentage=0.95, **kwargs):
+        """Plot, for each batch, the 1-D error density and GP fit with a credible band.
+
+        Args:
+            meshticks (int): Number of points in the `[0,1]` plotting mesh.
+            ci_percentage (float): Credible level for the plotted GP
+                prediction band.
+            **kwargs: Unused; accepted for interface compatibility with
+                `plot`.
+
+        Returns:
+            matplotlib.figure.Figure: The assembled figure.
+            matplotlib.gridspec.GridSpec: The figure's grid layout.
+        """
         from matplotlib import pyplot, gridspec
 
         beta = norm.ppf(np.mean([ci_percentage, 1]))
@@ -671,6 +795,19 @@ class PFGPCIData(Data):
         return fig, gs
 
     def plot_2d(self, meshticks=257, clevels=32, **kwargs):
+        """Plot, for each batch, 2-D contours of the true function, error density, and GP mean.
+
+        Args:
+            meshticks (int): Number of points per axis in the `[0,1]^2`
+                plotting mesh.
+            clevels (int): Number of contour levels.
+            **kwargs: Unused; accepted for interface compatibility with
+                `plot`.
+
+        Returns:
+            matplotlib.figure.Figure: The assembled figure.
+            matplotlib.gridspec.GridSpec: The figure's grid layout.
+        """
         from matplotlib import pyplot, gridspec, colormaps
 
         n_batches = len(self.n_batch)

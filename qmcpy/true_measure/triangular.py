@@ -30,6 +30,14 @@ class TriangularDistribution:
         self._m = loc + c * scale
 
     def pdf(self, x):
+        """Probability density function of the triangular distribution.
+
+        Args:
+            x (np.ndarray): Points at which to evaluate the density.
+
+        Returns:
+            np.ndarray: Density values, same shape as `x`.
+        """
         x = np.asarray(x, dtype=float)
         a, m, b = self._a, self._m, self._b
         out = np.zeros_like(x, dtype=float)
@@ -42,6 +50,14 @@ class TriangularDistribution:
         return out
 
     def ppf(self, u):
+        """Percent point function (inverse CDF) of the triangular distribution.
+
+        Args:
+            u (np.ndarray): Probabilities in `[0,1]` at which to evaluate the inverse CDF.
+
+        Returns:
+            np.ndarray: Quantile values, same shape as `u`.
+        """
         u = np.asarray(u, dtype=float)
         a, m, b = self._a, self._m, self._b
         Fm = (m - a) / (b - a)

@@ -14,11 +14,6 @@ import warnings
 
 
 class CubMLQMCCont(AbstractCubMLQMC):
-    _RESUME_REQUIRED_FIELDS = (
-        "levels", "n_level", "eval_level", "mean_level_reps", "mean_level",
-        "var_level", "cost_level", "var_cost_ratio_level", "bias_estimate", "level_integrands"
-    )
-
     """
     Multilevel Quasi-Monte Carlo stopping criterion with continuation.
 
@@ -78,6 +73,11 @@ class CubMLQMCCont(AbstractCubMLQMC):
 
     1.  [https://github.com/PieterjanRobbe/MultilevelEstimators.jl](https://github.com/PieterjanRobbe/MultilevelEstimators.jl).
     """
+
+    _RESUME_REQUIRED_FIELDS = (
+        "levels", "n_level", "eval_level", "mean_level_reps", "mean_level",
+        "var_level", "cost_level", "var_cost_ratio_level", "bias_estimate", "level_integrands"
+    )
 
     def __init__(
         self,

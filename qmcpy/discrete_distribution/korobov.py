@@ -26,6 +26,17 @@ def load_korobov_table(
     return raw, lut
 
 def get_a(lut, n, d):
+    """Look up the tabulated Korobov generator `a` for a given `n` and `d`.
+
+    Args:
+        lut (dict): Lookup table returned by the module's table loader, with
+            keys `n_values`, `d_values`, and `a`.
+        n (int): Number of points; must be one of `lut["n_values"]`.
+        d (int): Dimension; must be one of `lut["d_values"]`.
+
+    Returns:
+        int: The tabulated generator value `a` for this `(n, d)` pair.
+    """
     i = np.searchsorted(lut["n_values"], n)
     if i >= len(lut["n_values"]) or lut["n_values"][i] != n:
         raise ParameterError(

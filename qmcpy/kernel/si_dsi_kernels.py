@@ -13,6 +13,18 @@ import scipy.special
 
 
 class AbstractSIDSIKernel(AbstractKernelScaleLengthscales):
+    """Abstract base class for shift-invariant and digitally-shift-invariant
+    (Walsh) kernels, parameterized by smoothness `alpha`, `lengthscales`, and
+    `scale`.
+
+    Subclasses implement `get_per_dim_components`, which builds the family-
+    specific per-dimension building blocks (Bernoulli polynomials for
+    shift-invariant kernels, weighted Walsh functions for digitally-shift-
+    invariant kernels); this base class handles combining them (optionally
+    with derivative orders `beta0`/`beta1`) into the full kernel evaluation,
+    plus the `[0,1]^d` single/double integrals, which are constant (`scale`)
+    for this whole kernel family.
+    """
 
     AUTOGRADKERNEL = False
 
@@ -113,17 +125,45 @@ class AbstractSIDSIKernel(AbstractKernelScaleLengthscales):
 
     @property
     def alpha(self):
+        """Union[np.ndarray, torch.Tensor]: The smoothness parameter
+        $\\boldsymbol{\\alpha}$, computed from the raw stored value via
+        `tfs_alpha`'s inverse transform.
+        """
         return self.tfs_alpha[1](self.raw_alpha)
 
     def parsed_single_integral_01d(self, x, batch_params):
+        """Single integral of this kernel family over `[0,1]^d`, which is
+        the constant `scale` (a reproducing-kernel property of shift-
+        invariant/digitally-shift-invariant kernels).
+        """
         return batch_params["scale"][..., 0] + 0 * x[..., 0]
 
     def double_integral_01d(self):
+        """Double integral of this kernel family over `[0,1]^d x [0,1]^d`,
+        which is the constant `scale` (same reproducing-kernel property as
+        `parsed_single_integral_01d`).
+        """
         return self.scale[..., 0]
 
     def combine_per_dim_components_raw_m1(
         self, kparts, beta0, beta1, c, batch_params, stable
     ):
+        """Combine per-dimension kernel components into `(scale_term, remainder)`.
+
+        Args:
+            kparts (Union[np.ndarray, torch.Tensor]): Per-dimension components from `get_per_dim_components`.
+            beta0 (Union[np.ndarray, torch.Tensor]): Derivative orders for the first input.
+            beta1 (Union[np.ndarray, torch.Tensor]): Derivative orders for the second input.
+            c (Union[np.ndarray, torch.Tensor]): Coefficients of the derivative terms.
+            batch_params (dict): Batch-broadcast `scale`/`lengthscales`, from `get_batch_params`.
+            stable (bool): If `True`, use a numerically stabler (but more
+                expensive) product formula.
+
+        Returns:
+            tuple[Union[np.ndarray, torch.Tensor], Union[np.ndarray, torch.Tensor]]:
+                `(sc, v)` such that the full kernel value is `sc + v`;
+                `combine_per_dim_components` adds these back together.
+        """
         scale = batch_params["scale"][..., 0]
         lengthscales = batch_params["lengthscales"]
         ind = 1.0 * ((beta0 + beta1) == 0)
@@ -143,9 +183,27 @@ class AbstractSIDSIKernel(AbstractKernelScaleLengthscales):
         return sc, v
 
     def get_per_dim_components(self, x0, x1, beta0, beta1):
+        """*Abstract method* building this kernel family's per-dimension
+        components (e.g. Bernoulli polynomials or weighted Walsh functions,
+        depending on the subclass), with derivative orders `beta0`/`beta1`
+        applied. Called by `parsed___call__`.
+        """
         raise MethodImplementationError(self, "get_per_dim_components")
 
     def combine_per_dim_components(self, kparts, beta0, beta1, c, batch_params, stable):
+        """Combine per-dimension kernel components into the final kernel value.
+
+        Args:
+            kparts (Union[np.ndarray, torch.Tensor]): Per-dimension components from `get_per_dim_components`.
+            beta0 (Union[np.ndarray, torch.Tensor]): Derivative orders for the first input.
+            beta1 (Union[np.ndarray, torch.Tensor]): Derivative orders for the second input.
+            c (Union[np.ndarray, torch.Tensor]): Coefficients of the derivative terms.
+            batch_params (dict): Batch-broadcast `scale`/`lengthscales`, from `get_batch_params`.
+            stable (bool): If `True`, use a numerically stabler product formula.
+
+        Returns:
+            Union[np.ndarray, torch.Tensor]: The kernel evaluation.
+        """
         sc, v = self.combine_per_dim_components_raw_m1(
             kparts, beta0, beta1, c, batch_params, stable
         )
@@ -153,6 +211,7 @@ class AbstractSIDSIKernel(AbstractKernelScaleLengthscales):
         return k
 
     def parsed___call__(self, x0, x1, beta0, beta1, c, batch_params, stable=False):
+        """Evaluate the kernel by building then combining per-dimension components."""
         kparts = self.get_per_dim_components(x0, x1, beta0, beta1)
         k = self.combine_per_dim_components(
             kparts, beta0, beta1, c, batch_params, stable
@@ -415,6 +474,9 @@ class KernelShiftInvar(AbstractSIDSIKernel):
             self.lgamma = scipy.special.loggamma
 
     def get_per_dim_components(self, x0, x1, beta0, beta1):
+        """Per-dimension Bernoulli-polynomial components; see the class
+        docstring for the kernel formula.
+        """
         p = len(beta0)
         betasum = beta0 + beta1
         order = 2 * self.alpha - betasum
@@ -647,6 +709,10 @@ class KernelShiftInvarCombined(AbstractSIDSIKernel):
         )
 
     def get_per_dim_components(self, x0, x1, beta0, beta1):
+        """Per-dimension Bernoulli-polynomial components for orders 1-4,
+        later combined by `combine_per_dim_components_raw_m1` weighted by
+        `alpha`. Does not support derivatives (`beta0`/`beta1` must be zero).
+        """
         p = len(beta0)
         if not ((beta0 == 0).all() and (
             beta1 == 0
@@ -665,6 +731,9 @@ class KernelShiftInvarCombined(AbstractSIDSIKernel):
     def combine_per_dim_components_raw_m1(
         self, kparts, beta0, beta1, c, batch_params, stable
     ):
+        """Weight the order-1-4 components by `alpha` and sum, then delegate
+        to the base class's combination logic.
+        """
         kparts = (self.alpha[..., None, :, None, :] * kparts).sum(-3)
         return super().combine_per_dim_components_raw_m1(
             kparts, beta0, beta1, c, batch_params, stable
@@ -914,11 +983,22 @@ class KernelDigShiftInvar(AbstractSIDSIKernel):
 
     @property
     def t(self):
+        """int: Number of bits used in the binary representation of inputs
+        (see `set_t`). Must be set via `set_t` before use.
+        """
         if self._t is None:
             raise ParameterError("please use set_t to set the t value")
         return self._t
 
     def set_t(self, t):
+        """Set the number of bits `t` used to binarize inputs via `to_bin`.
+
+        Args:
+            t (Union[None, int]): Number of bits, `0 <= t <= 63` when
+                `torchify` (`torch.int64` limit) or `0 <= t <= 64` otherwise
+                (`np.uint64` limit). `None` clears the value, requiring a
+                later call to `set_t` before the kernel can be evaluated.
+        """
         if t is None:
             self._t = t
         else:
@@ -933,6 +1013,9 @@ class KernelDigShiftInvar(AbstractSIDSIKernel):
             self._t = t
 
     def get_per_dim_components(self, x0, x1, beta0, beta1):
+        """Per-dimension weighted-Walsh-function components; see the class
+        docstring for the kernel formula. Inputs are first binarized to `t` bits.
+        """
         t = self.t
         x0 = to_bin(x0, t)
         x1 = to_bin(x1, t)
@@ -1202,11 +1285,22 @@ class KernelDigShiftInvarAdaptiveAlpha(AbstractSIDSIKernel):
 
     @property
     def t(self):
+        """int: Number of bits used in the binary representation of inputs
+        (see `set_t`). Must be set via `set_t` before use.
+        """
         if self._t is None:
             raise ParameterError("please use set_t to set the t value")
         return self._t
 
     def set_t(self, t):
+        """Set the number of bits `t` used to binarize inputs via `to_bin`.
+
+        Args:
+            t (Union[None, int]): Number of bits, `0 <= t <= 63` when
+                `torchify` (`torch.int64` limit) or `0 <= t <= 64` otherwise
+                (`np.uint64` limit). `None` clears the value, requiring a
+                later call to `set_t` before the kernel can be evaluated.
+        """
         if t is None:
             self._t = t
         else:
@@ -1221,6 +1315,11 @@ class KernelDigShiftInvarAdaptiveAlpha(AbstractSIDSIKernel):
             self._t = t
 
     def get_per_dim_components(self, x0, x1, beta0, beta1):
+        """Per-dimension components with a per-XOR-bit-length adaptive
+        smoothness; see the class docstring for the kernel formula. Inputs
+        are first binarized to `t` bits. Does not support derivatives
+        (`beta0`/`beta1` must be zero).
+        """
         t = self.t
         x0 = to_bin(x0, t)
         x1 = to_bin(x1, t)
@@ -1239,6 +1338,10 @@ class KernelDigShiftInvarAdaptiveAlpha(AbstractSIDSIKernel):
     def combine_per_dim_components_raw_m1(
         self, flog2deltas, beta0, beta1, c, batch_params, stable
     ):
+        """Combine per-XOR-bit-length components using a smoothness `alpha`
+        that adapts to each bit length, then delegate to the base class's
+        combination logic.
+        """
         alpha = batch_params["alpha"]
         p2alphap1 = 2 ** (alpha + 1)
         nu = p2alphap1 / (p2alphap1 - 2)
@@ -1455,11 +1558,22 @@ class KernelDigShiftInvarCombined(AbstractSIDSIKernel):
 
     @property
     def t(self):
+        """int: Number of bits used in the binary representation of inputs
+        (see `set_t`). Must be set via `set_t` before use.
+        """
         if self._t is None:
             raise ParameterError("please use set_t to set the t value")
         return self._t
 
     def set_t(self, t):
+        """Set the number of bits `t` used to binarize inputs via `to_bin`.
+
+        Args:
+            t (Union[None, int]): Number of bits, `0 <= t <= 63` when
+                `torchify` (`torch.int64` limit) or `0 <= t <= 64` otherwise
+                (`np.uint64` limit). `None` clears the value, requiring a
+                later call to `set_t` before the kernel can be evaluated.
+        """
         if t is None:
             self._t = t
         else:
@@ -1474,6 +1588,12 @@ class KernelDigShiftInvarCombined(AbstractSIDSIKernel):
             self._t = t
 
     def get_per_dim_components(self, x0, x1, beta0, beta1):
+        """Per-dimension weighted-Walsh-function components for orders 1-4,
+        later combined by `combine_per_dim_components_raw_m1` weighted by
+        `alpha`; see the class docstring for the kernel formula. Inputs are
+        first binarized to `t` bits. Does not support derivatives
+        (`beta0`/`beta1` must be zero).
+        """
         t = self.t
         x0 = to_bin(x0, t)
         x1 = to_bin(x1, t)
@@ -1498,6 +1618,9 @@ class KernelDigShiftInvarCombined(AbstractSIDSIKernel):
     def combine_per_dim_components_raw_m1(
         self, kparts, beta0, beta1, c, batch_params, stable
     ):
+        """Weight the order-1-4 components by `alpha` and sum, then delegate
+        to the base class's combination logic.
+        """
         kparts = (self.alpha[..., None, :, None, :] * kparts).sum(-3)
         return super().combine_per_dim_components_raw_m1(
             kparts, beta0, beta1, c, batch_params, stable

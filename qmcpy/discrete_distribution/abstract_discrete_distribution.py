@@ -7,6 +7,12 @@ import numpy as np
 
 
 class AbstractDiscreteDistribution(object):
+    """Abstract base class for QMCPy discrete distributions (samplers).
+
+    Every concrete discrete distribution (e.g. `DigitalNetB2`, `Lattice`,
+    `IIDStdUniform`) subclasses this and implements `_gen_samples` and
+    `_spawn`.
+    """
 
     def __init__(self, dimension, replications, seed, d_limit, n_limit) -> None:
         self.mimics = "StdUniform"
@@ -83,6 +89,9 @@ class AbstractDiscreteDistribution(object):
     def gen_samples(
         self, n=None, n_min=None, n_max=None, return_binary=False, warn=True
     ):
+        r"""Generate samples from the sequence. Called by `__call__`; see its
+        docstring for the full `Args:`/`Returns:` description.
+        """
         if n is not None and n_min is None and n_max is None:
             n_min = 0
             n_max = int(n)
@@ -166,6 +175,16 @@ class AbstractDiscreteDistribution(object):
         raise MethodImplementationError(self, "_spawn")
 
     def pdf(self, x):
+        """Probability density function of the distribution this sampler mimics.
+
+        Args:
+            x (np.ndarray): Points at which to evaluate the density, shape `(*batch_shape, d)`.
+
+        Returns:
+            np.ndarray: Density values with shape `batch_shape`. The base
+                implementation is uniform on `[0,1]^d` (density 1 everywhere);
+                subclasses that mimic a different distribution override this.
+        """
         return np.ones_like(x[..., 0])
 
     def __repr__(self, abc_class_name):

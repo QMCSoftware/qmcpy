@@ -329,6 +329,25 @@ class CubMCG(AbstractStoppingCriterion):
         data.n_total = data.yfull.shape[-1]
 
     def integrate(self, resume=None):
+        """Determine the samples needed to satisfy the target tolerance.
+
+        Draws an initial `self.n_init` samples to estimate the standard
+        deviation and kurtosis. If `self.rel_tol` is 0, sizes and draws one
+        additional batch via a Chebyshev/Berry-Esseen bound (`_nchebe`).
+        Otherwise, iteratively grows the sample size (`_ncbinv`) until the
+        Berry-Esseen confidence bound meets both the absolute and relative
+        tolerance or `self.n_limit` would be exceeded.
+
+        Args:
+            resume (Data): Unsupported; must be `None`, as `CubMCG` cannot
+                resume a prior checkpoint.
+
+        Returns:
+            tuple: Approximation to the integral and the corresponding data object.
+
+        Raises:
+            ParameterError: If `resume` is not `None`.
+        """
         t_start = time()
         trace = self._make_trace_logger()
         if resume is not None:
@@ -535,6 +554,16 @@ class CubMCG(AbstractStoppingCriterion):
         return eps
 
     def set_tolerance(self, abs_tol=None, rel_tol=None, rmse_tol=None):
+        """Update the stopping criterion's target tolerance.
+
+        Args:
+            abs_tol (float): Absolute error tolerance.
+            rel_tol (float): Relative error tolerance.
+            rmse_tol (float): Unsupported; must be `None`.
+
+        Raises:
+            AssertionError: If `rmse_tol` is supplied.
+        """
         if not (rmse_tol is None):
             raise AssertionError("rmse_tol not supported by this stopping criterion.")
         if abs_tol != None:
@@ -544,19 +573,20 @@ class CubMCG(AbstractStoppingCriterion):
 
 
 def _tol_fun(abs_tol, rel_tol, theta, mu, toltype):
-    # """
-    # Generalized error tolerance function.
+    """Generalized error tolerance function.
 
-    # Args:
-    #     abs_tol (float): absolute error tolerance
-    #     rel_tol (float): relative error tolerance
-    #     theta (float): parameter in 'theta' case
-    #     mu (float): true mean
-    #     toltype (str): different options of tolerance function
+    Args:
+        abs_tol (float): Absolute error tolerance.
+        rel_tol (float): Relative error tolerance.
+        theta (float): Weight in `"combine"` case; 0 gives pure relative
+            tolerance, 1 gives pure absolute tolerance.
+        mu (float): True mean.
+        toltype (str): `"combine"` for a weighted sum of the two tolerances,
+            or `"max"` for their max.
 
-    # Returns:
-    #     float: tolerance as weighted sum of absolute and relative tolerance
-    # """
+    Returns:
+        float: Tolerance as a combination of absolute and relative tolerance.
+    """
     if toltype == "combine":  # the linear combination of two tolerances
         # theta == 0 --> relative error tolerance
         # theta == 1 --> absolute error tolerance

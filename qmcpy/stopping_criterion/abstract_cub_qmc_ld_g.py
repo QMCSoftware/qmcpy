@@ -18,6 +18,16 @@ def _lstsq_pyfunc(x, y):
 
 
 class AbstractCubQMCLDG(AbstractStoppingCriterion):
+    """Abstract base class for guaranteed low-discrepancy QMC stopping criteria.
+
+    Implements the fast-transform (FFT/FWT) cubature error bound shared by
+    `CubQMCLatticeG`, `CubQMCNetG`, and similar guaranteed lattice/digital-net
+    stopping criteria: doubling sample counts each iteration, maintaining the
+    running transform coefficients (`_ytildefull`, `_kappanumap`), optional
+    control-variate correction, and the cone-condition check that certifies
+    the error bound.
+    """
+
     _RESUME_REQUIRED_FIELDS = (
         "solution", "comb_bound_low", "comb_bound_high", "comb_bound_diff", "comb_flags", "n", "n_max", "xfull", "yfull"
     )
@@ -222,6 +232,23 @@ class AbstractCubQMCLDG(AbstractStoppingCriterion):
             )
 
     def integrate(self, resume=None):
+        """Determine the samples needed to satisfy the target tolerance.
+
+        Doubles the sample count each iteration, updates the running fast
+        transform (`_ytildefull`) and its permutation (`_kappanumap`),
+        optionally corrects for control variates, and (if `self.check_cone`)
+        checks the cone condition that certifies the low-discrepancy error
+        bound. Stops once every combined output is within tolerance or
+        `self.n_limit` would be exceeded.
+
+        Args:
+            resume (Data): Existing integration state to resume from, if
+                supported. Defaults to None.
+
+        Returns:
+            tuple: Approximation to the integral with shape ``integrand.d_comb``
+                and the corresponding data object.
+        """
         t_start = time()
         resume_provenance = self._capture_resume_provenance(resume)
         first_resume_iter = False
@@ -480,6 +507,18 @@ class AbstractCubQMCLDG(AbstractStoppingCriterion):
         return data.solution, data
 
     def set_tolerance(self, abs_tol=None, rel_tol=None, rmse_tol=None):
+        """Update the stopping criterion's target tolerance.
+
+        Args:
+            abs_tol (float): Absolute error tolerance, broadcast to
+                `self.abs_tols` with shape `integrand.d_comb`.
+            rel_tol (float): Relative error tolerance, broadcast to
+                `self.rel_tols` with shape `integrand.d_comb`.
+            rmse_tol (float): Unsupported; must be `None`.
+
+        Raises:
+            AssertionError: If `rmse_tol` is supplied.
+        """
         if not (rmse_tol is None):
             raise AssertionError("rmse_tol not supported by this stopping criterion.")
         if abs_tol is not None:

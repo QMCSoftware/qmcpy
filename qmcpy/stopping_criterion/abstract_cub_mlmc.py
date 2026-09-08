@@ -6,6 +6,13 @@ from scipy.stats import norm
 
 
 class AbstractCubMLMC(AbstractStoppingCriterion):
+    """Abstract base class for multilevel Monte Carlo stopping criteria.
+
+    Shared machinery for `CubMLMC` and `CubMLMCCont`: level statistics
+    (`_refresh_level_statistics`), level growth (`_add_level`), and resume
+    checkpoint construction/validation/replay used across MLMC stopping
+    criteria.
+    """
 
     @staticmethod
     def _append_level_diff_samples(data, level, dp):
@@ -66,6 +73,18 @@ class AbstractCubMLMC(AbstractStoppingCriterion):
         return ns.astype(int)
 
     def set_tolerance(self, abs_tol=None, rel_tol=None, rmse_tol=None):
+        """Update the stopping criterion's target tolerance.
+
+        Args:
+            abs_tol (float): Absolute error tolerance, converted to an RMSE
+                tolerance via `self.alpha`. Ignored if `rmse_tol` is supplied.
+            rel_tol (float): Unsupported; must be `None`.
+            rmse_tol (float): Root mean squared error tolerance. Takes
+                precedence over `abs_tol` if both are supplied.
+
+        Raises:
+            AssertionError: If `rel_tol` is supplied.
+        """
         if not (rel_tol is None):
             raise AssertionError("rel_tol not supported by this stopping criterion.")
         if rmse_tol != None:

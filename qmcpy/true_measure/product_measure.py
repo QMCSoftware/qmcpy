@@ -224,18 +224,29 @@ class ProductMeasure(AbstractTrueMeasure):
 
     @property
     def mean(self):
+        """np.ndarray: The measure's mean, concatenated from each marginal's
+        `mean` in marginal order and cached after first access.
+        """
         if self._mean_cache is None:
             self._mean_cache = self._concatenate_marginal_statistic("mean")
         return self._mean_cache
 
     @property
     def variance(self):
+        """np.ndarray: The measure's variance, concatenated from each
+        marginal's `variance` in marginal order and cached after first
+        access.
+        """
         if self._variance_cache is None:
             self._variance_cache = self._concatenate_marginal_statistic("variance")
         return self._variance_cache
 
     @property
     def standard_deviation(self):
+        """np.ndarray: The measure's standard deviation, concatenated from
+        each marginal's `standard_deviation` in marginal order and cached
+        after first access.
+        """
         if self._standard_deviation_cache is None:
             self._standard_deviation_cache = self._concatenate_marginal_statistic(
                 "standard_deviation"
@@ -284,6 +295,11 @@ class ProductMeasure(AbstractTrueMeasure):
 
     @property
     def covariance(self):
+        """Union[np.ndarray, scipy.sparse.spmatrix]: The measure's
+        block-diagonal covariance, built from each marginal's `covariance`
+        and cached after first access. Sparse if any marginal's covariance
+        is sparse, dense otherwise.
+        """
         if self._covariance_cache is None:
             self._covariance_cache = self._compute_covariance()
         return self._covariance_cache

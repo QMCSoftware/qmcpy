@@ -65,6 +65,20 @@ _HEADER = re.compile(r"^([A-Z][A-Za-z]*(?: [A-Z][A-Za-z]*)*):$")
 _CANON = {name.lower(): name for name in GOOGLE_SECTIONS | NUMPY_SECTIONS}
 
 
+def _is_property_setter_or_deleter(node):
+    """True if ``node`` is decorated ``@<name>.setter`` or ``@<name>.deleter``.
+
+    Such methods share their contract with the ``@property`` getter of the
+    same name (which is separately checked), so requiring their own
+    docstring would be a false positive -- no Python convention expects one.
+    """
+    for decorator in node.decorator_list:
+        if (isinstance(decorator, ast.Attribute)
+                and decorator.attr in ("setter", "deleter")):
+            return True
+    return False
+
+
 def _iter_public(tree):
     """Yield ``(node, kind)`` for the module plus its public API objects."""
     yield tree, "module"
@@ -76,6 +90,8 @@ def _iter_public(tree):
             yield node, "class"
             for sub in node.body:
                 if not isinstance(sub, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    continue
+                if _is_property_setter_or_deleter(sub):
                     continue
                 if not sub.name.startswith("_"):
                     yield sub, "method"
