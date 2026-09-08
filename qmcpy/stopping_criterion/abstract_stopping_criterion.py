@@ -546,7 +546,7 @@ class AbstractStoppingCriterion(object):
     def _validate_resume_with_state(self, data, required_fields=(), state_fields=()):
         """Validate resume data including algorithm-specific state fields.
 
-        Calls: meth:`_validate_resume_data` and additionally checks that all
+        Calls :meth:`_validate_resume_data` and additionally checks that all
         *state_fields* are present and that ``n_total >= n_init``.
 
         Args:

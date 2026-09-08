@@ -176,7 +176,7 @@ class AbstractIntegrand(object):
                 specifies a periodization transform. Options are:
 
                 - `False`: No periodizing transform, $\psi(x) = x$.
-                - `'BAKER'`: Baker tansform $\psi(x) = 1-2\lvert x-1/2 \rvert$.
+                - `'BAKER'`: Baker transform $\psi(x) = 1-2\lvert x-1/2 \rvert$.
                 - `'C0'`: $C^0$ transform $\psi(x) = 3x^2-2x^3$.
                 - `'C1'`: $C^1$ transform $\psi(x) = x^3(10-15x+6x^2)$.
                 - `'C1SIN'`: Sidi $C^1$ transform $\psi(x) = x-\sin(2 \pi x)/(2 \pi)$.

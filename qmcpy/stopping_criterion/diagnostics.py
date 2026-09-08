@@ -673,7 +673,7 @@ class _IterationTraceLogger(object):
     def iteration(self, data, step_value=None):
         """Emit an ITER row, unless state is unchanged since the last resume.
 
-        If: meth:`resume` was just called and the data state has not changed
+        If :meth:`resume` was just called and the data state has not changed
         (same ``n_total``, ``n_min``, ``m``, and ``xfull.shape``), the row is
         suppressed to avoid a duplicate log entry.
 

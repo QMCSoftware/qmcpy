@@ -26,7 +26,7 @@ class AbstractDiscreteDistribution(object):
         self.no_replications = replications is None
         self.replications = 1 if self.no_replications else int(replications)
         if self.replications < 0:
-            raise ParameterError("replications must be None or a postive int")
+            raise ParameterError("replications must be None or a positive int")
         if (
             isinstance(dimension, list)
             or isinstance(dimension, tuple)

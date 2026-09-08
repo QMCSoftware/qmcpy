@@ -208,9 +208,11 @@ class SensitivityIndices(AbstractIntegrand):
             y[(slice(None), 2) + i + self.i_slice] = (
                 f_x[(None,) + self.i_slice] ** 2
             )  # sigma^2+mu^2
-            # here we copy mu and sigma^2+mu^2 since if these these were not copied there is a chance the bounds could change
-            # for mu and/or sigma and then an index which was previously approximated sufficiently woulud become insufficientlly approximated
-            # and it would then be difficult ot go back and resample the numerator for that approximation
+            # Here we copy mu and sigma^2+mu^2 since, if these were not copied,
+            # there is a chance the bounds could change for mu and/or sigma.
+            # Then an index that was previously approximated sufficiently could
+            # become insufficiently approximated, and it would be difficult to
+            # go back and resample the numerator for that approximation.
         return y
 
     def _spawn(self, level, sampler):

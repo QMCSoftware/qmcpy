@@ -75,7 +75,7 @@ def mlmc_test(
         cst = 0
         integrand_spawn = integrand_spawns[ll]
         for j in range(1,101):
-            # evaluate integral at sampleing points samples
+            # Evaluate the integral at sampled points.
             samples = integrand_spawn.discrete_distrib.gen_samples(n=n/100)
             Pc,Pf = integrand_spawn.f(samples)
             dP = Pf-Pc

@@ -258,7 +258,7 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
 
             order (str): `'RADICAL INVERSE'`, or `'GRAY'` ordering. See the
                 doctest example above.
-            t (int): Number of bits in integer represetation of points *after*
+            t (int): Number of bits in integer representation of points *after*
                 randomization. The number of bits in the generating matrices is
                 inferred based on the largest value.
             alpha (int): Interlacing factor for higher order nets. When
@@ -702,7 +702,7 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
     def _gen_samples(self, n_min, n_max, return_binary, warn):
         if n_min == 0 and self.randomize in ["FALSE", "LMS"] and warn:
             warnings.warn(
-                "Without randomization, the first digtial net point is the origin",
+                "Without randomization, the first digital net point is the origin",
                 ParameterWarning,
             )
         r_x = np.uint64(self.gen_mats.shape[0])

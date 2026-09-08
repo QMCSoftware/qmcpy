@@ -129,7 +129,7 @@ class LatinHypercube(AbstractDiscreteDistribution):
     def _gen_samples(
             self, n=None, n_min=None, n_max=None, return_binary=False, warn=True
         ):
-        r"""..."""  # (inchangee)
+        r"""..."""  # (unchanged)
         if return_binary:
             raise ParameterError("LatinHypercube does not support return_binary=True")
         if n_min != 0:

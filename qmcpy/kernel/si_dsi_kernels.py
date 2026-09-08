@@ -841,7 +841,7 @@ class KernelDigShiftInvar(AbstractSIDSIKernel):
 
         Args:
             d (int): Dimension.
-            t (int): number of bits in binary represtnations. Typically
+            t (int): number of bits in binary representations. Typically
                 `dnb2.t` where `isinstance(dnb2,DigitalNetB2)`.
             scale (Union[np.ndarray, torch.Tensor]): Scaling factor $S$.
             lengthscales (Union[np.ndarray, torch.Tensor]): Product weights
@@ -1126,7 +1126,7 @@ class KernelDigShiftInvarAdaptiveAlpha(AbstractSIDSIKernel):
 
         Args:
             d (int): Dimension.
-            t (int): number of bits in binary represtnations. Typically
+            t (int): number of bits in binary representations. Typically
                 `dnb2.t` where `isinstance(dnb2,DigitalNetB2)`.
             scale (Union[np.ndarray, torch.Tensor]): Scaling factor $S$.
             lengthscales (Union[np.ndarray, torch.Tensor]): Product weights
@@ -1381,7 +1381,7 @@ class KernelDigShiftInvarCombined(AbstractSIDSIKernel):
 
         Args:
             d (int): Dimension.
-            t (int): number of bits in binary represtnations. Typically
+            t (int): number of bits in binary representations. Typically
                 `dnb2.t` where `isinstance(dnb2,DigitalNetB2)`.
             scale (Union[np.ndarray, torch.Tensor]): Scaling factor $S$.
             lengthscales (Union[np.ndarray, torch.Tensor]): Product weights

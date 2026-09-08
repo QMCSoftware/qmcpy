@@ -64,7 +64,7 @@ class IIDStdUniform(AbstractIIDDiscreteDistribution):
             int(dimension), replications, seed, d_limit=np.inf, n_limit=np.inf
         )
         if not (self.dvec == np.arange(self.d)).all():
-            warnings.warn("IIDStdUniform does not accomodate dvec", ParameterWarning)
+            warnings.warn("IIDStdUniform does not accommodate dvec", ParameterWarning)
 
     def _gen_samples(self, n_min, n_max, return_binary, warn):
         if n_min > 0 and warn:

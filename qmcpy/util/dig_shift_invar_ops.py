@@ -184,7 +184,7 @@ def to_bin(x, t: int):
     Args:
         x (Union[np.ndarray, torch.Tensor]): floating point representation of
             samples.
-        t (int): number of bits in binary represtnations. Typically `dnb2.t`
+        t (int): number of bits in binary representations. Typically `dnb2.t`
             where `isinstance(dnb2,DigitalNetB2)`.
 
     Returns:
@@ -227,7 +227,7 @@ def to_float(x, t: int):
     Args:
         x (Union[np.ndarray, torch.Tensor]): binary representation of samples
             with `dtype` either `np.uint64` or `torch.int64`.
-        t (int): number of bits in binary represtnations. Typically `dnb2.t`
+        t (int): number of bits in binary representations. Typically `dnb2.t`
             where `isinstance(dnb2,DigitalNetB2)`.
 
     Returns:

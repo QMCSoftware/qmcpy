@@ -234,7 +234,7 @@ class PFGPCI(AbstractStoppingCriterion):
             gpytorch_train_iter (int): Training iterations for the GP in
                 gpytorch
             gpytorch_use_gpu (bool): If True, have gpytorch use a GPU for
-                fitting and trining the GP
+                fitting and training the GP
             verbose (int): If verbose > 0, print information through the call
                 to integrate()
             n_ref_approx (int): If n_ref_approx > 0, use n_ref_approx points to
