@@ -228,7 +228,7 @@ class SensitivityIndices(AbstractIntegrand):
 
         Returns:
             tuple: Lower and upper bounds on the indices, clipped to $[0,1]$ and
-            widened to $[0,1]$ where the variance bound is non-positive.
+                widened to $[0,1]$ where the variance bound is non-positive.
         """
         tau_low, mu_low, f2_low = bound_low[:, 0], bound_low[:, 1], bound_low[:, 2]
         tau_high, mu_high, f2_high = (

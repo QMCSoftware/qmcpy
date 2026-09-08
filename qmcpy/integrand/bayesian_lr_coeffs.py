@@ -92,7 +92,7 @@ class BayesianLRCoeffs(AbstractIntegrand):
 
         Returns:
             np.ndarray: Stacked numerator (coefficient-weighted likelihood) and
-            denominator (likelihood), whose ratio is the posterior mean.
+                denominator (likelihood), whose ratio is the posterior mean.
         """
         z = np.einsum("...j,ij->...i", x, self.feature_array)
         z1 = z * self.response_vector
@@ -121,7 +121,7 @@ class BayesianLRCoeffs(AbstractIntegrand):
 
         Returns:
             tuple: Lower and upper bounds on the ratio, infinite where the
-            denominator interval straddles zero.
+                denominator interval straddles zero.
         """
         num_bounds_low, den_bounds_low = bound_low[0], bound_low[1]
         num_bounds_high, den_bounds_high = bound_high[0], bound_high[1]

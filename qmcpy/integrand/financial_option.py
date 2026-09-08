@@ -456,7 +456,7 @@ class FinancialOption(AbstractIntegrand):
 
         Returns:
             np.ndarray: Discounted payoffs; for a multilevel problem, the coarse
-            and fine payoffs stacked together.
+                and fine payoffs stacked together.
         """
         gbm = t  # GeometricBrownianMotion already provides GBM paths directly
         discounted_payoffs = self.payoff(gbm) * self.discount_factor
