@@ -142,7 +142,8 @@ class KorobovLattice(AbstractLDDiscreteDistribution):
             seed=None,
             randomize: str = "SHIFT",
         ) -> None:
-        r"""
+        r"""Initialize a KorobovLattice discrete distribution.
+
         Args:
             dimension (int): Dimension of the samples. Must be between 1 and
                 250 (the range covered by the precomputed table).

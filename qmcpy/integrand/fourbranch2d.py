@@ -45,7 +45,8 @@ class FourBranch2d(AbstractIntegrand):
     """
 
     def __init__(self, sampler) -> None:
-        r"""
+        r"""Initialize a FourBranch2d integrand.
+
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
                 Either

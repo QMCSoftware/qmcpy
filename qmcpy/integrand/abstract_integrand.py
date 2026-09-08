@@ -13,7 +13,8 @@ from itertools import repeat
 class AbstractIntegrand(object):
 
     def __init__(self, dimension_indv: tuple, dimension_comb: tuple, parallel: int, threadpool: bool = False) -> None:
-        r"""
+        r"""Initialize an AbstractIntegrand integrand.
+
         Args:
             dimension_indv (tuple): Individual solution shape.
             dimension_comb (tuple): Combined solution shape.

@@ -363,7 +363,8 @@ class AbstractKernelScaleLengthscales(AbstractKernel):
         compile_call: bool = False,
         compile_call_kwargs: dict = None,
     ) -> None:
-        r"""
+        r"""Initialize an AbstractKernelScaleLengthscales kernel.
+
         Args:
             d (int): Dimension.
             scale (Union[np.ndarray, torch.Tensor]): Scaling factor $S$.

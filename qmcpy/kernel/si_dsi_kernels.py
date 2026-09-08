@@ -336,7 +336,8 @@ class KernelShiftInvar(AbstractSIDSIKernel):
         tfs_weights=None,
         requires_grad_weights: bool = None,
     ) -> None:
-        r"""
+        r"""Initialize a KernelShiftInvar kernel.
+
         Args:
             d (int): Dimension.
             scale (Union[np.ndarray, torch.Tensor]): Scaling factor $S$.
@@ -559,7 +560,8 @@ class KernelShiftInvarCombined(AbstractSIDSIKernel):
         tfs_weights=None,
         requires_grad_weights: bool = None,
     ) -> None:
-        r"""
+        r"""Initialize a KernelShiftInvarCombined kernel.
+
         Args:
             d (int): Dimension.
             scale (Union[np.ndarray, torch.Tensor]): Scaling factor $S$.
@@ -835,7 +837,8 @@ class KernelDigShiftInvar(AbstractSIDSIKernel):
         tfs_weights=None,
         requires_grad_weights: bool = None,
     ) -> None:
-        r"""
+        r"""Initialize a KernelDigShiftInvar kernel.
+
         Args:
             d (int): Dimension.
             t (int): number of bits in binary represtnations. Typically
@@ -1119,7 +1122,8 @@ class KernelDigShiftInvarAdaptiveAlpha(AbstractSIDSIKernel):
         tfs_weights=None,
         requires_grad_weights: bool = None,
     ) -> None:
-        r"""
+        r"""Initialize a KernelDigShiftInvarAdaptiveAlpha kernel.
+
         Args:
             d (int): Dimension.
             t (int): number of bits in binary represtnations. Typically
@@ -1373,7 +1377,8 @@ class KernelDigShiftInvarCombined(AbstractSIDSIKernel):
         tfs_weights=None,
         requires_grad_weights: bool = None,
     ) -> None:
-        r"""
+        r"""Initialize a KernelDigShiftInvarCombined kernel.
+
         Args:
             d (int): Dimension.
             t (int): number of bits in binary represtnations. Typically

@@ -111,7 +111,8 @@ class SensitivityIndices(AbstractIntegrand):
     """
 
     def __init__(self, integrand: AbstractIntegrand, indices: np.ndarray = "singletons") -> None:
-        r"""
+        r"""Initialize a SensitivityIndices integrand.
+
         Args:
             integrand (AbstractIntegrand): Integrand to find sensitivity
                 indices of.

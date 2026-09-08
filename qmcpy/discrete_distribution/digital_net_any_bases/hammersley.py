@@ -72,7 +72,8 @@ class Hammersley(DigitalNetAnyBases):
                  n_lim: int = 2**32,
                  warn = True
                 ) -> None:
-        r"""
+        r"""Initialize a Hammersley discrete distribution.
+
         Args:
             dimension (int): Dimension of the samples. Must be a scalar `int`
                 (unlike `Halton`, an array of indices is not supported -- see

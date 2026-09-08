@@ -54,7 +54,8 @@ class Ishigami(AbstractIntegrand):
     """
 
     def __init__(self, sampler, a: float = 7, b: float = 0.1) -> None:
-        r"""
+        r"""Initialize an Ishigami integrand.
+
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
                 Either

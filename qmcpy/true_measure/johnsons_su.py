@@ -42,7 +42,8 @@ class JohnsonsSU(AbstractTrueMeasure):
     """
 
     def __init__(self, sampler, gamma=1, xi=1, delta=2, lam=2) -> None:
-        r"""
+        r"""Initialize a JohnsonsSU true measure.
+
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
                 Either

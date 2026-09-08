@@ -166,7 +166,8 @@ class DigitalNetAnyBases(AbstractLDDiscreteDistribution):
                  alpha: int = 1,
                  n_lim: int = 2**32,
                  warn: bool = True) -> None:
-        r"""
+        r"""Initialize a DigitalNetAnyBases discrete distribution.
+
         Args:
             dimension (Union[int,np.ndarray]): Dimension of the generator.
 

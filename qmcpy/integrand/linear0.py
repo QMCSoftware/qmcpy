@@ -29,7 +29,8 @@ class Linear0(AbstractIntegrand):
     """
 
     def __init__(self, sampler) -> None:
-        r"""
+        r"""Initialize a Linear0 integrand.
+
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
                 Either

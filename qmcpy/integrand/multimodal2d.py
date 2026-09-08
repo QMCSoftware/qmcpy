@@ -42,7 +42,8 @@ class Multimodal2d(AbstractIntegrand):
     """
 
     def __init__(self, sampler) -> None:
-        r"""
+        r"""Initialize a Multimodal2d integrand.
+
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
                 Either

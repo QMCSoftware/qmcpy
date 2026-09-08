@@ -200,7 +200,8 @@ class CubQMCBayesNetG(AbstractCubBayesLDG):
         alpha: np.ndarray = 0.01,
         errbd_type: str = "MLE",
     ) -> None:
-        r"""
+        r"""Initialize a CubQMCBayesNetG stopping criterion.
+
         Args:
             integrand (AbstractIntegrand): The integrand.
             abs_tol (np.ndarray): Absolute error tolerance.

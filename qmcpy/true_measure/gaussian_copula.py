@@ -76,7 +76,8 @@ class GaussianCopula(AbstractCopula):
     """
 
     def __init__(self, sampler, marginals: list, correlation: np.ndarray) -> None:
-        r"""
+        r"""Initialize a GaussianCopula true measure.
+
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
                 A sampler or transform whose range is the unit cube.

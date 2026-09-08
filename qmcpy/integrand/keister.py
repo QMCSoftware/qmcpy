@@ -45,7 +45,8 @@ class Keister(AbstractIntegrand):
     """
 
     def __init__(self, sampler) -> None:
-        r"""
+        r"""Initialize a Keister integrand.
+
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
                 Either

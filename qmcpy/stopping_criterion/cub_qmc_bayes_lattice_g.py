@@ -193,7 +193,8 @@ class CubQMCBayesLatticeG(AbstractCubBayesLDG):
         errbd_type: str = "MLE",
         order: int = 2,
     ) -> None:
-        r"""
+        r"""Initialize a CubQMCBayesLatticeG stopping criterion.
+
         Args:
             integrand (AbstractIntegrand): The integrand.
             abs_tol (np.ndarray): Absolute error tolerance.

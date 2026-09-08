@@ -89,7 +89,8 @@ class CustomFun(AbstractIntegrand):
     """
 
     def __init__(self, true_measure, g, dimension_indv: tuple = (), parallel: int = False) -> None:
-        """
+        """Initialize a CustomFun integrand.
+
         Args:
             true_measure (AbstractTrueMeasure): The true measure.
             g (callable): A function handle.

@@ -213,7 +213,8 @@ class CubQMCRepStudentT(AbstractStoppingCriterion):
         inflate: float = 1,
         alpha: np.ndarray = 0.01,
     ) -> None:
-        r"""
+        r"""Initialize a CubQMCRepStudentT stopping criterion.
+
         Args:
             integrand (AbstractIntegrand): The integrand.
             abs_tol (np.ndarray): Absolute error tolerance.

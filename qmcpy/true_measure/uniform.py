@@ -50,7 +50,8 @@ class Uniform(AbstractTrueMeasure):
     """
 
     def __init__(self, sampler, lower_bound=0, upper_bound=1) -> None:
-        r"""
+        r"""Initialize a Uniform true measure.
+
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
                 Either

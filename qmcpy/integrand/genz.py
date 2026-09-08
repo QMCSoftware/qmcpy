@@ -55,7 +55,8 @@ class Genz(AbstractIntegrand):
     """
 
     def __init__(self, sampler, kind_func: str = "OSCILLATORY", kind_coeff: int = 1) -> None:
-        """
+        """Initialize a Genz integrand.
+
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
                 Either

@@ -67,7 +67,8 @@ class UMBridgeWrapper(AbstractIntegrand):
     """
 
     def __init__(self, true_measure, model, config: dict = None, parallel: int = False) -> None:
-        """
+        """Initialize a UMBridgeWrapper integrand.
+
         Args:
             true_measure (AbstractTrueMeasure): The true measure.
             model (umbridge.HTTPModel): A `UM-Bridge` model.

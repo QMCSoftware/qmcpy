@@ -185,7 +185,8 @@ class CubQMCLatticeG(AbstractCubQMCLDG):
         check_cone: bool = False,
         ptransform: str = "BAKER",
     ) -> None:
-        r"""
+        r"""Initialize a CubQMCLatticeG stopping criterion.
+
         Args:
             integrand (AbstractIntegrand): The integrand.
             abs_tol (np.ndarray): Absolute error tolerance.

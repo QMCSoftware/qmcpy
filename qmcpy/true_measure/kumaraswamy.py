@@ -51,7 +51,8 @@ class Kumaraswamy(AbstractTrueMeasure):
     """
 
     def __init__(self, sampler, a=2, b=2) -> None:
-        r"""
+        r"""Initialize a Kumaraswamy true measure.
+
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
                 Either

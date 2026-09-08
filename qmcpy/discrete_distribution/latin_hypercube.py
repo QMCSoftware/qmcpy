@@ -97,7 +97,8 @@ class LatinHypercube(AbstractDiscreteDistribution):
     def __init__(
             self, dimension: int, replications, seed, randomize: str = "TRUE"
             ) -> None:
-        r"""
+        r"""Initialize a LatinHypercube discrete distribution.
+
         Args:
             dimension (int): Dimension of the samples.
 

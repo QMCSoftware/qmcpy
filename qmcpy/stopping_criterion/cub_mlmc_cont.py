@@ -86,7 +86,8 @@ class CubMLMCCont(AbstractCubMLMC):
         n_tols: int = 10,
         theta_init: float = 0.5,
     ) -> None:
-        r"""
+        r"""Initialize a CubMLMCCont stopping criterion.
+
         Args:
             integrand (AbstractIntegrand): The integrand.
             abs_tol (np.ndarray): Absolute error tolerance.

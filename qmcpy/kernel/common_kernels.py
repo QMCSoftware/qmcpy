@@ -475,7 +475,8 @@ class KernelRationalQuadratic(AbstractKernelScaleLengthscales):
         compile_call: bool = False,
         compile_call_kwargs: dict = None,
     ) -> None:
-        r"""
+        r"""Initialize a KernelRationalQuadratic kernel.
+
         Args:
             d (int): Dimension.
             scale (Union[np.ndarray, torch.Tensor]): Scaling factor $S$.

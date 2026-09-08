@@ -229,7 +229,8 @@ class CubQMCNetG(AbstractCubQMCLDG):
         control_variate_means: np.ndarray = None,
         update_cv_coeffs: bool = False,
     ) -> None:
-        r"""
+        r"""Initialize a CubQMCNetG stopping criterion.
+
         Args:
             integrand (AbstractIntegrand): The integrand.
             abs_tol (np.ndarray): Absolute error tolerance.

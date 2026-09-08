@@ -149,7 +149,8 @@ class BrownianMotion(Gaussian):
         bridge_vdc_gray_ordering: bool = True,
         bridge_output_order: str = 'increasing',
     ) -> None:
-        r"""
+        r"""Initialize a BrownianMotion true measure.
+
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
                 Either

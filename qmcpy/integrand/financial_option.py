@@ -255,7 +255,8 @@ class FinancialOption(AbstractIntegrand):
         barrier_price: float = 38,
         digital_payout: float = 10,
     ) -> None:
-        r"""
+        r"""Initialize a FinancialOption integrand.
+
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
                 Either

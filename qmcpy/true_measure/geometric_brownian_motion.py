@@ -58,7 +58,8 @@ class GeometricBrownianMotion(BrownianMotion):
         lazy_load: bool = True,
         lazy_decomp: bool = True,
     ) -> None:
-        r"""
+        r"""Initialize a GeometricBrownianMotion true measure.
+
         Args:
             sampler (DiscreteDistribution/TrueMeasure): A discrete distribution
                 or true measure.

@@ -148,7 +148,8 @@ class Lattice(AbstractLDDiscreteDistribution):
         order: str = "RADICAL INVERSE",
         m_max: int = None,
     ) -> None:
-        r"""
+        r"""Initialize a Lattice discrete distribution.
+
         Args:
             dimension (Union[int, np.ndarray]): Dimension of the generator.
 

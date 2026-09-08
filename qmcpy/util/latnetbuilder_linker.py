@@ -3,7 +3,8 @@ import numpy as np
 
 
 def latnetbuilder_linker(lnb_dir: str = "./", out_dir: str = "./", fout_prefix: str = "lnb4qmcpy"):
-    """
+    """Convert a LatNet Builder output directory into a QMCPy generating vector or matrix.
+
     Args:
         lnb_dir (str): relative path to directory where `outputMachine.txt` is
             stored e.g. 'my_lnb/poly_lat/'

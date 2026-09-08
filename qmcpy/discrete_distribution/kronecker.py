@@ -226,7 +226,8 @@ class Kronecker(AbstractLDDiscreteDistribution):
         shift: np.ndarray = None,
         warn: bool = True,
     ) -> None:
-        r"""
+        r"""Initialize a Kronecker discrete distribution.
+
         Args:
             dimension (Union[int, np.ndarray]): Dimension of the generator.
 

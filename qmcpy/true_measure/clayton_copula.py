@@ -80,7 +80,8 @@ class ClaytonCopula(AbstractCopula):
     """
 
     def __init__(self, sampler, marginals: list, theta: float) -> None:
-        r"""
+        r"""Initialize a ClaytonCopula true measure.
+
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
                 A sampler or transform whose range is the unit cube.

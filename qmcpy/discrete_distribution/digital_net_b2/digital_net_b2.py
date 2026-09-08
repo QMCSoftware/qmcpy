@@ -230,7 +230,8 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
         t_max=None,
         t_lms=None,
     ) -> None:
-        r"""
+        r"""Initialize a DigitalNetB2 discrete distribution.
+
         Args:
             dimension (Union[int, np.ndarray]): Dimension of the generator.
 

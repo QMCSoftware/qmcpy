@@ -75,7 +75,8 @@ class MaternGP(Gaussian):
         nugget: float = 1e-6,
         decomp_type: str = "PCA",
     ) -> None:
-        r"""
+        r"""Initialize a MaternGP true measure.
+
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
                 Either

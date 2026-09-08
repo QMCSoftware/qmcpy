@@ -40,7 +40,8 @@ class Sin1d(AbstractIntegrand):
     """
 
     def __init__(self, sampler, k: float = 1) -> None:
-        r"""
+        r"""Initialize a Sin1d integrand.
+
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
                 Either

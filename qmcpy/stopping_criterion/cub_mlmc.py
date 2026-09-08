@@ -87,7 +87,8 @@ class CubMLMC(AbstractCubMLMC):
         beta0: float = -1.0,
         gamma0: float = -1.0,
     ) -> None:
-        r"""
+        r"""Initialize a CubMLMC stopping criterion.
+
         Args:
             integrand (AbstractIntegrand): The integrand.
             abs_tol (np.ndarray): Absolute error tolerance.

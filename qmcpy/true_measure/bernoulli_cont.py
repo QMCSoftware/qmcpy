@@ -38,7 +38,8 @@ class BernoulliCont(AbstractTrueMeasure):
     """
 
     def __init__(self, sampler, lam=1 / 2) -> None:
-        r"""
+        r"""Initialize a BernoulliCont true measure.
+
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
                 Either

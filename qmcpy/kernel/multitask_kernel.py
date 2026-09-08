@@ -341,7 +341,8 @@ class KernelMultiTask(AbstractKernel):
         rank_factor=1,
         method: str = "LOW RANK",
     ) -> None:
-        r"""
+        r"""Initialize a KernelMultiTask kernel.
+
         Args:
             base_kernel (AbstractKernel): $K_{\mathrm{base}}$.
             num_tasks (int): Number of tasks $T>1$.

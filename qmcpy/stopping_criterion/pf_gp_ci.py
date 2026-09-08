@@ -195,7 +195,8 @@ class PFGPCI(AbstractStoppingCriterion):
         n_ref_approx: int = 2**22,
         seed_ref_approx: int = None,
     ) -> None:
-        """
+        """Initialize a PFGPCI stopping criterion.
+
         Args:
             integrand (AbstractIntegrand): The integrand.
             failure_threshold (float): Thresholds for failure.

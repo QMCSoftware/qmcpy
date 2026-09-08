@@ -50,7 +50,8 @@ class IIDStdUniform(AbstractIIDDiscreteDistribution):
     """
 
     def __init__(self, dimension: int = 1, replications=None, seed=None) -> None:
-        r"""
+        r"""Initialize an IIDStdUniform discrete distribution.
+
         Args:
             dimension (int): Dimension of the samples.
             replications (Union[None, int]): Number of randomizations. This is

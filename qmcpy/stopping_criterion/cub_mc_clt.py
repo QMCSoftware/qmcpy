@@ -137,7 +137,8 @@ class CubMCCLT(AbstractStoppingCriterion):
         control_variates: list = None,
         control_variate_means: np.ndarray = None,
     ) -> None:
-        r"""
+        r"""Initialize a CubMCCLT stopping criterion.
+
         Args:
             integrand (AbstractIntegrand): The integrand.
             abs_tol (np.ndarray): Absolute error tolerance.

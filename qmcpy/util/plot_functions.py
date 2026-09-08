@@ -18,7 +18,8 @@ def plot_proj(
     where_title: float = 1,
     **kwargs: dict
 ):
-    """
+    """Plot two-dimensional projections of a point set.
+
     Args:
         sampler (DiscreteDistribution, TrueMeasure): The generator of samples
             to be plotted.

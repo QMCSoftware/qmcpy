@@ -263,7 +263,8 @@ class CubMCG(AbstractStoppingCriterion):
         control_variates: list = None,
         control_variate_means: np.ndarray = None,
     ) -> None:
-        r"""
+        r"""Initialize a CubMCG stopping criterion.
+
         Args:
             integrand (AbstractIntegrand): The integrand.
             abs_tol (np.ndarray): Absolute error tolerance.

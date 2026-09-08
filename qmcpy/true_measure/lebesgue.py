@@ -36,7 +36,8 @@ class Lebesgue(AbstractTrueMeasure):
     """
 
     def __init__(self, sampler: AbstractTrueMeasure) -> None:
-        r"""
+        r"""Initialize a Lebesgue true measure.
+
         Args:
             sampler (AbstractTrueMeasure): A true measure by which to compose a
                 transform.

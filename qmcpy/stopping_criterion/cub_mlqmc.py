@@ -87,7 +87,8 @@ class CubMLQMC(AbstractCubMLQMC):
         levels_min: int = 2,
         levels_max: int = 10,
     ) -> None:
-        r"""
+        r"""Initialize a CubMLQMC stopping criterion.
+
         Args:
             integrand (AbstractIntegrand): The integrand.
             abs_tol (np.ndarray): Absolute error tolerance.

@@ -65,7 +65,8 @@ class BoxIntegral(AbstractIntegrand):
     """
 
     def __init__(self, sampler, s=1) -> None:
-        r"""
+        r"""Initialize a BoxIntegral integrand.
+
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
                 Either

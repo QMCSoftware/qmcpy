@@ -87,7 +87,8 @@ class StudentTCopula(AbstractCopula):
     )
 
     def __init__(self, sampler, marginals: list, correlation: np.ndarray, df: float) -> None:
-        r"""
+        r"""Initialize a StudentTCopula true measure.
+
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
                 A sampler or transform whose range is the unit cube.
