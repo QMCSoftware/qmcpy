@@ -659,10 +659,10 @@ format:
 	$(MAKE) convert_asserts_changed
 	@echo "---"
 	$(MAKE) add_docstring_arg_types_changed
-	# format_google_docstrings_changed deliberately NOT included: verified it
-	# strips Returns: types and collapses Args:/Warnings:/Raises: structure
-	# into run-on paragraphs on this codebase's actual docstrings -- tested
-	# on real files, reverted, not safe to run unattended (see git history).
+	@# format_google_docstrings_changed deliberately NOT included: verified it
+	@# strips Returns: types and collapses Args:/Warnings:/Raises: structure
+	@# into run-on paragraphs on this codebase's actual docstrings -- tested
+	@# on real files, reverted, not safe to run unattended (see git history).
 
 # Report-only: same conventions alltests.yml's "Check test-suite conventions"
 # step gates on, for running locally. Unlike `format`, nothing here writes to
@@ -675,6 +675,14 @@ check:
 	$(MAKE) check_baseline
 	@echo "---"
 	$(MAKE) check_asserts_changed
+	@echo "---"
+	$(MAKE) check_links
+	@# check_links_external deliberately NOT included: its own comment already
+	@# says "slow and network-flaky, run locally" -- not something `check`
+	@# should depend on. check_pep8_changed also deliberately excluded: 664
+	@# existing violations in currently-changed files would break `check`
+	@# immediately (same shape as F9/F10's docstring backlog; would need the
+	@# check_baseline ratchet, not a hard gate, if added later).
 
 flatten_qmcpy_imports:
 	$(PYTHON) scripts/flatten_qmcpy_imports.py
