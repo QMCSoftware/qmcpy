@@ -655,6 +655,14 @@ format:
 	$(MAKE) rm_trailing_whitespace FORMAT_PATH="$(FORMAT_PATH)"
 	@echo "---"
 	$(MAKE) harden_colab_notebook
+	@echo "---"
+	$(MAKE) convert_asserts_changed
+	@echo "---"
+	$(MAKE) add_docstring_arg_types_changed
+	# format_google_docstrings_changed deliberately NOT included: verified it
+	# strips Returns: types and collapses Args:/Warnings:/Raises: structure
+	# into run-on paragraphs on this codebase's actual docstrings -- tested
+	# on real files, reverted, not safe to run unattended (see git history).
 
 # Report-only: same conventions alltests.yml's "Check test-suite conventions"
 # step gates on, for running locally. Unlike `format`, nothing here writes to
@@ -665,6 +673,8 @@ check:
 	$(MAKE) check_docstring_changed
 	@echo "---"
 	$(MAKE) check_baseline
+	@echo "---"
+	$(MAKE) check_asserts_changed
 
 flatten_qmcpy_imports:
 	$(PYTHON) scripts/flatten_qmcpy_imports.py
