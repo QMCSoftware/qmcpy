@@ -38,6 +38,14 @@ TRAILING_TEXT_RE = re.compile(r"[ \t]+(?=\r?$)", re.MULTILINE)
 
 
 def iter_source_files(paths: list[str]) -> list[Path]:
+    """Collect the tracked and untracked files eligible for whitespace cleanup.
+
+    Args:
+        paths (list[str]): Files or directories to restrict the search to.
+
+    Returns:
+        list[Path]: Sorted regular files with a supported name or suffix.
+    """
     command = [
         "git",
         "ls-files",
@@ -105,6 +113,15 @@ def _strip_python_source(original: bytes) -> bytes:
 
 
 def remove_trailing_whitespace(path: Path, check: bool) -> bool:
+    """Strip trailing whitespace from one file.
+
+    Args:
+        path (Path): File to process; binary files are left untouched.
+        check (bool): Report whether the file would change without writing.
+
+    Returns:
+        bool: Whether the file changed, or would change under ``check``.
+    """
     original = path.read_bytes()
     if b"\0" in original:
         return False

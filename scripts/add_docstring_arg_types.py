@@ -68,7 +68,14 @@ class FileResult:
 
 
 def doc_node(node: ast.AST) -> ast.Constant | None:
-    """Return the string-literal node holding ``node``'s docstring, if any."""
+    """Return the string-literal node holding ``node``'s docstring, if any.
+
+    Args:
+        node (ast.AST): Node whose docstring literal is wanted.
+
+    Returns:
+        ast.Constant | None: The docstring node, or ``None`` when absent.
+    """
     body = getattr(node, "body", None)
     if (
         body
@@ -81,7 +88,14 @@ def doc_node(node: ast.AST) -> ast.Constant | None:
 
 
 def iter_public_functions(tree: ast.Module):
-    """Yield public module functions and methods from public classes."""
+    """Yield public module functions and methods from public classes.
+
+    Args:
+        tree (ast.Module): Parsed module to walk.
+
+    Yields:
+        ast.FunctionDef | ast.AsyncFunctionDef: Each public function or method.
+    """
     for node in tree.body:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             if not node.name.startswith("_"):
@@ -145,7 +159,14 @@ def _argument_annotations(node: ast.FunctionDef | ast.AsyncFunctionDef, source: 
 
 
 def line_without_ending(line: str) -> tuple[str, str]:
-    """Split a line into content and original line ending."""
+    """Split a line into content and original line ending.
+
+    Args:
+        line (str): Source line, with or without a line ending.
+
+    Returns:
+        tuple[str, str]: The content and the line ending that was removed.
+    """
     if line.endswith("\r\n"):
         return line[:-2], "\r\n"
     if line.endswith("\n"):
@@ -156,7 +177,18 @@ def line_without_ending(line: str) -> tuple[str, str]:
 def find_section(
     lines: list[str], start: int, end: int, name: str
 ) -> tuple[int, int] | None:
-    """Return the header and end indexes for a Google-style section."""
+    """Return the header and end indexes for a Google-style section.
+
+    Args:
+        lines (list[str]): Docstring lines to search.
+        start (int): First index to consider.
+        end (int): Index one past the last to consider.
+        name (str): Section header to look for, such as ``"Args"``.
+
+    Returns:
+        tuple[int, int] | None: Header and end indexes, or ``None`` when the
+        section is absent.
+    """
     header_line = None
     header_indent = None
     for i in range(start, end + 1):
@@ -184,7 +216,17 @@ def find_section(
 def find_args_section(
     lines: list[str], start: int, end: int
 ) -> tuple[int, int] | None:
-    """Return ``(args_line, section_end)`` indexes for a Google Args section."""
+    """Return ``(args_line, section_end)`` indexes for a Google Args section.
+
+    Args:
+        lines (list[str]): Docstring lines to search.
+        start (int): First index to consider.
+        end (int): Index one past the last to consider.
+
+    Returns:
+        tuple[int, int] | None: Header and end indexes, or ``None`` when there
+        is no Args section.
+    """
     return find_section(lines, start, end, "Args")
 
 
@@ -216,7 +258,14 @@ def _yield_annotation_text(source: str, annotation: ast.AST) -> str | None:
 
 
 def looks_like_type(text: str) -> bool:
-    """Return whether text is syntactically usable as a type expression."""
+    """Return whether text is syntactically usable as a type expression.
+
+    Args:
+        text (str): Candidate type expression.
+
+    Returns:
+        bool: Whether ``text`` parses as a Python expression.
+    """
     try:
         ast.parse(text, mode="eval")
     except SyntaxError:
@@ -369,7 +418,18 @@ def update_file(
     overwrite_existing: bool = False,
     include_outputs: bool = False,
 ) -> FileResult:
-    """Update Google-style types in one Python file."""
+    """Update Google-style types in one Python file.
+
+    Args:
+        path (Path): Python file to update.
+        check (bool): Report what would change without writing.
+        overwrite_existing (bool): Replace types already present rather than only
+            filling in missing ones.
+        include_outputs (bool): Also update the Returns section.
+
+    Returns:
+        FileResult: Counts of updates made and entries skipped.
+    """
     source = path.read_text(encoding="utf-8")
     tree = ast.parse(source, filename=str(path))
     lines = source.splitlines(keepends=True)
@@ -458,7 +518,16 @@ def _is_under(path: Path, root: Path) -> bool:
 def python_files(
     paths: list[str], diff_ref: str | None, root: str | None = None
 ) -> list[Path]:
-    """Collect Python files from paths, or from ``git diff`` when requested."""
+    """Collect Python files from paths, or from ``git diff`` when requested.
+
+    Args:
+        paths (list[str]): Files or directories to collect from.
+        diff_ref (str | None): Git ref to diff against instead of using ``paths``.
+        root (str | None): Repository root for the diff; defaults to the cwd.
+
+    Returns:
+        list[Path]: Python files to process, in sorted order.
+    """
     if diff_ref is not None:
         candidates = _changed_files(diff_ref)
     else:
@@ -518,7 +587,14 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
 
 
 def main(argv: list[str]) -> int:
-    """Run the command-line interface."""
+    """Run the command-line interface.
+
+    Args:
+        argv (list[str]): Command-line arguments, excluding the program name.
+
+    Returns:
+        int: Process exit status; ``0`` on success.
+    """
     args = _parse_args(argv)
     try:
         files = python_files(args.paths, args.diff, root=args.root)

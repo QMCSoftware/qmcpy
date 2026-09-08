@@ -15,6 +15,15 @@ from scripts import smoke_test_colab_notebooks as smoke
 
 
 def markdown_cell(source: str, cell_id: str = "markdown") -> dict:
+    """Build a minimal notebook Markdown cell.
+
+    Args:
+        source (str): Cell source text.
+        cell_id (str): Notebook cell identifier.
+
+    Returns:
+        dict: A Markdown cell in nbformat 4 shape.
+    """
     return {
         "cell_type": "markdown",
         "id": cell_id,
@@ -24,6 +33,15 @@ def markdown_cell(source: str, cell_id: str = "markdown") -> dict:
 
 
 def code_cell(source: str, cell_id: str = "code") -> dict:
+    """Build a minimal notebook code cell.
+
+    Args:
+        source (str): Cell source text.
+        cell_id (str): Notebook cell identifier.
+
+    Returns:
+        dict: A code cell in nbformat 4 shape, with no outputs.
+    """
     return {
         "cell_type": "code",
         "execution_count": None,

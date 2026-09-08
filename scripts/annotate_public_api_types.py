@@ -446,6 +446,13 @@ class PublicAPIAnnotationTransformer(cst.CSTTransformer):
     METADATA_DEPENDENCIES = (PositionProvider,)
 
     def __init__(self, path: Path, specs: dict[tuple[int, str], FunctionSpec]):
+        """Record the file and the annotations to apply.
+
+        Args:
+            path (Path): File being transformed, used in diagnostics.
+            specs (dict[tuple[int, str], FunctionSpec]): Annotation specification keyed
+                by ``(line number, function name)``.
+        """
         self.path = path
         self.specs = specs
         self.updates: list[Update] = []
@@ -510,7 +517,16 @@ class PublicAPIAnnotationTransformer(cst.CSTTransformer):
         original_node: cst.FunctionDef,
         updated_node: cst.FunctionDef,
     ) -> cst.FunctionDef:
-        """Update an eligible function or method signature."""
+        """Update an eligible function or method signature.
+
+        Args:
+            original_node (cst.FunctionDef): Node before any child updates.
+            updated_node (cst.FunctionDef): Node with child updates already applied.
+
+        Returns:
+            cst.FunctionDef: The annotated node, or ``updated_node`` unchanged when
+            the function is not eligible.
+        """
         line = self.get_metadata(PositionProvider, original_node.name).start.line
         spec = self.specs.get((line, original_node.name.value))
         if spec is None:
@@ -595,7 +611,15 @@ class PublicAPIAnnotationTransformer(cst.CSTTransformer):
 
 
 def transform_source(source: str, path: Path = Path("<memory>")) -> SourceResult:
-    """Annotate one source string without writing it."""
+    """Annotate one source string without writing it.
+
+    Args:
+        source (str): Python source to annotate.
+        path (Path): Path reported in diagnostics.
+
+    Returns:
+        SourceResult: Annotated source together with updates and conflicts.
+    """
     specs, skips = _collect_specs(source, path)
     module = cst.parse_module(source)
     transformer = PublicAPIAnnotationTransformer(path, specs)
@@ -610,7 +634,15 @@ def transform_source(source: str, path: Path = Path("<memory>")) -> SourceResult
 
 
 def update_file(path: Path, check: bool = False) -> FileResult:
-    """Annotate one Python file."""
+    """Annotate one Python file.
+
+    Args:
+        path (Path): Python file to annotate.
+        check (bool): Report what would change without writing.
+
+    Returns:
+        FileResult: Whether the file changed, and the updates and conflicts found.
+    """
     source = path.read_text(encoding="utf-8")
     result = transform_source(source, path=path)
     changed = result.source != source
@@ -658,7 +690,14 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
 
 
 def main(argv: list[str]) -> int:
-    """Run the command-line interface."""
+    """Run the command-line interface.
+
+    Args:
+        argv (list[str]): Command-line arguments, excluding the program name.
+
+    Returns:
+        int: Process exit status; ``0`` on success.
+    """
     args = _parse_args(argv)
     try:
         files = docstrings.python_files(args.paths, args.diff, root=args.root)

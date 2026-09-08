@@ -747,10 +747,19 @@ def flatten_imports(
 ) -> tuple[bytes, int]:
     """Flatten, combine, alphabetize, and deduplicate public imports.
 
-    `public_names` is qmcpy's public API surface (see `_load_qmcpy_public_names`).
-    When it's None, nested imports are left unchanged and existing top-level
-    star imports are deduplicated but left unexpanded. `protect_python` should
-    be true for Python files so strings and comments are never rewritten.
+        `public_names` is qmcpy's public API surface (see `_load_qmcpy_public_names`).
+        When it's None, nested imports are left unchanged and existing top-level
+        star imports are deduplicated but left unexpanded. `protect_python` should
+        be true for Python files so strings and comments are never rewritten.
+
+    Args:
+        content (bytes): File contents to rewrite.
+        public_names (frozenset[str] | None): Names treated as public; defaults to
+            the package's own public API.
+        protect_python (bool): Leave imports inside Python code blocks untouched.
+
+    Returns:
+        bytes: The rewritten contents, unchanged when nothing needed flattening.
     """
 
     change_count = 0
@@ -832,7 +841,14 @@ def _is_supported(path: Path) -> bool:
 
 
 def iter_target_files(paths: Iterable[Path]) -> Iterator[Path]:
-    """Yield supported files under paths, pruning generated and cache directories."""
+    """Yield supported files under paths, pruning generated and cache directories.
+
+    Args:
+        paths (Iterable[Path]): Files or directories to walk.
+
+    Yields:
+        Path: Each supported file, skipping generated and cache directories.
+    """
 
     seen: set[Path] = set()
     for path in paths:
@@ -876,6 +892,15 @@ def _display_path(path: Path, base: Path) -> Path:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the command-line interface.
+
+    Args:
+        argv (list[str] | None): Command-line arguments, excluding the program
+            name; defaults to ``sys.argv[1:]``.
+
+    Returns:
+        int: Process exit status; ``0`` on success.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--check",

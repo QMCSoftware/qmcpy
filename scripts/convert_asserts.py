@@ -91,12 +91,21 @@ class ConvertAssertTransformer(cst.CSTTransformer):
     METADATA_DEPENDENCIES = (PositionProvider,)
 
     def __init__(self, exception: str):
+        """Record the exception to raise in place of each assertion.
+
+        Args:
+            exception (str): Exception expression to raise, such as ``"AssertionError"``.
+        """
         self.exception = cst.parse_expression(exception)
         self.seen_lines = []
         self.converted_lines = []
 
     def visit_Assert(self, node: cst.Assert) -> None:
-        """Record every assertion, including forms that cannot be rewritten."""
+        """Record every assertion, including forms that cannot be rewritten.
+
+        Args:
+            node (cst.Assert): Assertion encountered in the tree.
+        """
         position = self.get_metadata(PositionProvider, node)
         self.seen_lines.append(position.start.line)
 
@@ -105,7 +114,16 @@ class ConvertAssertTransformer(cst.CSTTransformer):
         original_node: cst.SimpleStatementLine,
         updated_node: cst.SimpleStatementLine,
     ) -> cst.BaseStatement:
-        """Rewrite an assert when it is the line's only small statement."""
+        """Rewrite an assert when it is the line's only small statement.
+
+        Args:
+            original_node (cst.SimpleStatementLine): Node before any child updates.
+            updated_node (cst.SimpleStatementLine): Node with child updates applied.
+
+        Returns:
+            cst.BaseStatement: The rewritten statement, or ``updated_node`` unchanged
+            when the line holds more than the assertion.
+        """
         if len(updated_node.body) != 1:
             return updated_node
         assertion = updated_node.body[0]
@@ -139,7 +157,15 @@ class ConvertAssertTransformer(cst.CSTTransformer):
 
 
 def transform_source(source: str, exception: str = "AssertionError") -> SourceResult:
-    """Transform standalone assertions in a Python source string."""
+    """Transform standalone assertions in a Python source string.
+
+    Args:
+        source (str): Python source to transform.
+        exception (str): Exception expression to raise in place of each assertion.
+
+    Returns:
+        SourceResult: Transformed source with the lines seen and converted.
+    """
     _validate_exception(exception)
     module = cst.parse_module(source)
     transformer = ConvertAssertTransformer(exception)
@@ -164,7 +190,16 @@ def convert_file(
     exception: str = "AssertionError",
     check: bool = False,
 ) -> FileResult:
-    """Convert assertions in one Python file."""
+    """Convert assertions in one Python file.
+
+    Args:
+        path (Path): Python file to convert.
+        exception (str): Exception expression to raise in place of each assertion.
+        check (bool): Report what would change without writing.
+
+    Returns:
+        FileResult: Whether the file changed, and the conversion counts.
+    """
     source = path.read_text(encoding="utf-8")
     result = transform_source(source, exception=exception)
     changed = result.source != source
@@ -257,7 +292,14 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
 
 
 def main(argv: list[str]) -> int:
-    """Run the command-line interface."""
+    """Run the command-line interface.
+
+    Args:
+        argv (list[str]): Command-line arguments, excluding the program name.
+
+    Returns:
+        int: Process exit status; ``0`` on success.
+    """
     args = _parse_args(argv)
     try:
         _validate_exception(args.exception)

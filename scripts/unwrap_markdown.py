@@ -24,6 +24,15 @@ HTML_TAG_RE = re.compile(r"^</?[A-Za-z]")
 
 
 def iter_targets(paths: list[str]) -> tuple[list[Path], list[str]]:
+    """Collect the Markdown and notebook files to process.
+
+    Args:
+        paths (list[str]): Files or directories to walk.
+
+    Returns:
+        tuple[list[Path], list[str]]: The files found and a message for each path
+        that was missing or of an unsupported type.
+    """
     files: list[Path] = []
     errors: list[str] = []
     for raw_path in paths:
@@ -92,6 +101,17 @@ def _paragraph_has_latex(lines: list[str]) -> bool:
 
 
 def unwrap_markdown_text(text: str, *, preserve_latex: bool = False) -> str:
+    """Join each Markdown paragraph onto a single line.
+
+    Code fences, and optionally display-math blocks, are passed through unchanged.
+
+    Args:
+        text (str): Markdown source to unwrap.
+        preserve_latex (bool): Leave display-math blocks unwrapped.
+
+    Returns:
+        str: The unwrapped text, preserving the original line ending style.
+    """
     if not text:
         return text
 
@@ -232,6 +252,15 @@ def _split_notebook_source(text: str) -> list[str]:
 
 
 def process_markdown_file(path: Path, check: bool) -> bool:
+    """Unwrap the paragraphs of one Markdown file.
+
+    Args:
+        path (Path): Markdown file to process.
+        check (bool): Report whether the file would change without writing.
+
+    Returns:
+        bool: Whether the file changed, or would change under ``check``.
+    """
     original = path.read_text(encoding="utf-8")
     updated = unwrap_markdown_text(original, preserve_latex=True)
     changed = updated != original
@@ -241,6 +270,15 @@ def process_markdown_file(path: Path, check: bool) -> bool:
 
 
 def process_notebook(path: Path, check: bool) -> tuple[bool, int]:
+    """Unwrap the paragraphs of every Markdown cell in one notebook.
+
+    Args:
+        path (Path): Notebook file to process.
+        check (bool): Report whether the notebook would change without writing.
+
+    Returns:
+        tuple[bool, int]: Whether the notebook changed, and how many cells changed.
+    """
     with path.open(encoding="utf-8") as handle:
         notebook = json.load(handle)
 
