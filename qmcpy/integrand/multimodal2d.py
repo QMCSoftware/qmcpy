@@ -62,6 +62,14 @@ class Multimodal2d(AbstractIntegrand):
         )
 
     def g(self, t):
+        """Evaluate the two-dimensional multimodal function.
+
+        Args:
+            t (np.ndarray): Two-dimensional points.
+
+        Returns:
+            np.ndarray: Function values.
+        """
         t0, t1 = t[..., 0], t[..., 1]
         return (t0**2 + 4) * (t1 - 1) / 20 - np.sin(5 * t0 / 2) - 2
 

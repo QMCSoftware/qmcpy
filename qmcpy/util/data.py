@@ -5,6 +5,11 @@ from ..util import _univ_repr
 
 
 class Data(object):
+    """Container for the state a stopping criterion accumulates while integrating.
+
+    Holds the parameters reported in the integration results and supports saving
+    to and loading from disk so a run can be resumed.
+    """
 
     def __init__(self, parameters) -> None:
         self.parameters = parameters

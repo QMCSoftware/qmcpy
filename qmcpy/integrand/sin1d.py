@@ -63,6 +63,14 @@ class Sin1d(AbstractIntegrand):
         )
 
     def g(self, t):
+        r"""Evaluate the one-dimensional sine function.
+
+        Args:
+            t (np.ndarray): One-dimensional points.
+
+        Returns:
+            np.ndarray: $\sin(t)$.
+        """
         return np.sin(t[..., 0])
 
     def _spawn(self, level, sampler):

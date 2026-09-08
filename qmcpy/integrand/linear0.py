@@ -45,6 +45,14 @@ class Linear0(AbstractIntegrand):
         )
 
     def g(self, t):
+        """Evaluate the centered linear function.
+
+        Args:
+            t (np.ndarray): Points, dimensions along the last axis.
+
+        Returns:
+            np.ndarray: Sum of the coordinates of each point.
+        """
         y = t.sum(-1)
         return y
 

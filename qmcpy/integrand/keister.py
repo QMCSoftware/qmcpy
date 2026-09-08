@@ -61,6 +61,14 @@ class Keister(AbstractIntegrand):
         )
 
     def g(self, t):
+        r"""Evaluate the Keister function.
+
+        Args:
+            t (np.ndarray): Points, dimensions along the last axis.
+
+        Returns:
+            np.ndarray: $\pi^{d/2}\cos(\lVert t \rVert_2)$.
+        """
         d = t.shape[-1]
         norm = np.linalg.norm(t, axis=-1)
         k = np.pi ** (d / 2) * np.cos(norm)
@@ -94,4 +102,15 @@ class Keister(AbstractIntegrand):
         return I
 
     def exact_integ(self, *args, **kwargs):
+        """Return the exact value of the Keister integral.
+
+        Deprecated alias for :meth:`get_exact_value`.
+
+        Args:
+            *args (tuple): Forwarded to :meth:`get_exact_value`.
+            **kwargs (dict): Forwarded to :meth:`get_exact_value`.
+
+        Returns:
+            float: The exact integral value.
+        """
         return self.get_exact_value(*args, **kwargs)

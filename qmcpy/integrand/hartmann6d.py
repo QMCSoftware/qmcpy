@@ -66,6 +66,14 @@ class Hartmann6d(AbstractIntegrand):
         self.ah = AugmentedHartmann(negate=False)
 
     def g(self, t):
+        """Evaluate the six-dimensional augmented Hartmann function.
+
+        Args:
+            t (np.ndarray): Six-dimensional points.
+
+        Returns:
+            np.ndarray: Function values, via BoTorch's ``AugmentedHartmann``.
+        """
         import torch
 
         t = np.concatenate([t, np.ones(tuple(t.shape[:-1]) + (1,))], axis=-1)

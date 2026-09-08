@@ -76,6 +76,14 @@ class Ishigami(AbstractIntegrand):
         )
 
     def g(self, t):
+        r"""Evaluate the Ishigami function.
+
+        Args:
+            t (np.ndarray): Three-dimensional points.
+
+        Returns:
+            np.ndarray: $(1 + b t_3^4)\sin(t_1) + a \sin^2(t_2)$.
+        """
         y = (1 + self.b * t[..., 2] ** 4) * np.sin(t[..., 0]) + self.a * np.sin(
             t[..., 1]
         ) ** 2

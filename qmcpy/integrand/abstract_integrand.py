@@ -11,6 +11,12 @@ from itertools import repeat
 
 
 class AbstractIntegrand(object):
+    """Base class for integrands.
+
+    An integrand pairs a function $g$ with the true measure its argument is
+    distributed by, and exposes $f$, the composition that a stopping criterion
+    samples. Subclasses implement ``g``.
+    """
 
     def __init__(self, dimension_indv: tuple, dimension_comb: tuple, parallel: int, threadpool: bool = False) -> None:
         r"""Initialize an AbstractIntegrand integrand.
@@ -105,6 +111,18 @@ class AbstractIntegrand(object):
     def gen_samples(
         self, n=None, n_min=None, n_max=None, return_weights=False, warn=True
     ):
+        """Generate discrete distribution samples and evaluate the integrand at them.
+
+        Args:
+            n (Union[None, int]): Number of points, taken from index ``0`` to ``n``.
+            n_min (Union[None, int]): Starting index of the sequence.
+            n_max (Union[None, int]): Final index of the sequence.
+            return_weights (bool): Accepted for API consistency; unused here.
+            warn (bool): If ``False``, disable warnings while generating samples.
+
+        Returns:
+            np.ndarray: Integrand values at the generated points.
+        """
         x = self.discrete_distrib(n=n, n_min=n_min, n_max=n_max, warn=warn)
         y = self.f(x)
         return y

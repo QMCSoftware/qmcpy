@@ -167,6 +167,17 @@ class SensitivityIndices(AbstractIntegrand):
         self.d = 2 * self.dtilde
 
     def f(self, x, *args, **kwargs):
+        r"""Evaluate the numerator and moment terms needed for the sensitivity indices.
+
+        Args:
+            x (np.ndarray): Points from the discrete distribution.
+            *args (tuple): Forwarded to the wrapped integrand.
+            **kwargs (dict): Forwarded to the wrapped integrand; ``compute_flags``
+                selects which outputs to evaluate.
+
+        Returns:
+            np.ndarray: The $\tau$, mean, and second-moment terms.
+        """
         if "compute_flags" in kwargs:
             compute_flags = kwargs["compute_flags"]
             del kwargs["compute_flags"]
@@ -207,6 +218,16 @@ class SensitivityIndices(AbstractIntegrand):
         return SensitivityIndices(integrand=new_integrand, indices=self.indices)
 
     def bound_fun(self, bound_low, bound_high):
+        r"""Combine bounds on the moment terms into bounds on the sensitivity indices.
+
+        Args:
+            bound_low (np.ndarray): Lower bounds on $\tau$, the mean, and the second moment.
+            bound_high (np.ndarray): Upper bounds on the same terms.
+
+        Returns:
+            tuple: Lower and upper bounds on the indices, clipped to $[0,1]$ and
+            widened to $[0,1]$ where the variance bound is non-positive.
+        """
         tau_low, mu_low, f2_low = bound_low[:, 0], bound_low[:, 1], bound_low[:, 2]
         tau_high, mu_high, f2_high = (
             bound_high[:, 0],
@@ -226,4 +247,12 @@ class SensitivityIndices(AbstractIntegrand):
         return comb_bounds_low, comb_bounds_high
 
     def dependency(self, comb_flags):
+        """Map combined-output flags onto the individual outputs they require.
+
+        Args:
+            comb_flags (np.ndarray): Flags for the combined outputs.
+
+        Returns:
+            np.ndarray: Flags for the three moment terms behind each index.
+        """
         return np.repeat(comb_flags[:, None], 3, axis=1)

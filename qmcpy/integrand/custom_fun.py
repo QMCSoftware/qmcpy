@@ -119,6 +119,16 @@ class CustomFun(AbstractIntegrand):
         )
 
     def g(self, t, *args, **kwargs):
+        """Evaluate the user-supplied function.
+
+        Args:
+            t (np.ndarray): Points distributed by the true measure.
+            *args (tuple): Positional arguments forwarded to the user function.
+            **kwargs (dict): Keyword arguments forwarded to the user function.
+
+        Returns:
+            np.ndarray: Function values.
+        """
         return self.__g(t, *args, **kwargs)
 
     def _spawn(self, level, sampler):

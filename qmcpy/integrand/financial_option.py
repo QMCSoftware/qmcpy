@@ -448,6 +448,16 @@ class FinancialOption(AbstractIntegrand):
         )
 
     def g(self, t, **kwargs):
+        """Evaluate the discounted option payoff along each price path.
+
+        Args:
+            t (np.ndarray): Geometric Brownian motion paths from the true measure.
+            **kwargs (dict): Unused; accepted for API consistency.
+
+        Returns:
+            np.ndarray: Discounted payoffs; for a multilevel problem, the coarse
+            and fine payoffs stacked together.
+        """
         gbm = t  # GeometricBrownianMotion already provides GBM paths directly
         discounted_payoffs = self.payoff(gbm) * self.discount_factor
         if self.multilevel:
@@ -463,12 +473,36 @@ class FinancialOption(AbstractIntegrand):
         return discounted_payoffs
 
     def payoff_european_call(self, gbm):
+        """European call payoff at maturity.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         return np.maximum(gbm[..., -1] - self.strike_price, 0)
 
     def payoff_european_put(self, gbm):
+        """European put payoff at maturity.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         return np.maximum(self.strike_price - gbm[..., -1], 0)
 
     def payoff_asian_arithmetic_trap_call(self, gbm):
+        """Asian arithmetic-mean call payoff, trapezoidal averaging.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         return np.maximum(
             (self.start_price / 2 + gbm[..., :-1].sum(-1) + gbm[..., -1] / 2)
             / gbm.shape[-1]
@@ -477,6 +511,14 @@ class FinancialOption(AbstractIntegrand):
         )
 
     def payoff_asian_arithmetic_trap_put(self, gbm):
+        """Asian arithmetic-mean put payoff, trapezoidal averaging.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         return np.maximum(
             self.strike_price
             - (self.start_price / 2 + gbm[..., :-1].sum(-1) + gbm[..., -1] / 2)
@@ -485,6 +527,14 @@ class FinancialOption(AbstractIntegrand):
         )
 
     def payoff_asian_geometric_trap_call(self, gbm):
+        """Asian geometric-mean call payoff, trapezoidal averaging.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         return np.maximum(
             np.exp(
                 (
@@ -499,6 +549,14 @@ class FinancialOption(AbstractIntegrand):
         )
 
     def payoff_asian_geometric_trap_put(self, gbm):
+        """Asian geometric-mean put payoff, trapezoidal averaging.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         return np.maximum(
             self.strike_price
             - np.exp(
@@ -513,22 +571,62 @@ class FinancialOption(AbstractIntegrand):
         )
 
     def payoff_asian_arithmetic_right_call(self, gbm):
+        """Asian arithmetic-mean call payoff, right-endpoint averaging.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         return np.maximum(gbm.sum(-1) / gbm.shape[-1] - self.strike_price, 0)
 
     def payoff_asian_arithmetic_right_put(self, gbm):
+        """Asian arithmetic-mean put payoff, right-endpoint averaging.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         return np.maximum((self.strike_price - gbm.sum(-1)) / gbm.shape[-1], 0)
 
     def payoff_asian_geometric_right_call(self, gbm):
+        """Asian geometric-mean call payoff, right-endpoint averaging.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         return np.maximum(
             np.exp(np.log(gbm).sum(-1) / gbm.shape[-1]) - self.strike_price, 0
         )
 
     def payoff_asian_geometric_right_put(self, gbm):
+        """Asian geometric-mean put payoff, right-endpoint averaging.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         return np.maximum(
             self.strike_price - np.exp(np.log(gbm).sum(-1) / gbm.shape[-1]), 0
         )
 
     def payoff_barrier_in_up_call(self, gbm):
+        """Up-and-in barrier call payoff; pays only if the barrier is reached from below.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         v = gbm[..., -1].copy()
         flag = (gbm >= self.barrier_price).any(-1)
         v[~flag] = 0
@@ -536,6 +634,14 @@ class FinancialOption(AbstractIntegrand):
         return v
 
     def payoff_barrier_out_up_call(self, gbm):
+        """Up-and-out barrier call payoff; pays only if the barrier is never reached.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         v = gbm[..., -1].copy()
         flag = (gbm < self.barrier_price).all(-1)
         v[~flag] = 0
@@ -543,6 +649,14 @@ class FinancialOption(AbstractIntegrand):
         return v
 
     def payoff_barrier_in_down_call(self, gbm):
+        """Down-and-in barrier call payoff; pays only if the barrier is reached from above.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         v = gbm[..., -1].copy()
         flag = (gbm <= self.barrier_price).any(-1)
         v[~flag] = 0
@@ -550,6 +664,14 @@ class FinancialOption(AbstractIntegrand):
         return v
 
     def payoff_barrier_out_down_call(self, gbm):
+        """Down-and-out barrier call payoff; pays only if the barrier is never reached.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         v = gbm[..., -1].copy()
         flag = (gbm > self.barrier_price).all(-1)
         v[~flag] = 0
@@ -557,6 +679,14 @@ class FinancialOption(AbstractIntegrand):
         return v
 
     def payoff_barrier_in_up_put(self, gbm):
+        """Up-and-in barrier put payoff; pays only if the barrier is reached from below.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         v = gbm[..., -1].copy()
         flag = (gbm >= self.barrier_price).any(-1)
         v[~flag] = 0
@@ -564,6 +694,14 @@ class FinancialOption(AbstractIntegrand):
         return v
 
     def payoff_barrier_out_up_put(self, gbm):
+        """Up-and-out barrier put payoff; pays only if the barrier is never reached.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         v = gbm[..., -1].copy()
         flag = (gbm < self.barrier_price).all(-1)
         v[~flag] = 0
@@ -571,6 +709,14 @@ class FinancialOption(AbstractIntegrand):
         return v
 
     def payoff_barrier_in_down_put(self, gbm):
+        """Down-and-in barrier put payoff; pays only if the barrier is reached from above.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         v = gbm[..., -1].copy()
         flag = (gbm <= self.barrier_price).any(-1)
         v[~flag] = 0
@@ -578,6 +724,14 @@ class FinancialOption(AbstractIntegrand):
         return v
 
     def payoff_barrier_out_down_put(self, gbm):
+        """Down-and-out barrier put payoff; pays only if the barrier is never reached.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         v = gbm[..., -1].copy()
         flag = (gbm > self.barrier_price).all(-1)
         v[~flag] = 0
@@ -585,17 +739,49 @@ class FinancialOption(AbstractIntegrand):
         return v
 
     def payoff_lookback_call(self, gbm):  # include start price in min
+        """Lookback call payoff: final price less the running minimum, including the start price.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         min_path = np.minimum(gbm.min(-1), self.start_price)
         return gbm[..., -1] - min_path
 
     def payoff_lookback_put(self, gbm):  # include start price in max
+        """Lookback put payoff: the running maximum, including the start price, less the final price.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         max_path = np.maximum(gbm.max(-1), self.start_price)
         return max_path - gbm[..., -1]
 
     def payoff_digital_call(self, gbm):
+        """Digital call payoff: a fixed payout when the final price is at or above the strike.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         return np.where(gbm[..., -1] >= self.strike_price, self.digital_payout, 0)
 
     def payoff_digital_put(self, gbm):
+        """Digital put payoff: a fixed payout when the final price is at or below the strike.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         return np.where(gbm[..., -1] <= self.strike_price, self.digital_payout, 0)
 
     def get_exact_value(self):
@@ -692,6 +878,14 @@ class FinancialOption(AbstractIntegrand):
         return val
 
     def dimension_at_level(self, level):
+        """Return the number of monitoring times used at a multilevel level.
+
+        Args:
+            level (int): Multilevel level index.
+
+        Returns:
+            int: Monitoring times at that level, doubling with each level.
+        """
         return self.d_coarsest * 2**level
 
     def _spawn(self, level, sampler):
@@ -725,6 +919,11 @@ def _eurogbmprice(S0, r, T, sigma, K):
 
 
 class AsianOption(FinancialOption):
+    """Asian option.
+
+    Deprecated, please use :class:`FinancialOption` with ``option="ASIAN"``.
+    """
+
     def __init__(self, *args, **kwargs) -> None:
         """Deprecated, please use FinancialOption"""
         if "option" in kwargs:
@@ -733,6 +932,11 @@ class AsianOption(FinancialOption):
 
 
 class EuropeanOption(FinancialOption):
+    """European option.
+
+    Deprecated, please use :class:`FinancialOption` with ``option="EUROPEAN"``.
+    """
+
     def __init__(self, *args, **kwargs) -> None:
         """Deprecated, please use FinancialOption"""
         if "option" in kwargs:
@@ -741,6 +945,11 @@ class EuropeanOption(FinancialOption):
 
 
 class BarrierOption(FinancialOption):
+    """Barrier option.
+
+    Deprecated, please use :class:`FinancialOption` with ``option="BARRIER"``.
+    """
+
     def __init__(self, *args, **kwargs) -> None:
         """Deprecated, please use FinancialOption"""
         if "option" in kwargs:
@@ -749,6 +958,11 @@ class BarrierOption(FinancialOption):
 
 
 class LookbackOption(FinancialOption):
+    """Lookback option.
+
+    Deprecated, please use :class:`FinancialOption` with ``option="LOOKBACK"``.
+    """
+
     def __init__(self, *args, **kwargs) -> None:
         """Deprecated, please use FinancialOption"""
         if "option" in kwargs:
@@ -757,6 +971,11 @@ class LookbackOption(FinancialOption):
 
 
 class DigitalOption(FinancialOption):
+    """Digital option.
+
+    Deprecated, please use :class:`FinancialOption` with ``option="DIGITAL"``.
+    """
+
     def __init__(self, *args, **kwargs) -> None:
         """Deprecated, please use FinancialOption"""
         if "option" in kwargs:

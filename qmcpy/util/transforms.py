@@ -6,46 +6,132 @@ EPS64 = float(np.finfo(np.float64).eps)
 
 
 def insert_batch_dims(param, ndims, k):
+    """Insert singleton dimensions into a parameter so it broadcasts against batched inputs.
+
+    Args:
+        param (Union[np.ndarray, torch.Tensor]): Parameter to reshape.
+        ndims (int): Number of singleton dimensions to insert.
+        k (int): Position at which to insert them.
+
+    Returns:
+        Union[np.ndarray, torch.Tensor]: ``param`` with ``ndims`` singleton axes
+        inserted after its first ``k`` axes.
+    """
     ones = [1] * ndims
     return param.reshape(list(param.shape[:k]) + ones + list(param.shape[k:]))
 
 
 def tf_exp(x):
+    """Exponential transform.
+
+    Args:
+        x (Union[np.ndarray, torch.Tensor]): Input values.
+
+    Returns:
+        Union[np.ndarray, torch.Tensor]: ``exp(x)``.
+    """
     npt = get_npt(x)
     return npt.exp(x)
 
 
 def tf_exp_inv(x):
+    """Inverse of the exponential transform.
+
+    Args:
+        x (Union[np.ndarray, torch.Tensor]): Input values.
+
+    Returns:
+        Union[np.ndarray, torch.Tensor]: ``log(x)``.
+    """
     npt = get_npt(x)
     return npt.log(x)
 
 
 def tf_exp_eps(x):
+    """Exponential transform offset by machine epsilon.
+
+    Args:
+        x (Union[np.ndarray, torch.Tensor]): Input values.
+
+    Returns:
+        Union[np.ndarray, torch.Tensor]: ``exp(x) + eps``, kept strictly positive.
+    """
     return tf_exp(x) + EPS64
 
 
 def tf_exp_eps_inv(x):
+    """Inverse of the epsilon-offset exponential transform.
+
+    Args:
+        x (Union[np.ndarray, torch.Tensor]): Input values.
+
+    Returns:
+        Union[np.ndarray, torch.Tensor]: ``log(x - eps)``.
+    """
     return tf_exp_inv(x - EPS64)
 
 
 def tf_square(x):
+    """Square transform.
+
+    Args:
+        x (Union[np.ndarray, torch.Tensor]): Input values.
+
+    Returns:
+        Union[np.ndarray, torch.Tensor]: ``x**2``.
+    """
     return x**2
 
 
 def tf_square_inv(x):
+    """Inverse of the square transform.
+
+    Args:
+        x (Union[np.ndarray, torch.Tensor]): Input values.
+
+    Returns:
+        Union[np.ndarray, torch.Tensor]: ``sqrt(x)``.
+    """
     npt = get_npt(x)
     return npt.sqrt(x)
 
 
 def tf_square_eps(x):
+    """Square transform offset by machine epsilon.
+
+    Args:
+        x (Union[np.ndarray, torch.Tensor]): Input values.
+
+    Returns:
+        Union[np.ndarray, torch.Tensor]: ``x**2 + eps``, kept strictly positive.
+    """
     return tf_square(x) + EPS64
 
 
 def tf_square_eps_inv(x):
+    """Inverse of the epsilon-offset square transform.
+
+    Args:
+        x (Union[np.ndarray, torch.Tensor]): Input values.
+
+    Returns:
+        Union[np.ndarray, torch.Tensor]: ``sqrt(x - eps)``.
+    """
     return tf_square_inv(x - EPS64)
 
 
 def tf_explinear(x):
+    """Exponential-linear (softplus) transform.
+
+    Behaves like ``exp(x)`` for small ``x`` and like ``x`` for large ``x``, so it
+    maps the real line to the positive reals without overflowing.
+
+    Args:
+        x (Union[np.ndarray, torch.Tensor]): Input values.
+
+    Returns:
+        Union[np.ndarray, torch.Tensor]: ``log(1 + exp(x))``, computed stably.
+    """
     npt = get_npt(x)
     if npt == np:
         return -scipy.special.log_expit(-x)
@@ -54,19 +140,52 @@ def tf_explinear(x):
 
 
 def tf_explinear_inv(x):
+    """Inverse of the exponential-linear transform.
+
+    Args:
+        x (Union[np.ndarray, torch.Tensor]): Input values.
+
+    Returns:
+        Union[np.ndarray, torch.Tensor]: ``log(expm1(x))``, falling back to ``x`` once ``x >= 34``
+        where the two agree to machine precision.
+    """
     npt = get_npt(x)
     return npt.where(x < 34, npt.log(npt.expm1(x)), x)
 
 
 def tf_explinear_eps(x):
+    """Exponential-linear transform offset by machine epsilon.
+
+    Args:
+        x (Union[np.ndarray, torch.Tensor]): Input values.
+
+    Returns:
+        Union[np.ndarray, torch.Tensor]: ``tf_explinear(x) + eps``, kept strictly positive.
+    """
     return tf_explinear(x) + EPS64
 
 
 def tf_explinear_eps_inv(x):
+    """Inverse of the epsilon-offset exponential-linear transform.
+
+    Args:
+        x (Union[np.ndarray, torch.Tensor]): Input values.
+
+    Returns:
+        Union[np.ndarray, torch.Tensor]: ``tf_explinear_inv(x - eps)``.
+    """
     return tf_explinear_inv(x - EPS64)
 
 
 def tf_identity(x):
+    """Identity transform.
+
+    Args:
+        x (Union[np.ndarray, torch.Tensor]): Input values.
+
+    Returns:
+        Union[np.ndarray, torch.Tensor]: ``x`` unchanged.
+    """
     return x
 
 
@@ -82,6 +201,26 @@ def parse_assign_param(
     npt,
     nptkwargs,
 ):
+    """Validate and normalize one kernel parameter, returning it in array form.
+
+    A scalar is broadcast to ``shape_param``; an array-like is converted to the
+    backend array type and checked against the supplied constraints.
+
+    Args:
+        pname (str): Parameter name, used in error messages.
+        param (Union[float, np.ndarray, torch.Tensor]): Value to normalize.
+        shape_param (list): Target shape used when ``param`` is a scalar.
+        requires_grad_param (bool): Whether the torch parameter requires a gradient.
+        tfs_param (tuple): Pair of forward and inverse transforms for this parameter.
+        endsize_ops (list): Permitted sizes for the trailing dimension.
+        constraints (list): Constraints the parameter must satisfy.
+        torchify (bool): Return a ``torch.Tensor`` rather than an ``np.ndarray``.
+        npt (module): Array backend, either ``numpy`` or ``torch``.
+        nptkwargs (dict): Backend keyword arguments such as ``dtype`` and ``device``.
+
+    Returns:
+        tuple: The normalized parameter, its shape, and its transformed value.
+    """
     if np.isscalar(param):
         param = param * npt.ones(shape_param, **nptkwargs)
     else:

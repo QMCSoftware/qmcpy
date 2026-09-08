@@ -85,6 +85,15 @@ class BayesianLRCoeffs(AbstractIntegrand):
         )
 
     def g(self, x):
+        """Evaluate the unnormalized posterior numerator and denominator.
+
+        Args:
+            x (np.ndarray): Coefficient vectors, coefficients along the last axis.
+
+        Returns:
+            np.ndarray: Stacked numerator (coefficient-weighted likelihood) and
+            denominator (likelihood), whose ratio is the posterior mean.
+        """
         z = np.einsum("...j,ij->...i", x, self.feature_array)
         z1 = z * self.response_vector
         with np.errstate(over="ignore"):
@@ -104,6 +113,16 @@ class BayesianLRCoeffs(AbstractIntegrand):
         )
 
     def bound_fun(self, bound_low, bound_high):
+        """Combine numerator and denominator bounds into bounds on their ratio.
+
+        Args:
+            bound_low (np.ndarray): Lower bounds on the numerator and denominator.
+            bound_high (np.ndarray): Upper bounds on the numerator and denominator.
+
+        Returns:
+            tuple: Lower and upper bounds on the ratio, infinite where the
+            denominator interval straddles zero.
+        """
         num_bounds_low, den_bounds_low = bound_low[0], bound_low[1]
         num_bounds_high, den_bounds_high = bound_high[0], bound_high[1]
         comb_bounds_low = np.minimum.reduce(
@@ -127,4 +146,12 @@ class BayesianLRCoeffs(AbstractIntegrand):
         return comb_bounds_low, comb_bounds_high
 
     def dependency(self, comb_flags):
+        """Map combined-output flags onto the individual outputs they require.
+
+        Args:
+            comb_flags (np.ndarray): Flags for the combined outputs.
+
+        Returns:
+            np.ndarray: Flags for the numerator and denominator outputs.
+        """
         return np.vstack((comb_flags, comb_flags))

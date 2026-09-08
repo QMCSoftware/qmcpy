@@ -4,6 +4,12 @@ import gpytorch
 
 
 class ExactGPyTorchRegressionModel(gpytorch.models.ExactGP):
+    """Exact Gaussian process regression model backed by GPyTorch.
+
+    Wraps ``gpytorch.models.ExactGP`` with fitting, chunked prediction, and
+    incremental data addition, optionally on the GPU.
+    """
+
     allowed_likelihood_types = (
         gpytorch.likelihoods.GaussianLikelihood,
         gpytorch.likelihoods.GaussianLikelihoodWithMissingObs,
@@ -32,11 +38,27 @@ class ExactGPyTorchRegressionModel(gpytorch.models.ExactGP):
             self.likelihood = self.likelihood.cuda()
 
     def forward(self, x):
+        """Evaluate the GP prior at the given inputs.
+
+        Args:
+            x (torch.Tensor): Inputs of shape ``(n, d)``.
+
+        Returns:
+            gpytorch.distributions.MultivariateNormal: Prior distribution at ``x``.
+        """
         mean_x = self.mean_module(x)
         covar_x = self.covar_module(x)
         return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
 
     def fit(self, optimizer, mll, training_iter, verbose=0):
+        """Fit the model hyperparameters by maximizing the marginal log likelihood.
+
+        Args:
+            optimizer (torch.optim.Optimizer): Optimizer over the model parameters.
+            mll (gpytorch.mlls.MarginalLogLikelihood): Objective to maximize.
+            training_iter (int): Number of optimizer steps.
+            verbose (int): Print progress every ``verbose`` iterations; ``0`` is silent.
+        """
         self.train()
         self.likelihood.train()
         if verbose:
@@ -53,6 +75,18 @@ class ExactGPyTorchRegressionModel(gpytorch.models.ExactGP):
             optimizer.step()
 
     def predict(self, x, noise_const=0, chunk_size=2**15):
+        """Predict the posterior mean and standard deviation at new inputs.
+
+        Inputs are processed in chunks so large batches do not exhaust memory.
+
+        Args:
+            x (Union[np.ndarray, torch.Tensor]): Inputs of shape ``(n, d)``.
+            noise_const (float): Observation noise assumed at each new input.
+            chunk_size (int): Number of inputs evaluated per batch.
+
+        Returns:
+            tuple: Posterior mean and standard deviation, each of length ``n``.
+        """
         if isinstance(x, np.ndarray):
             x = torch.from_numpy(x)
         if not (x.ndim == 2 and x.shape[1] == self.d):
@@ -86,6 +120,16 @@ class ExactGPyTorchRegressionModel(gpytorch.models.ExactGP):
         return mean_post.numpy(), std_post.numpy()
 
     def add_data(self, x_t_new, y_t_new):
+        """Add observations to the training set and condition the model on them.
+
+        Args:
+            x_t_new (Union[np.ndarray, torch.Tensor]): New inputs of shape ``(n, d)``.
+            y_t_new (Union[np.ndarray, torch.Tensor]): New responses of length ``n``.
+
+        Returns:
+            ExactGPyTorchRegressionModel: Fantasy model conditioned on the combined
+            training set. The receiver is left unchanged.
+        """
         if isinstance(x_t_new, np.ndarray):
             x_t_new = torch.from_numpy(x_t_new)
         if isinstance(y_t_new, np.ndarray):

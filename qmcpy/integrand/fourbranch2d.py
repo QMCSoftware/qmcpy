@@ -63,6 +63,14 @@ class FourBranch2d(AbstractIntegrand):
         )
 
     def g(self, t):
+        """Evaluate the four-branch function.
+
+        Args:
+            t (np.ndarray): Two-dimensional points.
+
+        Returns:
+            np.ndarray: Minimum of the four branches at each point.
+        """
         t0, t1 = t[..., 0], t[..., 1]
         return np.minimum.reduce(
             [

@@ -120,6 +120,15 @@ class UMBridgeWrapper(AbstractIntegrand):
         )
 
     def g(self, t, **kwargs):
+        """Evaluate the wrapped UM-Bridge model at each point.
+
+        Args:
+            t (np.ndarray): Points, model inputs along the last axis.
+            **kwargs (dict): Unused; accepted for API consistency.
+
+        Returns:
+            np.ndarray: Model outputs, flattened across the UM-Bridge output blocks.
+        """
         y = np.zeros((self.total_out_elements,) + tuple(t.shape[:-1]), dtype=float)
         idxiterator = np.ndindex(t.shape[:-1])
         for i in idxiterator:

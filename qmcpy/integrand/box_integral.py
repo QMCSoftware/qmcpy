@@ -88,6 +88,15 @@ class BoxIntegral(AbstractIntegrand):
         )
 
     def g(self, t, **kwargs):
+        r"""Evaluate the box integral function.
+
+        Args:
+            t (np.ndarray): Points in the unit cube, dimensions along the last axis.
+            **kwargs (dict): Unused; accepted for API consistency.
+
+        Returns:
+            np.ndarray: $\lVert t \rVert_2^s$ for each exponent $s$.
+        """
         sum_squares = (t**2).sum(-1)
         y = sum_squares ** self.s_over_2[(...,) + (None,) * sum_squares.ndim]
         return y

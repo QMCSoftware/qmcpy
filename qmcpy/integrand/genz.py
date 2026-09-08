@@ -99,9 +99,25 @@ class Genz(AbstractIntegrand):
         super(Genz, self).__init__(dimension_indv=(), dimension_comb=(), parallel=False)
 
     def g_oscillatory(self, t):
+        r"""Evaluate the oscillatory Genz function.
+
+        Args:
+            t (np.ndarray): Points in the unit cube.
+
+        Returns:
+            np.ndarray: $\cos(-c \cdot t)$ at each point.
+        """
         return np.cos(-(self.c * t).sum(-1))
 
     def g_corner_peak(self, t):
+        r"""Evaluate the corner-peak Genz function.
+
+        Args:
+            t (np.ndarray): Points in the unit cube.
+
+        Returns:
+            np.ndarray: $(1 + c \cdot t)^{-(d+1)}$ at each point.
+        """
         return (1 + (self.c * t).sum(-1)) ** (-(self.d + 1))
 
     def _spawn(self, level, sampler):
