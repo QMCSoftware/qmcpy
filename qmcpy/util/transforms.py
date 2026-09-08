@@ -89,35 +89,46 @@ def parse_assign_param(
             if not isinstance(param, npt.Tensor):
                 param = npt.tensor(param)
             param = npt.atleast_1d(param)
-            assert isinstance(param, npt.Tensor), (
-                "%s must be a scalar or torch.Tensor" % pname
-            )
+            if not (isinstance(param, npt.Tensor)):
+                raise AssertionError(
+                    "%s must be a scalar or torch.Tensor" % pname
+                )
         else:
             if not isinstance(param, npt.ndarray):
                 param = npt.array(param)
             param = npt.atleast_1d(param)
-            assert isinstance(param, npt.ndarray), (
-                "%s must be a scalar or np.ndarray" % pname
-            )
+            if not (isinstance(param, npt.ndarray)):
+                raise AssertionError(
+                    "%s must be a scalar or np.ndarray" % pname
+                )
     shape_param = list(param.shape)
-    assert len(shape_param) >= 1, "invalid shape_%s = %s" % (pname, str(shape_param))
-    assert len(tfs_param) == 2, "tfs_scale should be a tuple of length 2"
-    assert callable(tfs_param[0]), "tfs_scale[0] should be a callable e.g. torch.log"
-    assert callable(tfs_param[1]), "tfs_scale[1] should be a callable e.g. torch.exp"
+    if not (len(shape_param) >= 1):
+        raise AssertionError("invalid shape_%s = %s" % (pname, str(shape_param)))
+    if not (len(tfs_param) == 2):
+        raise AssertionError("tfs_scale should be a tuple of length 2")
+    if not (callable(tfs_param[0])):
+        raise AssertionError("tfs_scale[0] should be a callable e.g. torch.log")
+    if not (callable(tfs_param[1])):
+        raise AssertionError("tfs_scale[1] should be a callable e.g. torch.exp")
     raw_param = tfs_param[0](param)
     if torchify:
-        assert isinstance(requires_grad_param, bool)
+        if not (isinstance(requires_grad_param, bool)):
+            raise AssertionError
         if requires_grad_param:
             raw_param = 1.0 * raw_param
         raw_param = npt.nn.Parameter(raw_param, requires_grad=requires_grad_param)
-    assert shape_param[-1] in endsize_ops, "%s not in %s" % (
-        str(shape_param[-1]),
-        str(endsize_ops),
-    )
+    if not (shape_param[-1] in endsize_ops):
+        raise AssertionError("%s not in %s" % (
+            str(shape_param[-1]),
+            str(endsize_ops),
+        ))
     if "POSITIVE" in constraints:
-        assert (param > 0).all(), "%s must be positive" % pname
+        if not ((param > 0).all()):
+            raise AssertionError("%s must be positive" % pname)
     if "NON-NEGATIVE" in constraints:
-        assert (param >= 0).all(), "%s must be non-negative" % pname
+        if not ((param >= 0).all()):
+            raise AssertionError("%s must be non-negative" % pname)
     if "INTEGER" in constraints:
-        assert (param % 1 == 0).all(), "%s must be integers" % pname
+        if not ((param % 1 == 0).all()):
+            raise AssertionError("%s must be integers" % pname)
     return raw_param

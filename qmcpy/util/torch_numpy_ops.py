@@ -7,5 +7,6 @@ def get_npt(x):
     else:
         import torch
 
-        assert isinstance(x, torch.Tensor)
+        if not (isinstance(x, torch.Tensor)):
+            raise AssertionError
         return torch

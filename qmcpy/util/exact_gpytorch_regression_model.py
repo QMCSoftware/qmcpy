@@ -15,16 +15,19 @@ class ExactGPyTorchRegressionModel(gpytorch.models.ExactGP):
             x_t = torch.from_numpy(x_t)
         if isinstance(y_t, np.ndarray):
             y_t = torch.from_numpy(y_t)
-        assert x_t.ndim == 2 and y_t.ndim == 1 and len(x_t) == len(y_t)
+        if not (x_t.ndim == 2 and y_t.ndim == 1 and len(x_t) == len(y_t)):
+            raise AssertionError
         super(ExactGPyTorchRegressionModel, self).__init__(x_t, y_t, likelihood)
-        assert isinstance(
+        if not (isinstance(
             self.likelihood, ExactGPyTorchRegressionModel.allowed_likelihood_types
-        )
+        )):
+            raise AssertionError
         self.mean_module, self.covar_module = prior_mean, prior_cov
         self.d = x_t.shape[1]
         self.use_gpu = use_gpu
         if self.use_gpu:
-            assert torch.cuda.is_available()
+            if not (torch.cuda.is_available()):
+                raise AssertionError
             self = self.cuda()
             self.likelihood = self.likelihood.cuda()
 
@@ -52,7 +55,8 @@ class ExactGPyTorchRegressionModel(gpytorch.models.ExactGP):
     def predict(self, x, noise_const=0, chunk_size=2**15):
         if isinstance(x, np.ndarray):
             x = torch.from_numpy(x)
-        assert x.ndim == 2 and x.shape[1] == self.d
+        if not (x.ndim == 2 and x.shape[1] == self.d):
+            raise AssertionError
         self.eval()
         self.likelihood.eval()
         n = len(x)
@@ -86,12 +90,13 @@ class ExactGPyTorchRegressionModel(gpytorch.models.ExactGP):
             x_t_new = torch.from_numpy(x_t_new)
         if isinstance(y_t_new, np.ndarray):
             y_t_new = torch.from_numpy(y_t_new)
-        assert (
+        if not (
             x_t_new.ndim == 2
             and x_t_new.shape[1] == self.d
             and y_t_new.ndim == 1
             and len(x_t_new) == len(y_t_new)
-        )
+        ):
+            raise AssertionError
         if self.use_gpu:
             x_t_new, y_t_new = x_t_new.cuda(), y_t_new.cuda()
         fantasy_model = self.get_fantasy_model(x_t_new, y_t_new)

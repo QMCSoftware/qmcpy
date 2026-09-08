@@ -48,7 +48,8 @@ class AbstractCubBayesLDG(AbstractStoppingCriterion):
         # Set Attributes
         self.n_init = int(n_init)
         self.n_limit = int(n_limit)
-        assert isinstance(error_fun, str) or callable(error_fun)
+        if not (isinstance(error_fun, str) or callable(error_fun)):
+            raise AssertionError
         # _error_fun_key stores a simple, serializable string and ensures correct state saving
         # in __getstate__(), bypassing serialization of complex lambda functions, which often fails.
         self.error_fun, self._error_fun_key = self._resolve_error_fun(error_fun)
@@ -60,12 +61,14 @@ class AbstractCubBayesLDG(AbstractStoppingCriterion):
         super(AbstractCubBayesLDG, self).__init__(
             allowed_distribs=allowed_distribs, allow_vectorized_integrals=True
         )
-        assert (
+        if not (
             self.integrand.discrete_distrib.no_replications == True
-        ), "Require the discrete distribution has replications=None"
-        assert (
+        ):
+            raise AssertionError("Require the discrete distribution has replications=None")
+        if not (
             self.integrand.discrete_distrib.randomize != "FALSE"
-        ), "Require discrete distribution is randomized"
+        ):
+            raise AssertionError("Require discrete distribution is randomized")
         self.alphas_indv, _ = self._compute_indv_alphas(
             np.full(self.integrand.d_comb, self.alpha)
         )
@@ -79,7 +82,8 @@ class AbstractCubBayesLDG(AbstractStoppingCriterion):
         self.use_gradient = False  # If true uses gradient descent in parameter search
         self.one_theta = True  # If true use common shape parameter for all dimensions, else allow shape parameter vary across dimensions
         self.errbd_type = errbd_type.upper()
-        assert self.errbd_type in ["MLE", "GCV", "FULL"]
+        if not (self.errbd_type in ["MLE", "GCV", "FULL"]):
+            raise AssertionError
         self.kernel = kernel
         self.debugEnable = True
         self.ft = ft
@@ -446,7 +450,8 @@ class AbstractCubBayesLDG(AbstractStoppingCriterion):
             raise ParameterError("resume data n_total must be a power of 2.")
 
     def set_tolerance(self, abs_tol=None, rel_tol=None, rmse_tol=None):
-        assert rmse_tol is None, "rmse_tol not supported by this stopping criterion."
+        if not (rmse_tol is None):
+            raise AssertionError("rmse_tol not supported by this stopping criterion.")
         if abs_tol is not None:
             self.abs_tol = abs_tol
             self.abs_tols = np.full(self.integrand.d_comb, self.abs_tol)

@@ -74,7 +74,8 @@ class AbstractCubQMCLDG(AbstractStoppingCriterion):
                 ParameterWarning,
             )
             self.n_limit = dd_n_limit
-        assert isinstance(error_fun, str) or callable(error_fun)
+        if not (isinstance(error_fun, str) or callable(error_fun)):
+            raise AssertionError
         # _error_fun_key stores a simple, serializable string and ensures correct state saving
         # in __getstate__(), bypassing serialization of complex lambda functions, which often fails.
         self.error_fun, self._error_fun_key = self._resolve_error_fun(error_fun)
@@ -97,20 +98,23 @@ class AbstractCubQMCLDG(AbstractStoppingCriterion):
         super(AbstractCubQMCLDG, self).__init__(
             allowed_distribs=allowed_distribs, allow_vectorized_integrals=True
         )
-        assert (
+        if not (
             self.integrand.discrete_distrib.no_replications == True
-        ), "Require the discrete distribution has replications=None"
-        assert (
+        ):
+            raise AssertionError("Require the discrete distribution has replications=None")
+        if not (
             self.integrand.discrete_distrib.randomize != "FALSE"
-        ), "Require discrete distribution is randomized"
+        ):
+            raise AssertionError("Require discrete distribution is randomized")
         self.set_tolerance(abs_tol, rel_tol)
         # control variates
         self._init_control_variates(control_variates, control_variate_means)
         self.update_beta = update_beta
         if self.ncv > 0:
-            assert self.cv_mu.shape == (
+            if not (self.cv_mu.shape == (
                 (self.ncv,) + self.integrand.d_indv
-            ), "Control variate means should have shape (len(control variates),d_indv)."
+            )):
+                raise AssertionError("Control variate means should have shape (len(control variates),d_indv).")
             self.parameters += ["cv", "cv_mu", "update_beta"]
         else:
             self.update_beta = False
@@ -476,7 +480,8 @@ class AbstractCubQMCLDG(AbstractStoppingCriterion):
         return data.solution, data
 
     def set_tolerance(self, abs_tol=None, rel_tol=None, rmse_tol=None):
-        assert rmse_tol is None, "rmse_tol not supported by this stopping criterion."
+        if not (rmse_tol is None):
+            raise AssertionError("rmse_tol not supported by this stopping criterion.")
         if abs_tol is not None:
             self.abs_tol = abs_tol
             self.abs_tols = np.full(self.integrand.d_comb, self.abs_tol)
