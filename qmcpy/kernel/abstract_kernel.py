@@ -107,7 +107,7 @@ class AbstractKernel(object):
             for pname, batch_param in self.batch_params.items()
         }
 
-    def __call__(self, x0, x1, beta0=None, beta1=None, c=None, **kwargs: dict):
+    def __call__(self, x0: Union[np.ndarray, torch.Tensor], x1: Union[np.ndarray, torch.Tensor], beta0: Union[None, np.ndarray, torch.Tensor] = None, beta1: Union[None, np.ndarray, torch.Tensor] = None, c: Union[None, np.ndarray, torch.Tensor] = None, **kwargs: dict):
         r"""Evaluate the kernel with (optional) partial derivatives
 
         $$\sum_{\ell=1}^p c_{\ell}
@@ -120,13 +120,13 @@ class AbstractKernel(object):
                 first input to kernel with
             x1 (Union[np.ndarray, torch.Tensor]): Shape `x1.shape=(...,d)`
                 second input to kernel with
-            beta0 (Union[np.ndarray, torch.Tensor]): Shape `beta0.shape=(p,d)`
+            beta0 (Union[None, np.ndarray, torch.Tensor]): Shape `beta0.shape=(p,d)`
                 derivative orders with respect to first inputs,
                 $\boldsymbol{\beta}_0$.
-            beta1 (Union[np.ndarray, torch.Tensor]): Shape `beta1.shape=(p,d)`
+            beta1 (Union[None, np.ndarray, torch.Tensor]): Shape `beta1.shape=(p,d)`
                 derivative orders with respect to first inputs,
                 $\boldsymbol{\beta}_1$.
-            c (Union[np.ndarray, torch.Tensor]): Shape `c.shape=(p,)`
+            c (Union[None, np.ndarray, torch.Tensor]): Shape `c.shape=(p,)`
                 coefficients of derivatives.
             **kwargs (dict): keyword arguments to parsed call
         Returns:

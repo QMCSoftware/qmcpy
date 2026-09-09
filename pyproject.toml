@@ -189,8 +189,12 @@ class = [
 
 [tool.pydoclint]
 # `make check_docstring` reads this. QMCPy convention: constructor arguments are
-# documented in the __init__ method's own docstring, and parameter types live in
-# the docstring (`name (type): ...`), not in the signature.
+# documented in the __init__ method's own docstring, and parameter types are
+# given in both the signature and the docstring (`name (type): ...`), kept in
+# sync by scripts/annotate_public_api_types.py. Optional heavy dependencies
+# (torch, matplotlib, pandas, ...) that a module only imports lazily are
+# referenced via `from __future__ import annotations` + `if TYPE_CHECKING:`
+# so the annotation never forces an eager import.
 style = "google"
 allow-init-docstring = true
 arg-type-hints-in-signature = true

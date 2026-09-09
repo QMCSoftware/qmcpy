@@ -1,5 +1,8 @@
-from typing import Union
+from typing import Callable, List, Union
 from .abstract_true_measure import AbstractTrueMeasure
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
 from ..util import MethodImplementationError, ParameterError
 import numpy as np
 import warnings
@@ -30,7 +33,7 @@ class AcceptanceRejection(AbstractTrueMeasure):
         sampler (AbstractDiscreteDistribution): A QMCPy discrete distribution
             of dimension s = target_dim + 1. Must mimic StdUniform. The last
             coordinate is used as the acceptance threshold.
-        target_density (callable): Unnormalised target density psi(x) where x
+        target_density (Callable): Unnormalised target density psi(x) where x
             has shape (N, d). Must return shape (N,) and be non-negative on
             [0,1]^d.
         upper_bound (float): L = sup_{x in [0,1]^d} psi(x). Every evaluation of
@@ -76,7 +79,7 @@ class AcceptanceRejection(AbstractTrueMeasure):
         qmcpy.util.exceptions_warnings.ParameterError: n_min > 0 but no prior call was made. Call gen_samples with n_min=0 first.
     """
 
-    def __init__(self, sampler, target_density, upper_bound, density_integral, max_retries=4) -> None:
+    def __init__(self, sampler: AbstractDiscreteDistribution, target_density: Callable, upper_bound: float, density_integral: float, max_retries: int = 4) -> None:
         self.parameters = ['target_dim', 'upper_bound', 'density_integral', 'acceptance_rate']
         self.domain = np.array([[0, 1]])
         self._parse_sampler(sampler)
@@ -233,14 +236,14 @@ class AcceptanceRejectionReal(AbstractTrueMeasure):
     Args:
         sampler (AbstractDiscreteDistribution): A QMCPy discrete distribution
             of dimension s = target_dim + 1. Must mimic StdUniform.
-        target_density (callable): Unnormalised target density psi(z) where z
+        target_density (Callable): Unnormalised target density psi(z) where z
             has shape (N, d). Must return shape (N,). Must satisfy psi(z) <= L
             * H(z) for all z.
-        inv_cdfs (list of callable): List of d quantile functions [F_1^{-1},
+        inv_cdfs (List[Callable]): List of d quantile functions [F_1^{-1},
             ..., F_d^{-1}], one per dimension. Each maps a 1-D array of
             uniforms in [0,1] to R. Example: [scipy.stats.norm.ppf] for a 1-D
             standard Gaussian.
-        H_func (callable): Auxiliary bound function H(z) where z has shape (N,
+        H_func (Callable): Auxiliary bound function H(z) where z has shape (N,
             d). Must return shape (N,) and satisfy psi(z) <= L * H(z) for all z
             in R^d.
         upper_bound (float): L satisfying psi(z) <= L * H(z) for all z.
@@ -290,8 +293,8 @@ class AcceptanceRejectionReal(AbstractTrueMeasure):
         qmcpy.util.exceptions_warnings.ParameterError: n_min > 0 but no prior call was made. Call gen_samples with n_min=0 first.
     """
 
-    def __init__(self, sampler, target_density, inv_cdfs, H_func,
-                 upper_bound, density_integral, max_retries=4) -> None:
+    def __init__(self, sampler: AbstractDiscreteDistribution, target_density: Callable, inv_cdfs: List[Callable], H_func: Callable,
+                 upper_bound: float, density_integral: float, max_retries: int = 4) -> None:
         self.parameters = ['target_dim', 'upper_bound', 'density_integral', 'acceptance_rate']
         self.domain = np.array([[0, 1]])
         self._parse_sampler(sampler)

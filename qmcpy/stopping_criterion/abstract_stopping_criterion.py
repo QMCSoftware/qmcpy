@@ -1,5 +1,5 @@
 from ..util.data import Data
-from typing import TYPE_CHECKING, TextIO, Union
+from typing import TYPE_CHECKING, Any, Callable, TextIO, Union
 import copy
 import sys
 
@@ -267,18 +267,18 @@ class AbstractStoppingCriterion(object):
             file=file,
         )
 
-    def _prepare_resume_data(self, resume: Data or None, validate_resume, restore_resume):
+    def _prepare_resume_data(self, resume: Union[None, Data], validate_resume: Callable, restore_resume: Callable):
         """Validate and restore a resume checkpoint before integration.
 
         Args:
-            resume (Data or None): Resume checkpoint passed to ``integrate``.
-            validate_resume (callable): Validator taking ``resume`` and raising
+            resume (Union[None, Data]): Resume checkpoint passed to ``integrate``.
+            validate_resume (Callable): Validator taking ``resume`` and raising
                 on incompatible state.
-            restore_resume (callable): Restorer taking ``resume`` and mutating
+            restore_resume (Callable): Restorer taking ``resume`` and mutating
                 the current stopping criterion into a compatible resumed state.
 
         Returns:
-            Data or None: A validated deep copy of the supplied checkpoint, or
+            Union[None, Data]: A validated deep copy of the supplied checkpoint, or
             None when no checkpoint was supplied.
         """
         if resume is None:
@@ -407,7 +407,7 @@ class AbstractStoppingCriterion(object):
         data.history_df = getattr(self, "history_df", None)
         self._annotate_checkpoint_metadata(data)
 
-    def _resume_value_equal(self, current, saved):
+    def _resume_value_equal(self, current: Any, saved: Any):
         """Deep equality check tolerant of arrays, lists, dicts, and QMCPy
         objects.
 
@@ -595,11 +595,11 @@ class AbstractStoppingCriterion(object):
         return n > 0 and (n & (n - 1)) == 0
 
     @staticmethod
-    def _resolve_error_fun(error_fun):
+    def _resolve_error_fun(error_fun: Union[str, Callable]):
         """Resolve an *error_fun* argument from a string keyword or callable.
 
         Args:
-            error_fun (Union[str, callable]): ``'EITHER'`` or ``'BOTH'`` or a
+            error_fun (Union[str, Callable]): ``'EITHER'`` or ``'BOTH'`` or a
                 callable with signature ``(sv, abs_tol, rel_tol) -> tol``.
 
         Returns:
@@ -639,7 +639,7 @@ class AbstractStoppingCriterion(object):
                 pass
         return None
 
-    def _init_control_variates(self, control_variates: list or AbstractIntegrand, control_variate_means):
+    def _init_control_variates(self, control_variates: Union[list, AbstractIntegrand], control_variate_means: np.ndarray):
         """Validate and store control variates and their means.
 
         Sets ``self.cv``, ``self.cv_mu``, and ``self.ncv`` after validating
@@ -648,9 +648,9 @@ class AbstractStoppingCriterion(object):
         the main integrand.
 
         Args:
-            control_variates (list or AbstractIntegrand): Control variate
+            control_variates (Union[list, AbstractIntegrand]): Control variate
                 integrand(s).
-            control_variate_means (array-like): Known means of each control
+            control_variate_means (np.ndarray): Known means of each control
                 variate.
 
         Returns:

@@ -1,11 +1,15 @@
 """Diagnostics helpers for stopping-criterion iteration tracing."""
+from __future__ import annotations
 
-from typing import Union
+from typing import TYPE_CHECKING, Union
 import io
 import numpy as np
 import sys
 from contextlib import redirect_stdout
 from math import log10
+
+if TYPE_CHECKING:
+    from .abstract_stopping_criterion import AbstractStoppingCriterion
 
 # ITER rows up to this count are always printed; above it the log-scale throttle applies.
 _THROTTLE_ITER_THRESHOLD = 30
@@ -451,7 +455,7 @@ def _format_iteration_log(
 
 
 class _IterationTraceLogger(object):
-    def __init__(self, stopping_criterion):
+    def __init__(self, stopping_criterion: AbstractStoppingCriterion):
         """Create a trace logger bound to the given stopping criterion.
 
         Args:
