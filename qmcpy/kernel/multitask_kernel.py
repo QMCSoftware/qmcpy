@@ -499,7 +499,7 @@ class KernelMultiTask(AbstractKernel):
         kmat = k_x * kmat_tasks
         return kmat[..., 0]
 
-    def __call__(self, task0: Union[int, np.ndarray, torch.Tensor], task1: Union[int, np.ndarray, torch.Tensor], x0: Union[np.ndarray, torch.Tensor], x1: Union[np.ndarray, torch.Tensor], beta0: Union[None, np.ndarray, torch.Tensor] = None, beta1: Union[None, np.ndarray, torch.Tensor] = None, c: Union[None, np.ndarray, torch.Tensor] = None):
+    def __call__(self, task0: Union[int, np.ndarray, torch.Tensor], task1: Union[int, np.ndarray, torch.Tensor], x0: Union[np.ndarray, torch.Tensor], x1: Union[np.ndarray, torch.Tensor], beta0: Union[None, np.ndarray, torch.Tensor] = None, beta1: Union[None, np.ndarray, torch.Tensor] = None, c: Union[None, np.ndarray, torch.Tensor] = None) -> Union[np.ndarray, torch.Tensor]:
         r"""Evaluate the kernel with (optional) partial derivatives
 
         $$\sum_{\ell=1}^p c_\ell

@@ -22,7 +22,7 @@ def insert_batch_dims(param: Union[np.ndarray, torch.Tensor], ndims: int, k: int
 
     Returns:
         Union[np.ndarray, torch.Tensor]: ``param`` with ``ndims`` singleton axes
-        inserted after its first ``k`` axes.
+            inserted after its first ``k`` axes.
     """
     ones = [1] * ndims
     return param.reshape(list(param.shape[:k]) + ones + list(param.shape[k:]))
@@ -154,7 +154,7 @@ def tf_explinear_inv(x: Union[np.ndarray, torch.Tensor]) -> Union[np.ndarray, to
 
     Returns:
         Union[np.ndarray, torch.Tensor]: ``log(expm1(x))``, falling back to ``x`` once ``x >= 34``
-        where the two agree to machine precision.
+            where the two agree to machine precision.
     """
     npt = get_npt(x)
     return npt.where(x < 34, npt.log(npt.expm1(x)), x)

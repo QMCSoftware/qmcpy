@@ -198,7 +198,7 @@ doctests_minimal: ensure_artifacts
 		--ignore qmcpy/kernel/ \
 		--ignore qmcpy/util/dig_shift_invar_ops.py \
 		--ignore qmcpy/util/shift_invar_ops.py \
-		--ignore qmcpy/util/exact_gpytorch_gression_model.py \
+		--ignore qmcpy/util/exact_gpytorch_regression_model.py \
 		--ignore qmcpy/integrand/umbridge_wrapper.py \
 		--ignore qmcpy/integrand/hartmann6d.py \
 		--ignore qmcpy/discrete_distribution/mpmc/ \

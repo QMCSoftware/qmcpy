@@ -129,7 +129,7 @@ class ExactGPyTorchRegressionModel(gpytorch.models.ExactGP):
 
         Returns:
             ExactGPyTorchRegressionModel: Fantasy model conditioned on the combined
-            training set. The receiver is left unchanged.
+                training set. The receiver is left unchanged.
         """
         if isinstance(x_t_new, np.ndarray):
             x_t_new = torch.from_numpy(x_t_new)

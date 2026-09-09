@@ -134,9 +134,10 @@ class AcceptanceRejection(AbstractTrueMeasure):
                 after all retries.
 
         Returns:
-            np.ndarray: Shape (n, target_dim).
-            weights (np.ndarray): Shape (n,). Only returned when
-                return_weights=True.
+            np.ndarray: Accepted samples of shape (n, target_dim). When
+                return_weights=True, a tuple (samples, weights) is returned
+                instead, where weights has shape (n,) and holds the importance
+                weights psi(x)/C.
         """
         if n_max is not None:
             if n_min is None:
@@ -350,9 +351,10 @@ class AcceptanceRejectionReal(AbstractTrueMeasure):
                 after all retries.
 
         Returns:
-            np.ndarray: Shape (n, target_dim).
-            weights (np.ndarray): Shape (n,). Only returned when
-                return_weights=True.
+            np.ndarray: Accepted samples of shape (n, target_dim). When
+                return_weights=True, a tuple (samples, weights) is returned
+                instead, where weights has shape (n,) and holds the importance
+                weights psi(z)/C.
         """
         if n_max is not None:
             if n_min is None:

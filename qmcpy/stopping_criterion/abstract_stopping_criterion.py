@@ -94,7 +94,7 @@ class AbstractStoppingCriterion(object):
 
         Returns:
             tuple: Approximation to the integral with shape ``integrand.d_comb`` and
-            the corresponding data object.
+                the corresponding data object.
         """
         raise MethodImplementationError(self, "integrate")
 

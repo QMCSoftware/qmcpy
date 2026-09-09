@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Tuple, Union
 from ..util import MethodImplementationError, _univ_repr, ParameterError
 from ..discrete_distribution.abstract_discrete_distribution import (
     AbstractDiscreteDistribution,
@@ -141,7 +141,7 @@ class AbstractTrueMeasure(object):
                 "sampler input should either be a AbstractDiscreteDistribution or AbstractTrueMeasure"
             )
 
-    def __call__(self, n: Union[None, int] = None, n_min: Union[None, int] = None, n_max: Union[None, int] = None, return_weights: bool = False, warn: bool = True):
+    def __call__(self, n: Union[None, int] = None, n_min: Union[None, int] = None, n_max: Union[None, int] = None, return_weights: bool = False, warn: bool = True) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
         r"""
         - If just `n` is supplied, generate samples from the sequence at indices 0,...,`n`-1.
         - If `n_min` and `n_max` are supplied, generate samples from the sequence at indices `n_min`,...,`n_max`-1.

@@ -14,8 +14,8 @@ def latnetbuilder_linker(lnb_dir: str = "./", out_dir: str = "./", fout_prefix: 
 
     Returns:
         str: path to file which can be passed into QMCPy's Lattice or Sobol' in
-        order to use the linked latnetbuilder generating vector/matrix e.g.
-        'my_poly_lat_vec.10.16.npy'
+            order to use the linked latnetbuilder generating vector/matrix e.g.
+            'my_poly_lat_vec.10.16.npy'
 
     Adapted from latnetbuilder parser:
         https://github.com/umontreal-simul/latnetbuilder/blob/master/python-wrapper/latnetbuilder/parse_output.py#L74

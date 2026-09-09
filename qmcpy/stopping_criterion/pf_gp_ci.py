@@ -633,9 +633,9 @@ class PFGPCIData(Data):
 
         Returns:
             dict: Per-iteration `"iter"`, `"n_sum"` (cumulative sample
-            count), `"n_batch"`, `"error_bounds"`, `"ci_low"`, `"ci_high"`,
-            and `"solutions"` arrays; plus `"solutions_ref"`, `"error_ref"`,
-            and `"in_ci"` if `self.approx_true_solution`.
+                count), `"n_batch"`, `"error_bounds"`, `"ci_low"`, `"ci_high"`,
+                and `"solutions"` arrays; plus `"solutions_ref"`, `"error_ref"`,
+                and `"in_ci"` if `self.approx_true_solution`.
         """
         df = {
             "iter": np.arange(len(self.n_sum)),

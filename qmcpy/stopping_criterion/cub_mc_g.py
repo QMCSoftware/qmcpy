@@ -594,3 +594,7 @@ def _tol_fun(abs_tol: float, rel_tol: float, theta: float, mu: float, toltype: s
         return theta * abs_tol + (1 - theta) * rel_tol * abs(mu)
     elif toltype == "max":  # the max case
         return max(abs_tol, rel_tol * abs(mu))
+    else:
+        raise ParameterError(
+            f"unknown toltype {toltype!r}; expected 'combine' or 'max'."
+        )

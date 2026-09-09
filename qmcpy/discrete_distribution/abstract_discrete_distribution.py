@@ -59,7 +59,7 @@ class AbstractDiscreteDistribution(object):
         self.spawn_key = self._base_seed.spawn_key
         self.rng = np.random.Generator(np.random.SFC64(self._base_seed))
 
-    def __call__(self, n: Union[None, int] = None, n_min: Union[None, int] = None, n_max: Union[None, int] = None, return_binary: bool = False, warn: bool = True):
+    def __call__(self, n: Union[None, int] = None, n_min: Union[None, int] = None, n_max: Union[None, int] = None, return_binary: bool = False, warn: bool = True) -> np.ndarray:
         r"""
         - If just `n` is supplied, generate samples from the sequence at indices 0,...,`n`-1.
         - If `n_min` and `n_max` are supplied, generate samples from the sequence at indices `n_min`,...,`n_max`-1.
