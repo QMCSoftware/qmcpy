@@ -9,7 +9,7 @@ import scipy.special
 
 
 class SensitivityIndices(AbstractIntegrand):
-    r"""Sensitivity indices i.e. normalized Sobol' Indices.
+    r"""Sensitivity indices i.e., normalized Sobol' Indices.
 
     Examples:
         Singleton indices

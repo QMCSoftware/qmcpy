@@ -100,7 +100,7 @@ class MaternGP(Gaussian):
             variance (float): Global scaling factor of the kernel. Retrievable
                 after construction via the `kernel_variance` property. (The
                 inherited `variance` attribute is the vector of marginal
-                variances, i.e. the diagonal of `covariance`.)
+                variances, i.e., the diagonal of `covariance`.)
             mean (Union[float, np.ndarray]): Mean vector for multivariate
                 `Gaussian`.
             nugget (float): Positive nugget to add to diagonal.

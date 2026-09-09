@@ -24,7 +24,7 @@ class DigitalNetAnyBases(AbstractLDDiscreteDistribution):
             - Pass in `generating_matrices` *without* interlacing and supply `alpha>1` to apply interlacing, or
             - Pass in `generating_matrices` *with* interlacing and set `alpha=1` to avoid additional interlacing.
 
-            i.e. do *not* pass in interlaced `generating_matrices` and set
+            i.e., do *not* pass in interlaced `generating_matrices` and set
             `alpha>1`, this will apply additional interlacing.
 
     A few examples below showcase how to pass in custom bases and generating

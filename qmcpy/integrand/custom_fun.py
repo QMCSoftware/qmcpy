@@ -67,7 +67,7 @@ class CustomFun(AbstractIntegrand):
         Stopping criterion which supporting vectorized outputs may pass in
         Boolean `compute_flags` with `dimension_indv` shape indicating which
         output need to evaluated,
-            i.e. where `compute_flags` is `False` we do not need to evaluate
+            i.e., where `compute_flags` is `False` we do not need to evaluate
             the integrand. We have not used this in inexpensive example above.
 
         With independent replications
