@@ -149,7 +149,7 @@ class Halton(DigitalNetAnyBases):
                 [0.34111023, 0.84596814, 0.0292313 ],
                 [0.71866903, 0.23852281, 0.80431142]]])
 
-    **References: **
+    **References:**
 
     1.  Marius Hofert and Christiane Lemieux.
         qrng: (Randomized) Quasi-Random Number Generators.

@@ -67,7 +67,7 @@ class LatinHypercube(AbstractDiscreteDistribution):
                [0.875, 0.125]])
 
 
-    **References: **
+    **References:**
 
     1.  M. D. McKay, R. J. Beckman, and W. J. Conover.
         A Comparison of Three Methods for Selecting Values of Input Variables in the Analysis of Output from a Computer Code.

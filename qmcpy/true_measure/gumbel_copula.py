@@ -63,7 +63,7 @@ class GumbelCopula(AbstractCopula):
         >>> bool(((0 <= independent_samples) & (independent_samples <= 1)).all())
         True
 
-    **References: **
+    **References:**
 
     1.  Roger B. Nelsen. *An Introduction to Copulas*. Second Edition,
         Springer Series in Statistics, Springer, 2006.

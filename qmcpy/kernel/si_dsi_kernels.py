@@ -373,7 +373,7 @@ class KernelShiftInvar(AbstractSIDSIKernel):
         >>> np.allclose(ynp,y.numpy())
         True
 
-    **References: **
+    **References:**
 
     1.  Kaarnioja, Vesa, Frances Y. Kuo, and Ian H. Sloan.
         "Lattice-based kernel approximation and serendipitous weights for parametric PDEs in very high dimensions."
@@ -597,7 +597,7 @@ class KernelShiftInvarCombined(AbstractSIDSIKernel):
         >>> np.abs(kfast-kstable).max()
         np.float64(3.552713678800501e-15)
 
-    **References: **
+    **References:**
 
     1.  Kaarnioja, Vesa, Frances Y. Kuo, and Ian H. Sloan.
         "Lattice-based kernel approximation and serendipitous weights for parametric PDEs in very high dimensions."
@@ -867,7 +867,7 @@ class KernelDigShiftInvar(AbstractSIDSIKernel):
         >>> np.abs(kfast-kstable).max()
         np.float64(4.440892098500626e-16)
 
-    **References: **
+    **References:**
 
     1.  Dick, Josef.
         "Walsh spaces containing smooth functions and quasi-Monte Carlo rules of arbitrary high order."
@@ -1179,7 +1179,7 @@ class KernelDigShiftInvarAdaptiveAlpha(AbstractSIDSIKernel):
         >>> np.abs(kfast-kstable).max()
         np.float64(4.440892098500626e-16)
 
-    **References: **
+    **References:**
 
     3.  Dick, Josef, and Friedrich Pillichshammer.
         "Multivariate integration in weighted Hilbert spaces based on Walsh functions and weighted Sobolev spaces."

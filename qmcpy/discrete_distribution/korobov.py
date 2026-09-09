@@ -132,7 +132,7 @@ class KorobovLattice(AbstractLDDiscreteDistribution):
                [0.75 , 0.25 ],
                [0.875, 0.625]])
 
-    **References: **
+    **References:**
 
     1.  N. M. Korobov.
         The approximate computation of multiple integrals.

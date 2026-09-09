@@ -129,7 +129,7 @@ def weighted_walsh_funcs(alpha: int, xb: Union[np.ndarray, torch.Tensor], t: int
     Returns:
         Union[np.ndarray, torch.Tensor]: Weighted Walsh function values.
 
-    **References: **
+    **References:**
 
         1.  Dick, Josef.
             "Walsh spaces containing smooth functions and quasi–Monte Carlo rules of arbitrary high order."

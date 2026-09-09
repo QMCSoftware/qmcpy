@@ -97,7 +97,7 @@ class SensitivityIndices(AbstractIntegrand):
         >>> closed_total_approx.shape
         (2, 4, 4, 5, 6)
 
-    **References: **
+    **References:**
 
     1.  Aleksei G. Sorokin and Jagadeeswaran Rathinavel.
         On Bounding and Approximating Functions of Multiple Expectations Using Quasi-Monte Carlo.

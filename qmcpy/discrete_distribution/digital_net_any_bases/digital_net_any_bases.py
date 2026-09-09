@@ -144,7 +144,7 @@ class DigitalNetAnyBases(AbstractLDDiscreteDistribution):
         >>> bool((x==x_b2).all())
         True
 
-    **References: **
+    **References:**
 
     1.  Dick, Josef, and Friedrich Pillichshammer.
         Digital nets and sequences: discrepancy theory and quasi–Monte Carlo integration.

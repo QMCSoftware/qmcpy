@@ -238,7 +238,7 @@ class CubMCG(AbstractStoppingCriterion):
             replications    1
             entropy         7
 
-    **References: **
+    **References:**
 
     1.  Fred J. Hickernell, Lan Jiang, Yuewei Liu, and Art B. Owen,
         "Guaranteed conservative fixed width confidence intervals via Monte Carlo sampling,"

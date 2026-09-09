@@ -124,7 +124,7 @@ class Kumaraswamy(AbstractTrueMeasure):
         Every operation is elementwise on the per-coordinate parameters $a$ and
         $b$, so ``mean`` and ``variance`` are returned as length-``d`` arrays.
 
-        **References: **
+        **References:**
 
         1.  Kumaraswamy distribution. Wikipedia.
             [https://en.wikipedia.org/wiki/Kumaraswamy_distribution](https://en.wikipedia.org/wiki/Kumaraswamy_distribution).

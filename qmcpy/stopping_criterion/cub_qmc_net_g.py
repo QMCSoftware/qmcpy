@@ -203,7 +203,7 @@ class CubQMCNetG(AbstractCubQMCLDG):
         array([16384, 16384, 16384])
         >>> assert (np.abs(true_value-solution)<abs_tol).all()
 
-    **References: **
+    **References:**
 
     1.  Hickernell, Fred J., and Lluís Antoni Jiménez Rugama.
         "Reliable adaptive cubature using digital sequences."

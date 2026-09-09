@@ -50,7 +50,7 @@ class Ishigami(AbstractIntegrand):
         >>> print("%.4f"%muhats.mean())
         3.4646
 
-    **References: **
+    **References:**
 
     1.  Ishigami, T., & Homma, T.
         An importance quantification technique in uncertainty analysis for computer models.

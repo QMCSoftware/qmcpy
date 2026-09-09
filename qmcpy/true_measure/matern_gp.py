@@ -57,7 +57,7 @@ class MaternGP(Gaussian):
                 [0.2147053 , 0.33293508, 0.43572791],
                 [0.37343973, 0.46534628, 0.56356714]]])
 
-    **References: **
+    **References:**
 
     1.  [`sklearn.gaussian_process.kernels.Matern`](https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.kernels.Matern.html).
 

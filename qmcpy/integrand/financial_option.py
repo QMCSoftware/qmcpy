@@ -233,7 +233,7 @@ class FinancialOption(AbstractIntegrand):
         >>> print("%.4f"%muhathat.sum())
         1.7982
 
-    **References: **
+    **References:**
 
     1.  M.B. Giles.
         Improved multilevel Monte Carlo convergence using the Milstein scheme.

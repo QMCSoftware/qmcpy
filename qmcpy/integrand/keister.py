@@ -42,7 +42,7 @@ class Keister(AbstractIntegrand):
         >>> print("%.4f"%muhats.mean())
         1.8024
 
-    **References: **
+    **References:**
 
     1.  B. D. Keister.
         Multidimensional Quadrature Algorithms.

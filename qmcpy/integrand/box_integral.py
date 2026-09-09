@@ -60,7 +60,7 @@ class BoxIntegral(AbstractIntegrand):
         array([[1.        , 0.76519118, 0.66666666],
                [0.62718785, 0.62224086, 0.64273341]])
 
-    **References: **
+    **References:**
 
     1.  D.H. Bailey, J.M. Borwein, R.E. Crandall, Box integrals.
         Journal of Computational and Applied Mathematics, Volume 206, Issue 1, 2007, Pages 196-208, ISSN 0377-0427.

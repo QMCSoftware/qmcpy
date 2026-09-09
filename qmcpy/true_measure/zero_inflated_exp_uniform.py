@@ -292,7 +292,7 @@ class ZeroInflatedExpUniform(SciPyWrapper):
         returned as length-1 arrays for consistency with the other true
         measures.
 
-        **References: **
+        **References:**
 
         1.  Exponential distribution. Wikipedia.
             [https://en.wikipedia.org/wiki/Exponential_distribution](https://en.wikipedia.org/wiki/Exponential_distribution).

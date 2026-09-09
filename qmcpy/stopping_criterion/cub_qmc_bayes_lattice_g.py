@@ -164,7 +164,7 @@ class CubQMCBayesLatticeG(AbstractCubBayesLDG):
             n_limit         2^(20)
             entropy         7
 
-    **References: **
+    **References:**
 
     1.  Jagadeeswaran, Rathinavel, and Fred J. Hickernell.
         "Fast automatic Bayesian cubature using lattice sampling."

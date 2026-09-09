@@ -67,7 +67,7 @@ class ClaytonCopula(AbstractCopula):
         >>> ClaytonCopula(DigitalNetB2(2, seed=7), marginals=marginals, theta=1e-8)(4).shape
         (4, 2)
 
-    **References: **
+    **References:**
 
     1.  Roger B. Nelsen. *An Introduction to Copulas*. Second Edition,
         Springer Series in Statistics, Springer, 2006.

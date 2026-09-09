@@ -174,7 +174,7 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
                 [0.94219959, 0.39172304, 0.20285965],
                 [0.19716391, 0.64741585, 0.92494554]]])
 
-    **References: **
+    **References:**
 
     1.  Marius Hofert and Christiane Lemieux.
         qrng: (Randomized) Quasi-Random Number Generators (2019).

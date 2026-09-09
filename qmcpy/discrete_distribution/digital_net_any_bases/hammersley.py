@@ -54,7 +54,7 @@ class Hammersley(DigitalNetAnyBases):
                [0.5 ],
                [0.75]])
 
-    **References: **
+    **References:**
 
     1.  J. Dick, F. Y. Kuo, and I. H. Sloan.
         High-dimensional integration: the quasi-Monte Carlo way.

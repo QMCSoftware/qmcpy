@@ -160,7 +160,7 @@ class CubQMCLatticeG(AbstractCubQMCLDG):
             n_limit         2^(20)
             entropy         7
 
-    **References: **
+    **References:**
 
     1.  Lluis Antoni Jimenez Rugama and Fred J. Hickernell.
         "Adaptive multidimensional integration based on rank-1 lattices,"

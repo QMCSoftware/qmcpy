@@ -133,7 +133,7 @@ class BrownianMotion(Gaussian):
         >>> true_measure.bridge_output_times
         array([0.6, 1. , 0.3, 0.8])
 
-        **References: **
+        **References:**
 
         1.  Art B. Owen.
             Monte Carlo theory, methods and examples.

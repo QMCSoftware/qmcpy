@@ -90,7 +90,7 @@ class FrankCopula(AbstractCopula):
         >>> FrankCopula(DigitalNetB2(5, seed=7), marginals=[stats.uniform()] * 5, theta=5.0)(4).shape
         (4, 5)
 
-    **References: **
+    **References:**
 
     1.  Roger B. Nelsen. *An Introduction to Copulas*. Second Edition,
         Springer Series in Statistics, Springer, 2006.
