@@ -19,7 +19,7 @@ class Data(object):
     def save(self, path: Union[str, Path], compress: bool = False, overwrite: bool = False) -> str:
         """Save this Data object to disk using pickle.
 
-        Warnings:
+        Warning:
             ``pickle`` files are not secure against untrusted input. Only save
             and later load checkpoint files that you created yourself or that
             come from a trusted source.
@@ -35,7 +35,7 @@ class Data(object):
 
         Returns:
             str: The final path the file was written to (may differ from *path* when
-            ``compress=True`` appends ``.gz``).
+                ``compress=True`` appends ``.gz``).
 
         Raises:
             FileExistsError: If the target path already exists and
@@ -58,7 +58,7 @@ class Data(object):
     def load(cls, path: Union[str, Path]) -> "Data":
         """Load a Data object from disk.
 
-        Warnings:
+        Warning:
             ``pickle`` deserialization can execute arbitrary code. Only load
             checkpoint files that you created yourself or that come from a
             trusted source.
