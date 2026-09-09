@@ -1,3 +1,8 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
 from .copula import (
     AbstractCopula,
     _clip_unit_interval,
@@ -75,7 +80,7 @@ class GaussianCopula(AbstractCopula):
         [arXiv:1508.03483](https://arxiv.org/abs/1508.03483).
     """
 
-    def __init__(self, sampler, marginals: list, correlation: np.ndarray) -> None:
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], marginals: list, correlation: np.ndarray) -> None:
         r"""Initialize a GaussianCopula true measure.
 
         Args:

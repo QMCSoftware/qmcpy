@@ -15,6 +15,15 @@ Usage:
 
 `--update` is for a change that intentionally reduces (or, with justification
 in the PR description, increases) one of these counts.
+
+A mid-migration branch (e.g. adding type hints to signatures across many
+files) can make a count spike well above the committed baseline before it
+comes back down -- pydoclint's DOC105/106/107 cross-check every arg's
+signature type against its docstring type, so partially-applied hints
+surface more mismatches than having no hints at all. That is expected, not
+a bug in this script: `make check` will keep reporting "REGRESSED" for that
+check until the migration is complete and `--update` is run to record the
+new, lower count.
 """
 import json
 import re

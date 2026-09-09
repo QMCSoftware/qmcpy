@@ -193,7 +193,7 @@ class = [
 # the docstring (`name (type): ...`), not in the signature.
 style = "google"
 allow-init-docstring = true
-arg-type-hints-in-signature = false
+arg-type-hints-in-signature = true
 arg-type-hints-in-docstring = true
 check-return-types = false
 check-yield-types = false

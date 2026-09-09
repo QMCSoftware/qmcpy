@@ -17,7 +17,7 @@ class MPNN_layer(MessagePassing):
     `edge_index` graph built in `MPMC_net`) and updates its own features.
     """
 
-    def __init__(self, ninp, nhid):
+    def __init__(self, ninp, nhid) -> None:
         super(MPNN_layer, self).__init__()
         self.ninp = ninp
         self.nhid = nhid
@@ -36,7 +36,7 @@ class MPNN_layer(MessagePassing):
                                           )
         self.norm = InstanceNorm(nhid)
 
-    def forward(self, x, edge_index, batch):
+    def forward(self, x: torch.Tensor, edge_index: torch.Tensor, batch: torch.Tensor) -> torch.Tensor:
         """Propagate messages over the graph and instance-normalize the result.
 
         Args:
@@ -51,7 +51,7 @@ class MPNN_layer(MessagePassing):
         x = self.norm(x, batch)
         return x
 
-    def message(self, x_i, x_j):
+    def message(self, x_i: torch.Tensor, x_j: torch.Tensor) -> torch.Tensor:
         """Compute the message sent from neighbor `x_j` to node `x_i`.
 
         Called internally by `MessagePassing.propagate`.
@@ -67,7 +67,7 @@ class MPNN_layer(MessagePassing):
         message = self.message_net_2(message)
         return message
 
-    def update(self, message, x):
+    def update(self, message: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
         """Combine a node's aggregated message with its own features.
 
         Called internally by `MessagePassing.propagate`.
@@ -95,7 +95,7 @@ class MPMC_net(nn.Module):
     minimize `loss_fn` evaluated on the resulting points.
     """
 
-    def __init__(self, dim, nhid, nlayers, nsamples, nbatch, radius, loss_fn, weights):
+    def __init__(self, dim, nhid, nlayers, nsamples, nbatch, radius, loss_fn, weights) -> None:
         super(MPMC_net, self).__init__()
         self.enc = nn.Linear(dim,nhid)
         self.convs = nn.ModuleList()
@@ -127,7 +127,7 @@ class MPMC_net(nn.Module):
         else:
             raise ValueError(f"Loss function DNE: {loss_fn}")
 
-    def forward(self):
+    def forward(self) -> tuple[torch.Tensor, torch.Tensor]:
         """Transform the stored random points and compute the discrepancy loss.
 
         Returns:

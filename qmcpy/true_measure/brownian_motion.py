@@ -1,3 +1,8 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
 from .gaussian import Gaussian
 from ..discrete_distribution import DigitalNetB2
 from ..util import ParameterError, ParameterWarning
@@ -138,14 +143,14 @@ class BrownianMotion(Gaussian):
 
     def __init__(
         self,
-        sampler,
+        sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure],
         t_final: float = 1,
         initial_value: float = 0,
         drift: int = 0,
         diffusion: int = 1,
         decomp_type: str = "PCA",
         lazy_decomp: bool = True,
-        monitoring_times=None,
+        monitoring_times: Union[None, np.ndarray, list] = None,
         bridge_vdc_gray_ordering: bool = True,
         bridge_output_order: str = 'increasing',
     ) -> None:
@@ -169,7 +174,7 @@ class BrownianMotion(Gaussian):
                 - `'BrownianBridge'` or `'Bridge'` for brownian bridge construction.
             lazy_decomp (bool): If True, defer expensive matrix decomposition
                 until needed.
-            monitoring_times (Union[np.ndarray, list]): Optional custom
+            monitoring_times (Union[None, np.ndarray, list]): Optional custom
                 sampling times for `'BrownianBridge'` with length d. The given
                 order is the insertion order if `'bridge_vdc_gray_ordering'` is
                 False.

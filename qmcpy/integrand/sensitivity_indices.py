@@ -1,3 +1,4 @@
+from typing import Union
 from .abstract_integrand import AbstractIntegrand
 from .keister import Keister
 from .box_integral import BoxIntegral
@@ -110,13 +111,13 @@ class SensitivityIndices(AbstractIntegrand):
         [https://artowen.su.domains/mc/A-anova.pdf](https://artowen.su.domains/mc/A-anova.pdf).
     """
 
-    def __init__(self, integrand: AbstractIntegrand, indices: np.ndarray = "singletons") -> None:
+    def __init__(self, integrand: AbstractIntegrand, indices: Union[str, np.ndarray] = "singletons") -> None:
         r"""Initialize a SensitivityIndices integrand.
 
         Args:
             integrand (AbstractIntegrand): Integrand to find sensitivity
                 indices of.
-            indices (np.ndarray): Bool array with shape $(\dots,d)$ where each
+            indices (Union[str, np.ndarray]): Bool array with shape $(\dots,d)$ where each
                 length $d$ vector item indicates which dimensions are active in
                 the subset.
 
@@ -166,7 +167,7 @@ class SensitivityIndices(AbstractIntegrand):
         )
         self.d = 2 * self.dtilde
 
-    def f(self, x, *args, **kwargs):
+    def f(self, x: np.ndarray, *args: tuple, **kwargs: dict) -> np.ndarray:
         r"""Evaluate the numerator and moment terms needed for the sensitivity indices.
 
         Args:
@@ -219,7 +220,7 @@ class SensitivityIndices(AbstractIntegrand):
         new_integrand = self.integrand.spawn(level, sampler)
         return SensitivityIndices(integrand=new_integrand, indices=self.indices)
 
-    def bound_fun(self, bound_low, bound_high):
+    def bound_fun(self, bound_low: np.ndarray, bound_high: np.ndarray) -> tuple:
         r"""Combine bounds on the moment terms into bounds on the sensitivity indices.
 
         Args:
@@ -248,7 +249,7 @@ class SensitivityIndices(AbstractIntegrand):
         comb_bounds_low[violated], comb_bounds_high[violated] = 0, 1
         return comb_bounds_low, comb_bounds_high
 
-    def dependency(self, comb_flags):
+    def dependency(self, comb_flags: np.ndarray) -> np.ndarray:
         """Map combined-output flags onto the individual outputs they require.
 
         Args:

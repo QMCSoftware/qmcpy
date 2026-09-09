@@ -1,5 +1,7 @@
 import gzip
 import pickle
+from pathlib import Path
+from typing import Union
 
 from ..util import _univ_repr
 
@@ -14,7 +16,7 @@ class Data(object):
     def __init__(self, parameters) -> None:
         self.parameters = parameters
 
-    def save(self, path, compress: bool = False, overwrite: bool = False):
+    def save(self, path: Union[str, Path], compress: bool = False, overwrite: bool = False) -> str:
         """Save this Data object to disk using pickle.
 
         Warnings:
@@ -23,7 +25,7 @@ class Data(object):
             come from a trusted source.
 
         Args:
-            path (str or pathlib.Path): File path to save to. If
+            path (Union[str, Path]): File path to save to. If
                 ``compress=True``, a ``.gz`` suffix is appended automatically
                 when not already present.
             compress (bool): Gzip-compress the saved file. Defaults to False.
@@ -53,7 +55,7 @@ class Data(object):
         return path
 
     @classmethod
-    def load(cls, path):
+    def load(cls, path: Union[str, Path]) -> "Data":
         """Load a Data object from disk.
 
         Warnings:
@@ -62,7 +64,7 @@ class Data(object):
             trusted source.
 
         Args:
-            path (str or pathlib.Path): Path to the saved file. Files ending in
+            path (Union[str, Path]): Path to the saved file. Files ending in
                 ``.gz`` are decompressed automatically.
 
         Returns:

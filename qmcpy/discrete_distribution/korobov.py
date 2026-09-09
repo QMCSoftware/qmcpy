@@ -1,3 +1,4 @@
+from typing import Union
 import numpy as np
 from qmcpy.util import ParameterError, ParameterWarning
 from pathlib import Path
@@ -25,7 +26,7 @@ def load_korobov_table(
         }
     return raw, lut
 
-def get_a(lut, n, d):
+def get_a(lut: dict, n: int, d: int) -> int:
     """Look up the tabulated Korobov generator `a` for a given `n` and `d`.
 
     Args:
@@ -149,8 +150,8 @@ class KorobovLattice(AbstractLDDiscreteDistribution):
     def __init__(
             self,
             dimension: int = 1,
-            replications: int = None,
-            seed=None,
+            replications: Union[None, int] = None,
+            seed: Union[None, int, np.random.SeedSequence] = None,
             randomize: str = "SHIFT",
         ) -> None:
         r"""Initialize a KorobovLattice discrete distribution.
@@ -159,7 +160,7 @@ class KorobovLattice(AbstractLDDiscreteDistribution):
             dimension (int): Dimension of the samples. Must be between 1 and
                 250 (the range covered by the precomputed table).
 
-            replications (int): Number of independent Cranley-Patterson shifts
+            replications (Union[None, int]): Number of independent Cranley-Patterson shifts
                 of the same underlying deterministic lattice.
 
             seed (Union[None, int, np.random.SeedSequence]): Seed the random

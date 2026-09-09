@@ -1,3 +1,8 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
 import numpy as np
 from .abstract_integrand import AbstractIntegrand
 from ..discrete_distribution import DigitalNetB2
@@ -53,7 +58,7 @@ class Ishigami(AbstractIntegrand):
         Proceedings, First International Symposium on (pp. 398-403). IEEE.
     """
 
-    def __init__(self, sampler, a: float = 7, b: float = 0.1) -> None:
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], a: float = 7, b: float = 0.1) -> None:
         r"""Initialize an Ishigami integrand.
 
         Args:
@@ -75,7 +80,7 @@ class Ishigami(AbstractIntegrand):
             dimension_indv=(), dimension_comb=(), parallel=False
         )
 
-    def g(self, t):
+    def g(self, t: np.ndarray) -> np.ndarray:
         r"""Evaluate the Ishigami function.
 
         Args:

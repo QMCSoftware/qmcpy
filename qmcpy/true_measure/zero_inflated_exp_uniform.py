@@ -1,8 +1,13 @@
+from typing import Union
 import warnings
 
 import numpy as np
 
 from ..util import DimensionError, ParameterError
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
 from .scipy_wrapper import SciPyWrapper
 
 
@@ -180,7 +185,20 @@ class ZeroInflatedExpUniform(SciPyWrapper):
     True
     """
 
-    def __init__(self, sampler, p_zero=0.4, lam=1.5, y_split=None) -> None:
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], p_zero: float = 0.4, lam: float = 1.5, y_split: Union[None, float] = None) -> None:
+        """Initialize a ZeroInflatedExpUniform true measure.
+
+        Args:
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): A
+                1-dimensional sampler generating unit-cube samples to be
+                transformed. If `y_split` is set, a 2-dimensional sampler is
+                required instead (deprecated construction).
+            p_zero (float): Probability mass at zero.
+            lam (float): Rate parameter of the exponential component.
+            y_split (Union[None, float]): Deprecated. If set, uses the legacy
+                2-dimensional zero-inflated exponential-uniform construction
+                instead of the 1-dimensional interface.
+        """
         if y_split is not None:
             warnings.warn(
                 "`y_split` is deprecated. The 2D zero-inflated "

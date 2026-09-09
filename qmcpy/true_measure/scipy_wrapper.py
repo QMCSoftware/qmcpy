@@ -1,3 +1,4 @@
+from typing import Union
 from .abstract_true_measure import AbstractTrueMeasure
 from ..util import DimensionError, ParameterError
 from ..discrete_distribution.abstract_discrete_distribution import (
@@ -175,13 +176,13 @@ class SciPyWrapper(AbstractTrueMeasure):
         (4, 2)
     """
 
-    def __init__(self, sampler, scipy_distribs) -> None:
+    def __init__(self, sampler: AbstractDiscreteDistribution, scipy_distribs: Union[scipy.stats._distn_infrastructure.rv_continuous_frozen, list, object]) -> None:
         """Wrap one or more SciPy distributions as a QMCPy true measure.
 
         Args:
             sampler (AbstractDiscreteDistribution): Low discrepancy or iid
                 sampler in dimension d, living on [0,1)^d.
-            scipy_distribs (Union[scipy.stats.rv_frozen, list, object]): One
+            scipy_distribs (Union[scipy.stats._distn_infrastructure.rv_continuous_frozen, list, object]): One
                 of the following:
 
                 - A single SciPy 1D continuous frozen distribution.

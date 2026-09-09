@@ -1,3 +1,9 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
+import numpy as np
 from .abstract_integrand import AbstractIntegrand
 from ..discrete_distribution import DigitalNetB2
 from ..true_measure import Uniform
@@ -28,7 +34,7 @@ class Linear0(AbstractIntegrand):
         -9.8203e-05
     """
 
-    def __init__(self, sampler) -> None:
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure]) -> None:
         r"""Initialize a Linear0 integrand.
 
         Args:
@@ -44,7 +50,7 @@ class Linear0(AbstractIntegrand):
             dimension_indv=(), dimension_comb=(), parallel=False
         )
 
-    def g(self, t):
+    def g(self, t: np.ndarray) -> np.ndarray:
         """Evaluate the centered linear function.
 
         Args:

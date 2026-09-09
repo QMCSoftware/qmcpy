@@ -1,3 +1,7 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from typing import Union
 from .abstract_true_measure import AbstractTrueMeasure
 from ..util import DimensionError, ParameterError
 from ..discrete_distribution import DigitalNetB2
@@ -41,7 +45,7 @@ class JohnsonsSU(AbstractTrueMeasure):
                 [ 1.57765245,  1.00275   ,  1.64972468]]])
     """
 
-    def __init__(self, sampler, gamma=1, xi=1, delta=2, lam=2) -> None:
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], gamma: Union[float, np.ndarray] = 1, xi: Union[float, np.ndarray] = 1, delta: Union[float, np.ndarray] = 2, lam: Union[float, np.ndarray] = 2) -> None:
         r"""Initialize a JohnsonsSU true measure.
 
         Args:

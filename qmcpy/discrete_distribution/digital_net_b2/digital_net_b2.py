@@ -1,3 +1,4 @@
+from typing import Union
 from ..abstract_discrete_distribution import AbstractLDDiscreteDistribution
 from ...util import ParameterError, ParameterWarning
 import qmctoolscl
@@ -215,20 +216,20 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
 
     def __init__(
         self,
-        dimension=1,
-        replications: int = None,
-        seed=None,
+        dimension: Union[int, np.ndarray] = 1,
+        replications: Union[None, int] = None,
+        seed: Union[None, int, np.random.SeedSequence] = None,
         randomize: str = "LMS DS",
-        generating_matrices="joe_kuo.6.21201.txt",
+        generating_matrices: Union[str, np.ndarray, int] = "joe_kuo.6.21201.txt",
         order: str = "RADICAL INVERSE",
         t: int = 63,
         alpha: int = 1,
-        msb: bool = None,
+        msb: Union[None, bool] = None,
         _verbose: bool = False,
         # deprecated
-        graycode=None,
-        t_max=None,
-        t_lms=None,
+        graycode: Union[None, bool] = None,
+        t_max: Union[None, int] = None,
+        t_lms: Union[None, int] = None,
     ) -> None:
         r"""Initialize a DigitalNetB2 discrete distribution.
 
@@ -238,7 +239,7 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
                 - If an `int` is passed in, use generating vector components at indices 0,...,`dimension`-1.
                 - If an `np.ndarray` is passed in, use generating vector components at these indices.
 
-            replications (int): Number of independent randomizations of a
+            replications (Union[None, int]): Number of independent randomizations of a
                 pointset.
             seed (Union[None, int, np.random.SeedSequence]): Seed the random
                 number generator for reproducibility.
@@ -266,12 +267,17 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
                 generating matrices, i.e., for `alpha`>1 do *not* pass in
                 generating matrices which are already interlaced. The Note for
                 this class contains more info.
-            msb (bool): Flag for Most Significant Bit (MSB) vs Least
+            msb (Union[None, bool]): Flag for Most Significant Bit (MSB) vs Least
                 Significant Bit (LSB) integer representations in generating
                 matrices. If `msb=False` (LSB order), then integers in
                 generating matrices will be bit-reversed.
             _verbose (bool): If `True`, print linear matrix scrambling
                 matrices.
+            graycode (Union[None, bool]): Deprecated; set `order='GRAY'` or
+                `order='RADICAL INVERSE'` instead.
+            t_max (Union[None, int]): Deprecated; has no effect, as it can be inferred
+                from the generating matrices.
+            t_lms (Union[None, int]): Deprecated; set `t` instead.
         """
         if graycode is not None:
             order = "GRAY" if graycode else "RADICAL INVERSE"

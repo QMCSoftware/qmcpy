@@ -1,3 +1,4 @@
+from typing import Union
 from .abstract_stopping_criterion import AbstractStoppingCriterion
 from ..util.data import Data
 from ..util import ParameterError
@@ -72,14 +73,14 @@ class AbstractCubMLMC(AbstractStoppingCriterion):
         )
         return ns.astype(int)
 
-    def set_tolerance(self, abs_tol=None, rel_tol=None, rmse_tol=None):
+    def set_tolerance(self, abs_tol: Union[None, float] = None, rel_tol: Union[None, float] = None, rmse_tol: Union[None, float] = None):
         """Update the stopping criterion's target tolerance.
 
         Args:
-            abs_tol (float): Absolute error tolerance, converted to an RMSE
+            abs_tol (Union[None, float]): Absolute error tolerance, converted to an RMSE
                 tolerance via `self.alpha`. Ignored if `rmse_tol` is supplied.
-            rel_tol (float): Unsupported; must be `None`.
-            rmse_tol (float): Root mean squared error tolerance. Takes
+            rel_tol (Union[None, float]): Unsupported; must be `None`.
+            rmse_tol (Union[None, float]): Root mean squared error tolerance. Takes
                 precedence over `abs_tol` if both are supplied.
 
         Raises:
@@ -177,11 +178,14 @@ class AbstractCubMLMC(AbstractStoppingCriterion):
         return data
 
     @staticmethod
-    def _validate_level_diffs(data):
+    def _validate_level_diffs(data: Data):
         """Validate the ``level_diffs`` replay cache on a resume checkpoint.
 
         Args:
             data (Data): Resume checkpoint to validate.
+
+        Returns:
+            None
 
         Raises:
             ParameterError: If ``level_diffs`` is present but structurally
@@ -200,7 +204,7 @@ class AbstractCubMLMC(AbstractStoppingCriterion):
                     % (level, level)
                 )
 
-    def _update_replay_data(self, data):
+    def _update_replay_data(self, data: Data):
         """Replay cached level-difference samples, falling back to fresh
         draws.
 

@@ -1,3 +1,8 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
 from .abstract_integrand import AbstractIntegrand
 from ..discrete_distribution import DigitalNetB2
 from ..true_measure import GeometricBrownianMotion
@@ -238,7 +243,7 @@ class FinancialOption(AbstractIntegrand):
 
     def __init__(
         self,
-        sampler,
+        sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure],
         option: str = "ASIAN",
         call_put: str = "CALL",
         volatility: float = 0.5,
@@ -247,8 +252,8 @@ class FinancialOption(AbstractIntegrand):
         interest_rate: float = 0,
         t_final: float = 1,
         decomp_type: str = "PCA",
-        level=None,
-        d_coarsest=2,
+        level: Union[None, int] = None,
+        d_coarsest: Union[None, int] = 2,
         asian_mean: str = "ARITHMETIC",
         asian_mean_quadrature_rule: str = "TRAPEZOIDAL",
         barrier_in_out: str = "IN",
@@ -447,7 +452,7 @@ class FinancialOption(AbstractIntegrand):
             dimension_indv=dim_shape, dimension_comb=dim_shape, parallel=False
         )
 
-    def g(self, t, **kwargs):
+    def g(self, t: np.ndarray, **kwargs: dict) -> np.ndarray:
         """Evaluate the discounted option payoff along each price path.
 
         Args:
@@ -472,7 +477,7 @@ class FinancialOption(AbstractIntegrand):
             )
         return discounted_payoffs
 
-    def payoff_european_call(self, gbm):
+    def payoff_european_call(self, gbm: np.ndarray) -> np.ndarray:
         """European call payoff at maturity.
 
         Args:
@@ -483,7 +488,7 @@ class FinancialOption(AbstractIntegrand):
         """
         return np.maximum(gbm[..., -1] - self.strike_price, 0)
 
-    def payoff_european_put(self, gbm):
+    def payoff_european_put(self, gbm: np.ndarray) -> np.ndarray:
         """European put payoff at maturity.
 
         Args:
@@ -494,7 +499,7 @@ class FinancialOption(AbstractIntegrand):
         """
         return np.maximum(self.strike_price - gbm[..., -1], 0)
 
-    def payoff_asian_arithmetic_trap_call(self, gbm):
+    def payoff_asian_arithmetic_trap_call(self, gbm: np.ndarray) -> np.ndarray:
         """Asian arithmetic-mean call payoff, trapezoidal averaging.
 
         Args:
@@ -510,7 +515,7 @@ class FinancialOption(AbstractIntegrand):
             0,
         )
 
-    def payoff_asian_arithmetic_trap_put(self, gbm):
+    def payoff_asian_arithmetic_trap_put(self, gbm: np.ndarray) -> np.ndarray:
         """Asian arithmetic-mean put payoff, trapezoidal averaging.
 
         Args:
@@ -526,7 +531,7 @@ class FinancialOption(AbstractIntegrand):
             0,
         )
 
-    def payoff_asian_geometric_trap_call(self, gbm):
+    def payoff_asian_geometric_trap_call(self, gbm: np.ndarray) -> np.ndarray:
         """Asian geometric-mean call payoff, trapezoidal averaging.
 
         Args:
@@ -548,7 +553,7 @@ class FinancialOption(AbstractIntegrand):
             0,
         )
 
-    def payoff_asian_geometric_trap_put(self, gbm):
+    def payoff_asian_geometric_trap_put(self, gbm: np.ndarray) -> np.ndarray:
         """Asian geometric-mean put payoff, trapezoidal averaging.
 
         Args:
@@ -570,7 +575,7 @@ class FinancialOption(AbstractIntegrand):
             0,
         )
 
-    def payoff_asian_arithmetic_right_call(self, gbm):
+    def payoff_asian_arithmetic_right_call(self, gbm: np.ndarray) -> np.ndarray:
         """Asian arithmetic-mean call payoff, right-endpoint averaging.
 
         Args:
@@ -581,7 +586,7 @@ class FinancialOption(AbstractIntegrand):
         """
         return np.maximum(gbm.sum(-1) / gbm.shape[-1] - self.strike_price, 0)
 
-    def payoff_asian_arithmetic_right_put(self, gbm):
+    def payoff_asian_arithmetic_right_put(self, gbm: np.ndarray) -> np.ndarray:
         """Asian arithmetic-mean put payoff, right-endpoint averaging.
 
         Args:
@@ -592,7 +597,7 @@ class FinancialOption(AbstractIntegrand):
         """
         return np.maximum((self.strike_price - gbm.sum(-1)) / gbm.shape[-1], 0)
 
-    def payoff_asian_geometric_right_call(self, gbm):
+    def payoff_asian_geometric_right_call(self, gbm: np.ndarray) -> np.ndarray:
         """Asian geometric-mean call payoff, right-endpoint averaging.
 
         Args:
@@ -605,7 +610,7 @@ class FinancialOption(AbstractIntegrand):
             np.exp(np.log(gbm).sum(-1) / gbm.shape[-1]) - self.strike_price, 0
         )
 
-    def payoff_asian_geometric_right_put(self, gbm):
+    def payoff_asian_geometric_right_put(self, gbm: np.ndarray) -> np.ndarray:
         """Asian geometric-mean put payoff, right-endpoint averaging.
 
         Args:
@@ -618,7 +623,7 @@ class FinancialOption(AbstractIntegrand):
             self.strike_price - np.exp(np.log(gbm).sum(-1) / gbm.shape[-1]), 0
         )
 
-    def payoff_barrier_in_up_call(self, gbm):
+    def payoff_barrier_in_up_call(self, gbm: np.ndarray) -> np.ndarray:
         """Up-and-in barrier call payoff; pays only if the barrier is reached from below.
 
         Args:
@@ -633,7 +638,7 @@ class FinancialOption(AbstractIntegrand):
         v[flag] = np.maximum(v[flag] - self.strike_price, 0)
         return v
 
-    def payoff_barrier_out_up_call(self, gbm):
+    def payoff_barrier_out_up_call(self, gbm: np.ndarray) -> np.ndarray:
         """Up-and-out barrier call payoff; pays only if the barrier is never reached.
 
         Args:
@@ -648,7 +653,7 @@ class FinancialOption(AbstractIntegrand):
         v[flag] = np.maximum(v[flag] - self.strike_price, 0)
         return v
 
-    def payoff_barrier_in_down_call(self, gbm):
+    def payoff_barrier_in_down_call(self, gbm: np.ndarray) -> np.ndarray:
         """Down-and-in barrier call payoff; pays only if the barrier is reached from above.
 
         Args:
@@ -663,7 +668,7 @@ class FinancialOption(AbstractIntegrand):
         v[flag] = np.maximum(v[flag] - self.strike_price, 0)
         return v
 
-    def payoff_barrier_out_down_call(self, gbm):
+    def payoff_barrier_out_down_call(self, gbm: np.ndarray) -> np.ndarray:
         """Down-and-out barrier call payoff; pays only if the barrier is never reached.
 
         Args:
@@ -678,7 +683,7 @@ class FinancialOption(AbstractIntegrand):
         v[flag] = np.maximum(v[flag] - self.strike_price, 0)
         return v
 
-    def payoff_barrier_in_up_put(self, gbm):
+    def payoff_barrier_in_up_put(self, gbm: np.ndarray) -> np.ndarray:
         """Up-and-in barrier put payoff; pays only if the barrier is reached from below.
 
         Args:
@@ -693,7 +698,7 @@ class FinancialOption(AbstractIntegrand):
         v[flag] = np.maximum(self.strike_price - v[flag], 0)
         return v
 
-    def payoff_barrier_out_up_put(self, gbm):
+    def payoff_barrier_out_up_put(self, gbm: np.ndarray) -> np.ndarray:
         """Up-and-out barrier put payoff; pays only if the barrier is never reached.
 
         Args:
@@ -708,7 +713,7 @@ class FinancialOption(AbstractIntegrand):
         v[flag] = np.maximum(self.strike_price - v[flag], 0)
         return v
 
-    def payoff_barrier_in_down_put(self, gbm):
+    def payoff_barrier_in_down_put(self, gbm: np.ndarray) -> np.ndarray:
         """Down-and-in barrier put payoff; pays only if the barrier is reached from above.
 
         Args:
@@ -723,7 +728,7 @@ class FinancialOption(AbstractIntegrand):
         v[flag] = np.maximum(self.strike_price - v[flag], 0)
         return v
 
-    def payoff_barrier_out_down_put(self, gbm):
+    def payoff_barrier_out_down_put(self, gbm: np.ndarray) -> np.ndarray:
         """Down-and-out barrier put payoff; pays only if the barrier is never reached.
 
         Args:
@@ -738,7 +743,7 @@ class FinancialOption(AbstractIntegrand):
         v[flag] = np.maximum(self.strike_price - v[flag], 0)
         return v
 
-    def payoff_lookback_call(self, gbm):  # include start price in min
+    def payoff_lookback_call(self, gbm: np.ndarray) -> np.ndarray:  # include start price in min
         """Lookback call payoff: final price less the running minimum, including the start price.
 
         Args:
@@ -750,7 +755,7 @@ class FinancialOption(AbstractIntegrand):
         min_path = np.minimum(gbm.min(-1), self.start_price)
         return gbm[..., -1] - min_path
 
-    def payoff_lookback_put(self, gbm):  # include start price in max
+    def payoff_lookback_put(self, gbm: np.ndarray) -> np.ndarray:  # include start price in max
         """Lookback put payoff: the running maximum, including the start price, less the final price.
 
         Args:
@@ -762,7 +767,7 @@ class FinancialOption(AbstractIntegrand):
         max_path = np.maximum(gbm.max(-1), self.start_price)
         return max_path - gbm[..., -1]
 
-    def payoff_digital_call(self, gbm):
+    def payoff_digital_call(self, gbm: np.ndarray) -> np.ndarray:
         """Digital call payoff: a fixed payout when the final price is at or above the strike.
 
         Args:
@@ -773,7 +778,7 @@ class FinancialOption(AbstractIntegrand):
         """
         return np.where(gbm[..., -1] >= self.strike_price, self.digital_payout, 0)
 
-    def payoff_digital_put(self, gbm):
+    def payoff_digital_put(self, gbm: np.ndarray) -> np.ndarray:
         """Digital put payoff: a fixed payout when the final price is at or below the strike.
 
         Args:
@@ -784,7 +789,7 @@ class FinancialOption(AbstractIntegrand):
         """
         return np.where(gbm[..., -1] <= self.strike_price, self.digital_payout, 0)
 
-    def get_exact_value(self):
+    def get_exact_value(self) -> float:
         """Compute the exact analytic fair price of the option in finite
         dimensions. Supports
 
@@ -844,7 +849,7 @@ class FinancialOption(AbstractIntegrand):
             )
         return fp
 
-    def get_exact_value_inf_dim(self):
+    def get_exact_value_inf_dim(self) -> float:
         r"""Get the exact analytic fair price of the option in infinite
         dimensions. Supports
 
@@ -877,7 +882,7 @@ class FinancialOption(AbstractIntegrand):
             )
         return val
 
-    def dimension_at_level(self, level):
+    def dimension_at_level(self, level: int) -> int:
         """Return the number of monitoring times used at a multilevel level.
 
         Args:

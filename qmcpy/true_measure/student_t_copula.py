@@ -1,3 +1,8 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
 from .copula import (
     AbstractCopula,
     _clip_unit_interval,
@@ -86,7 +91,7 @@ class StudentTCopula(AbstractCopula):
         "Weights will be treated as 1."
     )
 
-    def __init__(self, sampler, marginals: list, correlation: np.ndarray, df: float) -> None:
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], marginals: list, correlation: np.ndarray, df: float) -> None:
         r"""Initialize a StudentTCopula true measure.
 
         Args:

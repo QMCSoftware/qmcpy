@@ -1,3 +1,4 @@
+from typing import Union
 from ..util import (
     ParameterError,
     MethodImplementationError,
@@ -58,7 +59,7 @@ class AbstractDiscreteDistribution(object):
         self.spawn_key = self._base_seed.spawn_key
         self.rng = np.random.Generator(np.random.SFC64(self._base_seed))
 
-    def __call__(self, n=None, n_min=None, n_max=None, return_binary=False, warn=True):
+    def __call__(self, n: Union[None, int] = None, n_min: Union[None, int] = None, n_max: Union[None, int] = None, return_binary: bool = False, warn: bool = True):
         r"""
         - If just `n` is supplied, generate samples from the sequence at indices 0,...,`n`-1.
         - If `n_min` and `n_max` are supplied, generate samples from the sequence at indices `n_min`,...,`n_max`-1.
@@ -133,7 +134,7 @@ class AbstractDiscreteDistribution(object):
     def _gen_samples(self, *args, **kwargs):
         raise MethodImplementationError(self, "_gen_samples")
 
-    def spawn(self, s: int = 1, dimensions: np.ndarray = None):
+    def spawn(self, s: int = 1, dimensions: Union[None, np.ndarray] = None) -> list:
         r"""Spawn new instances of the current discrete distribution but with
         new seeds and dimensions. Used by multi-level QMC algorithms which
         require different seeds and dimensions on each level.
@@ -144,7 +145,7 @@ class AbstractDiscreteDistribution(object):
 
         Args:
             s (int): Number of copies to spawn
-            dimensions (np.ndarray): Length `s` array of dimensions for each
+            dimensions (Union[None, np.ndarray]): Length `s` array of dimensions for each
                 copy. Defaults to the current dimension.
 
         Returns:
@@ -174,7 +175,7 @@ class AbstractDiscreteDistribution(object):
     def _spawn(self, child_seed, dimension):
         raise MethodImplementationError(self, "_spawn")
 
-    def pdf(self, x):
+    def pdf(self, x: np.ndarray) -> np.ndarray:
         """Probability density function of the distribution this sampler mimics.
 
         Args:

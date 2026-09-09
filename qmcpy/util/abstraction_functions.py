@@ -2,7 +2,7 @@ import numpy as np
 from copy import copy
 
 
-def _univ_repr(qmc_object, abc_class_name, attributes):
+def _univ_repr(qmc_object: object, abc_class_name: str, attributes: list):
     """Clean way to represent qmc_object data.
 
     Args:

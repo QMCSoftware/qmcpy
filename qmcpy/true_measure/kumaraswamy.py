@@ -1,3 +1,7 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from typing import Union
 from .abstract_true_measure import AbstractTrueMeasure
 from ..util import DimensionError, ParameterError
 from ..discrete_distribution import DigitalNetB2
@@ -50,7 +54,7 @@ class Kumaraswamy(AbstractTrueMeasure):
                 [0.37253319, 0.45379743, 0.63366422]]])
     """
 
-    def __init__(self, sampler, a=2, b=2) -> None:
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], a: Union[float, np.ndarray] = 2, b: Union[float, np.ndarray] = 2) -> None:
         r"""Initialize a Kumaraswamy true measure.
 
         Args:

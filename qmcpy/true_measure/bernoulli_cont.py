@@ -1,3 +1,7 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from typing import Union
 from .abstract_true_measure import AbstractTrueMeasure
 from ..util import DimensionError
 from ..discrete_distribution import DigitalNetB2
@@ -37,7 +41,7 @@ class BernoulliCont(AbstractTrueMeasure):
                 [0.6345258 , 0.60241448, 0.84822692]]])
     """
 
-    def __init__(self, sampler, lam=1 / 2) -> None:
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], lam: Union[float, np.ndarray] = 1 / 2) -> None:
         r"""Initialize a BernoulliCont true measure.
 
         Args:

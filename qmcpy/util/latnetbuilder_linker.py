@@ -2,7 +2,7 @@ from ..util import NotYetImplemented
 import numpy as np
 
 
-def latnetbuilder_linker(lnb_dir: str = "./", out_dir: str = "./", fout_prefix: str = "lnb4qmcpy"):
+def latnetbuilder_linker(lnb_dir: str = "./", out_dir: str = "./", fout_prefix: str = "lnb4qmcpy") -> str:
     """Convert a LatNet Builder output directory into a QMCPy generating vector or matrix.
 
     Args:

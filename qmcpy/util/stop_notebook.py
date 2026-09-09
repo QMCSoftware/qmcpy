@@ -1,4 +1,4 @@
-def stop_notebook(query="Type 'yes' to continue running notebook"):
+def stop_notebook(query: str = "Type 'yes' to continue running notebook"):
     """Prompt at a notebook checkpoint and halt execution unless the user confirms.
 
     Placed between cells so that "Run All" pauses instead of running an

@@ -1,3 +1,8 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
 from .abstract_integrand import AbstractIntegrand
 from ..discrete_distribution import DigitalNetB2
 from ..true_measure import Uniform
@@ -54,7 +59,7 @@ class Genz(AbstractIntegrand):
         0.7200
     """
 
-    def __init__(self, sampler, kind_func: str = "OSCILLATORY", kind_coeff: int = 1) -> None:
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], kind_func: str = "OSCILLATORY", kind_coeff: int = 1) -> None:
         """Initialize a Genz integrand.
 
         Args:
@@ -98,7 +103,7 @@ class Genz(AbstractIntegrand):
         self.parameters = ["kind_func", "kind_coeff"]
         super(Genz, self).__init__(dimension_indv=(), dimension_comb=(), parallel=False)
 
-    def g_oscillatory(self, t):
+    def g_oscillatory(self, t: np.ndarray) -> np.ndarray:
         r"""Evaluate the oscillatory Genz function.
 
         Args:
@@ -109,7 +114,7 @@ class Genz(AbstractIntegrand):
         """
         return np.cos(-(self.c * t).sum(-1))
 
-    def g_corner_peak(self, t):
+    def g_corner_peak(self, t: np.ndarray) -> np.ndarray:
         r"""Evaluate the corner-peak Genz function.
 
         Args:

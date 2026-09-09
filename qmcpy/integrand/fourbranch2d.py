@@ -1,3 +1,8 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
 import numpy as np
 from .abstract_integrand import AbstractIntegrand
 from ..true_measure import Uniform
@@ -44,7 +49,7 @@ class FourBranch2d(AbstractIntegrand):
         -2.5042
     """
 
-    def __init__(self, sampler) -> None:
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure]) -> None:
         r"""Initialize a FourBranch2d integrand.
 
         Args:
@@ -62,7 +67,7 @@ class FourBranch2d(AbstractIntegrand):
             dimension_indv=(), dimension_comb=(), parallel=False
         )
 
-    def g(self, t):
+    def g(self, t: np.ndarray) -> np.ndarray:
         """Evaluate the four-branch function.
 
         Args:

@@ -1,3 +1,4 @@
+from typing import Union, Tuple, Callable
 from .abstract_discrete_distribution import AbstractLDDiscreteDistribution
 from ..util import ParameterError
 import numpy as np
@@ -218,12 +219,12 @@ class Kronecker(AbstractLDDiscreteDistribution):
     """
 
     def __init__(self,
-        dimension=1,
-        replications: int = None,
-        seed=None,
+        dimension: Union[int, np.ndarray] = 1,
+        replications: Union[None, int] = None,
+        seed: Union[None, int, np.random.SeedSequence] = None,
         randomize: str = "SHIFT",
-        generating_vector="CBC",
-        shift: np.ndarray = None,
+        generating_vector: Union[str, np.ndarray] = "CBC",
+        shift: Union[None, np.ndarray] = None,
         warn: bool = True,
     ) -> None:
         r"""Initialize a Kronecker discrete distribution.
@@ -234,7 +235,7 @@ class Kronecker(AbstractLDDiscreteDistribution):
                 - If an `int` is passed in, use generating vector components at indices 0,...,`dimension`-1.
                 - If an `np.ndarray` is passed in, use generating vector components at these indices.
 
-            replications (int): Number of independent randomizations.
+            replications (Union[None, int]): Number of independent randomizations.
             seed (Union[None, int, np.random.SeedSequence]): Seed the random
                 number generator for reproducibility.
             randomize (str): Options are
@@ -250,7 +251,7 @@ class Kronecker(AbstractLDDiscreteDistribution):
                 - `"SUZUKI"`: uses a deterministic construction $\boldsymbol{\alpha}_j = 2^{j/(d+1)}$.
                 - np.array: user-specified generating vector.
 
-            shift (np.ndarray): Shift vector $\boldsymbol{\delta}$. If
+            shift (Union[None, np.ndarray]): Shift vector $\boldsymbol{\delta}$. If
                 `randomize=True`, this is ignored and a random shift is
                 generated. Otherwise, a fixed shift is used.
             warn (bool): If False, suppress warnings during construction
@@ -340,16 +341,16 @@ class Kronecker(AbstractLDDiscreteDistribution):
         points = ((i[:,None] * self.gen_vec[:,None,:]) + self.shift[:, None, :]) % 1
         return points
 
-    def periodic_discrepancy(self, n, k_tilde=None, gamma=None):
+    def periodic_discrepancy(self, n: int, k_tilde: Union[None, Tuple[Callable, float]] = None, gamma: Union[None, np.ndarray] = None) -> np.ndarray:
         """Calculate the discrepancy for a periodic kernel.
 
         Args:
             n (int): The number of sample points.
-            k_tilde (Tuple[callable, float]): A `(function, integral)` pair
+            k_tilde (Union[None, Tuple[Callable, float]]): A `(function, integral)` pair
                 where the function takes the sample points and coordinate
                 weights and returns kernel values, and `integral` is that
                 function's integral over the unit hypercube.
-            gamma (np.ndarray): Coordinate weights, shape `(d,)`.
+            gamma (Union[None, np.ndarray]): Coordinate weights, shape `(d,)`.
 
         Returns:
             np.ndarray: The discrepancy.
@@ -367,15 +368,15 @@ class Kronecker(AbstractLDDiscreteDistribution):
         return np.sqrt(self._square_periodic_discrepancies(n, k_tilde, gamma))
 
 
-    def wssd_discrepancy(self, n, weights, k_tilde = None, gamma = None):
+    def wssd_discrepancy(self, n: int, weights: np.ndarray, k_tilde: Union[None, Tuple[Callable, float]] = None, gamma: Union[None, np.ndarray] = None) -> np.ndarray:
         """Calculate the weighted sum of squared discrepancies.
 
         Args:
             n (int): The number of sample points.
             weights (np.ndarray): Weights applied to each squared discrepancy
                 before summing.
-            k_tilde (Tuple[callable, float]): Same as in `periodic_discrepancy`.
-            gamma (np.ndarray): Coordinate weights, shape `(d,)`.
+            k_tilde (Union[None, Tuple[Callable, float]]): Same as in `periodic_discrepancy`.
+            gamma (Union[None, np.ndarray]): Coordinate weights, shape `(d,)`.
 
         Returns:
             np.ndarray: The weighted sum of squared discrepancies.

@@ -1,3 +1,4 @@
+from typing import Union
 from qmcpy.util import ParameterError,ParameterWarning
 import numpy as np
 from .halton import Halton
@@ -67,10 +68,10 @@ class Hammersley(DigitalNetAnyBases):
 
     def __init__(self,
                  dimension: int = 1,
-                 seed=None,
-                 t=None,
+                 seed: Union[None, int, np.random.SeedSequence] = None,
+                 t: Union[None, int] = None,
                  n_lim: int = 2**32,
-                 warn = True
+                 warn: bool = True
                 ) -> None:
         r"""Initialize a Hammersley discrete distribution.
 
@@ -90,6 +91,7 @@ class Hammersley(DigitalNetAnyBases):
 
             n_lim (int): Maximum number of points `n` this distribution can be
                 asked to generate.
+            warn (bool): If `False`, disable warnings when generating samples.
         """
 
         if not np.isscalar(dimension):

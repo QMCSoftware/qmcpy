@@ -1,3 +1,8 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
 from .abstract_integrand import AbstractIntegrand
 from ..discrete_distribution import DigitalNetB2
 from ..true_measure import Gaussian
@@ -44,7 +49,7 @@ class Keister(AbstractIntegrand):
         Computers in Physics, 10, pp. 119-122, 1996.
     """
 
-    def __init__(self, sampler) -> None:
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure]) -> None:
         r"""Initialize a Keister integrand.
 
         Args:
@@ -60,7 +65,7 @@ class Keister(AbstractIntegrand):
             dimension_indv=(), dimension_comb=(), parallel=False
         )
 
-    def g(self, t):
+    def g(self, t: np.ndarray) -> np.ndarray:
         r"""Evaluate the Keister function.
 
         Args:
@@ -78,7 +83,7 @@ class Keister(AbstractIntegrand):
         return Keister(sampler=sampler)
 
     @classmethod
-    def get_exact_value(cls, d: int):
+    def get_exact_value(cls, d: int) -> float:
         """Compute the exact analytic value of the Keister integral with
         dimension $d$.
 
@@ -101,7 +106,7 @@ class Keister(AbstractIntegrand):
         I = (2 * (np.pi ** (d / 2)) / gamma(d / 2)) * cosinteg[d - 1]
         return I
 
-    def exact_integ(self, *args, **kwargs):
+    def exact_integ(self, *args: tuple, **kwargs: dict) -> float:
         """Return the exact value of the Keister integral.
 
         Deprecated alias for :meth:`get_exact_value`.

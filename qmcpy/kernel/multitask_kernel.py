@@ -1,3 +1,9 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Union, Tuple, Callable
+if TYPE_CHECKING:
+    import torch
+
 from .abstract_kernel import AbstractKernel
 from .common_kernels import KernelGaussian
 from ..util.transforms import tf_identity, tf_exp_eps, tf_exp_eps_inv, insert_batch_dims
@@ -330,15 +336,15 @@ class KernelMultiTask(AbstractKernel):
         self,
         base_kernel: AbstractKernel,
         num_tasks: int,
-        factor=1.0,
-        diag=1.0,
-        shape_factor: list = None,
-        shape_diag: list = None,
-        tfs_factor=(tf_identity, tf_identity),
-        tfs_diag=(tf_exp_eps_inv, tf_exp_eps),
+        factor: Union[float, np.ndarray, torch.Tensor] = 1.0,
+        diag: Union[float, np.ndarray, torch.Tensor] = 1.0,
+        shape_factor: Union[None, list] = None,
+        shape_diag: Union[None, list] = None,
+        tfs_factor: Tuple[Callable, Callable] = (tf_identity, tf_identity),
+        tfs_diag: Tuple[Callable, Callable] = (tf_exp_eps_inv, tf_exp_eps),
         requires_grad_factor: bool = True,
         requires_grad_diag: bool = True,
-        rank_factor=1,
+        rank_factor: int = 1,
         method: str = "LOW RANK",
     ) -> None:
         r"""Initialize a KernelMultiTask kernel.
@@ -346,21 +352,24 @@ class KernelMultiTask(AbstractKernel):
         Args:
             base_kernel (AbstractKernel): $K_{\mathrm{base}}$.
             num_tasks (int): Number of tasks $T>1$.
-            factor (Union[np.ndarray, torch.Tensor]): Factor $\mathsf{F}$.
-            diag (Union[np.ndarray, torch.Tensor]): Diagonal parameter
+            factor (Union[float, np.ndarray, torch.Tensor]): Factor $\mathsf{F}$.
+            diag (Union[float, np.ndarray, torch.Tensor]): Diagonal parameter
                 $\boldsymbol{v}$.
-            shape_factor (list): Shape of `factor` when `np.isscalar(factor)`.
-            shape_diag (list): Shape of `diag` when `np.isscalar(diag)`.
-            tfs_factor (Tuple[callable,callable]): The first argument
+            shape_factor (Union[None, list]): Shape of `factor` when `np.isscalar(factor)`.
+            shape_diag (Union[None, list]): Shape of `diag` when `np.isscalar(diag)`.
+            tfs_factor (Tuple[Callable,Callable]): The first argument
                 transforms to the raw value to be optimized; the second applies
                 the inverse transform.
-            tfs_diag (Tuple[callable,callable]): The first argument transforms
+            tfs_diag (Tuple[Callable,Callable]): The first argument transforms
                 to the raw value to be optimized; the second applies the
                 inverse transform.
             requires_grad_factor (bool): If `True` and `torchify`, set
                 `requires_grad=True` for `factor`.
             requires_grad_diag (bool): If `True` and `torchify`, set
                 `requires_grad=True` for `diag`.
+            rank_factor (int): Rank of the low-rank `factor` matrix when
+                `method="LOW RANK"` and `shape_factor` is not given; must
+                satisfy `0 <= rank_factor <= num_tasks`.
             method (str): `"LOW RANK"` or "CHOLESKY"
         """
         if not (isinstance(base_kernel, AbstractKernel)):
@@ -523,7 +532,7 @@ class KernelMultiTask(AbstractKernel):
         kmat_x = self.base_kernel.__call__(x0, x1, beta0, beta1, c)
         return self._parsed__call__(task0, task1, kmat_x)
 
-    def single_integral_01d(self, task0, task1, x):
+    def single_integral_01d(self, task0: Union[int, np.ndarray, torch.Tensor], task1: Union[int, np.ndarray, torch.Tensor], x: Union[np.ndarray, torch.Tensor]) -> Union[np.ndarray, torch.Tensor]:
         r"""Evaluate the integral of the kernel over the unit cube
 
         $$\tilde{K}((i_0,\boldsymbol{x}),i_1) = \int_{[0,1]^d}
@@ -544,7 +553,7 @@ class KernelMultiTask(AbstractKernel):
         kint_x = self.base_kernel.single_integral_01d(x)
         return self._parsed__call__(task0, task1, kint_x)
 
-    def double_integral_01d(self, task0, task1):
+    def double_integral_01d(self, task0: Union[int, np.ndarray, torch.Tensor], task1: Union[int, np.ndarray, torch.Tensor]) -> Union[np.ndarray, torch.Tensor]:
         r"""Evaluate the integral of the kernel over the unit cube
 
         $$\tilde{K}(i_0,i_1) = \int_{[0,1]^d} \int_{[0,1]^d}

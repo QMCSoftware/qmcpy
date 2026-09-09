@@ -1,3 +1,7 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from typing import Union
 from .abstract_true_measure import AbstractTrueMeasure
 from ..util import DimensionError, ParameterError
 from ..discrete_distribution import DigitalNetB2
@@ -49,7 +53,7 @@ class Uniform(AbstractTrueMeasure):
                 [1.37943573, 1.10241448, 1.13481488]]])
     """
 
-    def __init__(self, sampler, lower_bound=0, upper_bound=1) -> None:
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], lower_bound: Union[float, np.ndarray] = 0, upper_bound: Union[float, np.ndarray] = 1) -> None:
         r"""Initialize a Uniform true measure.
 
         Args:

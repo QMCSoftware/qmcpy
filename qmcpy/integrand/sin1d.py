@@ -1,3 +1,8 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
 import numpy as np
 from .abstract_integrand import AbstractIntegrand
 from ..true_measure import Uniform
@@ -39,7 +44,7 @@ class Sin1d(AbstractIntegrand):
         7.0800e-04
     """
 
-    def __init__(self, sampler, k: float = 1) -> None:
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], k: float = 1) -> None:
         r"""Initialize a Sin1d integrand.
 
         Args:
@@ -62,7 +67,7 @@ class Sin1d(AbstractIntegrand):
             dimension_indv=(), dimension_comb=(), parallel=False
         )
 
-    def g(self, t):
+    def g(self, t: np.ndarray) -> np.ndarray:
         r"""Evaluate the one-dimensional sine function.
 
         Args:

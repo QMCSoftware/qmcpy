@@ -86,6 +86,8 @@ class MaternGP(Gaussian):
             points (np.ndarray): The positions of points on a metric space. The
                 array should have shape $(d,k)$ where $d$ is the dimension of
                 the sampler and $k$ is the latent dimension.
+            length_scale (Union[float, np.ndarray]): Determines "peakiness", or
+                how correlated two points are based on their distance.
             nu (float): The "smoothness" of the MaternGP function, e.g.,
 
                 - $\nu = 1/2$ is equivalent to the absolute exponential kernel,
@@ -95,8 +97,6 @@ class MaternGP(Gaussian):
 
                 Note that when $\nu \notin \{1/2, 3/2, 5/2, \infty \}$ the
                 kernel is around $10$ times slower to evaluate.
-            length_scale (Union[float, np.ndarray]): Determines "peakiness", or
-                how correlated two points are based on their distance.
             variance (float): Global scaling factor of the kernel. Retrievable
                 after construction via the `kernel_variance` property. (The
                 inherited `variance` attribute is the vector of marginal

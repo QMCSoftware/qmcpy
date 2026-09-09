@@ -1,3 +1,9 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Union
+if TYPE_CHECKING:
+    import torch
+
 import numpy as np
 
 
@@ -10,13 +16,13 @@ class Polynomial:
     >>> assert np.allclose(y,y_true,atol=1e-12)
     """
 
-    def __init__(self, coeffs) -> None:
+    def __init__(self, coeffs: Union[list, np.ndarray, torch.Tensor]) -> None:
         """Polynomial evaluation with Horner's rule
 
         Args:
-            coeffs (list or np.ndarray or torch.Tensor): vector of coefficients
-            e.g. coeffs = [a, b, c] corresponds to the quadratic polynomial
-            a*x**2 + b*x + c
+            coeffs (Union[list, np.ndarray, torch.Tensor]): Vector of
+                coefficients, e.g., `coeffs = [a, b, c]` corresponds to the
+                quadratic polynomial `a*x**2 + b*x + c`.
         """
         if not (isinstance(coeffs, list)):
             raise AssertionError
@@ -54,7 +60,7 @@ BERNOULLIPOLYSDICT = {
 }
 
 
-def bernoulli_poly(n: int, x):
+def bernoulli_poly(n: int, x: Union[np.ndarray, torch.Tensor]) -> Union[np.ndarray, torch.Tensor]:
     r"""$n^\text{th}$ Bernoulli polynomial
 
     Examples:

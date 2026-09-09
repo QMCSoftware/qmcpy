@@ -20,7 +20,7 @@ def _parse_ft_input(x):
     return x, shape, d, n, n // 2
 
 
-def fftbr_qmctoolscl(x: np.ndarray):
+def fftbr_qmctoolscl(x: np.ndarray) -> np.ndarray:
     r"""QMCToolsCL implementation of the 1 dimensional Bit-Reversed-Order
     (BRO) Fast Fourier Transform (FFT) along the last dimension. Requires the
     last dimension of x is already in BRO, so we can skip the first step of the
@@ -55,7 +55,7 @@ def fftbr_qmctoolscl(x: np.ndarray):
     return xc.reshape(shape)
 
 
-def ifftbr_qmctoolscl(x: np.ndarray):
+def ifftbr_qmctoolscl(x: np.ndarray) -> np.ndarray:
     r"""QMCToolsCL implementation of the 1 dimensional Bit-Reversed-Order
     (BRO) Inverse Fast Fourier Transform (IFFT) along the last dimension.
     Outputs an array in bit-reversed order, so we can skip the last step of the
@@ -90,7 +90,7 @@ def ifftbr_qmctoolscl(x: np.ndarray):
     return xc.reshape(shape)
 
 
-def fwht_qmctoolscl(x: np.ndarray):
+def fwht_qmctoolscl(x: np.ndarray) -> np.ndarray:
     r"""QMCToolsCL implementation of the 1 dimensional Fast Walsh Hadamard
     Transform (FWHT) along the last dimension. Requires the size of the last
     dimension is a power of 2.

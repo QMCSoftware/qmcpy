@@ -1,3 +1,9 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Union, Tuple, Callable
+if TYPE_CHECKING:
+    import torch
+
 from .abstract_kernel import AbstractKernelScaleLengthscales
 from ..discrete_distribution import DigitalNetB2
 from ..util.transforms import tf_exp_eps, tf_exp_eps_inv, tf_identity
@@ -16,7 +22,7 @@ class AbstractKernelGaussianSE(AbstractKernelScaleLengthscales):
 
     AUTOGRADKERNEL = True
 
-    def parsed_single_integral_01d(self, x, batch_params):
+    def parsed_single_integral_01d(self, x: Union[np.ndarray, torch.Tensor], batch_params: dict) -> Union[np.ndarray, torch.Tensor]:
         """Analytic single integral of the Gaussian/SE-family kernel over `[0,1]^d`.
 
         Args:
@@ -39,7 +45,7 @@ class AbstractKernelGaussianSE(AbstractKernelScaleLengthscales):
         )
         return kint
 
-    def double_integral_01d(self):
+    def double_integral_01d(self) -> Union[np.ndarray, torch.Tensor]:
         """Analytic double integral of the Gaussian/SE-family kernel over `[0,1]^d x [0,1]^d`.
 
         Returns:
@@ -483,43 +489,43 @@ class KernelRationalQuadratic(AbstractKernelScaleLengthscales):
     def __init__(
         self,
         d: int,
-        scale=1.0,
-        lengthscales=1.0,
-        alpha=1.0,
-        shape_scale: list = None,
-        shape_lengthscales: list = None,
-        shape_alpha: list = None,
-        tfs_scale=(tf_exp_eps_inv, tf_exp_eps),
-        tfs_lengthscales=(tf_exp_eps_inv, tf_exp_eps),
-        tfs_alpha=(tf_exp_eps_inv, tf_exp_eps),
+        scale: Union[float, np.ndarray, torch.Tensor] = 1.0,
+        lengthscales: Union[float, np.ndarray, torch.Tensor] = 1.0,
+        alpha: Union[float, np.ndarray, torch.Tensor] = 1.0,
+        shape_scale: Union[None, list] = None,
+        shape_lengthscales: Union[None, list] = None,
+        shape_alpha: Union[None, list] = None,
+        tfs_scale: Tuple[Callable, Callable] = (tf_exp_eps_inv, tf_exp_eps),
+        tfs_lengthscales: Tuple[Callable, Callable] = (tf_exp_eps_inv, tf_exp_eps),
+        tfs_alpha: Tuple[Callable, Callable] = (tf_exp_eps_inv, tf_exp_eps),
         torchify: bool = False,
         requires_grad_scale: bool = True,
         requires_grad_lengthscales: bool = True,
         requires_grad_alpha: bool = True,
-        device="cpu",
+        device: Union[str, torch.device] = "cpu",
         compile_call: bool = False,
-        compile_call_kwargs: dict = None,
+        compile_call_kwargs: Union[None, dict] = None,
     ) -> None:
         r"""Initialize a KernelRationalQuadratic kernel.
 
         Args:
             d (int): Dimension.
-            scale (Union[np.ndarray, torch.Tensor]): Scaling factor $S$.
-            lengthscales (Union[np.ndarray, torch.Tensor]): Lengthscales
+            scale (Union[float, np.ndarray, torch.Tensor]): Scaling factor $S$.
+            lengthscales (Union[float, np.ndarray, torch.Tensor]): Lengthscales
                 $\boldsymbol{\gamma}$.
-            alpha (Union[np.ndarray, torch.Tensor]): Scale mixture parameter
+            alpha (Union[float, np.ndarray, torch.Tensor]): Scale mixture parameter
                 $\alpha$.
-            shape_scale (list): Shape of `scale` when `np.isscalar(scale)`.
-            shape_lengthscales (list): Shape of `lengthscales` when
+            shape_scale (Union[None, list]): Shape of `scale` when `np.isscalar(scale)`.
+            shape_lengthscales (Union[None, list]): Shape of `lengthscales` when
                 `np.isscalar(lengthscales)`
-            shape_alpha (list): Shape of `alpha` when `np.isscalar(alpha)`
-            tfs_scale (Tuple[callable,callable]): The first argument transforms
+            shape_alpha (Union[None, list]): Shape of `alpha` when `np.isscalar(alpha)`
+            tfs_scale (Tuple[Callable,Callable]): The first argument transforms
                 to the raw value to be optimized; the second applies the
                 inverse transform.
-            tfs_lengthscales (Tuple[callable,callable]): The first argument
+            tfs_lengthscales (Tuple[Callable,Callable]): The first argument
                 transforms to the raw value to be optimized; the second applies
                 the inverse transform.
-            tfs_alpha (Tuple[callable,callable]): The first argument transforms
+            tfs_alpha (Tuple[Callable,Callable]): The first argument transforms
                 to the raw value to be optimized; the second applies the
                 inverse transform.
             torchify (bool): If `True`, use the `torch` backend. Set to `True`
@@ -531,10 +537,10 @@ class KernelRationalQuadratic(AbstractKernelScaleLengthscales):
                 `requires_grad=True` for `lengthscales`.
             requires_grad_alpha (bool): If `True` and `torchify`, set
                 `requires_grad=True` for `alpha`.
-            device (torch.device): If `torchify`, put things onto this device.
+            device (Union[str, torch.device]): If `torchify`, put things onto this device.
             compile_call (bool): If `True`, `torch.compile` the
                 `parsed___call__` method.
-            compile_call_kwargs (dict): When `compile_call` is `True`, pass
+            compile_call_kwargs (Union[None, dict]): When `compile_call` is `True`, pass
                 these keyword arguments to `torch.compile`.
         """
         if shape_scale is None:

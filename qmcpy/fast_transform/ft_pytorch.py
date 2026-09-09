@@ -1,9 +1,10 @@
+from typing import Union
 import torch
 import numpy as np
 import itertools
 
 
-def fftbr_torch(x: torch.Tensor):
+def fftbr_torch(x: torch.Tensor) -> torch.Tensor:
     r"""Torch implementation of the 1 dimensional Bit-Reversed-Order (BRO)
     Fast Fourier Transform (FFT) along the last dimension. Requires the last
     dimension of x is already in BRO, so we can skip the first step of the
@@ -55,7 +56,7 @@ def fftbr_torch(x: torch.Tensor):
     return torch.fft.fft(xr, norm="ortho")
 
 
-def ifftbr_torch(x: torch.Tensor):
+def ifftbr_torch(x: torch.Tensor) -> torch.Tensor:
     r"""Torch implementation of the 1 dimensional Bit-Reversed-Order (BRO)
     Inverse Fast Fourier Transform (IFFT) along the last dimension. Outputs an
     array in bit-reversed order, so we can skip the last step of the
@@ -139,7 +140,7 @@ class _FWHTB2Ortho(torch.autograd.Function):
         return _fwht_torch(dx)
 
 
-def fwht_torch(x: torch.Tensor):
+def fwht_torch(x: torch.Tensor) -> torch.Tensor:
     r"""Torch implementation of the 1 dimensional Fast Walsh Hadamard
     Transform (FWHT) along the last dimension. Requires the size of the last
     dimension is a power of 2.
@@ -173,7 +174,7 @@ def fwht_torch(x: torch.Tensor):
     return _FWHTB2Ortho.apply(x)
 
 
-def omega_fwht_torch(m: int, device=None):
+def omega_fwht_torch(m: int, device: Union[None, torch.device] = None) -> np.ndarray:
     r"""Torch implementation useful when efficiently updating FWHT values
     after doubling the sample size.
 
@@ -193,6 +194,8 @@ def omega_fwht_torch(m: int, device=None):
 
     Args:
         m (int): Size $2^m$ output.
+        device (Union[None, torch.device]): Device to place the output tensor on.
+            Defaults to CPU.
 
     Returns:
         np.ndarray: $\left(1\right)_{k=0}^{2^m}$.
@@ -202,7 +205,7 @@ def omega_fwht_torch(m: int, device=None):
     return torch.ones(2**m, device=device)
 
 
-def omega_fftbr_torch(m: int, device=None):
+def omega_fftbr_torch(m: int, device: Union[None, torch.device] = None) -> np.ndarray:
     r"""Torch implementation useful when efficiently updating FFT values after
     doubling the sample size.
 
@@ -222,6 +225,8 @@ def omega_fftbr_torch(m: int, device=None):
 
     Args:
         m (int): Size $2^m$ output.
+        device (Union[None, torch.device]): Device to place the output tensor on.
+            Defaults to CPU.
 
     Returns:
         np.ndarray: $\left(e^{- \pi \mathrm{i} k / 2^m}\right)_{k=0}^{2^m}$.

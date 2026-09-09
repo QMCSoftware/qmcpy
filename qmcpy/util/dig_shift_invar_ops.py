@@ -1,9 +1,15 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Union
+if TYPE_CHECKING:
+    import torch
+
 import numpy as np
 from .exceptions_warnings import ParameterError
 from .torch_numpy_ops import get_npt
 
 
-def k4sumterm(x, t: int, cutoff=1e-8):
+def k4sumterm(x: Union[np.ndarray, torch.Tensor], t: int, cutoff: float = 1e-8) -> Union[np.ndarray, torch.Tensor]:
     r"""$$K_4(x) = \sum_{a=0}^{t-1} \frac{x_a}{2^{3a}}$$
 
     where $x_a$ is the bit at index $a$ in the binary expansion of $x$ e.g. $x
@@ -30,8 +36,10 @@ def k4sumterm(x, t: int, cutoff=1e-8):
                 [-1.14, -0.89, -0.89, -0.86]])
 
     Args:
-        x (Union[np.ndarray torch.Tensor]): Integer arrays.
+        x (Union[np.ndarray, torch.Tensor]): Integer arrays.
         t (int): Number of bits in each integer.
+        cutoff (float): Stop accumulating terms once `1/2**(3*a)` falls
+            below this threshold.
 
     Returns:
         Union[np.ndarray, torch.Tensor]: The $K_4$ sum term.
@@ -64,7 +72,7 @@ WEIGHTEDWALSHFUNCSZEROS = {
 }
 
 
-def weighted_walsh_funcs(alpha: int, xb, t: int):
+def weighted_walsh_funcs(alpha: int, xb: Union[np.ndarray, torch.Tensor], t: int) -> Union[np.ndarray, torch.Tensor]:
     r"""Weighted walsh functions
 
     $$\sum_{k=0}^\infty \mathrm{wal}_k(x) 2^{-\mu_\alpha(k)}$$
@@ -157,7 +165,7 @@ def weighted_walsh_funcs(alpha: int, xb, t: int):
     return y
 
 
-def to_bin(x, t: int):
+def to_bin(x: Union[np.ndarray, torch.Tensor], t: int) -> Union[np.ndarray, torch.Tensor]:
     r"""Convert floating point representations of digital net samples in base
     $b=2$ to binary representations.
 
@@ -208,7 +216,7 @@ def to_bin(x, t: int):
             raise ParameterError("x.dtype must be float or int, got %s" % str(x.dtype))
 
 
-def to_float(x, t: int):
+def to_float(x: Union[np.ndarray, torch.Tensor], t: int) -> Union[np.ndarray, torch.Tensor]:
     r"""Convert binary representations of digital net samples in base $b=2$ to
     floating point representations.
 
@@ -250,7 +258,7 @@ def to_float(x, t: int):
             raise ParameterError("x.dtype must be torch.int64, got %s" % str(x.dtype))
 
 
-def bin_from_numpy_to_torch(xb):
+def bin_from_numpy_to_torch(xb: Union[np.ndarray]) -> Union[torch.Tensor]:
     r"""Convert `numpy.uint64` to `torch.int64`, useful for converting binary
     samples from `DigitalNetB2` to torch representations.
 

@@ -125,29 +125,69 @@ class FileResult:
     changed: bool
 
 
+def _is_type_checking_test(test: ast.expr) -> bool:
+    """True for an `if` test of `TYPE_CHECKING` or `typing.TYPE_CHECKING`.
+
+    Names bound only under this guard are never executed at runtime, so an
+    annotation that references them is safe exactly when the module also
+    enables postponed evaluation (`from __future__ import annotations`) --
+    the annotation is then stored as an unevaluated string.
+    """
+    if isinstance(test, ast.Name):
+        return test.id == "TYPE_CHECKING"
+    return isinstance(test, ast.Attribute) and test.attr == "TYPE_CHECKING"
+
+
+def _collect_import_names(node: ast.stmt, names: set[str]) -> None:
+    """Add the names one import-like or binding statement introduces."""
+    if isinstance(node, ast.Import):
+        for alias in node.names:
+            names.add(alias.asname or alias.name.split(".")[0])
+    elif isinstance(node, ast.ImportFrom):
+        for alias in node.names:
+            if alias.name != "*":
+                names.add(alias.asname or alias.name)
+    elif isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+        names.add(node.name)
+    elif isinstance(node, (ast.Assign, ast.AnnAssign, ast.NamedExpr)):
+        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+        for target in targets:
+            if isinstance(target, ast.Name):
+                names.add(target.id)
+
+
+def _has_future_annotations(tree: ast.Module) -> bool:
+    """True if the module enables postponed evaluation of annotations."""
+    return any(
+        isinstance(node, ast.ImportFrom)
+        and node.module == "__future__"
+        and any(alias.name == "annotations" for alias in node.names)
+        for node in tree.body
+    )
+
+
 def _module_names(tree: ast.Module, before_line: int) -> set[str]:
-    """Collect module names bound before a callable's definition."""
+    """Collect module names bound before a callable's definition.
+
+    Names introduced only inside an `if TYPE_CHECKING:` guard are included
+    too, but only when the module also has `from __future__ import
+    annotations`: such names are unavailable at runtime, and without
+    postponed evaluation a signature referencing one would raise NameError
+    the moment the function is defined.
+    """
     names = set(BUILTIN_TYPE_NAMES)
+    include_type_checking = _has_future_annotations(tree)
     for node in tree.body:
         if getattr(node, "lineno", before_line) >= before_line:
             continue
-        if isinstance(node, ast.Import):
-            for alias in node.names:
-                names.add(alias.asname or alias.name.split(".")[0])
-        elif isinstance(node, ast.ImportFrom):
-            for alias in node.names:
-                if alias.name != "*":
-                    names.add(alias.asname or alias.name)
-        elif isinstance(
-            node,
-            (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef),
+        _collect_import_names(node, names)
+        if (
+            include_type_checking
+            and isinstance(node, ast.If)
+            and _is_type_checking_test(node.test)
         ):
-            names.add(node.name)
-        elif isinstance(node, (ast.Assign, ast.AnnAssign, ast.NamedExpr)):
-            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-            for target in targets:
-                if isinstance(target, ast.Name):
-                    names.add(target.id)
+            for sub in node.body:
+                _collect_import_names(sub, names)
     return names
 
 

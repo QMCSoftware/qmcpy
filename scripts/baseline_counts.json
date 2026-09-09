@@ -1,5 +1,5 @@
 {
   "check_docstring": 0,
-  "pydoclint": 151,
+  "pydoclint": 101,
   "unsafe_annotations": 109
 }

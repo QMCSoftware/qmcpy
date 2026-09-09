@@ -1,3 +1,5 @@
+from ..integrand.abstract_integrand import AbstractIntegrand
+from typing import Union, Callable
 from .abstract_stopping_criterion import AbstractStoppingCriterion
 from ..util.data import Data
 
@@ -159,24 +161,24 @@ class CubMCCLTVec(AbstractStoppingCriterion):
 
     def __init__(
         self,
-        integrand,
-        abs_tol: np.ndarray = 1e-2,
-        rel_tol: np.ndarray = 0.0,
-        n_init: int = 256.0,
+        integrand: AbstractIntegrand,
+        abs_tol: Union[float, np.ndarray] = 1e-2,
+        rel_tol: Union[float, np.ndarray] = 0.0,
+        n_init: int = 256,
         n_limit: int = 2**30,
-        error_fun="EITHER",
+        error_fun: Union[str, Callable] = "EITHER",
         inflate: float = 1,
-        alpha: np.ndarray = 0.01,
+        alpha: Union[float, np.ndarray] = 0.01,
     ) -> None:
         r"""Initialize a CubMCCLTVec stopping criterion.
 
         Args:
             integrand (AbstractIntegrand): The integrand.
-            abs_tol (np.ndarray): Absolute error tolerance.
-            rel_tol (np.ndarray): Relative error tolerance.
+            abs_tol (Union[float, np.ndarray]): Absolute error tolerance.
+            rel_tol (Union[float, np.ndarray]): Relative error tolerance.
             n_init (int): Initial number of samples.
             n_limit (int): Maximum number of samples.
-            error_fun (Union[str, callable]): Function mapping the approximate
+            error_fun (Union[str, Callable]): Function mapping the approximate
                 solution, absolute error tolerance, and relative error
                 tolerance to the current error bound.
 
@@ -192,7 +194,7 @@ class CubMCCLTVec(AbstractStoppingCriterion):
                     ```
             inflate (float): Inflation factor $\geq 1$ to multiply by the
                 variance estimate to make it more conservative.
-            alpha (np.ndarray): Uncertainty level in $(0,1)$.
+            alpha (Union[float, np.ndarray]): Uncertainty level in $(0,1)$.
         """
         self.parameters = [
             "inflate",
@@ -264,7 +266,7 @@ class CubMCCLTVec(AbstractStoppingCriterion):
         self.integrand.discrete_distrib = self.discrete_distrib
         self.integrand.true_measure.discrete_distrib = self.discrete_distrib
 
-    def integrate(self, resume=None):
+    def integrate(self, resume: Union[None, Data] = None) -> tuple:
         """Determine the samples needed to satisfy the target tolerance.
 
         Doubles the sample count each iteration and forms a CLT-based
@@ -273,7 +275,7 @@ class CubMCCLTVec(AbstractStoppingCriterion):
         within tolerance or `self.n_limit` would be exceeded.
 
         Args:
-            resume (Data): Existing integration state to resume from, if
+            resume (Union[None, Data]): Existing integration state to resume from, if
                 supported. Defaults to None.
 
         Returns:
@@ -374,15 +376,15 @@ class CubMCCLTVec(AbstractStoppingCriterion):
         trace.finalize()
         return data.solution, data
 
-    def set_tolerance(self, abs_tol=None, rel_tol=None, rmse_tol=None):
+    def set_tolerance(self, abs_tol: Union[None, float] = None, rel_tol: Union[None, float] = None, rmse_tol: Union[None, float] = None):
         """Update the stopping criterion's target tolerance.
 
         Args:
-            abs_tol (float): Absolute error tolerance, broadcast to
+            abs_tol (Union[None, float]): Absolute error tolerance, broadcast to
                 `self.abs_tols` with shape `integrand.d_comb`.
-            rel_tol (float): Relative error tolerance, broadcast to
+            rel_tol (Union[None, float]): Relative error tolerance, broadcast to
                 `self.rel_tols` with shape `integrand.d_comb`.
-            rmse_tol (float): Unsupported; must be `None`.
+            rmse_tol (Union[None, float]): Unsupported; must be `None`.
 
         Raises:
             AssertionError: If `rmse_tol` is supplied.

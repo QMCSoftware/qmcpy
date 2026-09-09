@@ -29,7 +29,7 @@ class TriangularDistribution:
         self._b = loc + scale
         self._m = loc + c * scale
 
-    def pdf(self, x):
+    def pdf(self, x: np.ndarray) -> np.ndarray:
         """Probability density function of the triangular distribution.
 
         Args:
@@ -49,7 +49,7 @@ class TriangularDistribution:
         out[right] = 2.0 * (b - x[right]) / ((b - a) * (b - m))
         return out
 
-    def ppf(self, u):
+    def ppf(self, u: np.ndarray) -> np.ndarray:
         """Percent point function (inverse CDF) of the triangular distribution.
 
         Args:

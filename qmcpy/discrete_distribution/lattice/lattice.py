@@ -1,3 +1,4 @@
+from typing import Union
 from ..abstract_discrete_distribution import AbstractLDDiscreteDistribution
 from ...util import ParameterError, ParameterWarning
 import qmctoolscl
@@ -140,13 +141,13 @@ class Lattice(AbstractLDDiscreteDistribution):
 
     def __init__(
         self,
-        dimension=1,
-        replications: int = None,
-        seed=None,
+        dimension: Union[int, np.ndarray] = 1,
+        replications: Union[None, int] = None,
+        seed: Union[None, int, np.random.SeedSequence] = None,
         randomize: str = "SHIFT",
-        generating_vector="kuo.lattice-33002-1024-1048576.9125.txt",
+        generating_vector: Union[str, np.ndarray, int] = "kuo.lattice-33002-1024-1048576.9125.txt",
         order: str = "RADICAL INVERSE",
-        m_max: int = None,
+        m_max: Union[None, int] = None,
     ) -> None:
         r"""Initialize a Lattice discrete distribution.
 
@@ -156,7 +157,7 @@ class Lattice(AbstractLDDiscreteDistribution):
                 - If an `int` is passed in, use generating vector components at indices 0,...,`dimension`-1.
                 - If an `np.ndarray` is passed in, use generating vector components at these indices.
 
-            replications (int): Number of independent randomizations.
+            replications (Union[None, int]): Number of independent randomizations.
             seed (Union[None, int, np.random.SeedSequence]): Seed the random
                 number generator for reproducibility.
             randomize (str): Options are
@@ -178,7 +179,7 @@ class Lattice(AbstractLDDiscreteDistribution):
 
             order (str): `'LINEAR'`, `'RADICAL INVERSE'`, or `'GRAY'` ordering.
                 See the doctest example above.
-            m_max (int): $2^{m_\mathrm{max}}$ is the maximum number of
+            m_max (Union[None, int]): $2^{m_\mathrm{max}}$ is the maximum number of
                 supported samples.
         """
         self.parameters = ["randomize", "gen_vec_source", "order", "n_limit"]
@@ -371,7 +372,7 @@ class Lattice(AbstractLDDiscreteDistribution):
         x = np.outer(y, self.gen_vec) % 1
         return x
 
-    def calculate_y(self, m_low, m_high, y):
+    def calculate_y(self, m_low: int, m_high: int, y: np.ndarray) -> np.ndarray:
         """Refine 1D interval midpoints from level `m_low` up to `m_high`.
 
         At each level, interleaves the current midpoints `y` with the new

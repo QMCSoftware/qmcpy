@@ -1,11 +1,18 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Union
+import types
 import numpy as np
 import scipy.special
 from .torch_numpy_ops import get_npt
 
+if TYPE_CHECKING:
+    import torch
+
 EPS64 = float(np.finfo(np.float64).eps)
 
 
-def insert_batch_dims(param, ndims, k):
+def insert_batch_dims(param: Union[np.ndarray, torch.Tensor], ndims: int, k: int) -> Union[np.ndarray, torch.Tensor]:
     """Insert singleton dimensions into a parameter so it broadcasts against batched inputs.
 
     Args:
@@ -21,7 +28,7 @@ def insert_batch_dims(param, ndims, k):
     return param.reshape(list(param.shape[:k]) + ones + list(param.shape[k:]))
 
 
-def tf_exp(x):
+def tf_exp(x: Union[np.ndarray, torch.Tensor]) -> Union[np.ndarray, torch.Tensor]:
     """Exponential transform.
 
     Args:
@@ -34,7 +41,7 @@ def tf_exp(x):
     return npt.exp(x)
 
 
-def tf_exp_inv(x):
+def tf_exp_inv(x: Union[np.ndarray, torch.Tensor]) -> Union[np.ndarray, torch.Tensor]:
     """Inverse of the exponential transform.
 
     Args:
@@ -47,7 +54,7 @@ def tf_exp_inv(x):
     return npt.log(x)
 
 
-def tf_exp_eps(x):
+def tf_exp_eps(x: Union[np.ndarray, torch.Tensor]) -> Union[np.ndarray, torch.Tensor]:
     """Exponential transform offset by machine epsilon.
 
     Args:
@@ -59,7 +66,7 @@ def tf_exp_eps(x):
     return tf_exp(x) + EPS64
 
 
-def tf_exp_eps_inv(x):
+def tf_exp_eps_inv(x: Union[np.ndarray, torch.Tensor]) -> Union[np.ndarray, torch.Tensor]:
     """Inverse of the epsilon-offset exponential transform.
 
     Args:
@@ -71,7 +78,7 @@ def tf_exp_eps_inv(x):
     return tf_exp_inv(x - EPS64)
 
 
-def tf_square(x):
+def tf_square(x: Union[np.ndarray, torch.Tensor]) -> Union[np.ndarray, torch.Tensor]:
     """Square transform.
 
     Args:
@@ -83,7 +90,7 @@ def tf_square(x):
     return x**2
 
 
-def tf_square_inv(x):
+def tf_square_inv(x: Union[np.ndarray, torch.Tensor]) -> Union[np.ndarray, torch.Tensor]:
     """Inverse of the square transform.
 
     Args:
@@ -96,7 +103,7 @@ def tf_square_inv(x):
     return npt.sqrt(x)
 
 
-def tf_square_eps(x):
+def tf_square_eps(x: Union[np.ndarray, torch.Tensor]) -> Union[np.ndarray, torch.Tensor]:
     """Square transform offset by machine epsilon.
 
     Args:
@@ -108,7 +115,7 @@ def tf_square_eps(x):
     return tf_square(x) + EPS64
 
 
-def tf_square_eps_inv(x):
+def tf_square_eps_inv(x: Union[np.ndarray, torch.Tensor]) -> Union[np.ndarray, torch.Tensor]:
     """Inverse of the epsilon-offset square transform.
 
     Args:
@@ -120,7 +127,7 @@ def tf_square_eps_inv(x):
     return tf_square_inv(x - EPS64)
 
 
-def tf_explinear(x):
+def tf_explinear(x: Union[np.ndarray, torch.Tensor]) -> Union[np.ndarray, torch.Tensor]:
     """Exponential-linear (softplus) transform.
 
     Behaves like ``exp(x)`` for small ``x`` and like ``x`` for large ``x``, so it
@@ -139,7 +146,7 @@ def tf_explinear(x):
         return -npt.nn.functional.logsigmoid(-x)
 
 
-def tf_explinear_inv(x):
+def tf_explinear_inv(x: Union[np.ndarray, torch.Tensor]) -> Union[np.ndarray, torch.Tensor]:
     """Inverse of the exponential-linear transform.
 
     Args:
@@ -153,7 +160,7 @@ def tf_explinear_inv(x):
     return npt.where(x < 34, npt.log(npt.expm1(x)), x)
 
 
-def tf_explinear_eps(x):
+def tf_explinear_eps(x: Union[np.ndarray, torch.Tensor]) -> Union[np.ndarray, torch.Tensor]:
     """Exponential-linear transform offset by machine epsilon.
 
     Args:
@@ -165,7 +172,7 @@ def tf_explinear_eps(x):
     return tf_explinear(x) + EPS64
 
 
-def tf_explinear_eps_inv(x):
+def tf_explinear_eps_inv(x: Union[np.ndarray, torch.Tensor]) -> Union[np.ndarray, torch.Tensor]:
     """Inverse of the epsilon-offset exponential-linear transform.
 
     Args:
@@ -177,7 +184,7 @@ def tf_explinear_eps_inv(x):
     return tf_explinear_inv(x - EPS64)
 
 
-def tf_identity(x):
+def tf_identity(x: Union[np.ndarray, torch.Tensor]) -> Union[np.ndarray, torch.Tensor]:
     """Identity transform.
 
     Args:
@@ -190,17 +197,17 @@ def tf_identity(x):
 
 
 def parse_assign_param(
-    pname,
-    param,
-    shape_param,
-    requires_grad_param,
-    tfs_param,
-    endsize_ops,
-    constraints,
-    torchify,
-    npt,
-    nptkwargs,
-):
+    pname: str,
+    param: Union[float, np.ndarray, torch.Tensor],
+    shape_param: list,
+    requires_grad_param: bool,
+    tfs_param: tuple,
+    endsize_ops: list,
+    constraints: list,
+    torchify: bool,
+    npt: types.ModuleType,
+    nptkwargs: dict,
+) -> tuple:
     """Validate and normalize one kernel parameter, returning it in array form.
 
     A scalar is broadcast to ``shape_param``; an array-like is converted to the
@@ -215,7 +222,7 @@ def parse_assign_param(
         endsize_ops (list): Permitted sizes for the trailing dimension.
         constraints (list): Constraints the parameter must satisfy.
         torchify (bool): Return a ``torch.Tensor`` rather than an ``np.ndarray``.
-        npt (module): Array backend, either ``numpy`` or ``torch``.
+        npt (types.ModuleType): Array backend, either ``numpy`` or ``torch``.
         nptkwargs (dict): Backend keyword arguments such as ``dtype`` and ``device``.
 
     Returns:

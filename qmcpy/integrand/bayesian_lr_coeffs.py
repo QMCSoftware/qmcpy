@@ -1,3 +1,8 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
 from .abstract_integrand import AbstractIntegrand
 from ..discrete_distribution import DigitalNetB2  #pylint: disable=unused-import
 from ..true_measure import Gaussian
@@ -33,7 +38,7 @@ class BayesianLRCoeffs(AbstractIntegrand):
     """
 
     def __init__(
-        self, sampler, feature_array: np.ndarray, response_vector: np.ndarray, prior_mean: np.ndarray = 0, prior_covariance: np.ndarray = 10
+        self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], feature_array: np.ndarray, response_vector: np.ndarray, prior_mean: Union[float, np.ndarray] = 0, prior_covariance: Union[float, np.ndarray] = 10
     ) -> None:
         r"""Initialize a BayesianLRCoeffs integrand.
 
@@ -48,12 +53,12 @@ class BayesianLRCoeffs(AbstractIntegrand):
                 dimension.
             response_vector (np.ndarray): Binary responses vector of length
                 $N$.
-            prior_mean (np.ndarray): Length $d$ vector of prior means, one for
+            prior_mean (Union[float, np.ndarray]): Length $d$ vector of prior means, one for
                 each coefficient.
 
                 - The first $d-1$ inputs correspond to the $d-1$ features.
                 - The last input corresponds to the intercept coefficient.
-            prior_covariance (np.ndarray): Prior covariance array with shape
+            prior_covariance (Union[float, np.ndarray]): Prior covariance array with shape
                 $(d,d)$ d x d where indexing is consistent with the prior mean.
         """
         self.prior_mean = prior_mean
@@ -84,7 +89,7 @@ class BayesianLRCoeffs(AbstractIntegrand):
             parallel=False,
         )
 
-    def g(self, x):
+    def g(self, x: np.ndarray) -> np.ndarray:
         """Evaluate the unnormalized posterior numerator and denominator.
 
         Args:
@@ -112,7 +117,7 @@ class BayesianLRCoeffs(AbstractIntegrand):
             prior_covariance=self.prior_covariance,
         )
 
-    def bound_fun(self, bound_low, bound_high):
+    def bound_fun(self, bound_low: np.ndarray, bound_high: np.ndarray) -> tuple:
         """Combine numerator and denominator bounds into bounds on their ratio.
 
         Args:
@@ -145,7 +150,7 @@ class BayesianLRCoeffs(AbstractIntegrand):
         comb_bounds_low[violated], comb_bounds_high[violated] = -np.inf, np.inf
         return comb_bounds_low, comb_bounds_high
 
-    def dependency(self, comb_flags):
+    def dependency(self, comb_flags: np.ndarray) -> np.ndarray:
         """Map combined-output flags onto the individual outputs they require.
 
         Args:

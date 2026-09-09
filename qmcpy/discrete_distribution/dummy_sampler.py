@@ -1,3 +1,5 @@
+from typing import Union
+import numpy as np
 from .abstract_discrete_distribution import AbstractLDDiscreteDistribution
 from ..util import ParameterError
 
@@ -28,7 +30,18 @@ class DummySampler(AbstractLDDiscreteDistribution):
     qmcpy.util.exceptions_warnings.ParameterError: DummySampler is only a construction placeholder for ProductMeasure child true measures and cannot generate samples.
     """
 
-    def __init__(self, dimension=1, replications=None, seed=None, warn=True) -> None:
+    def __init__(self, dimension: int = 1, replications: Union[None, int] = None, seed: Union[None, int, np.random.SeedSequence] = None, warn: bool = True) -> None:
+        """Initialize a DummySampler discrete distribution.
+
+        Args:
+            dimension (int): Dimension of the placeholder sampler.
+            replications (Union[None, int]): Number of independent randomizations, kept
+                for API consistency with the other discrete distributions.
+            seed (Union[None, int, np.random.SeedSequence]): Unused; kept for
+                API consistency with the other discrete distributions.
+            warn (bool): Unused; kept for API consistency with the other
+                discrete distributions.
+        """
         # Keep the same constructor as other discrete distributions.
         del warn
 

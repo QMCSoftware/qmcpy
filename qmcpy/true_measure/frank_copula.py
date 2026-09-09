@@ -1,3 +1,8 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
 from .copula import (
     AbstractCopula,
     _clip_unit_interval,
@@ -102,7 +107,7 @@ class FrankCopula(AbstractCopula):
         [doi:10.1016/j.jmva.2012.02.019](https://doi.org/10.1016/j.jmva.2012.02.019).
     """
 
-    def __init__(self, sampler, marginals: list, theta: float) -> None:
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], marginals: list, theta: float) -> None:
         r"""Initialize a FrankCopula true measure.
 
         Args:

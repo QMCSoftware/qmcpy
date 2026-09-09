@@ -1,3 +1,4 @@
+from typing import Union
 import numpy as np
 from scipy import sparse
 
@@ -98,28 +99,27 @@ class ProductMeasure(AbstractTrueMeasure):
     (4, 3)
     """
 
-    def __init__(self, sampler, marginals) -> None:
+    def __init__(self, sampler: AbstractDiscreteDistribution, marginals: Union[list, tuple]) -> None:
         """Initialize a product measure from one sampler and several
         marginals.
 
         Args:
+            sampler (AbstractDiscreteDistribution): The sampler for the whole
+                product measure. Its dimension must equal the sum of the
+                marginal dimensions.
+            marginals (Union[list, tuple]): Independent true
+                measures to place side by side. A marginal may itself be
+                multidimensional.
 
-        sampler: AbstractDiscreteDistribution The sampler for the whole product
-            measure. Its dimension must equal the sum of the marginal
-            dimensions.
+        Notes:
+            Why one sampler? The product measure should be driven by one
+            total-dimensional QMC point set. We do not generate separate QMC
+            samples from each marginal. Instead, one sample u in [0,1]^d is
+            split into blocks:
 
-        marginals: list or tuple of AbstractTrueMeasure Independent true
-            measures to place side by side. A marginal may itself be
-            multidimensional.
+                u = (u_marginal_1, u_marginal_2, ..., u_marginal_k).
 
-        Why one sampler? ---------------- The product measure should be driven
-        by one total-dimensional QMC point set. We do not generate separate QMC
-        samples from each marginal. Instead, one sample u in [0,1]^d is split
-        into blocks:
-
-            u = (u_marginal_1, u_marginal_2, ..., u_marginal_k).
-
-        This preserves the intended total-dimensional QMC construction.
+            This preserves the intended total-dimensional QMC construction.
         """
         if not isinstance(marginals, (list, tuple)) or len(marginals) == 0:
             raise ParameterError("ProductMeasure requires a nonempty list of marginals.")

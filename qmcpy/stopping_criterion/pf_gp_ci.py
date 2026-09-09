@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from ..integrand.abstract_integrand import AbstractIntegrand
+from typing import TYPE_CHECKING, Union, Callable
 from .abstract_stopping_criterion import AbstractStoppingCriterion
 from ..discrete_distribution import DigitalNetB2
 from ..integrand.ishigami import Ishigami
@@ -16,6 +20,9 @@ import numpy as np
 from scipy.stats import norm
 import torch
 import gpytorch
+
+if TYPE_CHECKING:
+    import matplotlib.figure
 
 
 class Suggester(object):
@@ -40,7 +47,7 @@ class PFSampleErrorDensityAR(Suggester):
         self.verbose = verbose
         super(PFSampleErrorDensityAR, self).__init__()
 
-    def suggest(self, n, d, gp, rng, efficiency, pct=0.5):
+    def suggest(self, n: int, d: int, gp: ExactGPyTorchRegressionModel, rng: np.random.Generator, efficiency: float, pct: float = 0.5) -> np.ndarray:
         """Draw `n` new sample locations via acceptance-rejection.
 
         Args:
@@ -48,7 +55,7 @@ class PFSampleErrorDensityAR(Suggester):
             d (int): Dimension of the sampling domain.
             gp (ExactGPyTorchRegressionModel): Current GP surrogate, used to
                 evaluate the error density at candidate points.
-            rng (numpy.random.Generator): Random number generator for
+            rng (np.random.Generator): Random number generator for
                 candidate draws.
             efficiency (float): Estimated acceptance rate, used to size each
                 batch of candidate draws.
@@ -100,7 +107,7 @@ class SuggesterSimple(Suggester):
         self.n_min = 0
         super(SuggesterSimple, self).__init__()
 
-    def suggest(self, n, d, gp, rng, **kwargs):
+    def suggest(self, n: int, d: int, gp: ExactGPyTorchRegressionModel, rng: np.random.Generator, **kwargs) -> np.ndarray:
         """Draw the next `n` sample locations from `self.sampler`.
 
         Args:
@@ -110,7 +117,7 @@ class SuggesterSimple(Suggester):
             gp (ExactGPyTorchRegressionModel): Unused; accepted for
                 interface compatibility with other `Suggester`
                 implementations.
-            rng (numpy.random.Generator): Unused; accepted for interface
+            rng (np.random.Generator): Unused; accepted for interface
                 compatibility with other `Suggester` implementations.
             **kwargs: Unused; accepted for interface compatibility with
                 other `Suggester` implementations.
@@ -219,15 +226,15 @@ class PFGPCI(AbstractStoppingCriterion):
 
     def __init__(
         self,
-        integrand,
+        integrand: AbstractIntegrand,
         failure_threshold: float,
         failure_above_threshold: bool,
         abs_tol: float = 5e-3,
         n_init: float = 64,
         n_limit: int = 1000,
         alpha: float = 1e-2,
-        init_samples: float = None,
-        batch_sampler=PFSampleErrorDensityAR(),
+        init_samples: Union[None, float] = None,
+        batch_sampler: Union[Suggester, AbstractDiscreteDistribution] = PFSampleErrorDensityAR(),
         n_batch: int = 4,
         n_approx: int = 2**20,
         gpytorch_prior_mean: gpytorch.means = gpytorch.means.ZeroMean(),
@@ -237,17 +244,17 @@ class PFGPCI(AbstractStoppingCriterion):
         gpytorch_likelihood: gpytorch.likelihoods = gpytorch.likelihoods.GaussianLikelihood(
             noise_constraint=gpytorch.constraints.Interval(1e-12, 1e-8)
         ),
-        gpytorch_marginal_log_likelihood_func=lambda likelihood, gpyt_model: gpytorch.mlls.ExactMarginalLogLikelihood(
+        gpytorch_marginal_log_likelihood_func: Callable = lambda likelihood, gpyt_model: gpytorch.mlls.ExactMarginalLogLikelihood(
             likelihood, gpyt_model
         ),
-        torch_optimizer_func=lambda gpyt_model: torch.optim.Adam(
+        torch_optimizer_func: Callable = lambda gpyt_model: torch.optim.Adam(
             gpyt_model.parameters(), lr=0.1
         ),
         gpytorch_train_iter: int = 100,
         gpytorch_use_gpu: bool = False,
-        verbose: int = False,
+        verbose: Union[bool, int] = False,
         n_ref_approx: int = 2**22,
-        seed_ref_approx: int = None,
+        seed_ref_approx: Union[None, int] = None,
     ) -> None:
         """Initialize a PFGPCI stopping criterion.
 
@@ -263,15 +270,15 @@ class PFGPCI(AbstractStoppingCriterion):
                 integrand.discrete_distrib from which to build the first
                 surrogate GP
             n_limit (int): Budget of simulations.
-            n_batch (int): The number of samples per batch to draw from
-                batch_sampler.
             alpha (float): The credible interval is constructed to hold with
                 probability at least 1 - alpha
-            init_samples (float): If the simulation has already been run, pass
+            init_samples (Union[None, float]): If the simulation has already been run, pass
                 in (x,y) where x are past samples from the discrete
                 distribution and y are corresponding simulation evaluations.
-            batch_sampler (Suggester or AbstractDiscreteDistribution):
+            batch_sampler (Union[Suggester, AbstractDiscreteDistribution]):
                 A suggestion scheme for future samples.
+            n_batch (int): The number of samples per batch to draw from
+                batch_sampler.
             n_approx (int): Number of points from integrand.discrete_distrib
                 used to approximate estimate and credible interval bounds
             gpytorch_prior_mean (gpytorch.means): prior mean function of the GP
@@ -280,23 +287,23 @@ class PFGPCI(AbstractStoppingCriterion):
             gpytorch_likelihood (gpytorch.likelihoods): GP likelihood, require
                 one of gpytorch.likelihoods.{GaussianLikelihood,
                 GaussianLikelihoodWithMissingObs, FixedNoiseGaussianLikelihood}
-            gpytorch_marginal_log_likelihood_func (callable): Function taking
+            gpytorch_marginal_log_likelihood_func (Callable): Function taking
                 in the likelihood and gpytorch model and returning a marginal
                 log likelihood from gpytorch.mlls
-            torch_optimizer_func (callable): Function taking in the gpytorch
+            torch_optimizer_func (Callable): Function taking in the gpytorch
                 model and returning an optimizer from torch.optim
             gpytorch_train_iter (int): Training iterations for the GP in
                 gpytorch
             gpytorch_use_gpu (bool): If True, have gpytorch use a GPU for
                 fitting and training the GP
-            verbose (int): If verbose > 0, print information through the call
+            verbose (Union[bool, int]): If verbose > 0, print information through the call
                 to integrate()
             n_ref_approx (int): If n_ref_approx > 0, use n_ref_approx points to
                 get a reference QMC approximation of the true solution.
                 Caution: If n_ref_approx > 0, it should be a large int e.g.
                 2**22, in which case it is only helpful for cheap to evaluate
                 simulations
-            seed_ref_approx (int): Seed for the reference approximation. Only
+            seed_ref_approx (Union[None, int]): Seed for the reference approximation. Only
                 applies when n_ref_approx>0
         """
         self.parameters = ["abs_tol", "n_init", "n_limit", "n_batch"]
@@ -364,7 +371,7 @@ class PFGPCI(AbstractStoppingCriterion):
             else self.failure_threshold - y
         )
 
-    def integrate(self, seed=None, refit=False, resume=None):
+    def integrate(self, seed: Union[None, int] = None, refit: bool = False, resume: Union[None, Data] = None) -> tuple:
         """Determine the samples needed to satisfy the target tolerance.
 
         Draws an initial batch (`self.n_init` points, or `init_samples` if
@@ -375,12 +382,12 @@ class PFGPCI(AbstractStoppingCriterion):
         `self.n_limit` would be exceeded.
 
         Args:
-            seed (int): Seed for the internal `DigitalNetB2` sampler used to
+            seed (Union[None, int]): Seed for the internal `DigitalNetB2` sampler used to
                 approximate the solution and (if `init_samples` was not
                 supplied) draw the initial batch.
             refit (bool): If `True`, refit the GP hyperparameters from
                 scratch every batch rather than only on the first batch.
-            resume (Data): Unsupported; must be `None`, as `PFGPCI` cannot
+            resume (Union[None, Data]): Unsupported; must be `None`, as `PFGPCI` cannot
                 resume a prior checkpoint.
 
         Returns:
@@ -549,7 +556,7 @@ class PFGPCIData(Data):
             parameters=["solution", "error_bound", "bound_low", "bound_high", "n_total", "time_integrate"]
         )
 
-    def update_data(self, batch_count, xdraw, ydrawtf):
+    def update_data(self, batch_count: int, xdraw: np.ndarray, ydrawtf: np.ndarray):
         """Fold one new batch of samples into the GP surrogate and credible interval.
 
         Refits the GP from scratch (on the first batch, or every batch if
@@ -621,7 +628,7 @@ class PFGPCIData(Data):
             )
         )
 
-    def get_results_dict(self):
+    def get_results_dict(self) -> dict:
         """Collect the per-iteration history as arrays.
 
         Returns:
@@ -647,7 +654,7 @@ class PFGPCIData(Data):
             )
         return df
 
-    def plot(self, trace_only=False, **kwargs):
+    def plot(self, trace_only: bool = False, **kwargs) -> matplotlib.figure.Figure:
         """Plot the convergence trace, plus a per-batch GP diagnostic panel if `d` is 1 or 2.
 
         Args:
@@ -716,7 +723,7 @@ class PFGPCIData(Data):
         )
         return fig
 
-    def plot_1d(self, meshticks=1025, ci_percentage=0.95, **kwargs):
+    def plot_1d(self, meshticks: int = 1025, ci_percentage: float = 0.95, **kwargs) -> matplotlib.figure.Figure:
         """Plot, for each batch, the 1-D error density and GP fit with a credible band.
 
         Args:
@@ -794,7 +801,7 @@ class PFGPCIData(Data):
             ax.xaxis.set_visible(False)
         return fig, gs
 
-    def plot_2d(self, meshticks=257, clevels=32, **kwargs):
+    def plot_2d(self, meshticks: int = 257, clevels: int = 32, **kwargs) -> matplotlib.figure.Figure:
         """Plot, for each batch, 2-D contours of the true function, error density, and GP mean.
 
         Args:

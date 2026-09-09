@@ -1,3 +1,5 @@
+from ..integrand.abstract_integrand import AbstractIntegrand
+from typing import Union, Callable
 from .abstract_cub_bayes_ld_g import AbstractCubBayesLDG
 from ..discrete_distribution import Lattice
 from ..integrand import Keister, BoxIntegral, Genz, SensitivityIndices
@@ -182,13 +184,13 @@ class CubQMCBayesLatticeG(AbstractCubBayesLDG):
 
     def __init__(
         self,
-        integrand,
-        abs_tol: np.ndarray = 1e-2,
-        rel_tol: np.ndarray = 0,
+        integrand: AbstractIntegrand,
+        abs_tol: Union[float, np.ndarray] = 1e-2,
+        rel_tol: Union[float, np.ndarray] = 0,
         n_init: int = 2**8,
         n_limit: int = 2**22,
-        error_fun="EITHER",
-        alpha: np.ndarray = 0.01,
+        error_fun: Union[str, Callable] = "EITHER",
+        alpha: Union[float, np.ndarray] = 0.01,
         ptransform: str = "C1SIN",
         errbd_type: str = "MLE",
         order: int = 2,
@@ -197,11 +199,11 @@ class CubQMCBayesLatticeG(AbstractCubBayesLDG):
 
         Args:
             integrand (AbstractIntegrand): The integrand.
-            abs_tol (np.ndarray): Absolute error tolerance.
-            rel_tol (np.ndarray): Relative error tolerance.
+            abs_tol (Union[float, np.ndarray]): Absolute error tolerance.
+            rel_tol (Union[float, np.ndarray]): Relative error tolerance.
             n_init (int): Initial number of samples.
             n_limit (int): Maximum number of samples.
-            error_fun (Union[str, callable]): Function mapping the approximate
+            error_fun (Union[str, Callable]): Function mapping the approximate
                 solution, absolute error tolerance, and relative error
                 tolerance to the current error bound.
 
@@ -215,7 +217,7 @@ class CubQMCBayesLatticeG(AbstractCubBayesLDG):
                     ```python
                     error_fun = lambda sv,abs_tol,rel_tol: np.minimum(abs_tol,abs(sv)*rel_tol)
                     ```
-            alpha (np.ndarray): Uncertainty level in $(0,1)$.
+            alpha (Union[float, np.ndarray]): Uncertainty level in $(0,1)$.
             ptransform (str): Periodization transform, see the options in
                 `AbstractIntegrand.f`.
             errbd_type (str): Options are

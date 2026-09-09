@@ -1,9 +1,16 @@
+from __future__ import annotations
+
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import TYPE_CHECKING, Union
 from .abstract_integrand import AbstractIntegrand
 from ..discrete_distribution import DigitalNetB2
 from ..true_measure import Uniform
 from ..util import ParameterError
 import numpy as np
 import os
+
+if TYPE_CHECKING:
+    import umbridge
 
 
 class UMBridgeWrapper(AbstractIntegrand):
@@ -66,15 +73,15 @@ class UMBridgeWrapper(AbstractIntegrand):
         [['-1.59e-08', '1.49e-04', '1.49e-04'], ['8.20e-06', '-1.38e-04'], ['-8.14e-06']]
     """
 
-    def __init__(self, true_measure, model, config: dict = None, parallel: int = False) -> None:
+    def __init__(self, true_measure: AbstractTrueMeasure, model: umbridge.HTTPModel, config: Union[None, dict] = None, parallel: Union[bool, int] = False) -> None:
         """Initialize a UMBridgeWrapper integrand.
 
         Args:
             true_measure (AbstractTrueMeasure): The true measure.
             model (umbridge.HTTPModel): A `UM-Bridge` model.
-            config (dict): Configuration keyword argument to
+            config (Union[None, dict]): Configuration keyword argument to
                 `umbridge.HTTPModel(url,name).__call__`.
-            parallel (int): Parallelization flag.
+            parallel (Union[bool, int]): Parallelization flag.
 
                 - When `parallel = 0` or `parallel = 1` then function evaluation is done in serial fashion.
                 - `parallel > 1` specifies the number of processes used by `multiprocessing.Pool` or `multiprocessing.pool.ThreadPool`.
@@ -119,7 +126,7 @@ class UMBridgeWrapper(AbstractIntegrand):
             threadpool=True,
         )
 
-    def g(self, t, **kwargs):
+    def g(self, t: np.ndarray, **kwargs: dict) -> np.ndarray:
         """Evaluate the wrapped UM-Bridge model at each point.
 
         Args:
@@ -153,7 +160,7 @@ class UMBridgeWrapper(AbstractIntegrand):
             parallel=self.parallel,
         )
 
-    def to_umbridge_out_sizes(self, x: np.ndarray):
+    def to_umbridge_out_sizes(self, x: np.ndarray) -> list:
         """Convert a data attribute to `UM-Bridge` output sized list of
         lists.
 

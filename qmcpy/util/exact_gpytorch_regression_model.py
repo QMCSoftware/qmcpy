@@ -1,3 +1,4 @@
+from typing import Union
 import numpy as np
 import torch
 import gpytorch
@@ -16,7 +17,7 @@ class ExactGPyTorchRegressionModel(gpytorch.models.ExactGP):
         gpytorch.likelihoods.FixedNoiseGaussianLikelihood,
     )
 
-    def __init__(self, x_t, y_t, prior_mean, prior_cov, likelihood, use_gpu=False):
+    def __init__(self, x_t, y_t, prior_mean, prior_cov, likelihood, use_gpu=False) -> None:
         if isinstance(x_t, np.ndarray):
             x_t = torch.from_numpy(x_t)
         if isinstance(y_t, np.ndarray):
@@ -37,7 +38,7 @@ class ExactGPyTorchRegressionModel(gpytorch.models.ExactGP):
             self = self.cuda()
             self.likelihood = self.likelihood.cuda()
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> gpytorch.distributions.MultivariateNormal:
         """Evaluate the GP prior at the given inputs.
 
         Args:
@@ -50,7 +51,7 @@ class ExactGPyTorchRegressionModel(gpytorch.models.ExactGP):
         covar_x = self.covar_module(x)
         return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
 
-    def fit(self, optimizer, mll, training_iter, verbose=0):
+    def fit(self, optimizer: torch.optim.Optimizer, mll: gpytorch.mlls.MarginalLogLikelihood, training_iter: int, verbose: int = 0):
         """Fit the model hyperparameters by maximizing the marginal log likelihood.
 
         Args:
@@ -74,7 +75,7 @@ class ExactGPyTorchRegressionModel(gpytorch.models.ExactGP):
                     print("\t\t\t%s %.2e" % (name.ljust(50, "."), val))
             optimizer.step()
 
-    def predict(self, x, noise_const=0, chunk_size=2**15):
+    def predict(self, x: Union[np.ndarray, torch.Tensor], noise_const: float = 0, chunk_size: int = 2**15) -> tuple:
         """Predict the posterior mean and standard deviation at new inputs.
 
         Inputs are processed in chunks so large batches do not exhaust memory.
@@ -119,7 +120,7 @@ class ExactGPyTorchRegressionModel(gpytorch.models.ExactGP):
             torch.cuda.empty_cache()
         return mean_post.numpy(), std_post.numpy()
 
-    def add_data(self, x_t_new, y_t_new):
+    def add_data(self, x_t_new: Union[np.ndarray, torch.Tensor], y_t_new: Union[np.ndarray, torch.Tensor]) -> "ExactGPyTorchRegressionModel":
         """Add observations to the training set and condition the model on them.
 
         Args:

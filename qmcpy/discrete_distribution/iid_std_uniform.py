@@ -1,3 +1,4 @@
+from typing import Union
 from .abstract_discrete_distribution import AbstractIIDDiscreteDistribution
 from ..util import ParameterError, ParameterWarning
 import numpy as np
@@ -49,7 +50,7 @@ class IIDStdUniform(AbstractIIDDiscreteDistribution):
                 [0.6171181 , 0.1239209 , 0.16809479]]])
     """
 
-    def __init__(self, dimension: int = 1, replications=None, seed=None) -> None:
+    def __init__(self, dimension: int = 1, replications: Union[None, int] = None, seed: Union[None, int, np.random.SeedSequence] = None) -> None:
         r"""Initialize an IIDStdUniform discrete distribution.
 
         Args:

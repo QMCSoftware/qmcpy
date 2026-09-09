@@ -1,3 +1,4 @@
+from typing import Union
 import warnings
 from ..abstract_discrete_distribution import AbstractLDDiscreteDistribution
 from ...util import ParameterError,ParameterWarning
@@ -157,12 +158,12 @@ class DigitalNetAnyBases(AbstractLDDiscreteDistribution):
     DEFAULT_GENERATING_MATRICES = None
 
     def __init__(self,
-                 dimension = 1,
-                 replications: int = None,
-                 seed = None,
+                 dimension: Union[int, np.ndarray] = 1,
+                 replications: Union[None, int] = None,
+                 seed: Union[None, int, np.random.SeedSequence] = None,
                  randomize: str = 'LMS DP',
-                 bases_generating_matrices = None,
-                 t: int = None,
+                 bases_generating_matrices: Union[None, str, tuple] = None,
+                 t: Union[None, int] = None,
                  alpha: int = 1,
                  n_lim: int = 2**32,
                  warn: bool = True) -> None:
@@ -174,9 +175,9 @@ class DigitalNetAnyBases(AbstractLDDiscreteDistribution):
                 - If an `int` is passed in, use generating vector components at indices 0,...,`dimension`-1.
                 - If an `np.ndarray` is passed in, use generating vector components at these indices.
 
-            replications (int): Number of independent randomizations of a
+            replications (Union[None, int]): Number of independent randomizations of a
                 pointset.
-            seed (Union[None,int,np.random.SeedSeq]): Seed the random number
+            seed (Union[None,int,np.random.SeedSequence]): Seed the random number
                 generator for reproducibility.
             randomize (str): Options are
 
@@ -189,7 +190,7 @@ class DigitalNetAnyBases(AbstractLDDiscreteDistribution):
                 - `'QRNG'`: Deterministic permutation scramble and random digital shift from QRNG [1] (with `generalize=True`). Does *not* support replications>1.
                 - `None`: No randomization. In this case the first point will be the origin.
 
-            bases_generating_matrices (Union[str, tuple]): Specify the bases
+            bases_generating_matrices (Union[None, str, tuple]): Specify the bases
                 and the generating matrices.
 
                 - `"HALTON"` will use Halton generating matrices.
@@ -199,7 +200,7 @@ class DigitalNetAnyBases(AbstractLDDiscreteDistribution):
                     - `bases` is an `np.ndarray` of integers with shape $(,d)$ or $(r,d)$ where $d$ is the number of dimensions and $r$ is the number of replications.
                     - `generating_matrices` is an `np.ndarray` of integers with shape $(d,m_\mathrm{max},t_\mathrm{max})$ or $(r,d,m_\mathrm{max},t_\mathrm{max})$ where $d$ is the number of dimensions, $r$ is the number of replications, and $2^{m_\mathrm{max}}$ is the maximum number of supported points.
 
-            t (int): Number of digits *after* randomization. The number of
+            t (Union[None, int]): Number of digits *after* randomization. The number of
                 digits in the generating matrices is inferred.
             alpha (int): Interlacing factor for higher order nets. When
                 `alpha`>1, interlacing is performed regardless of the

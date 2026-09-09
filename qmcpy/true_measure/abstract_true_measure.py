@@ -1,3 +1,4 @@
+from typing import Union
 from ..util import MethodImplementationError, _univ_repr, ParameterError
 from ..discrete_distribution.abstract_discrete_distribution import (
     AbstractDiscreteDistribution,
@@ -140,7 +141,7 @@ class AbstractTrueMeasure(object):
                 "sampler input should either be a AbstractDiscreteDistribution or AbstractTrueMeasure"
             )
 
-    def __call__(self, n=None, n_min=None, n_max=None, return_weights=False, warn=True):
+    def __call__(self, n: Union[None, int] = None, n_min: Union[None, int] = None, n_max: Union[None, int] = None, return_weights: bool = False, warn: bool = True):
         r"""
         - If just `n` is supplied, generate samples from the sequence at indices 0,...,`n`-1.
         - If `n_min` and `n_max` are supplied, generate samples from the sequence at indices `n_min`,...,`n_max`-1.
@@ -215,7 +216,7 @@ class AbstractTrueMeasure(object):
             "_transform. Try setting sampler to be in a PDF AbstractTrueMeasure to importance sample by.",
         )
 
-    def _weight(self, x):
+    def _weight(self, x: np.ndarray) -> np.ndarray:
         r"""Non-negative weight function. This is often a PDF, but is not
         required to be e.g., Lebesgue weight is always 1, but is not a PDF.
 
@@ -229,7 +230,7 @@ class AbstractTrueMeasure(object):
             self, "weight. Try a different true measure with a _weight method."
         )
 
-    def spawn(self, s: int = 1, dimensions: np.ndarray = None):
+    def spawn(self, s: int = 1, dimensions: Union[None, np.ndarray] = None) -> list:
         r"""Spawn new instances of the current true measure but with new seeds
         and dimensions. Used by multi-level QMC algorithms which require
         different seeds and dimensions on each level.
@@ -240,7 +241,7 @@ class AbstractTrueMeasure(object):
 
         Args:
             s (int): Number of copies to spawn
-            dimensions (np.ndarray): Length `s` array of dimensions for each
+            dimensions (Union[None, np.ndarray]): Length `s` array of dimensions for each
                 copy. Defaults to the current dimension.
 
         Returns:

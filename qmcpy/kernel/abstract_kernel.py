@@ -1,3 +1,9 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Union, Tuple, Callable
+if TYPE_CHECKING:
+    import torch
+
 from ..util import MethodImplementationError
 import numpy as np
 from ..util.transforms import (
@@ -87,7 +93,7 @@ class AbstractKernel(object):
         """
         return {pname: getattr(self, pname) for pname in self.batch_param_names}
 
-    def get_batch_params(self, ndim):
+    def get_batch_params(self, ndim: int) -> dict:
         """Return `batch_params` with each value reshaped to broadcast against `ndim` extra dimensions.
 
         Args:
@@ -101,7 +107,7 @@ class AbstractKernel(object):
             for pname, batch_param in self.batch_params.items()
         }
 
-    def __call__(self, x0, x1, beta0=None, beta1=None, c=None, **kwargs):
+    def __call__(self, x0, x1, beta0=None, beta1=None, c=None, **kwargs: dict):
         r"""Evaluate the kernel with (optional) partial derivatives
 
         $$\sum_{\ell=1}^p c_{\ell}
@@ -122,7 +128,7 @@ class AbstractKernel(object):
                 $\boldsymbol{\beta}_1$.
             c (Union[np.ndarray, torch.Tensor]): Shape `c.shape=(p,)`
                 coefficients of derivatives.
-            kwargs (dict): keyword arguments to parsed call
+            **kwargs (dict): keyword arguments to parsed call
         Returns:
             Union[np.ndarray, torch.Tensor]: Shape `y.shape=(x0+x1).shape[:-1]` kernel evaluations.
         """
@@ -301,7 +307,7 @@ class AbstractKernel(object):
         """
         raise MethodImplementationError(self, "parsed___call__")
 
-    def single_integral_01d(self, x):
+    def single_integral_01d(self, x: Union[np.ndarray, torch.Tensor]) -> Union[np.ndarray, torch.Tensor]:
         r"""Evaluate the integral of the kernel over the unit cube
 
         $$\tilde{K}(\boldsymbol{x}) = \int_{[0,1]^d}
@@ -337,7 +343,7 @@ class AbstractKernel(object):
         """
         raise MethodImplementationError(self, "parsed_single_integral_01d")
 
-    def double_integral_01d(self):
+    def double_integral_01d(self) -> "Union[np.ndarray, torch.Tensor]":
         r"""Evaluate the integral of the kernel over the unit cube
 
         $$\tilde{K} = \int_{[0,1]^d} \int_{[0,1]^d}
@@ -349,7 +355,7 @@ class AbstractKernel(object):
         """
         raise MethodImplementationError(self, "double_integral_01d")
 
-    def rel_pairwise_dist_func(self, x0, x1, lengthscales):
+    def rel_pairwise_dist_func(self, x0: Union[np.ndarray, torch.Tensor], x1: Union[np.ndarray, torch.Tensor], lengthscales: Union[np.ndarray, torch.Tensor]) -> Union[np.ndarray, torch.Tensor]:
         r"""Lengthscale-normalized pairwise distance $\lVert x_0-x_1\rVert / (\sqrt{2}\boldsymbol{\gamma})$.
 
         A common building block for stationary/RBF-style kernels.
@@ -366,14 +372,14 @@ class AbstractKernel(object):
 
     def parse_assign_param(
         self,
-        pname,
-        param,
-        shape_param,
-        requires_grad_param,
-        tfs_param,
-        endsize_ops,
-        constraints,
-    ):
+        pname: str,
+        param: Union[float, np.ndarray, torch.Tensor],
+        shape_param: list,
+        requires_grad_param: bool,
+        tfs_param: Tuple[Callable, Callable],
+        endsize_ops: list,
+        constraints: list,
+    ) -> Union[np.ndarray, torch.Tensor]:
         """Validate, transform, and store a kernel hyperparameter.
 
         Thin wrapper around `qmcpy.util.transforms.parse_assign_param` that
@@ -384,7 +390,7 @@ class AbstractKernel(object):
             param (Union[float, np.ndarray, torch.Tensor]): The raw user-supplied parameter value.
             shape_param (list): Shape to broadcast `param` to when it is scalar.
             requires_grad_param (bool): If `True` and `torchify`, set `requires_grad=True`.
-            tfs_param (Tuple[callable, callable]): `(to_raw, from_raw)` transform pair.
+            tfs_param (Tuple[Callable, Callable]): `(to_raw, from_raw)` transform pair.
             endsize_ops (list): Allowed sizes for the parameter's trailing dimension.
             constraints (list): Named constraints to enforce (e.g. `["POSITIVE"]`).
 
@@ -416,33 +422,33 @@ class AbstractKernelScaleLengthscales(AbstractKernel):
     def __init__(
         self,
         d: int,
-        scale=1.0,
-        lengthscales=1.0,
-        shape_scale: list = None,
-        shape_lengthscales: list = None,
-        tfs_scale=(tf_exp_eps_inv, tf_exp_eps),
-        tfs_lengthscales=(tf_exp_eps_inv, tf_exp_eps),
+        scale: Union[float, np.ndarray, torch.Tensor] = 1.0,
+        lengthscales: Union[float, np.ndarray, torch.Tensor] = 1.0,
+        shape_scale: Union[None, list] = None,
+        shape_lengthscales: Union[None, list] = None,
+        tfs_scale: Tuple[Callable, Callable] = (tf_exp_eps_inv, tf_exp_eps),
+        tfs_lengthscales: Tuple[Callable, Callable] = (tf_exp_eps_inv, tf_exp_eps),
         torchify: bool = False,
         requires_grad_scale: bool = True,
         requires_grad_lengthscales: bool = True,
-        device="cpu",
+        device: Union[str, torch.device] = "cpu",
         compile_call: bool = False,
-        compile_call_kwargs: dict = None,
+        compile_call_kwargs: Union[None, dict] = None,
     ) -> None:
         r"""Initialize an AbstractKernelScaleLengthscales kernel.
 
         Args:
             d (int): Dimension.
-            scale (Union[np.ndarray, torch.Tensor]): Scaling factor $S$.
-            lengthscales (Union[np.ndarray, torch.Tensor]): Lengthscales
+            scale (Union[float, np.ndarray, torch.Tensor]): Scaling factor $S$.
+            lengthscales (Union[float, np.ndarray, torch.Tensor]): Lengthscales
                 $\boldsymbol{\gamma}$.
-            shape_scale (list): Shape of `scale` when `np.isscalar(scale)`.
-            shape_lengthscales (list): Shape of `lengthscales` when
+            shape_scale (Union[None, list]): Shape of `scale` when `np.isscalar(scale)`.
+            shape_lengthscales (Union[None, list]): Shape of `lengthscales` when
                 `np.isscalar(lengthscales)`
-            tfs_scale (Tuple[callable,callable]): The first argument transforms
+            tfs_scale (Tuple[Callable,Callable]): The first argument transforms
                 to the raw value to be optimized; the second applies the
                 inverse transform.
-            tfs_lengthscales (Tuple[callable,callable]): The first argument
+            tfs_lengthscales (Tuple[Callable,Callable]): The first argument
                 transforms to the raw value to be optimized; the second applies
                 the inverse transform.
             torchify (bool): If `True`, use the `torch` backend. Set to `True`
@@ -452,10 +458,10 @@ class AbstractKernelScaleLengthscales(AbstractKernel):
                 `requires_grad=True` for `scale`.
             requires_grad_lengthscales (bool): If `True` and `torchify`, set
                 `requires_grad=True` for `lengthscales`.
-            device (torch.device): If `torchify`, put things onto this device.
+            device (Union[str, torch.device]): If `torchify`, put things onto this device.
             compile_call (bool): If `True`, `torch.compile` the
                 `parsed___call__` method.
-            compile_call_kwargs (dict): When `compile_call` is `True`, pass
+            compile_call_kwargs (Union[None, dict]): When `compile_call` is `True`, pass
                 these keyword arguments to `torch.compile`.
         """
         if shape_scale is None:

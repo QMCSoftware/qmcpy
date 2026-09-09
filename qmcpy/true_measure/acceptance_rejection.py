@@ -1,3 +1,4 @@
+from typing import Union
 from .abstract_true_measure import AbstractTrueMeasure
 from ..util import MethodImplementationError, ParameterError
 import numpy as np
@@ -104,7 +105,7 @@ class AcceptanceRejection(AbstractTrueMeasure):
         self._driver_offset = None
         super(AcceptanceRejection, self).__init__()
 
-    def gen_samples(self, n: int = None, n_min: int = None, n_max: int = None, return_weights: bool = False, warn: bool = True):
+    def gen_samples(self, n: Union[None, int] = None, n_min: Union[None, int] = None, n_max: Union[None, int] = None, return_weights: bool = False, warn: bool = True) -> np.ndarray:
         """Generate accepted samples from the target density.
 
         Unlike other TrueMeasures, this method cannot be decomposed into a
@@ -117,12 +118,12 @@ class AcceptanceRejection(AbstractTrueMeasure):
         position.
 
         Args:
-            n (int): Number of accepted samples to return. Treated as n_min=0,
+            n (Union[None, int]): Number of accepted samples to return. Treated as n_min=0,
                 n_max=n (always resets the driver sequence).
-            n_min (int): Starting accepted-sample index. Use 0 to reset and
+            n_min (Union[None, int]): Starting accepted-sample index. Use 0 to reset and
                 start fresh. Use a positive value to continue from the previous
                 call.
-            n_max (int): Ending accepted-sample index (exclusive). Number of
+            n_max (Union[None, int]): Ending accepted-sample index (exclusive). Number of
                 samples returned is n_max - n_min.
             return_weights (bool): If True, also return importance weights
                 psi(x)/C for each accepted sample.
@@ -320,7 +321,7 @@ class AcceptanceRejectionReal(AbstractTrueMeasure):
         self._driver_offset = None
         super(AcceptanceRejectionReal, self).__init__()
 
-    def gen_samples(self, n: int = None, n_min: int = None, n_max: int = None, return_weights: bool = False, warn: bool = True):
+    def gen_samples(self, n: Union[None, int] = None, n_min: Union[None, int] = None, n_max: Union[None, int] = None, return_weights: bool = False, warn: bool = True) -> np.ndarray:
         """Generate accepted samples from the target density on R^d.
 
         Unlike other TrueMeasures, this method cannot be decomposed into a
@@ -333,12 +334,12 @@ class AcceptanceRejectionReal(AbstractTrueMeasure):
         position.
 
         Args:
-            n (int): Number of accepted samples to return. Treated as n_min=0,
+            n (Union[None, int]): Number of accepted samples to return. Treated as n_min=0,
                 n_max=n (always resets the driver sequence).
-            n_min (int): Starting accepted-sample index. Use 0 to reset and
+            n_min (Union[None, int]): Starting accepted-sample index. Use 0 to reset and
                 start fresh. Use a positive value to continue from the previous
                 call.
-            n_max (int): Ending accepted-sample index (exclusive). Number of
+            n_max (Union[None, int]): Ending accepted-sample index (exclusive). Number of
                 samples returned is n_max - n_min.
             return_weights (bool): If True, also return importance weights
                 psi(z)/C for each accepted sample.

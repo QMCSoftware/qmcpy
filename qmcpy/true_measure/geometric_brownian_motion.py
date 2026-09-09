@@ -1,5 +1,9 @@
 from .brownian_motion import BrownianMotion
+from .abstract_true_measure import AbstractTrueMeasure
 from ..discrete_distribution import DigitalNetB2
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
 from ..util import ParameterError
 from typing import Union, Tuple
 from numpy import (
@@ -49,7 +53,7 @@ class GeometricBrownianMotion(BrownianMotion):
 
     def __init__(
         self,
-        sampler,
+        sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure],
         t_final: float = 1,
         initial_value: float = 1,
         drift: float = 0,
@@ -61,7 +65,7 @@ class GeometricBrownianMotion(BrownianMotion):
         r"""Initialize a GeometricBrownianMotion true measure.
 
         Args:
-            sampler (DiscreteDistribution/TrueMeasure): A discrete distribution
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): A discrete distribution
                 or true measure.
             t_final (float): End time for the geometric Brownian motion,
                 non-negative.
@@ -284,7 +288,7 @@ class GeometricBrownianMotion(BrownianMotion):
             mean=log_mean, cov=log_cov, allow_singular=True
         )
 
-    def _weight(self, x):
+    def _weight(self, x: ndarray):
         """Compute PDF of multivariate log-normal distribution. For
         log-normal: f(x) = (1/∏x_i) * φ(log(x/S0)) where φ is multivariate
         normal PDF.
@@ -310,14 +314,14 @@ class GeometricBrownianMotion(BrownianMotion):
         return normal_pdf * jacobian
 
     def gen_samples(
-        self, n=None, n_min=None, n_max=None, return_weights: bool = False, warn: bool = True
+        self, n: Union[None, int] = None, n_min: Union[None, int] = None, n_max: Union[None, int] = None, return_weights: bool = False, warn: bool = True
     ) -> Union[ndarray, Tuple[ndarray, ndarray]]:
         """Generate GBM samples using the parent's transform pipeline.
 
         Args:
-            n (int): number of samples to generate
-            n_min (int): minimum index of sequence
-            n_max (int): maximum index of sequence
+            n (Union[None, int]): number of samples to generate
+            n_min (Union[None, int]): minimum index of sequence
+            n_max (Union[None, int]): maximum index of sequence
             return_weights (bool): whether to return Jacobian weights
             warn (bool): whether to warn about sample generation
 

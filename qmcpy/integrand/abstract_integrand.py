@@ -1,3 +1,4 @@
+from typing import Union
 from ..util import MethodImplementationError, _univ_repr, ParameterError
 from ..true_measure.abstract_true_measure import AbstractTrueMeasure
 from ..discrete_distribution.abstract_discrete_distribution import (
@@ -88,7 +89,7 @@ class AbstractIntegrand(object):
             )
         self.EPS = np.finfo(float).eps
 
-    def __call__(self, n=None, n_min=None, n_max=None, warn=True):
+    def __call__(self, n: Union[None, int] = None, n_min: Union[None, int] = None, n_max: Union[None, int] = None, warn: bool = True):
         r"""
         - If just `n` is supplied, generate samples from the sequence at indices 0,...,`n`-1.
         - If `n_min` and `n_max` are supplied, generate samples from the sequence at indices `n_min`,...,`n_max`-1.
@@ -109,8 +110,8 @@ class AbstractIntegrand(object):
         return self.gen_samples(n=n, n_min=n_min, n_max=n_max, warn=warn)
 
     def gen_samples(
-        self, n=None, n_min=None, n_max=None, return_weights=False, warn=True
-    ):
+        self, n: Union[None, int] = None, n_min: Union[None, int] = None, n_max: Union[None, int] = None, return_weights: bool = False, warn: bool = True
+    ) -> np.ndarray:
         """Generate discrete distribution samples and evaluate the integrand at them.
 
         Args:
@@ -127,14 +128,14 @@ class AbstractIntegrand(object):
         y = self.f(x)
         return y
 
-    def g(self, t: np.ndarray, *args: tuple, **kwargs: dict):
+    def g(self, t: np.ndarray, *args: tuple, **kwargs: dict) -> np.ndarray:
         r"""*Abstract method* implementing the integrand as a function of the
         true measure.
 
         Args:
             t (np.ndarray): Inputs with shape `(*batch_shape, d)`.
-            args (tuple): positional arguments to `g`.
-            kwargs (dict): keyword arguments to `g`.
+            *args (tuple): positional arguments to `g`.
+            **kwargs (dict): keyword arguments to `g`.
 
                 Some algorithms will additionally try to pass in a
                 `compute_flags` keyword argument. This `np.ndarray` are flags
@@ -152,15 +153,15 @@ class AbstractIntegrand(object):
         """
         raise MethodImplementationError(self, "g")
 
-    def f(self, x: np.ndarray, *args: tuple, **kwargs: dict):
+    def f(self, x: np.ndarray, *args: tuple, **kwargs: dict) -> np.ndarray:
         r"""Function to evaluate the transformed integrand as a function of
         the discrete distribution. Automatically applies the transformation
         determined by the true measure.
 
         Args:
             x (np.ndarray): Inputs with shape `(*batch_shape, d)`.
-            args (tuple): positional arguments to `g`.
-            kwargs (dict): keyword arguments to `g`.
+            *args (tuple): positional arguments to `g`.
+            **kwargs (dict): keyword arguments to `g`.
 
                 Some algorithms will additionally try to pass in a
                 `compute_flags` keyword argument. This `np.ndarray` are flags
@@ -323,7 +324,7 @@ class AbstractIntegrand(object):
                 raise e
         return y
 
-    def bound_fun(self, bound_low: np.ndarray, bound_high: np.ndarray):
+    def bound_fun(self, bound_low: np.ndarray, bound_high: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Compute the bounds on the combined function based on bounds for
         the individual functions.
 
@@ -351,7 +352,7 @@ class AbstractIntegrand(object):
             )
         return bound_low, bound_high
 
-    def dependency(self, comb_flags: np.ndarray):
+    def dependency(self, comb_flags: np.ndarray) -> np.ndarray:
         """Takes a vector of indicators of weather of not the error bound is
         satisfied for combined integrands and returns flags for individual
         integrands.
@@ -377,7 +378,7 @@ class AbstractIntegrand(object):
             else np.tile((comb_flags == False).any(), self.d_indv)
         )
 
-    def spawn(self, levels: np.ndarray):
+    def spawn(self, levels: np.ndarray) -> list:
         r"""Spawn new instances of the current integrand at different levels
         with new seeds. Used by multi-level QMC algorithms which require
         integrands at multiple levels.
@@ -403,7 +404,7 @@ class AbstractIntegrand(object):
             spawned_integrand[l] = self._spawn(level, tm_spawns[l])
         return spawned_integrand
 
-    def dimension_at_level(self, level: int):
+    def dimension_at_level(self, level: int) -> int:
         """*Abstract method* which returns the dimension of the generator
         required for a given level.
 

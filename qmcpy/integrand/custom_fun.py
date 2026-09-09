@@ -1,3 +1,5 @@
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union, Callable
 from .abstract_integrand import AbstractIntegrand
 from ..discrete_distribution import DigitalNetB2  #pylint: disable=unused-import
 from ..true_measure import Gaussian, Uniform  #pylint: disable=unused-import
@@ -88,15 +90,15 @@ class CustomFun(AbstractIntegrand):
         array([3.83e-03, -6.78e-03, -1.56e-03, -5.65e-04])
     """
 
-    def __init__(self, true_measure, g, dimension_indv: tuple = (), parallel: int = False) -> None:
+    def __init__(self, true_measure: AbstractTrueMeasure, g: Callable, dimension_indv: tuple = (), parallel: Union[bool, int] = False) -> None:
         """Initialize a CustomFun integrand.
 
         Args:
             true_measure (AbstractTrueMeasure): The true measure.
-            g (callable): A function handle.
+            g (Callable): A function handle.
             dimension_indv (tuple): Shape of individual solution outputs from
                 `g`.
-            parallel (int): Parallelization flag.
+            parallel (Union[bool, int]): Parallelization flag.
 
                 - When `parallel = 0` or `parallel = 1` then function evaluation is done in serial fashion.
                 - `parallel > 1` specifies the number of processes used by `multiprocessing.Pool` or `multiprocessing.pool.ThreadPool`.
@@ -118,7 +120,7 @@ class CustomFun(AbstractIntegrand):
             parallel=parallel,
         )
 
-    def g(self, t, *args, **kwargs):
+    def g(self, t: np.ndarray, *args: tuple, **kwargs: dict) -> np.ndarray:
         """Evaluate the user-supplied function.
 
         Args:

@@ -1,8 +1,9 @@
 import qmcpy as qp
+from ..integrand.abstract_integrand import AbstractIntegrand
 import numpy as np
 
 def mlmc_test(
-    integrand,
+    integrand: AbstractIntegrand,
     n: int = 20000,
     l: int = 8,
     n_init: int = 200,

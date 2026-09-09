@@ -1,3 +1,4 @@
+from typing import Union
 from .abstract_discrete_distribution import AbstractDiscreteDistribution
 import numpy as np
 from qmcpy.util import ParameterError, ParameterWarning
@@ -95,7 +96,7 @@ class LatinHypercube(AbstractDiscreteDistribution):
     """
 
     def __init__(
-            self, dimension: int, replications, seed, randomize: str = "TRUE"
+            self, dimension: int, replications: Union[None, int], seed: Union[None, int, np.random.SeedSequence], randomize: str = "TRUE"
             ) -> None:
         r"""Initialize a LatinHypercube discrete distribution.
 

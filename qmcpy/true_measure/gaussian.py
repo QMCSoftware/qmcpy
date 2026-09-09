@@ -1,6 +1,9 @@
 from .abstract_true_measure import AbstractTrueMeasure
 from ..util import DimensionError, ParameterError
 from ..discrete_distribution import DigitalNetB2
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
 import numpy as np
 from numpy.linalg import cholesky, slogdet
 from scipy.stats import norm, multivariate_normal
@@ -48,7 +51,7 @@ class Gaussian(AbstractTrueMeasure):
                 [ 1.1844196 ,  0.44964332,  1.27760936]]])
     """
 
-    def __init__(self, sampler, mean: Union[float, np.ndarray] = 0.0, covariance: Union[float, np.ndarray] = 1.0, decomp_type: str = "PCA") -> None:
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], mean: Union[float, np.ndarray] = 0.0, covariance: Union[float, np.ndarray] = 1.0, decomp_type: str = "PCA") -> None:
         """Initialize a Gaussian true measure.
 
         Args:

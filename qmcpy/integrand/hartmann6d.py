@@ -1,3 +1,8 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
 import numpy as np
 from .abstract_integrand import AbstractIntegrand
 from ..true_measure import Uniform
@@ -44,7 +49,7 @@ class Hartmann6d(AbstractIntegrand):
         -0.2599
     """
 
-    def __init__(self, sampler) -> None:
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure]) -> None:
         r"""Initialize a Hartmann6d integrand.
 
         Args:
@@ -65,7 +70,7 @@ class Hartmann6d(AbstractIntegrand):
 
         self.ah = AugmentedHartmann(negate=False)
 
-    def g(self, t):
+    def g(self, t: np.ndarray) -> np.ndarray:
         """Evaluate the six-dimensional augmented Hartmann function.
 
         Args:

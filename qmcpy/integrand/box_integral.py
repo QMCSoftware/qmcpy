@@ -1,3 +1,8 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
 from .abstract_integrand import AbstractIntegrand
 from ..discrete_distribution import DigitalNetB2
 from ..true_measure import Uniform
@@ -64,7 +69,7 @@ class BoxIntegral(AbstractIntegrand):
         [https://www.davidhbailey.com/dhbpapers/boxintegrals.pdf](https://www.davidhbailey.com/dhbpapers/boxintegrals.pdf)
     """
 
-    def __init__(self, sampler, s=1) -> None:
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], s: Union[float, np.ndarray] = 1) -> None:
         r"""Initialize a BoxIntegral integrand.
 
         Args:
@@ -87,7 +92,7 @@ class BoxIntegral(AbstractIntegrand):
             dimension_indv=self.s.shape, dimension_comb=self.s.shape, parallel=False
         )
 
-    def g(self, t, **kwargs):
+    def g(self, t: np.ndarray, **kwargs: dict) -> np.ndarray:
         r"""Evaluate the box integral function.
 
         Args:

@@ -1,5 +1,6 @@
 """Diagnostics helpers for stopping-criterion iteration tracing."""
 
+from typing import Union
 import io
 import numpy as np
 import sys
@@ -454,7 +455,8 @@ class _IterationTraceLogger(object):
         """Create a trace logger bound to the given stopping criterion.
 
         Args:
-            stopping_criterion: Stopping criterion instance. The logger reads
+            stopping_criterion (AbstractStoppingCriterion): Stopping
+                criterion instance. The logger reads
                 the optional attributes ``trace_iterations`` (bool),
                 ``trace_label`` (str), ``verbose`` (bool), ``trace_print``
                 (bool), and the internal ``_trace_store_*`` flags to configure
@@ -522,7 +524,7 @@ class _IterationTraceLogger(object):
         return iter_count % step != 0
 
     @staticmethod
-    def _state_signature(data):
+    def _state_signature(data: object):
         """Return a hashable snapshot of the data fields used to detect
         duplicate rows.
 
@@ -546,7 +548,7 @@ class _IterationTraceLogger(object):
             print(f"=== {self.label} iteration log ===")
             self.header_printed = True
 
-    def _get_visible_columns(self, data, row=None):
+    def _get_visible_columns(self, data: object, row: Union[None, dict] = None):
         """Return the ordered list of column names to display, inferred from
         data.
 
@@ -556,6 +558,8 @@ class _IterationTraceLogger(object):
         Args:
             data (object): Integration state object used to determine which
                 optional columns are present.
+            row (Union[None, dict]): Pre-extracted diagnostic row to infer columns from,
+                if already available. Computed from `data` when `None`.
 
         Returns:
             tuple[str, ...]: Column names from the set ``{'stage', 'iter', 'solution',
@@ -568,19 +572,22 @@ class _IterationTraceLogger(object):
         self.visible_columns = _visible_columns_from_row(row)
         return self.visible_columns
 
-    def emit(self, stage, data, step_value=None, increment=False, iter_value=None):
+    def emit(self, stage: str, data: object, step_value: Union[None, int] = None, increment: bool = False, iter_value: Union[None, int] = None):
         """Print one diagnostic row for the given stage label.
 
         Args:
             stage (str): Row label, e.g. ``"ITER"`` or ``"RESUME"``.
             data (object): Integration state object.
-            step_value (int | None): Value to assign to ``data.m`` before
+            step_value (Union[None, int]): Value to assign to ``data.m`` before
                 printing. Defaults to None.
             increment (bool): If True, advance the internal iteration counter
                 and assign the new value to ``data._iter_count``. Defaults to
                 False.
-            iter_value (int | None): Explicit iteration count to display
+            iter_value (Union[None, int]): Explicit iteration count to display
                 (overrides ``increment``). Defaults to None.
+
+        Returns:
+            None
         """
         if not self.enabled:
             return
@@ -625,7 +632,7 @@ class _IterationTraceLogger(object):
             )
             self.table_header_printed = True
 
-    def resume(self, data, step_value=None):
+    def resume(self, data: object, step_value: Union[None, int] = None):
         """Emit a RESUME row and snapshot the current state for duplicate
         suppression.
 
@@ -636,7 +643,7 @@ class _IterationTraceLogger(object):
 
         Args:
             data (object): Integration state object from the resume checkpoint.
-            step_value (int | None): Value to assign to ``data.m`` before
+            step_value (Union[None, int]): Value to assign to ``data.m`` before
                 printing. Defaults to None.
         """
         self._seed_history_from_resume(data)
@@ -670,7 +677,7 @@ class _IterationTraceLogger(object):
         self.stopping_criterion.iteration_history = self.history
         self._resume_seeded = True
 
-    def iteration(self, data, step_value=None):
+    def iteration(self, data: object, step_value: Union[None, int] = None):
         """Emit an ITER row, unless state is unchanged since the last resume.
 
         If :meth:`resume` was just called and the data state has not changed
@@ -679,8 +686,11 @@ class _IterationTraceLogger(object):
 
         Args:
             data (object): Current integration state object.
-            step_value (int | None): Value to assign to ``data.m`` before
+            step_value (Union[None, int]): Value to assign to ``data.m`` before
                 printing. Defaults to None.
+
+        Returns:
+            None
         """
         current_signature = self._state_signature(data)
         if (
@@ -742,11 +752,11 @@ class _IterationTraceLogger(object):
 
 
 def _print_diagnostic(
-    label,
-    data,
-    table_header=False,
-    verbose=True,
-    visible_columns=None,
+    label: str,
+    data: object,
+    table_header: bool = False,
+    verbose: bool = True,
+    visible_columns: Union[None, tuple, list] = None,
 ):
     """Print diagnostic information for an integration state.
 
@@ -758,8 +768,11 @@ def _print_diagnostic(
             the row. Defaults to False.
         verbose (bool): Whether to print every ``ITER`` row. Defaults to True.
             If False, the current iteration-log throttling rules are applied.
-        visible_columns (tuple[str, ...] | list[str] | None): Ordered columns
+        visible_columns (Union[None, tuple, list]): Ordered columns
             to print. Defaults to all supported columns.
+
+    Returns:
+        None
     """
     row = _extract_diagnostic_row(data)
     iter_display = row["iter"]

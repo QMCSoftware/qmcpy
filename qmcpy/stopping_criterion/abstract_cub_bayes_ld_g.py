@@ -1,3 +1,4 @@
+from typing import Union
 from .abstract_stopping_criterion import AbstractStoppingCriterion
 from ..util.data import Data
 
@@ -42,7 +43,7 @@ class AbstractCubBayesLDG(AbstractStoppingCriterion):
         alpha,
         error_fun,
         errbd_type,
-    ):
+    ) -> None:
         self.parameters = ["abs_tol", "rel_tol", "n_init", "n_limit", "order"]
         # Input Checks
         if np.log2(n_init) % 1 != 0:
@@ -199,7 +200,7 @@ class AbstractCubBayesLDG(AbstractStoppingCriterion):
         if isinstance(self.error_fun, str):
             self.error_fun, _ = self._resolve_error_fun(self.error_fun)
 
-    def objective_function(self, theta, xun, ftilde):
+    def objective_function(self, theta: float, xun: np.ndarray, ftilde: np.ndarray) -> float:
         """Compute the Bayesian cubature loss used to fit the kernel parameter theta.
 
         Evaluates either the negative log marginal likelihood (MLE) or the
@@ -279,7 +280,7 @@ class AbstractCubBayesLDG(AbstractStoppingCriterion):
         return loss, vec_lambda, vec_lambda_ring, RKHS_norm
 
     @staticmethod
-    def kernel_t(aconst, Bern):
+    def kernel_t(aconst: Union[float, np.ndarray], Bern: np.ndarray) -> np.ndarray:
         r"""Compute the modified kernel ``Km1 = K - 1`` from Bernoulli polynomial values.
 
         Working with ``Km1`` rather than ``K`` directly avoids cancellation
@@ -315,7 +316,7 @@ class AbstractCubBayesLDG(AbstractStoppingCriterion):
         return [Km1, K]
 
     @staticmethod
-    def alert_msg(*args):
+    def alert_msg(*args: tuple):
         """Print a debug message if a variable contains NaN, Inf, or complex values.
 
         Args:
@@ -348,7 +349,7 @@ class AbstractCubBayesLDG(AbstractStoppingCriterion):
                 else:
                     print("unknown type check requested !")
 
-    def integrate(self, resume=None):
+    def integrate(self, resume: Union[None, Data] = None) -> tuple:
         """Determine the samples needed to satisfy the target tolerance.
 
         Doubles the sample count each iteration, updates the running fast
@@ -359,7 +360,7 @@ class AbstractCubBayesLDG(AbstractStoppingCriterion):
         exceeded.
 
         Args:
-            resume (Data): Existing integration state to resume from, if
+            resume (Union[None, Data]): Existing integration state to resume from, if
                 supported. Defaults to None.
 
         Returns:
@@ -507,15 +508,15 @@ class AbstractCubBayesLDG(AbstractStoppingCriterion):
         if not self._is_power_of_two(n_total):
             raise ParameterError("resume data n_total must be a power of 2.")
 
-    def set_tolerance(self, abs_tol=None, rel_tol=None, rmse_tol=None):
+    def set_tolerance(self, abs_tol: Union[None, float] = None, rel_tol: Union[None, float] = None, rmse_tol: Union[None, float] = None):
         """Update the stopping criterion's target tolerance.
 
         Args:
-            abs_tol (float): Absolute error tolerance, broadcast to
+            abs_tol (Union[None, float]): Absolute error tolerance, broadcast to
                 `self.abs_tols` with shape `integrand.d_comb`.
-            rel_tol (float): Relative error tolerance, broadcast to
+            rel_tol (Union[None, float]): Relative error tolerance, broadcast to
                 `self.rel_tols` with shape `integrand.d_comb`.
-            rmse_tol (float): Unsupported; must be `None`.
+            rmse_tol (Union[None, float]): Unsupported; must be `None`.
 
         Raises:
             AssertionError: If `rmse_tol` is supplied.

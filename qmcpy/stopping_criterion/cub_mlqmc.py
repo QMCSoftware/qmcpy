@@ -1,4 +1,6 @@
+from typing import Union
 from .abstract_cub_mlqmc import AbstractCubMLQMC
+from ..integrand.abstract_integrand import AbstractIntegrand
 from ..util.data import Data
 import copy
 from ..discrete_distribution import DigitalNetB2, Lattice, Halton
@@ -78,12 +80,12 @@ class CubMLQMC(AbstractCubMLQMC):
 
     def __init__(
         self,
-        integrand,
-        abs_tol=0.05,
-        rmse_tol=None,
+        integrand: AbstractIntegrand,
+        abs_tol: Union[float, np.ndarray] = 0.05,
+        rmse_tol: Union[None, np.ndarray] = None,
         n_init: int = 256,
-        n_limit=1e10,
-        alpha=0.01,
+        n_limit: int = 10**10,
+        alpha: Union[float, np.ndarray] = 0.01,
         levels_min: int = 2,
         levels_max: int = 10,
     ) -> None:
@@ -91,13 +93,13 @@ class CubMLQMC(AbstractCubMLQMC):
 
         Args:
             integrand (AbstractIntegrand): The integrand.
-            abs_tol (np.ndarray): Absolute error tolerance.
-            rmse_tol (np.ndarray): Root mean squared error tolerance. If
+            abs_tol (Union[float, np.ndarray]): Absolute error tolerance.
+            rmse_tol (Union[None, np.ndarray]): Root mean squared error tolerance. If
                 supplied, then absolute tolerance and alpha are ignored in
                 favor of the rmse tolerance.
             n_init (int): Initial number of samples.
             n_limit (int): Maximum number of samples.
-            alpha (np.ndarray): Uncertainty level in $(0,1)$.
+            alpha (Union[float, np.ndarray]): Uncertainty level in $(0,1)$.
             levels_min (int): Minimum level of refinement $\geq 2$.
             levels_max (int): Maximum level of refinement $\geq$ `levels_min`.
         """
@@ -222,11 +224,11 @@ class CubMLQMC(AbstractCubMLQMC):
                 break
         return snapshots
 
-    def integrate(self, resume=None) -> tuple:
+    def integrate(self, resume: Union[None, Data] = None) -> tuple:
         """Run (or continue) the MLQMC integration.
 
         Args:
-            resume (Data): Checkpoint returned by a previous ``integrate()``
+            resume (Union[None, Data]): Checkpoint returned by a previous ``integrate()``
                 call.  The new tolerance may be tighter *or* looser than the
                 one used when the checkpoint was created. With a tighter
                 tolerance the algorithm draws additional samples from where it
