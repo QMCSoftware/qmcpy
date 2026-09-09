@@ -508,7 +508,7 @@ class AbstractCubBayesLDG(AbstractStoppingCriterion):
         if not self._is_power_of_two(n_total):
             raise ParameterError("resume data n_total must be a power of 2.")
 
-    def set_tolerance(self, abs_tol: Union[None, float] = None, rel_tol: Union[None, float] = None, rmse_tol: Union[None, float] = None):
+    def set_tolerance(self, abs_tol: Union[None, float] = None, rel_tol: Union[None, float] = None, rmse_tol: Union[None, float] = None) -> None:
         """Update the stopping criterion's target tolerance.
 
         Args:

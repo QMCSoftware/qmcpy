@@ -453,7 +453,7 @@ class CubQMCRepStudentT(AbstractStoppingCriterion):
         self.integrand.discrete_distrib = self.discrete_distrib
         self.integrand.true_measure.discrete_distrib = self.discrete_distrib
 
-    def set_tolerance(self, abs_tol: Union[None, float] = None, rel_tol: Union[None, float] = None, rmse_tol: Union[None, float] = None):
+    def set_tolerance(self, abs_tol: Union[None, float] = None, rel_tol: Union[None, float] = None, rmse_tol: Union[None, float] = None) -> None:
         """Update the stopping criterion's target tolerance.
 
         Args:

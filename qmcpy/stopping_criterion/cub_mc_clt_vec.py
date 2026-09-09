@@ -376,7 +376,7 @@ class CubMCCLTVec(AbstractStoppingCriterion):
         trace.finalize()
         return data.solution, data
 
-    def set_tolerance(self, abs_tol: Union[None, float] = None, rel_tol: Union[None, float] = None, rmse_tol: Union[None, float] = None):
+    def set_tolerance(self, abs_tol: Union[None, float] = None, rel_tol: Union[None, float] = None, rmse_tol: Union[None, float] = None) -> None:
         """Update the stopping criterion's target tolerance.
 
         Args:
