@@ -327,17 +327,18 @@ def main(argv: list[str]) -> int:
             continue
         results.append(result)
 
-    if not args.quiet:
+    if not args.quiet and any(r.converted_lines or r.skipped_lines for r in results):
         action = "would convert" if args.check else "converted"
+        print()
         for result in results:
             for line in result.converted_lines:
                 print(
-                    f"{result.path}:{line}: {action} assert to "
+                    f"  - {result.path}:{line}: {action} assert to "
                     f"explicit {args.exception}"
                 )
             for line in result.skipped_lines:
                 print(
-                    f"{result.path}:{line}: skipped assert in a compound "
+                    f"  - {result.path}:{line}: skipped assert in a compound "
                     "one-line statement"
                 )
 
@@ -346,9 +347,16 @@ def main(argv: list[str]) -> int:
     changed_files = sum(result.changed for result in results)
     verb = "would change" if args.check else "changed"
     print(
-        f"{len(files)} file(s) inspected; {converted} assert(s) converted; "
+        f"  - {len(files)} file(s) inspected; {converted} assert(s) converted; "
         f"{skipped} assert(s) skipped; {changed_files} file(s) {verb}."
     )
+
+    if changed_files == 0:
+        print(f"clean  (0 of {len(files)} files)")
+    elif args.check:
+        print(f"ERROR: {changed_files} would change  ({changed_files} of {len(files)} files)")
+    else:
+        print(f"{changed_files} changed  ({changed_files} of {len(files)} files)")
 
     if args.check and converted:
         return 1

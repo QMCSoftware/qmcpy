@@ -142,17 +142,24 @@ def main() -> int:
     parser.add_argument("paths", nargs="+", help="tracked files or directories to process")
     args = parser.parse_args()
 
+    scanned = list(iter_source_files(args.paths))
     changed = sorted(
-        path for path in iter_source_files(args.paths)
+        path for path in scanned
         if remove_trailing_whitespace(path, args.check)
     )
     action = "would update" if args.check else "updated"
     if changed:
-        print(f"trailing whitespace {action}: {len(changed)} file(s):")
+        print()
+        print(f"  - trailing whitespace {action}: {len(changed)} file(s):")
         for path in changed:
-            print(f"  {path}")
+            print(f"    - {path}")
+
+    if not changed:
+        print(f"clean  (0 of {len(scanned)} files)")
+    elif args.check:
+        print(f"ERROR: {len(changed)} would change  ({len(changed)} of {len(scanned)} files)")
     else:
-        print(f"  trailing whitespace {action}: 0 file(s)")
+        print(f"{len(changed)} changed  ({len(changed)} of {len(scanned)} files)")
     return int(args.check and bool(changed))
 
 

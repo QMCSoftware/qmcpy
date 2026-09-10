@@ -624,7 +624,8 @@ def main(argv: list[str]) -> int:
 
     updates = [update for result in results for update in result.updates]
     skips = [skip for result in results for skip in result.skips]
-    if not args.quiet:
+    if not args.quiet and (updates or skips):
+        print()
         for update in updates:
             action = "would update" if args.check else "updated"
             old = (
@@ -633,21 +634,28 @@ def main(argv: list[str]) -> int:
                 else f" replacing `{update.previous_type}`"
             )
             print(
-                f"{update.path}:{update.line}: {action} "
+                f"  - {update.path}:{update.line}: {action} "
                 f"{update.function}.{update.argument} ({update.annotation}){old}"
             )
         for skip in skips:
-            print(f"{skip.path}:{skip.line}: skipped {skip.function}: {skip.reason}")
+            print(f"  - {skip.path}:{skip.line}: skipped {skip.function}: {skip.reason}")
 
     args_updates = [update for update in updates if update.section == "Args"]
     output_updates = [update for update in updates if update.section != "Args"]
     changed_files = sum(1 for result in results if result.changed)
     verb = "would change" if args.check else "changed"
     print(
-        f"{len(files)} file(s) inspected; {len(args_updates)} Args type update(s); "
+        f"  - {len(files)} file(s) inspected; {len(args_updates)} Args type update(s); "
         f"{len(output_updates)} output type update(s); "
         f"{changed_files} file(s) {verb}."
     )
+
+    if changed_files == 0:
+        print(f"clean  (0 of {len(files)} files)")
+    elif args.check:
+        print(f"ERROR: {changed_files} would change  ({changed_files} of {len(files)} files)")
+    else:
+        print(f"{changed_files} changed  ({changed_files} of {len(files)} files)")
 
     if args.check and updates:
         return 1

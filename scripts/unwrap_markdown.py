@@ -337,11 +337,17 @@ def main() -> int:
         f"{changed_cells} markdown cell(s)"
     )
     if changed_paths:
-        print(summary + ":")
+        print()
+        print("  - " + summary + ":")
         for path in sorted(changed_paths):
-            print(f"  {path}")
+            print(f"    - {path}")
+
+    if not changed_paths:
+        print(f"clean  (0 of {len(targets)} files)")
+    elif args.check:
+        print(f"ERROR: {len(changed_paths)} would change  ({len(changed_paths)} of {len(targets)} files)")
     else:
-        print("  " + summary)
+        print(f"{len(changed_paths)} changed  ({len(changed_paths)} of {len(targets)} files)")
     return 1 if args.check and changed_paths else 0
 
 

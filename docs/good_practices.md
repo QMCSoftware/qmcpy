@@ -57,7 +57,7 @@ For changed public APIs, `make annotate_public_api_types_changed` performs the r
 
 These helpers synchronize explicit type information; they do not infer a scientific API contract from default values, implementation expressions, or one observed runtime type. They also do not invent missing docstring descriptions or sections. Resolve every reported conflict manually, especially scalar-versus-array inputs, optional values, shape conventions, and abstract interfaces.
 
-For mostly well-formed Google-style docstrings, developers may also use the optional open-source `format-docstring` helper to normalize wrapping and existing argument type syntax. Install it locally with `python -m pip install format-docstring`, then run `make format_google_docstrings` to apply it under `qmcpy/`, or run `make format_google_docstrings_changed` to apply it only to Python files reported by `git diff --name-only develop -- '*.py'`. Always review the resulting diff because automated formatting can reflow examples and prose.
+There is intentionally no full third-party docstring reformatter in the Makefile. `format-docstring` was evaluated and rejected: on this codebase it strips `Returns:`/`Yields:` types and rewrites `**References:**` to `**References: **`. If wrapping/whitespace normalization is ever wanted, prefer a tool that leaves section structure and type hints untouched (for example `docformatter` or `pydocstringformatter`), and still review the diff.
 
 ## Extend the Existing Object Model
 

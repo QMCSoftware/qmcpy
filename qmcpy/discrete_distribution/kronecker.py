@@ -243,7 +243,7 @@ class Kronecker(AbstractLDDiscreteDistribution):
                 - `'SHIFT'`: use `shift` if supplied, otherwise use a random shift $\boldsymbol{\delta} \sim \mathrm{Uniform}([0,1)^d)$.
                 - `'FALSE'`: zero shift.
 
-            generating_vector (Union[str,np.ndarray]): Generating vector
+            generating_vector (Union[str, np.ndarray]): Generating vector
                 $\boldsymbol{\alpha}$.
 
                 - `"CBC"`: uses the first $d$ components of a known good Component-by-Component (CBC) generating vector.

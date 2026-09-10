@@ -71,19 +71,15 @@ convert_asserts: check_assert_codemod_dependency
 	$(PYTHON) scripts/convert_asserts.py --exception "$(ASSERT_EXCEPTION)" $(ASSERT_CONVERT_ARGS) $(ASSERT_PATH)
 
 convert_asserts_changed: check_assert_codemod_dependency
-	$(PYTHON) scripts/convert_asserts.py --diff "$(ASSERT_DIFF_BASE)" --exception "$(ASSERT_EXCEPTION)" $(ASSERT_CONVERT_ARGS)
+	@$(PYTHON) scripts/convert_asserts.py --diff "$(ASSERT_DIFF_BASE)" --exception "$(ASSERT_EXCEPTION)" $(ASSERT_CONVERT_ARGS)
 
 check_asserts_changed: check_assert_codemod_dependency
-	$(PYTHON) scripts/convert_asserts.py --diff "$(ASSERT_DIFF_BASE)" --exception "$(ASSERT_EXCEPTION)" --check $(ASSERT_CONVERT_ARGS)
+	@$(PYTHON) scripts/convert_asserts.py --diff "$(ASSERT_DIFF_BASE)" --exception "$(ASSERT_EXCEPTION)" --check $(ASSERT_CONVERT_ARGS)
 
 DOCSTRING_PATH ?= qmcpy
 DOCSTRING_BASE ?= origin/develop
 PYDOCLINT ?= pydoclint
 PYDOCLINT_ARGS ?= -q
-DOCSTRING_FORMATTER ?= format-docstring
-DOCSTRING_FORMAT_PATH ?= qmcpy
-DOCSTRING_FORMAT_DIFF_BASE ?= develop
-DOCSTRING_FORMAT_ARGS ?= --docstring-style google --fix-rst-backticks=False --include-arg-types=True --include-arg-defaults=False --include-return-and-yield-types=False
 DOCSTRING_TYPE_PATH ?= qmcpy
 DOCSTRING_TYPE_DIFF_BASE ?= develop
 DOCSTRING_TYPE_ARGS ?=
@@ -105,8 +101,9 @@ DOCSTRING_SYNC_ARGS ?=
 # to make both parts fail the build.
 check_docstring:
 	@$(PYTHON) scripts/check_docstring.py $(DOCSTRING_PATH) --diff $(DOCSTRING_BASE) $(CHECK_DOCSTRING_ARGS) $(STRICT)
-	@echo ""
-	@$(PYDOCLINT) $(PYDOCLINT_ARGS) $(DOCSTRING_PATH) $(if $(STRICT),,|| true)
+	@out="$$($(PYDOCLINT) $(PYDOCLINT_ARGS) $(DOCSTRING_PATH) 2>&1)"; rc=$$?; \
+	[ -z "$$out" ] || printf '\n%s\n' "$$out"; \
+	$(if $(STRICT),exit $$rc,true)
 
 # Ratchet gate: check_docstring/pydoclint/annotate_public_api_types are
 # informational (existing backlog is large, see PR #613 review F9/F10), but
@@ -119,35 +116,11 @@ check_baseline:
 check_baseline_update:
 	@$(PYTHON) scripts/check_baseline.py --update
 
-format_google_docstrings:
-	@command -v "$(DOCSTRING_FORMATTER)" >/dev/null 2>&1 || { \
-		echo "Missing $(DOCSTRING_FORMATTER). Install with: $(PYTHON) -m pip install format-docstring"; \
-		exit 127; \
-	}
-	@echo "$(DOCSTRING_FORMATTER) formats existing Google-style docstrings; it does not infer missing scientific argument types."
-	$(DOCSTRING_FORMATTER) $(DOCSTRING_FORMAT_ARGS) $(DOCSTRING_FORMAT_PATH)
-
-format_google_docstrings_changed:
-	@command -v "$(DOCSTRING_FORMATTER)" >/dev/null 2>&1 || { \
-		echo "Missing $(DOCSTRING_FORMATTER). Install with: $(PYTHON) -m pip install format-docstring"; \
-		exit 127; \
-	}
-	@set -e; \
-	changed_files="$$(git diff --name-only --diff-filter=ACMR "$(DOCSTRING_FORMAT_DIFF_BASE)" -- '*.py')"; \
-	if [ -z "$$changed_files" ]; then \
-		echo "No changed Python files relative to $(DOCSTRING_FORMAT_DIFF_BASE)."; \
-	else \
-		echo "$(DOCSTRING_FORMATTER) formats existing Google-style docstrings; it does not infer missing scientific argument types."; \
-		echo "Formatting Google-style docstrings in Python files changed relative to $(DOCSTRING_FORMAT_DIFF_BASE):"; \
-		printf '%s\n' "$$changed_files"; \
-		$(DOCSTRING_FORMATTER) $(DOCSTRING_FORMAT_ARGS) $$changed_files; \
-	fi
-
 add_docstring_arg_types:
 	$(PYTHON) scripts/add_docstring_arg_types.py $(DOCSTRING_TYPE_ARGS) $(DOCSTRING_TYPE_PATH)
 
 add_docstring_arg_types_changed:
-	$(PYTHON) scripts/add_docstring_arg_types.py --diff "$(DOCSTRING_TYPE_DIFF_BASE)" $(DOCSTRING_TYPE_ARGS)
+	@$(PYTHON) scripts/add_docstring_arg_types.py --diff "$(DOCSTRING_TYPE_DIFF_BASE)" $(DOCSTRING_TYPE_ARGS)
 
 check_docstring_arg_types_changed:
 	$(PYTHON) scripts/add_docstring_arg_types.py --diff "$(DOCSTRING_TYPE_DIFF_BASE)" --check $(DOCSTRING_TYPE_ARGS)
@@ -176,13 +149,14 @@ check_docstring_changed:
 		} | sort -u \
 	)"; \
 	if [ -z "$$changed_files" ]; then \
-		echo "No changed qmcpy/*.py files relative to $(DOCSTRING_BASE)."; \
+		echo "  - No changed qmcpy/*.py files relative to $(DOCSTRING_BASE)."; \
 	else \
 		file_count=$$(printf '%s\n' "$$changed_files" | wc -l | tr -d ' '); \
-		echo "Checking docstrings on $$file_count changed qmcpy file(s) relative to $(DOCSTRING_BASE)."; \
+		echo "  - Checking docstrings on $$file_count changed qmcpy file(s) relative to $(DOCSTRING_BASE)."; \
 		$(PYTHON) scripts/check_docstring.py $$changed_files $(CHECK_DOCSTRING_ARGS) $(STRICT); \
-		echo ""; \
-		$(PYDOCLINT) $(PYDOCLINT_ARGS) $$changed_files $(if $(STRICT),,|| true); \
+		out="$$($(PYDOCLINT) $(PYDOCLINT_ARGS) $$changed_files 2>&1)"; rc=$$?; \
+		[ -z "$$out" ] || printf '\n%s\n' "$$out"; \
+		$(if $(STRICT),test $$rc -eq 0,true); \
 	fi
 
 ##########################################################
@@ -647,36 +621,74 @@ update_pep8_badge:
 FORMAT_PATH ?= .
 MARKDOWN_UNWRAP_PATH ?= $(FORMAT_PATH)
 
-format:
-	$(MAKE) flatten_qmcpy_imports
-	@echo "---"
-	$(MAKE) markdown-unwrap MARKDOWN_UNWRAP_PATH="$(MARKDOWN_UNWRAP_PATH)"
-	@echo "---"
-	$(MAKE) rm_trailing_whitespace FORMAT_PATH="$(FORMAT_PATH)"
-	@echo "---"
-	$(MAKE) harden_colab_notebook
-	@echo "---"
-	$(MAKE) convert_asserts_changed
-	@echo "---"
-	$(MAKE) add_docstring_arg_types_changed
-	@# format_google_docstrings_changed deliberately NOT included: verified it
-	@# strips Returns: types and collapses Args:/Warnings:/Raises: structure
-	@# into run-on paragraphs on this codebase's actual docstrings -- tested
-	@# on real files, reverted, not safe to run unattended (see git history).
+RULE := ==========================================================================
+RULE2 := $(subst =,-,$(RULE))
 
-# Report-only: same conventions alltests.yml's "Check test-suite conventions"
-# step gates on, for running locally. Unlike `format`, nothing here writes to
-# the codebase.
+# `make format` rewrites files in place. Every step ends with one summary line:
+#     <tool>: clean         (0/N files)   -- nothing changed
+#     <tool>: 3 changed     (3/N files)   -- 3 files were rewritten
+# Review the result with `git diff` before committing.
+format:
+	@echo "$(RULE)"
+	@echo "make format: rewriting files in place -- review with 'git diff' afterwards"
+	@echo "$(RULE)"
+	@echo
+	@echo "> flatten_qmcpy_imports"
+	@$(MAKE) flatten_qmcpy_imports
+	@echo
+	@echo "> markdown_unwrap"
+	@$(MAKE) markdown-unwrap MARKDOWN_UNWRAP_PATH="$(MARKDOWN_UNWRAP_PATH)"
+	@echo
+	@echo "> trailing_whitespace"
+	@$(MAKE) rm_trailing_whitespace FORMAT_PATH="$(FORMAT_PATH)"
+	@echo
+	@echo "> harden_colab_notebook"
+	@$(MAKE) harden_colab_notebook
+	@echo
+	@echo "> convert_asserts_changed"
+	@$(MAKE) convert_asserts_changed
+	@echo
+	@echo "> add_docstring_arg_types_changed"
+	@$(MAKE) add_docstring_arg_types_changed
+	@echo
+	@echo "$(RULE2)"
+	@echo "make format: done -- a 'clean' line for every step means nothing changed"
+	@echo "$(RULE2)"
+	@# No third-party docstring reformatter here on purpose: format-docstring
+	@# (tried on this codebase) strips Returns:/Yields: types under
+	@# --include-return-and-yield-types=False and rewrites `**References:**` to
+	@# `**References: **`. Wrapping/whitespace-only tools like docformatter are
+	@# safe to add later if wanted; a full reflow pass is not.
+
+# `make check` only reads -- it never edits the tree. Every step ends with one
+# summary line:
+#     <tool>: clean         (0/N files)   -- nothing to fix
+#     <tool>: 2 problem(s)  (2/N files)   -- 2 files need attention
+# Same conventions as alltests.yml's "Check test-suite conventions" step. It
+# stops at the first step that fails; fix that step and rerun.
 check:
-	$(MAKE) check_test_style
-	@echo "---"
-	$(MAKE) check_docstring_changed
-	@echo "---"
-	$(MAKE) check_baseline
-	@echo "---"
-	$(MAKE) check_asserts_changed
-	@echo "---"
-	$(MAKE) check_links
+	@echo "$(RULE)"
+	@echo "make check: read-only, same rules as CI -- nothing here edits the tree"
+	@echo "$(RULE)"
+	@echo
+	@echo "> check_test_style"
+	@$(MAKE) check_test_style
+	@echo
+	@echo "> check_docstring_changed"
+	@$(MAKE) check_docstring_changed
+	@echo
+	@echo "> check_baseline"
+	@$(MAKE) check_baseline
+	@echo
+	@echo "> check_asserts_changed"
+	@$(MAKE) check_asserts_changed
+	@echo
+	@echo "> check_links"
+	@$(MAKE) check_links
+	@echo
+	@echo "$(RULE2)"
+	@echo "make check: every step above is clean"
+	@echo "$(RULE2)"
 	@# check_links_external deliberately NOT included: its own comment already
 	@# says "slow and network-flaky, run locally" -- not something `check`
 	@# should depend on. check_pep8_changed also deliberately excluded: 664
@@ -685,10 +697,10 @@ check:
 	@# check_baseline ratchet, not a hard gate, if added later).
 
 flatten_qmcpy_imports:
-	$(PYTHON) scripts/flatten_qmcpy_imports.py
+	@$(PYTHON) scripts/flatten_qmcpy_imports.py
 
 markdown-unwrap:
-	$(PYTHON) scripts/unwrap_markdown.py "$(MARKDOWN_UNWRAP_PATH)"
+	@$(PYTHON) scripts/unwrap_markdown.py "$(MARKDOWN_UNWRAP_PATH)"
 
 rm_trailing_whitespace:
-	$(PYTHON) scripts/remove_trailing_whitespace.py "$(FORMAT_PATH)"
+	@$(PYTHON) scripts/remove_trailing_whitespace.py "$(FORMAT_PATH)"

@@ -414,10 +414,10 @@ class KernelShiftInvar(AbstractSIDSIKernel):
             shape_scale (Union[None, list]): Shape of `scale` when `np.isscalar(scale)`.
             shape_lengthscales (Union[None, list]): Shape of `lengthscales` when
                 `np.isscalar(lengthscales)`
-            tfs_scale (Union[None, Tuple[Callable,Callable]]): The first argument transforms
+            tfs_scale (Union[None, Tuple[Callable, Callable]]): The first argument transforms
                 to the raw value to be optimized; the second applies the
                 inverse transform.
-            tfs_lengthscales (Union[None, Tuple[Callable,Callable]]): The first argument
+            tfs_lengthscales (Union[None, Tuple[Callable, Callable]]): The first argument
                 transforms to the raw value to be optimized; the second applies
                 the inverse transform.
             torchify (bool): If `True`, use the `torch` backend. Set to `True`
@@ -435,7 +435,7 @@ class KernelShiftInvar(AbstractSIDSIKernel):
             weights (Union[None, np.ndarray, torch.Tensor]): Alias for
                 `lengthscales`.
             shape_weights (Union[None, list]): Alias for `shape_lengthscales`.
-            tfs_weights (Union[None, Tuple[Callable,Callable]]): Alias for
+            tfs_weights (Union[None, Tuple[Callable, Callable]]): Alias for
                 `tfs_lengthscales`.
             requires_grad_weights (Union[None, bool]): Alias for
                 `requires_grad_lengthscales`.
@@ -642,13 +642,13 @@ class KernelShiftInvarCombined(AbstractSIDSIKernel):
             shape_lengthscales (Union[None, list]): Shape of `lengthscales` when
                 `np.isscalar(lengthscales)`
             shape_alpha (Union[None, list]): Shape of `alpha` when `np.isscalar(alpha)`
-            tfs_scale (Union[None, Tuple[Callable,Callable]]): The first argument transforms
+            tfs_scale (Union[None, Tuple[Callable, Callable]]): The first argument transforms
                 to the raw value to be optimized; the second applies the
                 inverse transform.
-            tfs_lengthscales (Union[None, Tuple[Callable,Callable]]): The first argument
+            tfs_lengthscales (Union[None, Tuple[Callable, Callable]]): The first argument
                 transforms to the raw value to be optimized; the second applies
                 the inverse transform.
-            tfs_alpha (Union[None, Tuple[Callable,Callable]]): The first argument transforms
+            tfs_alpha (Union[None, Tuple[Callable, Callable]]): The first argument transforms
                 to the raw value to be optimized; the second applies the
                 inverse transform.
             torchify (bool): If `True`, use the `torch` backend. Set to `True`
@@ -668,7 +668,7 @@ class KernelShiftInvarCombined(AbstractSIDSIKernel):
             weights (Union[None, np.ndarray, torch.Tensor]): Alias for
                 `lengthscales`.
             shape_weights (Union[None, list]): Alias for `shape_lengthscales`.
-            tfs_weights (Union[None, Tuple[Callable,Callable]]): Alias for
+            tfs_weights (Union[None, Tuple[Callable, Callable]]): Alias for
                 `tfs_lengthscales`.
             requires_grad_weights (Union[None, bool]): Alias for
                 `requires_grad_lengthscales`.
@@ -927,10 +927,10 @@ class KernelDigShiftInvar(AbstractSIDSIKernel):
             shape_scale (Union[None, list]): Shape of `scale` when `np.isscalar(scale)`.
             shape_lengthscales (Union[None, list]): Shape of `lengthscales` when
                 `np.isscalar(lengthscales)`
-            tfs_scale (Union[None, Tuple[Callable,Callable]]): The first argument transforms
+            tfs_scale (Union[None, Tuple[Callable, Callable]]): The first argument transforms
                 to the raw value to be optimized; the second applies the
                 inverse transform.
-            tfs_lengthscales (Union[None, Tuple[Callable,Callable]]): The first argument
+            tfs_lengthscales (Union[None, Tuple[Callable, Callable]]): The first argument
                 transforms to the raw value to be optimized; the second applies
                 the inverse transform.
             torchify (bool): If `True`, use the `torch` backend. Set to `True`
@@ -948,7 +948,7 @@ class KernelDigShiftInvar(AbstractSIDSIKernel):
             weights (Union[None, np.ndarray, torch.Tensor]): Alias for
                 `lengthscales`.
             shape_weights (Union[None, list]): Alias for `shape_lengthscales`.
-            tfs_weights (Union[None, Tuple[Callable,Callable]]): Alias for
+            tfs_weights (Union[None, Tuple[Callable, Callable]]): Alias for
                 `tfs_lengthscales`.
             requires_grad_weights (Union[None, bool]): Alias for
                 `requires_grad_lengthscales`.
@@ -1227,13 +1227,13 @@ class KernelDigShiftInvarAdaptiveAlpha(AbstractSIDSIKernel):
             shape_lengthscales (Union[None, list]): Shape of `lengthscales` when
                 `np.isscalar(lengthscales)`
             shape_alpha (Union[None, list]): Shape of `alpha` when `np.isscalar(alpha)`
-            tfs_scale (Union[None, Tuple[Callable,Callable]]): The first argument transforms
+            tfs_scale (Union[None, Tuple[Callable, Callable]]): The first argument transforms
                 to the raw value to be optimized; the second applies the
                 inverse transform.
-            tfs_lengthscales (Union[None, Tuple[Callable,Callable]]): The first argument
+            tfs_lengthscales (Union[None, Tuple[Callable, Callable]]): The first argument
                 transforms to the raw value to be optimized; the second applies
                 the inverse transform.
-            tfs_alpha (Union[None, Tuple[Callable,Callable]]): The first argument transforms
+            tfs_alpha (Union[None, Tuple[Callable, Callable]]): The first argument transforms
                 to the raw value to be optimized; the second applies the
                 inverse transform.
             torchify (bool): If `True`, use the `torch` backend. Set to `True`
@@ -1253,7 +1253,7 @@ class KernelDigShiftInvarAdaptiveAlpha(AbstractSIDSIKernel):
             weights (Union[None, np.ndarray, torch.Tensor]): Alias for
                 `lengthscales`.
             shape_weights (Union[None, list]): Alias for `shape_lengthscales`.
-            tfs_weights (Union[None, Tuple[Callable,Callable]]): Alias for
+            tfs_weights (Union[None, Tuple[Callable, Callable]]): Alias for
                 `tfs_lengthscales`.
             requires_grad_weights (Union[None, bool]): Alias for
                 `requires_grad_lengthscales`.
@@ -1502,13 +1502,13 @@ class KernelDigShiftInvarCombined(AbstractSIDSIKernel):
             shape_lengthscales (Union[None, list]): Shape of `lengthscales` when
                 `np.isscalar(lengthscales)`
             shape_alpha (Union[None, list]): Shape of `alpha` when `np.isscalar(alpha)`
-            tfs_scale (Union[None, Tuple[Callable,Callable]]): The first argument transforms
+            tfs_scale (Union[None, Tuple[Callable, Callable]]): The first argument transforms
                 to the raw value to be optimized; the second applies the
                 inverse transform.
-            tfs_lengthscales (Union[None, Tuple[Callable,Callable]]): The first argument
+            tfs_lengthscales (Union[None, Tuple[Callable, Callable]]): The first argument
                 transforms to the raw value to be optimized; the second applies
                 the inverse transform.
-            tfs_alpha (Union[None, Tuple[Callable,Callable]]): The first argument transforms
+            tfs_alpha (Union[None, Tuple[Callable, Callable]]): The first argument transforms
                 to the raw value to be optimized; the second applies the
                 inverse transform.
             torchify (bool): If `True`, use the `torch` backend. Set to `True`
@@ -1528,7 +1528,7 @@ class KernelDigShiftInvarCombined(AbstractSIDSIKernel):
             weights (Union[None, np.ndarray, torch.Tensor]): Alias for
                 `lengthscales`.
             shape_weights (Union[None, list]): Alias for `shape_lengthscales`.
-            tfs_weights (Union[None, Tuple[Callable,Callable]]): Alias for
+            tfs_weights (Union[None, Tuple[Callable, Callable]]): Alias for
                 `tfs_lengthscales`.
             requires_grad_weights (Union[None, bool]): Alias for
                 `requires_grad_lengthscales`.

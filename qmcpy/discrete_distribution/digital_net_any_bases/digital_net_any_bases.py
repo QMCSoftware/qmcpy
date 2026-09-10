@@ -170,14 +170,14 @@ class DigitalNetAnyBases(AbstractLDDiscreteDistribution):
         r"""Initialize a DigitalNetAnyBases discrete distribution.
 
         Args:
-            dimension (Union[int,np.ndarray]): Dimension of the generator.
+            dimension (Union[int, np.ndarray]): Dimension of the generator.
 
                 - If an `int` is passed in, use generating vector components at indices 0,...,`dimension`-1.
                 - If an `np.ndarray` is passed in, use generating vector components at these indices.
 
             replications (Union[None, int]): Number of independent randomizations of a
                 pointset.
-            seed (Union[None,int,np.random.SeedSequence]): Seed the random number
+            seed (Union[None, int, np.random.SeedSequence]): Seed the random number
                 generator for reproducibility.
             randomize (str): Options are
 

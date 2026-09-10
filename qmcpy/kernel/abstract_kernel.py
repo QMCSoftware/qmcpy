@@ -445,10 +445,10 @@ class AbstractKernelScaleLengthscales(AbstractKernel):
             shape_scale (Union[None, list]): Shape of `scale` when `np.isscalar(scale)`.
             shape_lengthscales (Union[None, list]): Shape of `lengthscales` when
                 `np.isscalar(lengthscales)`
-            tfs_scale (Tuple[Callable,Callable]): The first argument transforms
+            tfs_scale (Tuple[Callable, Callable]): The first argument transforms
                 to the raw value to be optimized; the second applies the
                 inverse transform.
-            tfs_lengthscales (Tuple[Callable,Callable]): The first argument
+            tfs_lengthscales (Tuple[Callable, Callable]): The first argument
                 transforms to the raw value to be optimized; the second applies
                 the inverse transform.
             torchify (bool): If `True`, use the `torch` backend. Set to `True`

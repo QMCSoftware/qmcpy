@@ -128,34 +128,36 @@ def main(argv):
 
     misnamed = [f for f in files if not _area_ok(f)]
 
+    if function_based or no_tests or misnamed:
+        print()
+
     if not quiet:
-        print(f"{len(class_based)}/{len(files)} file(s) use a unittest.TestCase class")
+        print(f"  - {len(class_based)} of {len(files)} files use a unittest.TestCase class")
     if function_based:
-        print(
-            f"{len(function_based)} file(s) use bare pytest functions "
-            f"(no unittest.TestCase class):"
-        )
+        print(f"  - {len(function_based)} file(s) use bare pytest functions (no unittest.TestCase class):")
         for f in function_based:
-            print(f"  {f.as_posix()}")
-    elif not quiet:
-        print("  no bare-function test files found")
+            print(f"    - {f.as_posix()}")
     if no_tests and not quiet:
-        print(f"{len(no_tests)} file(s) define no test_* callables:")
+        print(f"  - {len(no_tests)} file(s) define no test_* callables:")
         for f in no_tests:
-            print(f"  {f.as_posix()}")
+            print(f"    - {f.as_posix()}")
 
     if not quiet:
         print(
-            f"{len(files) - len(misnamed)}/{len(files)} file(s) use a "
+            f"  - {len(files) - len(misnamed)} of {len(files)} files use a "
             f"test_<area>_ prefix ({', '.join(sorted(AREA_PREFIXES))})"
         )
     if misnamed:
-        print(f"  {len(misnamed)} file(s) have no recognized test_<area>_ prefix:")
+        print(f"  - {len(misnamed)} file(s) have no recognized test_<area>_ prefix:")
         for f in misnamed:
-            print(f"  {f.as_posix()}")
-    elif not quiet:
-        print("  no misnamed test files found")
+            print(f"    - {f.as_posix()}")
 
+    bad = {*function_based, *misnamed, *no_tests}
+    if not bad:
+        print(f"clean  (0 of {len(files)} files)")
+    else:
+        prefix = "ERROR" if strict else "WARNING"
+        print(f"{prefix}: {len(bad)} problem(s)  ({len(bad)} of {len(files)} files)")
     return 1 if (strict and (function_based or misnamed or no_tests)) else 0
 
 

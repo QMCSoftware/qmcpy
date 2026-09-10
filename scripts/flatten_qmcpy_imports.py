@@ -953,16 +953,21 @@ def main(argv: list[str] | None = None) -> int:
     if changed:
         file_label = "file" if len(changed) == 1 else "files"
         import_label = "import" if changed_imports == 1 else "imports"
+        print()
         print(
-            f"qmcpy imports {action}: {len(changed)} {file_label}, "
+            f"  - qmcpy imports {action}: {len(changed)} {file_label}, "
             f"{changed_imports} {import_label}:"
         )
         for display_path, count in sorted(changed):
             per = "import" if count == 1 else "imports"
-            print(f"  {display_path} ({count} {per})")
-    else:
-        print(f"  qmcpy imports {action}: 0 files")
+            print(f"    - {display_path} ({count} {per})")
 
+    if not changed:
+        print(f"clean  (0 of {len(targets)} files)")
+    elif args.check:
+        print(f"ERROR: {len(changed)} would change  ({len(changed)} of {len(targets)} files)")
+    else:
+        print(f"{len(changed)} changed  ({len(changed)} of {len(targets)} files)")
     return int(args.check and bool(changed))
 
 

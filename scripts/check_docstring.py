@@ -254,15 +254,16 @@ def main(argv):
             print(f"{f.as_posix()}: skipped (syntax error: {exc})", file=sys.stderr)
             continue
         per_file[f] = findings
-        for lineno, cat, detail in findings:
+        for _, cat, _ in findings:
             by_cat[cat] = by_cat.get(cat, 0) + 1
             total += 1
-            if not quiet:
-                print(f"{f.as_posix()}:{lineno}: {cat}: {detail}")
 
-    if not quiet:
+    if total and not quiet:
         print()
-    print(_summary(total, len(files), by_cat, f"{len(files)} file(s) scanned"))
+        for f, findings in per_file.items():
+            for lineno, cat, detail in findings:
+                print(f"  - {f.as_posix()}:{lineno}: {cat}: {detail}")
+    print("  - " + _summary(total, len(files), by_cat, f"{len(files)} file(s) scanned"))
 
     if diff_ref is not None:
         try:
@@ -278,8 +279,14 @@ def main(argv):
                 for _, cat, _ in findings:
                     sub_cat[cat] = sub_cat.get(cat, 0) + 1
                     sub_total += 1
-            print(_summary(sub_total, sub_files, sub_cat, f"changed vs {diff_ref}"))
+            print("  - " + _summary(sub_total, sub_files, sub_cat, f"changed vs {diff_ref}"))
 
+    files_with_issues = sum(1 for findings in per_file.values() if findings)
+    if files_with_issues == 0:
+        print(f"clean  (0 of {len(files)} files)")
+    else:
+        prefix = "ERROR" if (strict and total) else "WARNING"
+        print(f"{prefix}: {files_with_issues} problem(s)  ({files_with_issues} of {len(files)} files)")
     return 1 if (strict and total) else 0
 
 

@@ -357,10 +357,10 @@ class KernelMultiTask(AbstractKernel):
                 $\boldsymbol{v}$.
             shape_factor (Union[None, list]): Shape of `factor` when `np.isscalar(factor)`.
             shape_diag (Union[None, list]): Shape of `diag` when `np.isscalar(diag)`.
-            tfs_factor (Tuple[Callable,Callable]): The first argument
+            tfs_factor (Tuple[Callable, Callable]): The first argument
                 transforms to the raw value to be optimized; the second applies
                 the inverse transform.
-            tfs_diag (Tuple[Callable,Callable]): The first argument transforms
+            tfs_diag (Tuple[Callable, Callable]): The first argument transforms
                 to the raw value to be optimized; the second applies the
                 inverse transform.
             requires_grad_factor (bool): If `True` and `torchify`, set

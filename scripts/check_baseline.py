@@ -41,7 +41,8 @@ CHECKS = {
         # M file(s)" or, once N reaches zero, "no issues in M file(s)" --
         # match both so the ratchet keeps working after a check is fully fixed.
         "pattern": re.compile(
-            r"^\d+ file\(s\) scanned: (?:(\d+) issue\(s\) across|no issues in) \d+ file\(s\)",
+            r"^\s*(?:- )?\d+ file\(s\) scanned: "
+            r"(?:(\d+) issue\(s\) across|no issues in) \d+ file\(s\)",
             re.M,
         ),
     },
@@ -86,7 +87,12 @@ def main(argv):
             status = f"improved from {base}"
         else:
             status = "unchanged"
-        print(f"{name}: {count} ({status})")
+        print(f"  - {name}: {count} ({status})")
+
+    if not regressed:
+        print(f"clean  (0 of {len(CHECKS)} counts)")
+    else:
+        print(f"ERROR: {len(regressed)} regressed  ({len(regressed)} of {len(CHECKS)} counts)")
 
     if update:
         BASELINE_PATH.write_text(json.dumps(current, indent=2, sort_keys=True) + "\n")

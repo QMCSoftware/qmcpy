@@ -89,6 +89,7 @@ nav:
       - QMCPy MPMC compatibility matrix: mpmc-compatibility.md
       - Unit tests on Jupyter Notebooks: booktests.md
       - Coding Agents: AGENTS.md
+    - Makefile Developer Tooling: demos/makefile_dev_tools.ipynb
     - JOSS 2026 Paper: paper/paper.md
 
 
