@@ -155,12 +155,13 @@ class AbstractTrueMeasure(object):
             warn (bool): If `False`, disable warnings when generating samples.
 
         Returns:
-            np.ndarray: Samples from the sequence.
+            Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]: Samples from the
+                sequence when `return_weights=False`, otherwise the pair
+                `(samples, jacobian_weights)`.
 
-                - If `replications` is `None` then this will be of size (`n_max`-`n_min`) $\times$ `dimension`
-                - If `replications` is a positive int, then `t` will be of size `replications` $\times$ (`n_max`-`n_min`) $\times$ `dimension`
-            np.ndarray: Jacobian weights, returned as the second result only
-                when `return_weights=True`.
+                - If `replications` is `None` the samples are of size (`n_max`-`n_min`) $\times$ `dimension`
+                - If `replications` is a positive int, they are of size `replications` $\times$ (`n_max`-`n_min`) $\times$ `dimension`
+                - The jacobian weights, when returned, drop the trailing `dimension` axis
         """
         return self.gen_samples(
             n=n, n_min=n_min, n_max=n_max, return_weights=return_weights, warn=warn
