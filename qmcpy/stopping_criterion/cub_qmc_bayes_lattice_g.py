@@ -4,13 +4,9 @@ from .abstract_cub_bayes_ld_g import AbstractCubBayesLDG
 from ..discrete_distribution import Lattice
 from ..integrand import Keister, BoxIntegral, Genz, SensitivityIndices
 from ..fast_transform import fftbr, omega_fftbr
-from ..util import ParameterError  # , ParameterWarning #MaxSamplesWarning,
+from ..util import ParameterError
 
-# from math import factorial
 import numpy as np
-
-# from time import time
-# import warnings
 
 
 class CubQMCBayesLatticeG(AbstractCubBayesLDG):
