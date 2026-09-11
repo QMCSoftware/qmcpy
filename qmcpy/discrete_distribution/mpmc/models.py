@@ -10,7 +10,14 @@ from .utils import (
 
 
 class MPNN_layer(MessagePassing):
-    def __init__(self, ninp, nhid):
+    """One message-passing neural network layer used by `MPMC_net`.
+
+    Implements `torch_geometric.nn.MessagePassing`'s `message`/`update`
+    interface: each node aggregates messages from its neighbors (from the
+    `edge_index` graph built in `MPMC_net`) and updates its own features.
+    """
+
+    def __init__(self, ninp, nhid) -> None:
         super(MPNN_layer, self).__init__()
         self.ninp = ninp
         self.nhid = nhid
@@ -29,24 +36,66 @@ class MPNN_layer(MessagePassing):
                                           )
         self.norm = InstanceNorm(nhid)
 
-    def forward(self, x, edge_index, batch):
+    def forward(self, x: torch.Tensor, edge_index: torch.Tensor, batch: torch.Tensor) -> torch.Tensor:
+        """Propagate messages over the graph and instance-normalize the result.
+
+        Args:
+            x (torch.Tensor): Node features, shape `(num_nodes, ninp)`.
+            edge_index (torch.Tensor): Graph connectivity, shape `(2, num_edges)`.
+            batch (torch.Tensor): Batch assignment for each node, shape `(num_nodes,)`.
+
+        Returns:
+            torch.Tensor: Updated, normalized node features, shape `(num_nodes, nhid)`.
+        """
         x = self.propagate(edge_index, x=x)
         x = self.norm(x, batch)
         return x
 
-    def message(self, x_i, x_j):
+    def message(self, x_i: torch.Tensor, x_j: torch.Tensor) -> torch.Tensor:
+        """Compute the message sent from neighbor `x_j` to node `x_i`.
+
+        Called internally by `MessagePassing.propagate`.
+
+        Args:
+            x_i (torch.Tensor): Features of the target node, shape `(num_edges, ninp)`.
+            x_j (torch.Tensor): Features of the source (neighbor) node, shape `(num_edges, ninp)`.
+
+        Returns:
+            torch.Tensor: Message for each edge, shape `(num_edges, nhid)`.
+        """
         message = self.message_net_1(torch.cat((x_i, x_j), dim=-1))
         message = self.message_net_2(message)
         return message
 
-    def update(self, message, x):
+    def update(self, message: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
+        """Combine a node's aggregated message with its own features.
+
+        Called internally by `MessagePassing.propagate`.
+
+        Args:
+            message (torch.Tensor): Aggregated incoming message, shape `(num_nodes, nhid)`.
+            x (torch.Tensor): The node's own features, shape `(num_nodes, ninp)`.
+
+        Returns:
+            torch.Tensor: Updated node features, shape `(num_nodes, nhid)`.
+        """
         update = self.update_net_1(torch.cat((x, message), dim=-1))
         update = self.update_net_2(update)
         return update
 
 
 class MPMC_net(nn.Module):
-    def __init__(self, dim, nhid, nlayers, nsamples, nbatch, radius, loss_fn, weights):
+    """Graph neural network that transforms random points into a
+    low-discrepancy point set by minimizing a discrepancy-based loss.
+
+    Encodes `nbatch` independent batches of `nsamples` random points in
+    `dim` dimensions, passes them through `nlayers` `MPNN_layer`s connected
+    by a radius graph, decodes back to `dim` dimensions, and squashes to
+    `[0,1]^dim` via a sigmoid. Trained (elsewhere, e.g. `MPMC._train`) to
+    minimize `loss_fn` evaluated on the resulting points.
+    """
+
+    def __init__(self, dim, nhid, nlayers, nsamples, nbatch, radius, loss_fn, weights) -> None:
         super(MPMC_net, self).__init__()
         self.enc = nn.Linear(dim,nhid)
         self.convs = nn.ModuleList()
@@ -78,7 +127,15 @@ class MPMC_net(nn.Module):
         else:
             raise ValueError(f"Loss function DNE: {loss_fn}")
 
-    def forward(self):
+    def forward(self) -> tuple[torch.Tensor, torch.Tensor]:
+        """Transform the stored random points and compute the discrepancy loss.
+
+        Returns:
+            tuple[torch.Tensor, torch.Tensor]: `(loss, X)` where `loss` is
+                the scalar mean discrepancy loss (weighted by `self.weights`
+                if given) and `X` is the transformed point set, shape
+                `(nbatch, nsamples, dim)`.
+        """
         X = self.x
         edge_index = self.edge_index
 

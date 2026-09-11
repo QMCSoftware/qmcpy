@@ -1,0 +1,5 @@
+{
+  "check_docstring": 0,
+  "pydoclint": 0,
+  "unsafe_annotations": 0
+}

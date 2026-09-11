@@ -38,6 +38,14 @@ TRAILING_TEXT_RE = re.compile(r"[ \t]+(?=\r?$)", re.MULTILINE)
 
 
 def iter_source_files(paths: list[str]) -> list[Path]:
+    """Collect the tracked and untracked files eligible for whitespace cleanup.
+
+    Args:
+        paths (list[str]): Files or directories to restrict the search to.
+
+    Returns:
+        list[Path]: Sorted regular files with a supported name or suffix.
+    """
     command = [
         "git",
         "ls-files",
@@ -105,6 +113,15 @@ def _strip_python_source(original: bytes) -> bytes:
 
 
 def remove_trailing_whitespace(path: Path, check: bool) -> bool:
+    """Strip trailing whitespace from one file.
+
+    Args:
+        path (Path): File to process; binary files are left untouched.
+        check (bool): Report whether the file would change without writing.
+
+    Returns:
+        bool: Whether the file changed, or would change under ``check``.
+    """
     original = path.read_bytes()
     if b"\0" in original:
         return False
@@ -125,11 +142,24 @@ def main() -> int:
     parser.add_argument("paths", nargs="+", help="tracked files or directories to process")
     args = parser.parse_args()
 
-    changed = [
-        path for path in iter_source_files(args.paths) if remove_trailing_whitespace(path, args.check)
-    ]
+    scanned = list(iter_source_files(args.paths))
+    changed = sorted(
+        path for path in scanned
+        if remove_trailing_whitespace(path, args.check)
+    )
     action = "would update" if args.check else "updated"
-    print(f"trailing whitespace {action}: {len(changed)} file(s)")
+    if changed:
+        print()
+        print(f"  - trailing whitespace {action}: {len(changed)} file(s):")
+        for path in changed:
+            print(f"    - {path}")
+
+    if not changed:
+        print(f"clean  (0 of {len(scanned)} files)")
+    elif args.check:
+        print(f"ERROR: {len(changed)} would change  ({len(changed)} of {len(scanned)} files)")
+    else:
+        print(f"{len(changed)} changed  ({len(changed)} of {len(scanned)} files)")
     return int(args.check and bool(changed))
 
 

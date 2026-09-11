@@ -1,3 +1,7 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from typing import Union
 from .abstract_true_measure import AbstractTrueMeasure
 from ..util import DimensionError, ParameterError
 from ..discrete_distribution import DigitalNetB2
@@ -7,8 +11,8 @@ import numpy as np
 
 
 class Kumaraswamy(AbstractTrueMeasure):
-    r"""
-    Kumaraswamy distribution as described in [https://en.wikipedia.org/wiki/Kumaraswamy_distribution](https://en.wikipedia.org/wiki/Kumaraswamy_distribution).
+    r"""Kumaraswamy distribution as described in
+    [https://en.wikipedia.org/wiki/Kumaraswamy_distribution](https://en.wikipedia.org/wiki/Kumaraswamy_distribution).
 
     Examples:
         >>> true_measure = Kumaraswamy(DigitalNetB2(2,seed=7),a=[1,2],b=[3,4])
@@ -50,10 +54,12 @@ class Kumaraswamy(AbstractTrueMeasure):
                 [0.37253319, 0.45379743, 0.63366422]]])
     """
 
-    def __init__(self, sampler, a=2, b=2):
-        r"""
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], a: Union[float, np.ndarray] = 2, b: Union[float, np.ndarray] = 2) -> None:
+        r"""Initialize a Kumaraswamy true measure.
+
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.
@@ -92,22 +98,21 @@ class Kumaraswamy(AbstractTrueMeasure):
             covariance=diags(variance, format="dia"),
         )
         super(Kumaraswamy, self).__init__()
-        assert self.alpha.shape == (self.d,) and self.beta.shape == (self.d,)
+        if not (self.alpha.shape == (self.d,) and self.beta.shape == (self.d,)):
+            raise AssertionError
 
     def _compute_moments(self):
-        r"""
-        Compute the marginal mean and variance of each coordinate.
+        r"""Compute the marginal mean and variance of each coordinate.
 
         The Kumaraswamy raw moments are $M_n = b\,B(1 + n/a, b)$ [1], so the
-        mean is $M_1$ and the variance is $M_2 - M_1^2$. Forming that difference
-        directly causes cancellation error once the variance is small relative
-        to $M_1^2$ (e.g. large $a$).
+        mean is $M_1$ and the variance is $M_2 - M_1^2$. Forming that
+        difference directly causes cancellation error once the variance is
+        small relative to $M_1^2$ (e.g. large $a$).
 
         Instead, with the log-moment function $K(r) = \log M_r$,
 
-        $$\text{mean} = e^{K(1)}, \qquad
-          \operatorname{Var}[X] = \text{mean}^2\,(e^{q} - 1), \qquad
-          q = K(2) - 2K(1).$$
+        $$\text{mean} = e^{K(1)}, \qquad \operatorname{Var}[X] =
+        \text{mean}^2\,(e^{q} - 1), \qquad q = K(2) - 2K(1).$$
 
         Each log-moment is available in closed form via the log-Beta function
         [2], $K(r) = \log b + \ln B(1 + r/a, b)$, so ``mean`` and $q$ are

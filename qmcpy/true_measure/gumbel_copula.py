@@ -1,3 +1,8 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
 from .copula import (
     AbstractCopula,
     _clip_unit_interval,
@@ -11,17 +16,16 @@ import numpy as np
 
 
 class GumbelCopula(AbstractCopula):
-    r"""
-    Gumbel copula transform with user supplied marginals.
+    r"""Gumbel copula transform with user supplied marginals.
 
-    This implementation supports general dimension for ``theta >= 1``. It
-    maps independent uniforms to Gumbel-dependent uniforms by numerically
-    inverting the conditional CDFs from the inverse Rosenblatt construction.
-    The base ``AbstractCopula`` class then applies marginal quantile functions.
-    SciPy calls the quantile function ``ppf``.
+    This implementation supports general dimension for ``theta >= 1``. It maps
+    independent uniforms to Gumbel-dependent uniforms by numerically inverting
+    the conditional CDFs from the inverse Rosenblatt construction. The base
+    ``AbstractCopula`` class then applies marginal quantile functions. SciPy
+    calls the quantile function ``ppf``.
 
-    Gumbel copulas have positive upper-tail dependence for ``theta > 1``.
-    The boundary case ``theta = 1`` is the independent copula.
+    Gumbel copulas have positive upper-tail dependence for ``theta > 1``. The
+    boundary case ``theta = 1`` is the independent copula.
 
     Examples:
         >>> import numpy as np
@@ -76,15 +80,17 @@ class GumbelCopula(AbstractCopula):
         [doi:10.1016/j.jmva.2012.02.019](https://doi.org/10.1016/j.jmva.2012.02.019).
     """
 
-    def __init__(self, sampler, marginals, theta):
-        r"""
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], marginals: list, theta: float) -> None:
+        r"""Initialize a GumbelCopula true measure.
+
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
                 A sampler or transform whose range is the unit cube.
             marginals (list): Length d list of SciPy-like univariate
                 distributions implementing a quantile function, called ``ppf``
                 in SciPy.
-            theta (float): Gumbel dependence parameter, requiring ``theta >= 1``.
+            theta (float): Gumbel dependence parameter, requiring ``theta >=
+                1``.
         """
         self.parameters = ["marginals", "theta"]
         super(GumbelCopula, self).__init__(sampler=sampler, marginals=marginals)

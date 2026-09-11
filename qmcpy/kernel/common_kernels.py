@@ -1,3 +1,9 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Union, Tuple, Callable
+if TYPE_CHECKING:
+    import torch
+
 from .abstract_kernel import AbstractKernelScaleLengthscales
 from ..discrete_distribution import DigitalNetB2
 from ..util.transforms import tf_exp_eps, tf_exp_eps_inv, tf_identity
@@ -8,10 +14,24 @@ import scipy.special
 
 
 class AbstractKernelGaussianSE(AbstractKernelScaleLengthscales):
+    """Abstract base class for Gaussian / squared-exponential-family kernels.
+
+    Provides the analytic `[0,1]^d` single and double integrals shared by
+    this whole kernel family; subclasses need only implement `parsed___call__`.
+    """
 
     AUTOGRADKERNEL = True
 
-    def parsed_single_integral_01d(self, x, batch_params):
+    def parsed_single_integral_01d(self, x: Union[np.ndarray, torch.Tensor], batch_params: dict) -> Union[np.ndarray, torch.Tensor]:
+        """Analytic single integral of the Gaussian/SE-family kernel over `[0,1]^d`.
+
+        Args:
+            x (Union[np.ndarray, torch.Tensor]): Points, shape `(...,d)`.
+            batch_params (dict): Batch-broadcast `scale`/`lengthscales`, from `get_batch_params`.
+
+        Returns:
+            Union[np.ndarray, torch.Tensor]: Shape `(...,)` integral kernel evaluations.
+        """
         s = batch_params["scale"][..., 0]
         l = batch_params["lengthscales"]
         norm_class = (
@@ -25,7 +45,12 @@ class AbstractKernelGaussianSE(AbstractKernelScaleLengthscales):
         )
         return kint
 
-    def double_integral_01d(self):
+    def double_integral_01d(self) -> Union[np.ndarray, torch.Tensor]:
+        """Analytic double integral of the Gaussian/SE-family kernel over `[0,1]^d x [0,1]^d`.
+
+        Returns:
+            Union[np.ndarray, torch.Tensor]: Double integral kernel evaluations.
+        """
         erf = self.npt.erf if self.torchify else scipy.special.erf
         s = self.scale[..., 0]
         l = self.lengthscales
@@ -39,10 +64,11 @@ class AbstractKernelGaussianSE(AbstractKernelScaleLengthscales):
 
 
 class KernelGaussian(AbstractKernelGaussianSE):
-    r"""
-    Gaussian / Squared Exponential kernel implemented using the product of exponentials.
+    r"""Gaussian / Squared Exponential kernel implemented using the product of
+    exponentials.
 
-    $$K(\boldsymbol{x},\boldsymbol{z}) = S \prod_{j=1}^d \exp\left(-\left(\frac{x_j-z_j}{\sqrt{2} \gamma_j}\right)^2\right)$$
+    $$K(\boldsymbol{x},\boldsymbol{z}) = S \prod_{j=1}^d
+    \exp\left(-\left(\frac{x_j-z_j}{\sqrt{2} \gamma_j}\right)^2\right)$$
 
     Examples:
         >>> rng = np.random.Generator(np.random.PCG64(7))
@@ -260,6 +286,9 @@ class KernelGaussian(AbstractKernelGaussianSE):
     """
 
     def parsed___call__(self, x0, x1, batch_params):
+        """Gaussian / squared exponential kernel evaluation via a direct
+        elementwise formula; see the class docstring for the formula.
+        """
         scale = batch_params["scale"][..., 0]
         lengthscales = batch_params["lengthscales"]
         k = scale * self.npt.exp(
@@ -269,11 +298,14 @@ class KernelGaussian(AbstractKernelGaussianSE):
 
 
 class KernelSquaredExponential(AbstractKernelGaussianSE):
-    r"""
-    Gaussian / Squared Exponential kernel implemented using the pairwise distance function.
-    Please use `KernelGaussian` when using derivative information.
+    r"""Gaussian / Squared Exponential kernel implemented using the pairwise
+    distance function. Please use `KernelGaussian` when using derivative
+    information.
 
-    $$K(\boldsymbol{x},\boldsymbol{z}) = S \exp\left(-d_{\boldsymbol{\gamma}}^2(\boldsymbol{x},\boldsymbol{z})\right), \qquad d_{\boldsymbol{\gamma}}(\boldsymbol{x},\boldsymbol{z}) = \left\lVert\frac{\boldsymbol{x}-\boldsymbol{z}}{\sqrt{2}\boldsymbol{\gamma}}\right\rVert_2.$$
+    $$K(\boldsymbol{x},\boldsymbol{z}) = S
+    \exp\left(-d_{\boldsymbol{\gamma}}^2(\boldsymbol{x},\boldsymbol{z})\right),
+    \qquad d_{\boldsymbol{\gamma}}(\boldsymbol{x},\boldsymbol{z}) =
+    \left\lVert\frac{\boldsymbol{x}-\boldsymbol{z}}{\sqrt{2}\boldsymbol{\gamma}}\right\rVert_2.$$
 
     Examples:
         >>> rng = np.random.Generator(np.random.PCG64(7))
@@ -355,6 +387,9 @@ class KernelSquaredExponential(AbstractKernelGaussianSE):
     """
 
     def parsed___call__(self, x0, x1, batch_params):
+        """Gaussian / squared exponential kernel evaluation via the pairwise
+        distance function; see the class docstring for the formula.
+        """
         scale = batch_params["scale"][..., 0]
         lengthscales = batch_params["lengthscales"]
         rdists = self.rel_pairwise_dist_func(x0, x1, lengthscales)
@@ -363,10 +398,12 @@ class KernelSquaredExponential(AbstractKernelGaussianSE):
 
 
 class KernelRationalQuadratic(AbstractKernelScaleLengthscales):
-    r"""
-    Rational Quadratic kernel
+    r"""Rational Quadratic kernel
 
-    $$K(\boldsymbol{x},\boldsymbol{z}) = S \left(1+\frac{d_{\boldsymbol{\gamma}}^2(\boldsymbol{x},\boldsymbol{z})}{\alpha}\right)^{-\alpha}, \qquad d_{\boldsymbol{\gamma}}(\boldsymbol{x},\boldsymbol{z}) = \left\lVert\frac{\boldsymbol{x}-\boldsymbol{z}}{\sqrt{2}\boldsymbol{\gamma}}\right\rVert_2.$$
+    $$K(\boldsymbol{x},\boldsymbol{z}) = S
+    \left(1+\frac{d_{\boldsymbol{\gamma}}^2(\boldsymbol{x},\boldsymbol{z})}{\alpha}\right)^{-\alpha},
+    \qquad d_{\boldsymbol{\gamma}}(\boldsymbol{x},\boldsymbol{z}) =
+    \left\lVert\frac{\boldsymbol{x}-\boldsymbol{z}}{\sqrt{2}\boldsymbol{\gamma}}\right\rVert_2.$$
 
     Examples:
         >>> rng = np.random.Generator(np.random.PCG64(7))
@@ -451,43 +488,60 @@ class KernelRationalQuadratic(AbstractKernelScaleLengthscales):
 
     def __init__(
         self,
-        d,
-        scale=1.0,
-        lengthscales=1.0,
-        alpha=1.0,
-        shape_scale=None,
-        shape_lengthscales=None,
-        shape_alpha=None,
-        tfs_scale=(tf_exp_eps_inv, tf_exp_eps),
-        tfs_lengthscales=(tf_exp_eps_inv, tf_exp_eps),
-        tfs_alpha=(tf_exp_eps_inv, tf_exp_eps),
-        torchify=False,
-        requires_grad_scale=True,
-        requires_grad_lengthscales=True,
-        requires_grad_alpha=True,
-        device="cpu",
-        compile_call=False,
-        compile_call_kwargs=None,
-    ):
-        r"""
+        d: int,
+        scale: Union[float, np.ndarray, torch.Tensor] = 1.0,
+        lengthscales: Union[float, np.ndarray, torch.Tensor] = 1.0,
+        alpha: Union[float, np.ndarray, torch.Tensor] = 1.0,
+        shape_scale: Union[None, list] = None,
+        shape_lengthscales: Union[None, list] = None,
+        shape_alpha: Union[None, list] = None,
+        tfs_scale: Tuple[Callable, Callable] = (tf_exp_eps_inv, tf_exp_eps),
+        tfs_lengthscales: Tuple[Callable, Callable] = (tf_exp_eps_inv, tf_exp_eps),
+        tfs_alpha: Tuple[Callable, Callable] = (tf_exp_eps_inv, tf_exp_eps),
+        torchify: bool = False,
+        requires_grad_scale: bool = True,
+        requires_grad_lengthscales: bool = True,
+        requires_grad_alpha: bool = True,
+        device: Union[str, torch.device] = "cpu",
+        compile_call: bool = False,
+        compile_call_kwargs: Union[None, dict] = None,
+    ) -> None:
+        r"""Initialize a KernelRationalQuadratic kernel.
+
         Args:
             d (int): Dimension.
-            scale (Union[np.ndarray, torch.Tensor]): Scaling factor $S$.
-            lengthscales (Union[np.ndarray, torch.Tensor]): Lengthscales $\boldsymbol{\gamma}$.
-            alpha (Union[np.ndarray, torch.Tensor]): Scale mixture parameter $\alpha$.
-            shape_scale (list): Shape of `scale` when `np.isscalar(scale)`.
-            shape_lengthscales (list): Shape of `lengthscales` when `np.isscalar(lengthscales)`
-            shape_alpha (list): Shape of `alpha` when `np.isscalar(alpha)`
-            tfs_scale (Tuple[callable,callable]): The first argument transforms to the raw value to be optimized; the second applies the inverse transform.
-            tfs_lengthscales (Tuple[callable,callable]): The first argument transforms to the raw value to be optimized; the second applies the inverse transform.
-            tfs_alpha (Tuple[callable,callable]): The first argument transforms to the raw value to be optimized; the second applies the inverse transform.
-            torchify (bool): If `True`, use the `torch` backend. Set to `True` if computing gradients with respect to inputs and/or hyperparameters.
-            requires_grad_scale (bool): If `True` and `torchify`, set `requires_grad=True` for `scale`.
-            requires_grad_lengthscales (bool): If `True` and `torchify`, set `requires_grad=True` for `lengthscales`.
-            requires_grad_alpha (bool): If `True` and `torchify`, set `requires_grad=True` for `alpha`.
-            device (torch.device): If `torchify`, put things onto this device.
-            compile_call (bool): If `True`, `torch.compile` the `parsed___call__` method.
-            compile_call_kwargs (dict): When `compile_call` is `True`, pass these keyword arguments to `torch.compile`.
+            scale (Union[float, np.ndarray, torch.Tensor]): Scaling factor $S$.
+            lengthscales (Union[float, np.ndarray, torch.Tensor]): Lengthscales
+                $\boldsymbol{\gamma}$.
+            alpha (Union[float, np.ndarray, torch.Tensor]): Scale mixture parameter
+                $\alpha$.
+            shape_scale (Union[None, list]): Shape of `scale` when `np.isscalar(scale)`.
+            shape_lengthscales (Union[None, list]): Shape of `lengthscales` when
+                `np.isscalar(lengthscales)`
+            shape_alpha (Union[None, list]): Shape of `alpha` when `np.isscalar(alpha)`
+            tfs_scale (Tuple[Callable, Callable]): The first argument transforms
+                to the raw value to be optimized; the second applies the
+                inverse transform.
+            tfs_lengthscales (Tuple[Callable, Callable]): The first argument
+                transforms to the raw value to be optimized; the second applies
+                the inverse transform.
+            tfs_alpha (Tuple[Callable, Callable]): The first argument transforms
+                to the raw value to be optimized; the second applies the
+                inverse transform.
+            torchify (bool): If `True`, use the `torch` backend. Set to `True`
+                if computing gradients with respect to inputs and/or
+                hyperparameters.
+            requires_grad_scale (bool): If `True` and `torchify`, set
+                `requires_grad=True` for `scale`.
+            requires_grad_lengthscales (bool): If `True` and `torchify`, set
+                `requires_grad=True` for `lengthscales`.
+            requires_grad_alpha (bool): If `True` and `torchify`, set
+                `requires_grad=True` for `alpha`.
+            device (Union[str, torch.device]): If `torchify`, put things onto this device.
+            compile_call (bool): If `True`, `torch.compile` the
+                `parsed___call__` method.
+            compile_call_kwargs (Union[None, dict]): When `compile_call` is `True`, pass
+                these keyword arguments to `torch.compile`.
         """
         if shape_scale is None:
             shape_scale = [1]
@@ -524,9 +578,13 @@ class KernelRationalQuadratic(AbstractKernelScaleLengthscales):
 
     @property
     def alpha(self):
+        """Union[np.ndarray, torch.Tensor]: The shape/mixture parameter
+        $\alpha$, computed from the raw stored value via `tfs_alpha`'s inverse transform.
+        """
         return self.tfs_alpha[1](self.raw_alpha)
 
     def parsed___call__(self, x0, x1, batch_params):
+        """Rational quadratic kernel evaluation; see the class docstring for the formula."""
         scale = batch_params["scale"][..., 0]
         lengthscales = batch_params["lengthscales"]
         alpha = batch_params["alpha"][..., 0]
@@ -536,10 +594,12 @@ class KernelRationalQuadratic(AbstractKernelScaleLengthscales):
 
 
 class KernelMatern12(AbstractKernelScaleLengthscales):
-    r"""
-    Matern kernel with $\alpha=1/2$.
+    r"""Matern kernel with $\alpha=1/2$.
 
-    $$K(\boldsymbol{x},\boldsymbol{z}) = S \exp\left(-d_{\boldsymbol{\gamma}}(\boldsymbol{x},\boldsymbol{z})\right), \qquad d_{\boldsymbol{\gamma}}(\boldsymbol{x},\boldsymbol{z}) = \left\lVert\frac{\boldsymbol{x}-\boldsymbol{z}}{\sqrt{2}\boldsymbol{\gamma}}\right\rVert_2.$$
+    $$K(\boldsymbol{x},\boldsymbol{z}) = S
+    \exp\left(-d_{\boldsymbol{\gamma}}(\boldsymbol{x},\boldsymbol{z})\right),
+    \qquad d_{\boldsymbol{\gamma}}(\boldsymbol{x},\boldsymbol{z}) =
+    \left\lVert\frac{\boldsymbol{x}-\boldsymbol{z}}{\sqrt{2}\boldsymbol{\gamma}}\right\rVert_2.$$
 
     Examples:
         >>> rng = np.random.Generator(np.random.PCG64(7))
@@ -623,6 +683,7 @@ class KernelMatern12(AbstractKernelScaleLengthscales):
     AUTOGRADKERNEL = True
 
     def parsed___call__(self, x0, x1, batch_params):
+        """Matern 1/2 (exponential) kernel evaluation; see the class docstring for the formula."""
         scale = batch_params["scale"][..., 0]
         lengthscales = batch_params["lengthscales"]
         rdists = self.rel_pairwise_dist_func(x0, x1, lengthscales)
@@ -631,10 +692,12 @@ class KernelMatern12(AbstractKernelScaleLengthscales):
 
 
 class KernelMatern32(AbstractKernelScaleLengthscales):
-    r"""
-    Matern kernel with $\alpha=3/2$.
+    r"""Matern kernel with $\alpha=3/2$.
 
-    $$K(\boldsymbol{x},\boldsymbol{z}) = S \left(1+\sqrt{3} d_{\boldsymbol{\gamma}}(\boldsymbol{x},\boldsymbol{z})\right)\exp\left(-\sqrt{3}d_{\boldsymbol{\gamma}}(\boldsymbol{x},\boldsymbol{z})\right), \qquad d_{\boldsymbol{\gamma}}(\boldsymbol{x},\boldsymbol{z}) = \left\lVert\frac{\boldsymbol{x}-\boldsymbol{z}}{\sqrt{2}\boldsymbol{\gamma}}\right\rVert_2.$$
+    $$K(\boldsymbol{x},\boldsymbol{z}) = S \left(1+\sqrt{3}
+    d_{\boldsymbol{\gamma}}(\boldsymbol{x},\boldsymbol{z})\right)\exp\left(-\sqrt{3}d_{\boldsymbol{\gamma}}(\boldsymbol{x},\boldsymbol{z})\right),
+    \qquad d_{\boldsymbol{\gamma}}(\boldsymbol{x},\boldsymbol{z}) =
+    \left\lVert\frac{\boldsymbol{x}-\boldsymbol{z}}{\sqrt{2}\boldsymbol{\gamma}}\right\rVert_2.$$
 
     Examples:
         >>> rng = np.random.Generator(np.random.PCG64(7))
@@ -718,6 +781,7 @@ class KernelMatern32(AbstractKernelScaleLengthscales):
     AUTOGRADKERNEL = True
 
     def parsed___call__(self, x0, x1, batch_params):
+        """Matern 3/2 kernel evaluation; see the class docstring for the formula."""
         scale = batch_params["scale"][..., 0]
         lengthscales = batch_params["lengthscales"]
         rdists = self.rel_pairwise_dist_func(x0, x1, lengthscales)
@@ -726,10 +790,13 @@ class KernelMatern32(AbstractKernelScaleLengthscales):
 
 
 class KernelMatern52(AbstractKernelScaleLengthscales):
-    r"""
-    Matern kernel with $\alpha=5/2$.
+    r"""Matern kernel with $\alpha=5/2$.
 
-    $$K(\boldsymbol{x},\boldsymbol{z}) = S \left(1+\sqrt{5} d_{\boldsymbol{\gamma}}(\boldsymbol{x},\boldsymbol{z}) + \frac{5}{3} d_{\boldsymbol{\gamma}}^2(\boldsymbol{x},\boldsymbol{z})\right)\exp\left(-\sqrt{5}d_{\boldsymbol{\gamma}}(\boldsymbol{x},\boldsymbol{z})\right), \qquad d_{\boldsymbol{\gamma}}(\boldsymbol{x},\boldsymbol{z}) = \left\lVert\frac{\boldsymbol{x}-\boldsymbol{z}}{\sqrt{2}\boldsymbol{\gamma}}\right\rVert_2.$$
+    $$K(\boldsymbol{x},\boldsymbol{z}) = S \left(1+\sqrt{5}
+    d_{\boldsymbol{\gamma}}(\boldsymbol{x},\boldsymbol{z}) + \frac{5}{3}
+    d_{\boldsymbol{\gamma}}^2(\boldsymbol{x},\boldsymbol{z})\right)\exp\left(-\sqrt{5}d_{\boldsymbol{\gamma}}(\boldsymbol{x},\boldsymbol{z})\right),
+    \qquad d_{\boldsymbol{\gamma}}(\boldsymbol{x},\boldsymbol{z}) =
+    \left\lVert\frac{\boldsymbol{x}-\boldsymbol{z}}{\sqrt{2}\boldsymbol{\gamma}}\right\rVert_2.$$
 
     Examples:
         >>> rng = np.random.Generator(np.random.PCG64(7))
@@ -813,6 +880,7 @@ class KernelMatern52(AbstractKernelScaleLengthscales):
     AUTOGRADKERNEL = True
 
     def parsed___call__(self, x0, x1, batch_params):
+        """Matern 5/2 kernel evaluation; see the class docstring for the formula."""
         scale = batch_params["scale"][..., 0]
         lengthscales = batch_params["lengthscales"]
         rdists = self.rel_pairwise_dist_func(x0, x1, lengthscales)

@@ -1,3 +1,4 @@
+from typing import Union
 from .abstract_stopping_criterion import AbstractStoppingCriterion
 from ..util.data import Data
 
@@ -15,8 +16,8 @@ import warnings
 
 
 class CubMCG(AbstractStoppingCriterion):
-    r"""
-    IID Monte Carlo stopping criterion using Berry-Esseen inequalities in a two step method with guarantees for functions with bounded kurtosis.
+    r"""IID Monte Carlo stopping criterion using Berry-Esseen inequalities in
+    a two step method with guarantees for functions with bounded kurtosis.
 
     Examples:
         >>> ao = FinancialOption(IIDStdUniform(52,seed=7))
@@ -253,27 +254,30 @@ class CubMCG(AbstractStoppingCriterion):
 
     def __init__(
         self,
-        integrand,
-        abs_tol=1e-2,
-        rel_tol=0.0,
-        n_init=1024,
-        n_limit=2**30,
-        inflate=1.2,
-        alpha=0.01,
-        control_variates=None,
-        control_variate_means=None,
-    ):
-        r"""
+        integrand: AbstractIntegrand,
+        abs_tol: Union[float, np.ndarray] = 1e-2,
+        rel_tol: Union[float, np.ndarray] = 0.0,
+        n_init: int = 1024,
+        n_limit: int = 2**30,
+        inflate: float = 1.2,
+        alpha: Union[float, np.ndarray] = 0.01,
+        control_variates: Union[None, list] = None,
+        control_variate_means: Union[None, np.ndarray] = None,
+    ) -> None:
+        r"""Initialize a CubMCG stopping criterion.
+
         Args:
             integrand (AbstractIntegrand): The integrand.
-            abs_tol (np.ndarray): Absolute error tolerance.
-            rel_tol (np.ndarray): Relative error tolerance.
+            abs_tol (Union[float, np.ndarray]): Absolute error tolerance.
+            rel_tol (Union[float, np.ndarray]): Relative error tolerance.
             n_init (int): Initial number of samples.
             n_limit (int): Maximum number of samples.
-            inflate (float): Inflation factor $\geq 1$ to multiply by the variance estimate to make it more conservative.
-            alpha (np.ndarray): Uncertainty level in $(0,1)$.
-            control_variates (list): Integrands to use as control variates, each with the same underlying discrete distribution instance.
-            control_variate_means (np.ndarray): Means of each control variate.
+            inflate (float): Inflation factor $\geq 1$ to multiply by the
+                variance estimate to make it more conservative.
+            alpha (Union[float, np.ndarray]): Uncertainty level in $(0,1)$.
+            control_variates (Union[None, list]): Integrands to use as control variates,
+                each with the same underlying discrete distribution instance.
+            control_variate_means (Union[None, np.ndarray]): Means of each control variate.
         """
         if control_variates is None:
             control_variates = []
@@ -301,13 +305,15 @@ class CubMCG(AbstractStoppingCriterion):
             allowed_distribs=[AbstractIIDDiscreteDistribution],
             allow_vectorized_integrals=False,
         )
-        assert self.integrand.d_indv == ()
+        if not (self.integrand.d_indv == ()):
+            raise AssertionError
         # control variates
         self._init_control_variates(control_variates, control_variate_means)
         if self.ncv > 0:
-            assert self.cv_mu.shape == (
+            if not (self.cv_mu.shape == (
                 (self.ncv,) + self.integrand.d_indv
-            ), "Control variate means should have shape (len(control variates),d_indv)."
+            )):
+                raise AssertionError("Control variate means should have shape (len(control variates),d_indv).")
             self.parameters += ["cv", "cv_mu"]
 
     def _get_main_stage_samples(self, data):
@@ -323,7 +329,26 @@ class CubMCG(AbstractStoppingCriterion):
         data.solution = y_main.mean()
         data.n_total = data.yfull.shape[-1]
 
-    def integrate(self, resume=None):
+    def integrate(self, resume: Union[None, Data] = None) -> tuple:
+        """Determine the samples needed to satisfy the target tolerance.
+
+        Draws an initial `self.n_init` samples to estimate the standard
+        deviation and kurtosis. If `self.rel_tol` is 0, sizes and draws one
+        additional batch via a Chebyshev/Berry-Esseen bound (`_nchebe`).
+        Otherwise, iteratively grows the sample size (`_ncbinv`) until the
+        Berry-Esseen confidence bound meets both the absolute and relative
+        tolerance or `self.n_limit` would be exceeded.
+
+        Args:
+            resume (Union[None, Data]): Unsupported; must be `None`, as `CubMCG` cannot
+                resume a prior checkpoint.
+
+        Returns:
+            tuple: Approximation to the integral and the corresponding data object.
+
+        Raises:
+            ParameterError: If `resume` is not `None`.
+        """
         t_start = time()
         trace = self._make_trace_logger()
         if resume is not None:
@@ -529,31 +554,47 @@ class CubMCG(AbstractStoppingCriterion):
         # take the min of Chebyshev and Berry Esseen tolerance
         return eps
 
-    def set_tolerance(self, abs_tol=None, rel_tol=None, rmse_tol=None):
-        assert rmse_tol is None, "rmse_tol not supported by this stopping criterion."
+    def set_tolerance(self, abs_tol: Union[None, float] = None, rel_tol: Union[None, float] = None, rmse_tol: Union[None, float] = None) -> None:
+        """Update the stopping criterion's target tolerance.
+
+        Args:
+            abs_tol (Union[None, float]): Absolute error tolerance.
+            rel_tol (Union[None, float]): Relative error tolerance.
+            rmse_tol (Union[None, float]): Unsupported; must be `None`.
+
+        Raises:
+            AssertionError: If `rmse_tol` is supplied.
+        """
+        if not (rmse_tol is None):
+            raise AssertionError("rmse_tol not supported by this stopping criterion.")
         if abs_tol != None:
             self.abs_tol = abs_tol
         if rel_tol != None:
             self.rel_tol = rel_tol
 
 
-def _tol_fun(abs_tol, rel_tol, theta, mu, toltype):
-    # """
-    # Generalized error tolerance function.
+def _tol_fun(abs_tol: float, rel_tol: float, theta: float, mu: float, toltype: str):
+    """Generalized error tolerance function.
 
-    # Args:
-    #     abs_tol (float): absolute error tolerance
-    #     rel_tol (float): relative error tolerance
-    #     theta (float): parameter in 'theta' case
-    #     mu (float): true mean
-    #     toltype (str): different options of tolerance function
+    Args:
+        abs_tol (float): Absolute error tolerance.
+        rel_tol (float): Relative error tolerance.
+        theta (float): Weight in `"combine"` case; 0 gives pure relative
+            tolerance, 1 gives pure absolute tolerance.
+        mu (float): True mean.
+        toltype (str): `"combine"` for a weighted sum of the two tolerances,
+            or `"max"` for their max.
 
-    # Returns:
-    #     float: tolerance as weighted sum of absolute and relative tolerance
-    # """
+    Returns:
+        float: Tolerance as a combination of absolute and relative tolerance.
+    """
     if toltype == "combine":  # the linear combination of two tolerances
         # theta == 0 --> relative error tolerance
         # theta == 1 --> absolute error tolerance
         return theta * abs_tol + (1 - theta) * rel_tol * abs(mu)
     elif toltype == "max":  # the max case
         return max(abs_tol, rel_tol * abs(mu))
+    else:
+        raise ParameterError(
+            f"unknown toltype {toltype!r}; expected 'combine' or 'max'."
+        )

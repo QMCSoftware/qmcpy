@@ -1,20 +1,24 @@
+from typing import Union
 import warnings
 
 import numpy as np
 
 from ..util import DimensionError, ParameterError
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
 from .scipy_wrapper import SciPyWrapper
 
 
 class _ZeroInflatedExponential:
-    """
-    One-dimensional zero-inflated exponential distribution.
+    """One-dimensional zero-inflated exponential distribution.
 
     This distribution has probability mass ``p_zero`` at zero and an
     exponential distribution with rate ``lam`` on positive values.
 
-    It implements ``ppf`` so it can be passed to ``SciPyWrapper`` as a
-    custom univariate marginal.
+    It implements ``ppf`` so it can be passed to ``SciPyWrapper`` as a custom
+    univariate marginal.
     """
 
     def __init__(self, p_zero=0.4, lam=1.5):
@@ -27,13 +31,11 @@ class _ZeroInflatedExponential:
         self.lam = float(lam)
 
     def ppf(self, u):
-        """
-        Generalized inverse CDF of the zero-inflated exponential.
+        """Generalized inverse CDF of the zero-inflated exponential.
 
         SciPyWrapper supplies one coordinate at a time. For example:
 
-            sampler output: (n, 1)
-            ppf input:      (n,)
+        sampler output: (n, 1) ppf input:      (n,)
         """
         u = np.asarray(u, dtype=float)
 
@@ -58,8 +60,7 @@ class _ZeroInflatedExponential:
 
 
 class _DeprecatedZeroInflatedExpUniform2D:
-    """
-    Adapter for the deprecated two-dimensional ``y_split`` construction.
+    """Adapter for the deprecated two-dimensional ``y_split`` construction.
     """
 
     dim = 2
@@ -108,14 +109,12 @@ class _DeprecatedZeroInflatedExpUniform2D:
 
 
 class ZeroInflatedExpUniform(SciPyWrapper):
-    """
-    One-dimensional zero-inflated exponential true measure.
+    """One-dimensional zero-inflated exponential true measure.
 
-    The ``y_split`` keyword is retained temporarily for backward
-    compatibility with the deprecated two-dimensional construction.
+    The ``y_split`` keyword is retained temporarily for backward compatibility
+    with the deprecated two-dimensional construction.
 
-    Examples
-    --------
+    Examples:
     Without replications:
 
     >>> from qmcpy import DigitalNetB2, ZeroInflatedExpUniform
@@ -186,7 +185,20 @@ class ZeroInflatedExpUniform(SciPyWrapper):
     True
     """
 
-    def __init__(self, sampler, p_zero=0.4, lam=1.5, y_split=None):
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], p_zero: float = 0.4, lam: float = 1.5, y_split: Union[None, float] = None) -> None:
+        """Initialize a ZeroInflatedExpUniform true measure.
+
+        Args:
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): A
+                1-dimensional sampler generating unit-cube samples to be
+                transformed. If `y_split` is set, a 2-dimensional sampler is
+                required instead (deprecated construction).
+            p_zero (float): Probability mass at zero.
+            lam (float): Rate parameter of the exponential component.
+            y_split (Union[None, float]): Deprecated. If set, uses the legacy
+                2-dimensional zero-inflated exponential-uniform construction
+                instead of the 1-dimensional interface.
+        """
         if y_split is not None:
             warnings.warn(
                 "`y_split` is deprecated. The 2D zero-inflated "
@@ -255,8 +267,7 @@ class ZeroInflatedExpUniform(SciPyWrapper):
             ]
 
     def _compute_moments(self):
-        r"""
-        Closed-form mean and variance of the zero-inflated exponential.
+        r"""Closed-form mean and variance of the zero-inflated exponential.
 
         The distribution is a two component mixture that places probability
         mass $p = $ ``p_zero`` at $X = 0$ and, with probability $1 - p$, draws
@@ -268,15 +279,14 @@ class ZeroInflatedExpUniform(SciPyWrapper):
         component raw moments [2]. Because the point mass sits exactly at zero,
         that component adds nothing to either moment, leaving
 
-        $$\mathbb{E}[X] = (1 - p)\,\frac{1}{\lambda}, \qquad
-          \mathbb{E}[X^2] = (1 - p)\,\frac{2}{\lambda^2}.$$
+        $$\mathbb{E}[X] = (1 - p)\,\frac{1}{\lambda}, \qquad \mathbb{E}[X^2] =
+        (1 - p)\,\frac{2}{\lambda^2}.$$
 
         The variance then follows from $\operatorname{Var}[X] = \mathbb{E}[X^2]
         - \mathbb{E}[X]^2$ (equivalently, the law of total variance [3]):
 
-        $$\operatorname{Var}[X]
-          = \frac{(1 - p)(1 + p)}{\lambda^2}
-          = \frac{1 - p^2}{\lambda^2}.$$
+        $$\operatorname{Var}[X] = \frac{(1 - p)(1 + p)}{\lambda^2} = \frac{1 -
+        p^2}{\lambda^2}.$$
 
         The measure is one dimensional, so ``mean`` and ``variance`` are
         returned as length-1 arrays for consistency with the other true

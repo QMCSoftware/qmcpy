@@ -1,3 +1,8 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
 import numpy as np
 from .abstract_integrand import AbstractIntegrand
 from ..true_measure import Uniform
@@ -5,10 +10,13 @@ from ..discrete_distribution import DigitalNetB2
 
 
 class FourBranch2d(AbstractIntegrand):
-    r"""
-    Four Branch function in $d=2$.
+    r"""Four Branch function in $d=2$.
 
-    $$g(\boldsymbol{t}) = \min \begin{cases} 3+0.1(t_0-t_1)^2-\frac{t_0-t_1}{\sqrt{2}} \\ 3+0.1(t_0-t_1)^2+\frac{t_0-t_1}{\sqrt{2}} \\ t_0-t_1 + 7/\sqrt{2} \\ t_1-t_0 + 7/\sqrt{2}\end{cases}, \qquad \boldsymbol{T}=(T_0,T_1) \sim \mathcal{U}[-8,8]^2.$$
+    $$g(\boldsymbol{t}) = \min \begin{cases}
+    3+0.1(t_0-t_1)^2-\frac{t_0-t_1}{\sqrt{2}} \\
+    3+0.1(t_0-t_1)^2+\frac{t_0-t_1}{\sqrt{2}} \\ t_0-t_1 + 7/\sqrt{2} \\
+    t_1-t_0 + 7/\sqrt{2}\end{cases}, \qquad \boldsymbol{T}=(T_0,T_1) \sim
+    \mathcal{U}[-8,8]^2.$$
 
     Examples:
         >>> integrand = FourBranch2d(DigitalNetB2(2,seed=7))
@@ -41,22 +49,33 @@ class FourBranch2d(AbstractIntegrand):
         -2.5042
     """
 
-    def __init__(self, sampler):
-        r"""
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure]) -> None:
+        r"""Initialize a FourBranch2d integrand.
+
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.
         """
         self.sampler = sampler
-        assert self.sampler.d == 2
+        if not (self.sampler.d == 2):
+            raise AssertionError
         self.true_measure = Uniform(self.sampler, lower_bound=-8, upper_bound=8)
         super(FourBranch2d, self).__init__(
             dimension_indv=(), dimension_comb=(), parallel=False
         )
 
-    def g(self, t):
+    def g(self, t: np.ndarray) -> np.ndarray:
+        """Evaluate the four-branch function.
+
+        Args:
+            t (np.ndarray): Two-dimensional points.
+
+        Returns:
+            np.ndarray: Minimum of the four branches at each point.
+        """
         t0, t1 = t[..., 0], t[..., 1]
         return np.minimum.reduce(
             [

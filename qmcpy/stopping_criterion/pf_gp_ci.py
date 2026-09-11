@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from ..integrand.abstract_integrand import AbstractIntegrand
+from typing import TYPE_CHECKING, Union, Callable
 from .abstract_stopping_criterion import AbstractStoppingCriterion
 from ..discrete_distribution import DigitalNetB2
 from ..integrand.ishigami import Ishigami
@@ -17,17 +21,50 @@ from scipy.stats import norm
 import torch
 import gpytorch
 
+if TYPE_CHECKING:
+    import matplotlib.figure
+
 
 class Suggester(object):
+    """Base class for future-sample suggestion schemes used by `PFGPCI`.
+
+    Subclasses implement `suggest` to propose the next batch of sample
+    locations, typically concentrated near the estimated failure boundary.
+    """
+
     pass
 
 
 class PFSampleErrorDensityAR(Suggester):
-    def __init__(self, verbose=False):
+    """Suggest new samples via acceptance-rejection on the GP error density.
+
+    Draws uniform candidates and accepts them with probability proportional
+    to the current GP's misclassification-error density, concentrating new
+    samples near the estimated failure boundary.
+    """
+
+    def __init__(self, verbose=False) -> None:
         self.verbose = verbose
         super(PFSampleErrorDensityAR, self).__init__()
 
-    def suggest(self, n, d, gp, rng, efficiency, pct=0.5):
+    def suggest(self, n: int, d: int, gp: ExactGPyTorchRegressionModel, rng: np.random.Generator, efficiency: float, pct: float = 0.5) -> np.ndarray:
+        """Draw `n` new sample locations via acceptance-rejection.
+
+        Args:
+            n (int): Number of samples to return.
+            d (int): Dimension of the sampling domain.
+            gp (ExactGPyTorchRegressionModel): Current GP surrogate, used to
+                evaluate the error density at candidate points.
+            rng (np.random.Generator): Random number generator for
+                candidate draws.
+            efficiency (float): Estimated acceptance rate, used to size each
+                batch of candidate draws.
+            pct (float): Target probability of accepting at least `n` points
+                within one candidate batch.
+
+        Returns:
+            np.ndarray: `n` accepted sample locations, shape `(n, d)`.
+        """
         if self.verbose:
             print(
                 "\tAR sampling with efficiency %.1e, expect %d draws: "
@@ -55,16 +92,42 @@ class PFSampleErrorDensityAR(Suggester):
 
 
 class SuggesterSimple(Suggester):
-    def __init__(self, sampler):
+    """Suggest new samples by drawing the next block from a fixed sampler.
+
+    Wraps an `AbstractTrueMeasure`/`AbstractDiscreteDistribution` (or any
+    callable with the same interface) and advances through it sequentially,
+    ignoring the current GP state.
+    """
+
+    def __init__(self, sampler) -> None:
         self.sampler = sampler
         if isinstance(self.sampler, AbstractTrueMeasure):
-            assert (self.sampler.range == [0, 1]).all()
+            if not ((self.sampler.range == [0, 1]).all()):
+                raise AssertionError
         self.n_min = 0
         super(SuggesterSimple, self).__init__()
 
-    def suggest(self, n, d, gp, rng, **kwargs):
+    def suggest(self, n: int, d: int, gp: ExactGPyTorchRegressionModel, rng: np.random.Generator, **kwargs) -> np.ndarray:
+        """Draw the next `n` sample locations from `self.sampler`.
+
+        Args:
+            n (int): Number of samples to return.
+            d (int): Dimension of the sampling domain; must match
+                `self.sampler.d`.
+            gp (ExactGPyTorchRegressionModel): Unused; accepted for
+                interface compatibility with other `Suggester`
+                implementations.
+            rng (np.random.Generator): Unused; accepted for interface
+                compatibility with other `Suggester` implementations.
+            **kwargs: Unused; accepted for interface compatibility with
+                other `Suggester` implementations.
+
+        Returns:
+            np.ndarray: `n` sample locations, shape `(n, d)`.
+        """
         n_max = self.n_min + n
-        assert d == self.sampler.d
+        if not (d == self.sampler.d):
+            raise AssertionError
         try:
             x = self.sampler(n_min=self.n_min, n_max=n_max)
         except TypeError:
@@ -74,8 +137,8 @@ class SuggesterSimple(Suggester):
 
 
 class PFGPCI(AbstractStoppingCriterion):
-    """
-    Probability of failure estimation using adaptive Gaussian process construction and resulting credible intervals.
+    """Probability of failure estimation using adaptive Gaussian process
+    construction and resulting credible intervals.
 
     Examples:
         >>> pfgpci = PFGPCI(
@@ -163,60 +226,85 @@ class PFGPCI(AbstractStoppingCriterion):
 
     def __init__(
         self,
-        integrand,
-        failure_threshold,
-        failure_above_threshold,
-        abs_tol=5e-3,
-        n_init=64,
-        n_limit=1000,
-        alpha=1e-2,
-        init_samples=None,
-        batch_sampler=PFSampleErrorDensityAR(),
-        n_batch=4,
-        n_approx=2**20,
-        gpytorch_prior_mean=gpytorch.means.ZeroMean(),
-        gpytorch_prior_cov=gpytorch.kernels.ScaleKernel(
+        integrand: AbstractIntegrand,
+        failure_threshold: float,
+        failure_above_threshold: bool,
+        abs_tol: float = 5e-3,
+        n_init: float = 64,
+        n_limit: int = 1000,
+        alpha: float = 1e-2,
+        init_samples: Union[None, float] = None,
+        batch_sampler: Union[Suggester, AbstractDiscreteDistribution] = PFSampleErrorDensityAR(),
+        n_batch: int = 4,
+        n_approx: int = 2**20,
+        gpytorch_prior_mean: gpytorch.means = gpytorch.means.ZeroMean(),
+        gpytorch_prior_cov: gpytorch.kernels = gpytorch.kernels.ScaleKernel(
             gpytorch.kernels.MaternKernel(nu=2.5)
         ),
-        gpytorch_likelihood=gpytorch.likelihoods.GaussianLikelihood(
+        gpytorch_likelihood: gpytorch.likelihoods = gpytorch.likelihoods.GaussianLikelihood(
             noise_constraint=gpytorch.constraints.Interval(1e-12, 1e-8)
         ),
-        gpytorch_marginal_log_likelihood_func=lambda likelihood, gpyt_model: gpytorch.mlls.ExactMarginalLogLikelihood(
+        gpytorch_marginal_log_likelihood_func: Callable = lambda likelihood, gpyt_model: gpytorch.mlls.ExactMarginalLogLikelihood(
             likelihood, gpyt_model
         ),
-        torch_optimizer_func=lambda gpyt_model: torch.optim.Adam(
+        torch_optimizer_func: Callable = lambda gpyt_model: torch.optim.Adam(
             gpyt_model.parameters(), lr=0.1
         ),
-        gpytorch_train_iter=100,
-        gpytorch_use_gpu=False,
-        verbose=False,
-        n_ref_approx=2**22,
-        seed_ref_approx=None,
-    ):
-        """
+        gpytorch_train_iter: int = 100,
+        gpytorch_use_gpu: bool = False,
+        verbose: Union[bool, int] = False,
+        n_ref_approx: int = 2**22,
+        seed_ref_approx: Union[None, int] = None,
+    ) -> None:
+        """Initialize a PFGPCI stopping criterion.
+
         Args:
             integrand (AbstractIntegrand): The integrand.
             failure_threshold (float): Thresholds for failure.
-            failure_above_threshold (bool): Set to `True` if failure occurs when the simulation exceeds `failure_threshold` and False otherwise.
-            abs_tol (float): The desired maximum distance from the estimate to either end of the credible interval.
-            n_init (float): Initial number of samples from integrand.discrete_distrib from which to build the first surrogate GP
+            failure_above_threshold (bool): Set to `True` if failure occurs
+                when the simulation exceeds `failure_threshold` and False
+                otherwise.
+            abs_tol (float): The desired maximum distance from the estimate to
+                either end of the credible interval.
+            n_init (float): Initial number of samples from
+                integrand.discrete_distrib from which to build the first
+                surrogate GP
             n_limit (int): Budget of simulations.
-            n_batch (int): The number of samples per batch to draw from batch_sampler.
-            alpha (float): The credible interval is constructed to hold with probability at least 1 - alpha
-            init_samples (float): If the simulation has already been run, pass in (x,y) where x are past samples from the discrete distribution and y are corresponding simulation evaluations.
-            batch_sampler (Suggester or AbstractDiscreteDistribution): A suggestion scheme for future samples.
-            n_approx (int): Number of points from integrand.discrete_distrib used to approximate estimate and credible interval bounds
+            alpha (float): The credible interval is constructed to hold with
+                probability at least 1 - alpha
+            init_samples (Union[None, float]): If the simulation has already been run, pass
+                in (x,y) where x are past samples from the discrete
+                distribution and y are corresponding simulation evaluations.
+            batch_sampler (Union[Suggester, AbstractDiscreteDistribution]):
+                A suggestion scheme for future samples.
+            n_batch (int): The number of samples per batch to draw from
+                batch_sampler.
+            n_approx (int): Number of points from integrand.discrete_distrib
+                used to approximate estimate and credible interval bounds
             gpytorch_prior_mean (gpytorch.means): prior mean function of the GP
-            gpytorch_prior_cov (gpytorch.kernels): Prior covariance kernel of the GP
-            gpytorch_likelihood (gpytorch.likelihoods): GP likelihood, require one of gpytorch.likelihoods.{GaussianLikelihood, GaussianLikelihoodWithMissingObs, FixedNoiseGaussianLikelihood}
-            gpytorch_marginal_log_likelihood_func (callable): Function taking in the likelihood and gpytorch model and returning a marginal log likelihood from gpytorch.mlls
-            torch_optimizer_func (callable): Function taking in the gpytorch model and returning an optimizer from torch.optim
-            gpytorch_train_iter (int): Training iterations for the GP in gpytorch
-            gpytorch_use_gpu (bool): If True, have gpytorch use a GPU for fitting and trining the GP
-            verbose (int): If verbose > 0, print information through the call to integrate()
-            n_ref_approx (int): If n_ref_approx > 0, use n_ref_approx points to get a reference QMC approximation of the true solution.
-                Caution: If n_ref_approx > 0, it should be a large int e.g. 2**22, in which case it is only helpful for cheap to evaluate simulations
-            seed_ref_approx (int): Seed for the reference approximation. Only applies when n_ref_approx>0
+            gpytorch_prior_cov (gpytorch.kernels): Prior covariance kernel of
+                the GP
+            gpytorch_likelihood (gpytorch.likelihoods): GP likelihood, require
+                one of gpytorch.likelihoods.{GaussianLikelihood,
+                GaussianLikelihoodWithMissingObs, FixedNoiseGaussianLikelihood}
+            gpytorch_marginal_log_likelihood_func (Callable): Function taking
+                in the likelihood and gpytorch model and returning a marginal
+                log likelihood from gpytorch.mlls
+            torch_optimizer_func (Callable): Function taking in the gpytorch
+                model and returning an optimizer from torch.optim
+            gpytorch_train_iter (int): Training iterations for the GP in
+                gpytorch
+            gpytorch_use_gpu (bool): If True, have gpytorch use a GPU for
+                fitting and training the GP
+            verbose (Union[bool, int]): If verbose > 0, print information through the call
+                to integrate()
+            n_ref_approx (int): If n_ref_approx > 0, use n_ref_approx points to
+                get a reference QMC approximation of the true solution.
+                Caution: If n_ref_approx > 0, it should be a large int e.g.
+                2**22, in which case it is only helpful for cheap to evaluate
+                simulations
+            seed_ref_approx (Union[None, int]): Seed for the reference approximation. Only
+                applies when n_ref_approx>0
         """
         self.parameters = ["abs_tol", "n_init", "n_limit", "n_batch"]
         self.integrand = integrand
@@ -228,23 +316,29 @@ class PFGPCI(AbstractStoppingCriterion):
         self.failure_above_threshold = failure_above_threshold
         self.abs_tol = abs_tol
         self.alpha = alpha
-        assert 0 < self.alpha < 1
+        if not (0 < self.alpha < 1):
+            raise AssertionError
         self.n_init = n_init
         self.init_samples = init_samples is not None
         if self.init_samples:
             self.x_init, self.y_init = init_samples
-            assert self.x_init.ndim == 2 and self.y_init.ndim == 1
-            assert self.x_init.shape[1] == self.d and len(self.y_init) == len(
+            if not (self.x_init.ndim == 2 and self.y_init.ndim == 1):
+                raise AssertionError
+            if not (self.x_init.shape[1] == self.d and len(self.y_init) == len(
                 self.x_init
-            )
-            assert self.n_init == len(self.x_init)
+            )):
+                raise AssertionError
+            if not (self.n_init == len(self.x_init)):
+                raise AssertionError
             self.ytf_init = self._affine_tf(self.y_init)
         self.batch_sampler = batch_sampler
         self.n_batch = n_batch
         self.n_limit = n_limit
-        assert self.n_limit >= self.n_init
+        if not (self.n_limit >= self.n_init):
+            raise AssertionError
         self.n_approx = n_approx
-        assert (self.n_approx + self.n_init) <= 2**32
+        if not ((self.n_approx + self.n_init) <= 2**32):
+            raise AssertionError
         self.gpytorch_prior_mean = gpytorch_prior_mean
         self.gpytorch_prior_cov = gpytorch_prior_cov
         self.gpytorch_likelihood = gpytorch_likelihood
@@ -277,7 +371,32 @@ class PFGPCI(AbstractStoppingCriterion):
             else self.failure_threshold - y
         )
 
-    def integrate(self, seed=None, refit=False, resume=None):
+    def integrate(self, seed: Union[None, int] = None, refit: bool = False, resume: Union[None, Data] = None) -> tuple:
+        """Determine the samples needed to satisfy the target tolerance.
+
+        Draws an initial batch (`self.n_init` points, or `init_samples` if
+        supplied), fits a GP surrogate, then repeatedly draws
+        `self.n_batch` more points via `self.batch_sampler`, updates the GP,
+        and refines the credible-interval bound on the probability of
+        failure. Stops once the bound is within `self.abs_tol` or
+        `self.n_limit` would be exceeded.
+
+        Args:
+            seed (Union[None, int]): Seed for the internal `DigitalNetB2` sampler used to
+                approximate the solution and (if `init_samples` was not
+                supplied) draw the initial batch.
+            refit (bool): If `True`, refit the GP hyperparameters from
+                scratch every batch rather than only on the first batch.
+            resume (Union[None, Data]): Unsupported; must be `None`, as `PFGPCI` cannot
+                resume a prior checkpoint.
+
+        Returns:
+            tuple: Approximation to the probability of failure
+                and the corresponding data object.
+
+        Raises:
+            ParameterError: If `resume` is not `None`.
+        """
         t0 = time.time()
         trace = self._make_trace_logger()
         if resume is not None:
@@ -395,7 +514,7 @@ class PFGPCIData(Data):
         gpytorch_use_gpu,
         verbose,
         approx_true_solution,
-    ):
+    ) -> None:
         self.stopping_crit = stopping_crit
         self.integrand = integrand
         self.true_measure = true_measure
@@ -437,7 +556,20 @@ class PFGPCIData(Data):
             parameters=["solution", "error_bound", "bound_low", "bound_high", "n_total", "time_integrate"]
         )
 
-    def update_data(self, batch_count, xdraw, ydrawtf):
+    def update_data(self, batch_count: int, xdraw: np.ndarray, ydrawtf: np.ndarray):
+        """Fold one new batch of samples into the GP surrogate and credible interval.
+
+        Refits the GP from scratch (on the first batch, or every batch if
+        `self.refit`), otherwise incrementally adds the new data to the
+        existing GP. Recomputes the probability-of-failure estimate and its
+        credible interval from the updated surrogate.
+
+        Args:
+            batch_count (int): Index of this batch (0 for the initial batch).
+            xdraw (np.ndarray): New sample locations, shape `(n_new, d)`.
+            ydrawtf (np.ndarray): Affine-transformed integrand values at
+                `xdraw` (positive indicates failure), shape `(n_new,)`.
+        """
         self.n_batch.append(len(xdraw))
         self.x, self.y = np.vstack([self.x, xdraw]), np.hstack([self.y, ydrawtf])
         if batch_count == 0 or self.refit:
@@ -496,7 +628,15 @@ class PFGPCIData(Data):
             )
         )
 
-    def get_results_dict(self):
+    def get_results_dict(self) -> dict:
+        """Collect the per-iteration history as arrays.
+
+        Returns:
+            dict: Per-iteration `"iter"`, `"n_sum"` (cumulative sample
+                count), `"n_batch"`, `"error_bounds"`, `"ci_low"`, `"ci_high"`,
+                and `"solutions"` arrays; plus `"solutions_ref"`, `"error_ref"`,
+                and `"in_ci"` if `self.approx_true_solution`.
+        """
         df = {
             "iter": np.arange(len(self.n_sum)),
             "n_sum": self.n_sum,
@@ -514,7 +654,18 @@ class PFGPCIData(Data):
             )
         return df
 
-    def plot(self, trace_only=False, **kwargs):
+    def plot(self, trace_only: bool = False, **kwargs) -> matplotlib.figure.Figure:
+        """Plot the convergence trace, plus a per-batch GP diagnostic panel if `d` is 1 or 2.
+
+        Args:
+            trace_only (bool): If `True` (or if `d` is not 1 or 2, or no GP
+                has been fit yet), plot only the convergence trace.
+            **kwargs: Passed through to `plot_1d`/`plot_2d` when a
+                per-batch diagnostic panel is drawn.
+
+        Returns:
+            matplotlib.figure.Figure: The assembled figure.
+        """
         from matplotlib import pyplot
 
         if self.d == 1 and not trace_only and self.saved_gps != []:
@@ -572,7 +723,20 @@ class PFGPCIData(Data):
         )
         return fig
 
-    def plot_1d(self, meshticks=1025, ci_percentage=0.95, **kwargs):
+    def plot_1d(self, meshticks: int = 1025, ci_percentage: float = 0.95, **kwargs) -> matplotlib.figure.Figure:
+        """Plot, for each batch, the 1-D error density and GP fit with a credible band.
+
+        Args:
+            meshticks (int): Number of points in the `[0,1]` plotting mesh.
+            ci_percentage (float): Credible level for the plotted GP
+                prediction band.
+            **kwargs: Unused; accepted for interface compatibility with
+                `plot`.
+
+        Returns:
+            matplotlib.figure.Figure: The assembled figure.
+            matplotlib.gridspec.GridSpec: The figure's grid layout.
+        """
         from matplotlib import pyplot, gridspec
 
         beta = norm.ppf(np.mean([ci_percentage, 1]))
@@ -637,7 +801,20 @@ class PFGPCIData(Data):
             ax.xaxis.set_visible(False)
         return fig, gs
 
-    def plot_2d(self, meshticks=257, clevels=32, **kwargs):
+    def plot_2d(self, meshticks: int = 257, clevels: int = 32, **kwargs) -> matplotlib.figure.Figure:
+        """Plot, for each batch, 2-D contours of the true function, error density, and GP mean.
+
+        Args:
+            meshticks (int): Number of points per axis in the `[0,1]^2`
+                plotting mesh.
+            clevels (int): Number of contour levels.
+            **kwargs: Unused; accepted for interface compatibility with
+                `plot`.
+
+        Returns:
+            matplotlib.figure.Figure: The assembled figure.
+            matplotlib.gridspec.GridSpec: The figure's grid layout.
+        """
         from matplotlib import pyplot, gridspec, colormaps
 
         n_batches = len(self.n_batch)

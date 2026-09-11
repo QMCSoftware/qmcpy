@@ -1,3 +1,4 @@
+from typing import Union
 from ..abstract_discrete_distribution import AbstractLDDiscreteDistribution
 from ...util import ParameterError, ParameterWarning
 import qmctoolscl
@@ -9,10 +10,9 @@ from copy import deepcopy
 
 
 class Lattice(AbstractLDDiscreteDistribution):
-    r"""
-    Low discrepancy lattice sequence.
+    r"""Low discrepancy lattice sequence.
 
-    Note:
+    Notes:
         - Lattice sample sizes should be powers of $2$ e.g. $1$, $2$, $4$, $8$, $16$, $\dots$.
         - The first point of an unrandomized lattice is the origin.
 
@@ -52,7 +52,8 @@ class Lattice(AbstractLDDiscreteDistribution):
                 [0.40212985, 0.94669968, 0.35605352]]])
 
 
-        Different orderings (avoid warnings that the first point is the origin).
+        Different orderings (avoid warnings that the first point is the
+        origin).
 
         >>> Lattice(dimension=2,randomize=False,order='RADICAL INVERSE')(4,warn=False)
         array([[0.  , 0.  ],
@@ -70,7 +71,8 @@ class Lattice(AbstractLDDiscreteDistribution):
                [0.5 , 0.5 ],
                [0.75, 0.25]])
 
-        Generating vector from [https://github.com/QMCSoftware/LDData/tree/main/lattice](https://github.com/QMCSoftware/LDData/tree/main/lattice)
+        Generating vector from
+        [https://github.com/QMCSoftware/LDData/tree/main/lattice](https://github.com/QMCSoftware/LDData/tree/main/lattice)
 
         >>> Lattice(dimension=3,randomize=False,generating_vector="mps.exod2_base2_m20_CKN.txt")(8,warn=False)
         array([[0.   , 0.   , 0.   ],
@@ -93,7 +95,8 @@ class Lattice(AbstractLDDiscreteDistribution):
                [0.25, 0.75, 0.75],
                [0.75, 0.25, 0.25]])
 
-        Two random generating vectors both supporting $2^{25}$ points along with independent random shifts
+        Two random generating vectors both supporting $2^{25}$ points along
+        with independent random shifts
 
         >>> discrete_distrib = Lattice(3,seed=7,generating_vector=25,replications=2)
         >>> discrete_distrib.gen_vec
@@ -138,40 +141,46 @@ class Lattice(AbstractLDDiscreteDistribution):
 
     def __init__(
         self,
-        dimension=1,
-        replications=None,
-        seed=None,
-        randomize="SHIFT",
-        generating_vector="kuo.lattice-33002-1024-1048576.9125.txt",
-        order="RADICAL INVERSE",
-        m_max=None,
-    ):
-        r"""
+        dimension: Union[int, np.ndarray] = 1,
+        replications: Union[None, int] = None,
+        seed: Union[None, int, np.random.SeedSequence] = None,
+        randomize: str = "SHIFT",
+        generating_vector: Union[str, np.ndarray, int] = "kuo.lattice-33002-1024-1048576.9125.txt",
+        order: str = "RADICAL INVERSE",
+        m_max: Union[None, int] = None,
+    ) -> None:
+        r"""Initialize a Lattice discrete distribution.
+
         Args:
             dimension (Union[int, np.ndarray]): Dimension of the generator.
 
                 - If an `int` is passed in, use generating vector components at indices 0,...,`dimension`-1.
                 - If an `np.ndarray` is passed in, use generating vector components at these indices.
 
-            replications (int): Number of independent randomizations.
-            seed (Union[None, int, np.random.SeedSeq): Seed the random number generator for reproducibility.
+            replications (Union[None, int]): Number of independent randomizations.
+            seed (Union[None, int, np.random.SeedSequence]): Seed the random
+                number generator for reproducibility.
             randomize (str): Options are
 
                 - `'SHIFT'`: Random shift.
                 - `'FALSE'`: No randomization. In this case the first point will be the origin.
 
-            generating_vector (Union[str, np.ndarray, int]): Specify the generating vector.
+            generating_vector (Union[str, np.ndarray, int]): Specify the
+                generating vector.
 
                 - A `str` should be the name (or path) of a file from the LDData repo at [https://github.com/QMCSoftware/LDData/tree/main/lattice](https://github.com/QMCSoftware/LDData/tree/main/lattice).
                 - A `np.ndarray` of integers with shape $(d,)$ or $(r,d)$ where $d$ is the number of dimensions and $r$ is the number of replications.
                     Must supply `m_max` where $2^{m_\mathrm{max}}$ is the max number of supported samples.
                 - An `int`, call it $M$,
                 gives the random generating vector $(1,v_1,\dots,v_{d-1})^T$
-                where $d$ is the dimension and $v_i$ are randomly selected from $\{3,5,\dots,2^M-1\}$ uniformly and independently.
-                We require require $1 < M < 27$.
+                where $d$ is the dimension and $v_i$ are randomly selected from
+                $\{3,5,\dots,2^M-1\}$ uniformly and independently. We require
+                require $1 < M < 27$.
 
-            order (str): `'LINEAR'`, `'RADICAL INVERSE'`, or `'GRAY'` ordering. See the doctest example above.
-            m_max (int): $2^{m_\mathrm{max}}$ is the maximum number of supported samples.
+            order (str): `'LINEAR'`, `'RADICAL INVERSE'`, or `'GRAY'` ordering.
+                See the doctest example above.
+            m_max (Union[None, int]): $2^{m_\mathrm{max}}$ is the maximum number of
+                supported samples.
         """
         self.parameters = ["randomize", "gen_vec_source", "order", "n_limit"]
         self.input_generating_vector = deepcopy(generating_vector)
@@ -189,7 +198,8 @@ class Lattice(AbstractLDDiscreteDistribution):
             n_limit = 1048576
         elif isinstance(generating_vector, str):
             self.gen_vec_source = generating_vector
-            assert generating_vector[-4:] == ".txt"
+            if not (generating_vector[-4:] == ".txt"):
+                raise AssertionError
             local_root = dirname(abspath(__file__)) + "/generating_vectors/"
             repos = DataSource()
             if repos.exists(local_root + generating_vector):
@@ -247,11 +257,13 @@ class Lattice(AbstractLDDiscreteDistribution):
             n_limit = int(2**m_max)
             d_limit = int(gen_vec.shape[-1])
         elif isinstance(generating_vector, int):
-            assert 1 < generating_vector < 27, "int generating vector out of range"
+            if not (1 < generating_vector < 27):
+                raise AssertionError("int generating vector out of range")
             n_limit = 2**generating_vector
-            assert isinstance(
+            if not (isinstance(
                 dimension, int
-            ), "random generating vector requires int dimension"
+            )):
+                raise AssertionError("random generating vector requires int dimension")
             d_limit = dimension
         else:
             raise ParameterError(
@@ -274,20 +286,23 @@ class Lattice(AbstractLDDiscreteDistribution):
                     + 1,
                 ]
             ).copy()
-        assert isinstance(gen_vec, np.ndarray)
+        if not (isinstance(gen_vec, np.ndarray)):
+            raise AssertionError
         gen_vec = np.atleast_2d(gen_vec)
-        assert (
+        if not (
             gen_vec.ndim == 2
             and gen_vec.shape[1] >= self.d
             and (gen_vec.shape[0] == 1 or gen_vec.shape[0] == self.replications)
-        ), "invalid gen_vec.shape = %s" % str(gen_vec.shape)
+        ):
+            raise AssertionError("invalid gen_vec.shape = %s" % str(gen_vec.shape))
         self.gen_vec = gen_vec[:, self.dvec].copy()
         self.order = str(order).upper().strip().replace("_", " ")
         if self.order == "GRAY CODE":
             self.order = "GRAY"
         if self.order == "NATURAL":
             self.order = "RADICAL INVERSE"
-        assert self.order in ["LINEAR", "RADICAL INVERSE", "GRAY"]
+        if not (self.order in ["LINEAR", "RADICAL INVERSE", "GRAY"]):
+            raise AssertionError
         self.randomize = str(randomize).upper()
         if self.randomize == "TRUE":
             self.randomize = "SHIFT"
@@ -295,14 +310,16 @@ class Lattice(AbstractLDDiscreteDistribution):
             self.randomize = "FALSE"
         if self.randomize == "NO":
             self.randomize = "FALSE"
-        assert self.randomize in ["SHIFT", "FALSE"]
+        if not (self.randomize in ["SHIFT", "FALSE"]):
+            raise AssertionError
         if self.randomize == "SHIFT":
             self.shift = self.rng.uniform(size=(self.replications, self.d))
         if self.randomize == "FALSE":
-            assert self.gen_vec.shape[0] == self.replications, (
-                "randomize='FALSE' but replications = %d does not equal the number of sets of generating vectors %d"
-                % (self.replications, self.gen_vec.shape[0])
-            )
+            if not (self.gen_vec.shape[0] == self.replications):
+                raise AssertionError(
+                    "randomize='FALSE' but replications = %d does not equal the number of sets of generating vectors %d"
+                    % (self.replications, self.gen_vec.shape[0])
+                )
 
     def _gen_samples(self, n_min, n_max, return_binary, warn):
         if return_binary:
@@ -318,14 +335,16 @@ class Lattice(AbstractLDDiscreteDistribution):
         n_start = np.uint64(n_min)
         x = np.empty((r_x, n, d), dtype=np.float64)
         if self.order == "LINEAR":
-            assert (
+            if not (
                 r_x == 1
-            ), "lattice linear currently requires there be only 1 generating matrix"
+            ):
+                raise AssertionError("lattice linear currently requires there be only 1 generating matrix")
             x = self._gail_linear(n_min, n_max)[None, :, :]
         elif self.order == "RADICAL INVERSE":
-            assert (n_min == 0 or (n_min & (n_min - 1)) == 0) and (
+            if not ((n_min == 0 or (n_min & (n_min - 1)) == 0) and (
                 n_max == 0 or (n_max & (n_max - 1)) == 0
-            ), "lattice in natural order requires n_min and n_max be 0 or powers of 2"
+            )):
+                raise AssertionError("lattice in natural order requires n_min and n_max be 0 or powers of 2")
             _ = qmctoolscl.lat_gen_natural(
                 r_x, n, d, n_start, self.gen_vec, x, backend="c"
             )
@@ -334,7 +353,8 @@ class Lattice(AbstractLDDiscreteDistribution):
                 r_x, n, d, n_start, self.gen_vec, x, backend="c"
             )
         else:
-            assert False, "invalid lattice order"
+            if not (False):
+                raise AssertionError("invalid lattice order")
         if self.randomize == "FALSE":
             xr = x
         elif self.randomize == "SHIFT":
@@ -352,7 +372,22 @@ class Lattice(AbstractLDDiscreteDistribution):
         x = np.outer(y, self.gen_vec) % 1
         return x
 
-    def calculate_y(self, m_low, m_high, y):
+    def calculate_y(self, m_low: int, m_high: int, y: np.ndarray) -> np.ndarray:
+        """Refine 1D interval midpoints from level `m_low` up to `m_high`.
+
+        At each level, interleaves the current midpoints `y` with the new
+        midpoints introduced at that level, doubling the length of `y` each
+        step. Used internally by `_gail_linear` to build up linear-order
+        lattice coordinates level-by-level.
+
+        Args:
+            m_low (int): Starting level (`y` must already hold the midpoints for this level).
+            m_high (int): Final level (exclusive) to refine up to.
+            y (np.ndarray): Interval midpoints at level `m_low`, shape `(2**(m_low-1), 1)`.
+
+        Returns:
+            np.ndarray: Interval midpoints at level `m_high`, shape `(2**(m_high-1), 1)`.
+        """
         for m in range(m_low, m_high):
             n = 2**m
             y_next = np.arange(1 / n, 1, 2 / n).reshape((int(n / 2), 1))

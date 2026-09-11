@@ -1,4 +1,6 @@
+from typing import Union
 from .abstract_cub_mlqmc import AbstractCubMLQMC
+from ..integrand.abstract_integrand import AbstractIntegrand
 from ..util.data import Data
 import copy
 from ..discrete_distribution import DigitalNetB2, Lattice, Halton
@@ -14,11 +16,6 @@ import warnings
 
 
 class CubMLQMCCont(AbstractCubMLQMC):
-    _RESUME_REQUIRED_FIELDS = (
-        "levels", "n_level", "eval_level", "mean_level_reps", "mean_level",
-        "var_level", "cost_level", "var_cost_ratio_level", "bias_estimate", "level_integrands"
-    )
-
     """
     Multilevel Quasi-Monte Carlo stopping criterion with continuation.
 
@@ -79,30 +76,37 @@ class CubMLQMCCont(AbstractCubMLQMC):
     1.  [https://github.com/PieterjanRobbe/MultilevelEstimators.jl](https://github.com/PieterjanRobbe/MultilevelEstimators.jl).
     """
 
+    _RESUME_REQUIRED_FIELDS = (
+        "levels", "n_level", "eval_level", "mean_level_reps", "mean_level",
+        "var_level", "cost_level", "var_cost_ratio_level", "bias_estimate", "level_integrands"
+    )
+
     def __init__(
         self,
-        integrand,
-        abs_tol=0.05,
-        rmse_tol=None,
-        n_init=256,
-        n_limit=1e10,
-        inflate=100 ** (1 / 9),
-        alpha=0.01,
-        levels_min=2,
-        levels_max=10,
-        n_tols=10,
-        theta_init=0.5,
-    ):
-        r"""
+        integrand: AbstractIntegrand,
+        abs_tol: Union[float, np.ndarray] = 0.05,
+        rmse_tol: Union[None, np.ndarray] = None,
+        n_init: int = 256,
+        n_limit: int = 10**10,
+        inflate: float = 100 ** (1 / 9),
+        alpha: Union[float, np.ndarray] = 0.01,
+        levels_min: int = 2,
+        levels_max: int = 10,
+        n_tols: int = 10,
+        theta_init: float = 0.5,
+    ) -> None:
+        r"""Initialize a CubMLQMCCont stopping criterion.
+
         Args:
             integrand (AbstractIntegrand): The integrand.
-            abs_tol (np.ndarray): Absolute error tolerance.
-            rmse_tol (np.ndarray): Root mean squared error tolerance.
-                If supplied, then absolute tolerance and alpha are ignored in favor of the rmse tolerance.
+            abs_tol (Union[float, np.ndarray]): Absolute error tolerance.
+            rmse_tol (Union[None, np.ndarray]): Root mean squared error tolerance. If
+                supplied, then absolute tolerance and alpha are ignored in
+                favor of the rmse tolerance.
             n_init (int): Initial number of samples.
             n_limit (int): Maximum number of samples.
             inflate (float): Coarser tolerance multiplication factor $\geq 1$.
-            alpha (np.ndarray): Uncertainty level in $(0,1)$.
+            alpha (Union[float, np.ndarray]): Uncertainty level in $(0,1)$.
             levels_min (int): Minimum level of refinement $\geq 2$.
             levels_max (int): Maximum level of refinement $\geq$ `levels_min`.
             n_tols (int): Number of coarser tolerances to run.
@@ -136,8 +140,10 @@ class CubMLQMCCont(AbstractCubMLQMC):
         self._active_trace = None
         self.alpha = alpha
         self.inflate = inflate
-        assert self.inflate >= 1
-        assert 0 < self.alpha < 1
+        if not (self.inflate >= 1):
+            raise AssertionError
+        if not (0 < self.alpha < 1):
+            raise AssertionError
         # QMCPy Objs
         self.integrand = integrand
         self.true_measure = self.integrand.true_measure
@@ -147,7 +153,8 @@ class CubMLQMCCont(AbstractCubMLQMC):
             allow_vectorized_integrals=False,
         )
         self.replications = self.discrete_distrib.replications
-        assert self.replications >= 4, "require at least 4 replications"
+        if not (self.replications >= 4):
+            raise AssertionError("require at least 4 replications")
 
     def _validate_resume(self, data):
         self._validate_resume_data(data, required_fields=self._RESUME_REQUIRED_FIELDS)
@@ -168,18 +175,18 @@ class CubMLQMCCont(AbstractCubMLQMC):
             return False
         return hasattr(data, "level_rep_sums") and hasattr(data, "level_n_increments")
 
-    def integrate(self, resume=None) -> tuple:
+    def integrate(self, resume: Union[None, Data] = None) -> tuple:
         """Run (or continue) the continuation-MLQMC integration.
 
         Args:
-            resume (Data, optional): Checkpoint returned by a previous
-                ``integrate()`` call.  The new tolerance may be tighter *or*
-                looser than the one used when the checkpoint was created.
-                With a tighter tolerance the algorithm picks up the tolerance
-                ladder from ``max(checkpoint_rmse_tol, target_rmse_tol)`` and
-                continues down to ``target_rmse_tol``.  With a looser tolerance
-                the first step immediately converges on the existing samples
-                and no additional ladder steps are needed.
+            resume (Union[None, Data]): Checkpoint returned by a previous ``integrate()``
+                call.  The new tolerance may be tighter *or* looser than the
+                one used when the checkpoint was created. With a tighter
+                tolerance the algorithm picks up the tolerance ladder from
+                ``max(checkpoint_rmse_tol, target_rmse_tol)`` and continues
+                down to ``target_rmse_tol``.  With a looser tolerance the first
+                step immediately converges on the existing samples and no
+                additional ladder steps are needed.
 
         Returns:
             tuple: ``(solution, data)``.

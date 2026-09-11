@@ -38,9 +38,26 @@ When notebook-backed content changes:
 QMCPy documentation is built from docstrings, so public APIs should document their behavior clearly and consistently.
 
 - Use **Google-style docstrings** for public classes, methods, and functions.
-- Document parameters, return values, shapes, assumptions, and any stochastic behavior.
+- Start every docstring with a one-line summary before any section header.
+- Document every parameter and return value, plus shapes, assumptions, and any stochastic behavior. Constructor arguments go in the `__init__` method's own docstring, with the type in the docstring (`name (type): ...`).
+- Put a blank line before every section header (`Args:`, `Returns:`, `Raises:`, `Examples:`, ...) and write the header as `Name:` — not a NumPy-style `Name` followed by an `-----` underline.
 - Include short doctestable examples when they clarify expected use.
 - Update docstrings at the same time as the implementation so the rendered API docs do not drift from the code.
+
+`make check_docstring` runs two checks over public objects under `qmcpy/`:
+
+- `scripts/check_docstring.py` for **formatting** — a one-line summary before the first section (`missing-summary`), no NumPy-style sections, a blank line before every section header, canonical `Name:` headers, and public objects with no docstring. After the overall count it prints a second summary restricted to files changed relative to `DOCSTRING_BASE` (default `develop`), so you can see your branch's contribution to the backlog.
+- `pydoclint` (configured in `pyproject.toml` under `[tool.pydoclint]`) for **content** — every parameter and return value is documented and matches the signature, in Google form.
+
+It is informational by default; `STRICT=--strict make check_docstring` makes both parts fail the build. Pass `CHECK_DOCSTRING_ARGS=--skip-missing` to skip the "no docstring" formatting check, or `DOCSTRING_PATH=qmcpy/true_measure` to narrow the scan. `make check_docstring_changed` runs the same two checks on just the `qmcpy/*.py` files that changed relative to `DOCSTRING_BASE` — the quick check to run before opening a PR (it is also part of `make format`).
+
+For annotated public APIs, `make add_docstring_arg_types` inserts missing Google-style argument types into existing `Args:` entries from the function signature. For example, `distance: float` becomes `distance (float): ...` in the docstring. Use `DOCSTRING_TYPE_PATH=path/to/file.py` to narrow the scan, or run `make add_docstring_arg_types_changed` to apply it only to Python files reported by `git diff --name-only develop -- '*.py'`. Use `DOCSTRING_TYPE_DIFF_BASE=origin/develop` to compare against a different base, and use `make check_docstring_arg_types_changed` to fail when changed files still need annotation-derived updates. The helper does not infer types for unannotated functions and does not invent missing scientific argument descriptions.
+
+For changed public APIs, `make annotate_public_api_types_changed` performs the reverse operation conservatively: it copies explicit, valid Google `Args:` and `Returns:` types into missing function annotations and adds `-> None` to constructors. It never replaces an existing annotation. Types that are prose, use syntax unsafe for Python 3.9, or reference names not already available in the module are reported and skipped. Then `make sync_docstring_types_changed` copies the resulting signature annotations back into existing `Args:`, `Returns:`, and `Yields:` descriptions. Run the annotation target before the synchronization target, review the complete diff, and run `make check_public_api_types_changed` for a non-mutating consistency check. All three targets default to files under `qmcpy/` changed relative to `develop`; override this with `PUBLIC_API_TYPE_PATH` or `PUBLIC_API_TYPE_DIFF_BASE`.
+
+These helpers synchronize explicit type information; they do not infer a scientific API contract from default values, implementation expressions, or one observed runtime type. They also do not invent missing docstring descriptions or sections. Resolve every reported conflict manually, especially scalar-versus-array inputs, optional values, shape conventions, and abstract interfaces.
+
+There is intentionally no full third-party docstring reformatter in the Makefile. `format-docstring` was evaluated and rejected: on this codebase it strips `Returns:`/`Yields:` types and rewrites `**References:**` to `**References: **`. If wrapping/whitespace normalization is ever wanted, prefer a tool that leaves section structure and type hints untouched (for example `docformatter` or `pydocstringformatter`), and still review the diff.
 
 ## Extend the Existing Object Model
 
@@ -81,6 +98,10 @@ Several reviews focused on avoidable cleanup that is easy to catch before reques
 
 - Remove unused imports, trailing whitespace, and other style-only churn before requesting review.
 - Use explicit runtime exceptions such as `ParameterError` for invalid user inputs instead of relying on `assert` statements in production code.
+
+For a mechanical first pass, `make check_asserts_changed` reports standalone assertions in production Python files changed relative to `ASSERT_DIFF_BASE` (default `develop`) and returns nonzero when conversions are available. `make convert_asserts_changed` uses the open-source [LibCST](https://libcst.readthedocs.io/) codemod library to convert those assertions to explicit `AssertionError` raises while preserving comments and formatting. Use `make convert_asserts ASSERT_PATH=path/to/file.py` for a specific file or directory.
+
+`AssertionError` is the conservative default because it preserves the original exception class and message while making validation active under `python -O`. For a reviewed set of input checks, a developer may select an exception already imported by every target file, for example `make convert_asserts ASSERT_PATH=path/to/file.py ASSERT_EXCEPTION=ParameterError`. The tool does not infer whether a condition represents invalid input, a dimension mismatch, or an internal invariant; choose `ParameterError`, `DimensionError`, `ValueError`, or another public exception only after reviewing the API contract. Assertions sharing a semicolon-delimited line with another statement, or appearing in a one-line compound suite such as `if condition: assert invariant`, are reported but skipped. Always inspect the complete diff and run the focused tests after conversion.
 
 ## Add Demos or Blogs as Notebooks
 

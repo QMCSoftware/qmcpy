@@ -1,3 +1,5 @@
+from ..integrand.abstract_integrand import AbstractIntegrand
+from typing import Union, Callable
 from .abstract_cub_bayes_ld_g import AbstractCubBayesLDG
 from ..discrete_distribution import DigitalNetB2
 from ..integrand import Keister, BoxIntegral, Genz, SensitivityIndices
@@ -15,9 +17,9 @@ import warnings
 
 
 class CubQMCBayesNetG(AbstractCubBayesLDG):
-    r"""
-    Quasi-Monte Carlo stopping criterion using fast Bayesian cubature and digital nets
-    with guarantees for Gaussian processes having certain digitally shift invariant kernels.
+    r"""Quasi-Monte Carlo stopping criterion using fast Bayesian cubature and
+    digital nets with guarantees for Gaussian processes having certain
+    digitally shift invariant kernels.
 
     Examples:
         >>> k = Keister(DigitalNetB2(2, seed=123456789))
@@ -191,35 +193,38 @@ class CubQMCBayesNetG(AbstractCubBayesLDG):
 
     def __init__(
         self,
-        integrand,
-        abs_tol=1e-2,
-        rel_tol=0,
-        n_init=2**8,
-        n_limit=2**22,
-        error_fun="EITHER",
-        alpha=0.01,
-        errbd_type="MLE",
-    ):
-        r"""
+        integrand: AbstractIntegrand,
+        abs_tol: Union[float, np.ndarray] = 1e-2,
+        rel_tol: Union[float, np.ndarray] = 0,
+        n_init: int = 2**8,
+        n_limit: int = 2**22,
+        error_fun: Union[str, Callable] = "EITHER",
+        alpha: Union[float, np.ndarray] = 0.01,
+        errbd_type: str = "MLE",
+    ) -> None:
+        r"""Initialize a CubQMCBayesNetG stopping criterion.
+
         Args:
             integrand (AbstractIntegrand): The integrand.
-            abs_tol (np.ndarray): Absolute error tolerance.
-            rel_tol (np.ndarray): Relative error tolerance.
+            abs_tol (Union[float, np.ndarray]): Absolute error tolerance.
+            rel_tol (Union[float, np.ndarray]): Relative error tolerance.
             n_init (int): Initial number of samples.
             n_limit (int): Maximum number of samples.
-            error_fun (Union[str, callable]): Function mapping the approximate solution, absolute error tolerance, and relative error tolerance to the current error bound.
+            error_fun (Union[str, Callable]): Function mapping the approximate
+                solution, absolute error tolerance, and relative error
+                tolerance to the current error bound.
 
-                - `'EITHER'`, the default, requires the approximation error must be below either the absolue *or* relative tolerance.
+                - `'EITHER'`, the default, requires the approximation error to be below either the absolute *or* relative tolerance.
                     Equivalent to setting
                     ```python
                     error_fun = lambda sv,abs_tol,rel_tol: np.maximum(abs_tol,abs(sv)*rel_tol)
                     ```
-                - `'BOTH'` requires the approximation error to be below both the absolue *and* relative tolerance.
+                - `'BOTH'` requires the approximation error to be below both the absolute *and* relative tolerance.
                     Equivalent to setting
                     ```python
                     error_fun = lambda sv,abs_tol,rel_tol: np.minimum(abs_tol,abs(sv)*rel_tol)
                     ```
-            alpha (np.ndarray): Uncertainty level in $(0,1)$.
+            alpha (Union[float, np.ndarray]): Uncertainty level in $(0,1)$.
             errbd_type (str): Options are
 
                 - `'MLE'`: Marginal Log Likelihood.
@@ -296,9 +301,21 @@ class CubQMCBayesNetG(AbstractCubBayesLDG):
 
         return vec_lambda, vec_lambda_ring, lambda_factor
 
-    # Builds High order walsh kernel function
     @staticmethod
-    def BuildKernelFunc(order):
+    def BuildKernelFunc(order: int) -> Callable:
+        """Build a 1-D high-order Walsh kernel function.
+
+        Args:
+            order (int): Smoothness order of the digital-net Walsh kernel;
+                1, 2, or 3.
+
+        Returns:
+            Callable: Function mapping an array of 1-D coordinates to the
+                corresponding Walsh kernel values.
+
+        Raises:
+            NotYetImplemented: If `order` is not 1, 2, or 3.
+        """
         # a1 = @(x)(-np.floor(np.log2(x)))
         def a1(x):
             out = -np.floor(np.log2(x + np.finfo(float).eps))

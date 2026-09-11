@@ -1,3 +1,5 @@
+from ..integrand.abstract_integrand import AbstractIntegrand
+from typing import Union, Callable
 from .abstract_stopping_criterion import AbstractStoppingCriterion
 from ..util.data import Data
 from ..discrete_distribution import DigitalNetB2
@@ -20,8 +22,6 @@ import warnings
 
 
 class CubQMCRepStudentT(AbstractStoppingCriterion):
-    _RESUME_REQUIRED_FIELDS = ("xfull", "yfull", "n", "n_rep", "_ysums", "n_max")
-
     r"""
     Quasi-Monte Carlo stopping criterion based on Student's $t$-distribution for multiple replications.
 
@@ -202,38 +202,44 @@ class CubQMCRepStudentT(AbstractStoppingCriterion):
         [https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=10408613](https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=10408613).
     """
 
+    _RESUME_REQUIRED_FIELDS = ("xfull", "yfull", "n", "n_rep", "_ysums", "n_max")
+
     def __init__(
         self,
-        integrand,
-        abs_tol=1e-2,
-        rel_tol=0.0,
-        n_init=256.0,
-        n_limit=2**30,
-        error_fun="EITHER",
-        inflate=1,
-        alpha=0.01,
-    ):
-        r"""
+        integrand: AbstractIntegrand,
+        abs_tol: Union[float, np.ndarray] = 1e-2,
+        rel_tol: Union[float, np.ndarray] = 0.0,
+        n_init: int = 256,
+        n_limit: int = 2**30,
+        error_fun: Union[str, Callable] = "EITHER",
+        inflate: float = 1,
+        alpha: Union[float, np.ndarray] = 0.01,
+    ) -> None:
+        r"""Initialize a CubQMCRepStudentT stopping criterion.
+
         Args:
             integrand (AbstractIntegrand): The integrand.
-            abs_tol (np.ndarray): Absolute error tolerance.
-            rel_tol (np.ndarray): Relative error tolerance.
+            abs_tol (Union[float, np.ndarray]): Absolute error tolerance.
+            rel_tol (Union[float, np.ndarray]): Relative error tolerance.
             n_init (int): Initial number of samples.
             n_limit (int): Maximum number of samples.
-            error_fun (Union[str, callable]): Function mapping the approximate solution, absolute error tolerance, and relative error tolerance to the current error bound.
+            error_fun (Union[str, Callable]): Function mapping the approximate
+                solution, absolute error tolerance, and relative error
+                tolerance to the current error bound.
 
-                - `'EITHER'`, the default, requires the approximation error must be below either the absolue *or* relative tolerance.
+                - `'EITHER'`, the default, requires the approximation error to be below either the absolute *or* relative tolerance.
                     Equivalent to setting
                     ```python
                     error_fun = lambda sv,abs_tol,rel_tol: np.maximum(abs_tol,abs(sv)*rel_tol)
                     ```
-                - `'BOTH'` requires the approximation error to be below both the absolue *and* relative tolerance.
+                - `'BOTH'` requires the approximation error to be below both the absolute *and* relative tolerance.
                     Equivalent to setting
                     ```python
                     error_fun = lambda sv,abs_tol,rel_tol: np.minimum(abs_tol,abs(sv)*rel_tol)
                     ```
-            inflate (float): Inflation factor $\geq 1$ to multiply by the variance estimate to make it more conservative.
-            alpha (np.ndarray): Uncertainty level in $(0,1)$.
+            inflate (float): Inflation factor $\geq 1$ to multiply by the
+                variance estimate to make it more conservative.
+            alpha (Union[float, np.ndarray]): Uncertainty level in $(0,1)$.
         """
         self.parameters = ["inflate", "alpha", "abs_tol", "rel_tol", "n_init", "n_limit"]
         # Input Checks
@@ -250,7 +256,8 @@ class CubQMCRepStudentT(AbstractStoppingCriterion):
         # Set Attributes
         self.n_init = int(n_init)
         self.n_limit = int(n_limit)
-        assert isinstance(error_fun, str) or callable(error_fun)
+        if not (isinstance(error_fun, str) or callable(error_fun)):
+            raise AssertionError
         if isinstance(error_fun, str):
             if error_fun.upper() == "EITHER":
                 error_fun = lambda sv, abs_tol, rel_tol: np.maximum(
@@ -265,8 +272,10 @@ class CubQMCRepStudentT(AbstractStoppingCriterion):
         self.error_fun = error_fun
         self.alpha = alpha
         self.inflate = float(inflate)
-        assert self.inflate >= 1
-        assert 0 < self.alpha < 1
+        if not (self.inflate >= 1):
+            raise AssertionError
+        if not (0 < self.alpha < 1):
+            raise AssertionError
         # QMCPy Objs
         self.integrand = integrand
         self.true_measure = self.integrand.true_measure
@@ -275,12 +284,14 @@ class CubQMCRepStudentT(AbstractStoppingCriterion):
             allowed_distribs=[AbstractLDDiscreteDistribution],
             allow_vectorized_integrals=True,
         )
-        assert (
+        if not (
             self.integrand.discrete_distrib.replications > 1
-        ), "Require the discrete distribution has replications>1"
-        assert (
+        ):
+            raise AssertionError("Require the discrete distribution has replications>1")
+        if not (
             self.integrand.discrete_distrib.randomize != "FALSE"
-        ), "Require discrete distribution is randomized"
+        ):
+            raise AssertionError("Require discrete distribution is randomized")
         self.alphas_indv, _ = self._compute_indv_alphas(
             np.full(self.integrand.d_comb, self.alpha)
         )
@@ -289,7 +300,24 @@ class CubQMCRepStudentT(AbstractStoppingCriterion):
             self.alphas_indv / 2, df=self.integrand.discrete_distrib.replications - 1
         )
 
-    def integrate(self, resume=None):
+    def integrate(self, resume: Union[None, Data] = None) -> tuple:
+        """Determine the samples needed to satisfy the target tolerance.
+
+        Doubles the per-replication sample count each iteration and forms a
+        Student's $t$ confidence interval (`self.t_star`, inflated by
+        `self.inflate`, with degrees of freedom set by
+        `self.discrete_distrib.replications`) on each not-yet-converged
+        output. Stops once every combined output is within tolerance or
+        `self.n_limit` would be exceeded.
+
+        Args:
+            resume (Union[None, Data]): Existing integration state to resume from, if
+                supported. Defaults to None.
+
+        Returns:
+            tuple: Approximation to the integral with shape ``integrand.d_comb``
+                and the corresponding data object.
+        """
         t_start = time()
         resume_provenance = self._capture_resume_provenance(resume)
         trace = self._make_trace_logger()
@@ -425,8 +453,21 @@ class CubQMCRepStudentT(AbstractStoppingCriterion):
         self.integrand.discrete_distrib = self.discrete_distrib
         self.integrand.true_measure.discrete_distrib = self.discrete_distrib
 
-    def set_tolerance(self, abs_tol=None, rel_tol=None, rmse_tol=None):
-        assert rmse_tol is None, "rmse_tol not supported by this stopping criterion."
+    def set_tolerance(self, abs_tol: Union[None, float] = None, rel_tol: Union[None, float] = None, rmse_tol: Union[None, float] = None) -> None:
+        """Update the stopping criterion's target tolerance.
+
+        Args:
+            abs_tol (Union[None, float]): Absolute error tolerance, broadcast to
+                `self.abs_tols` with shape `integrand.d_comb`.
+            rel_tol (Union[None, float]): Relative error tolerance, broadcast to
+                `self.rel_tols` with shape `integrand.d_comb`.
+            rmse_tol (Union[None, float]): Unsupported; must be `None`.
+
+        Raises:
+            AssertionError: If `rmse_tol` is supplied.
+        """
+        if not (rmse_tol is None):
+            raise AssertionError("rmse_tol not supported by this stopping criterion.")
         if abs_tol is not None:
             self.abs_tol = abs_tol
             self.abs_tols = np.full(self.integrand.d_comb, self.abs_tol)

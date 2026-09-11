@@ -1,3 +1,4 @@
+from typing import Union
 from .abstract_stopping_criterion import AbstractStoppingCriterion
 from ..util.data import Data
 
@@ -18,6 +19,16 @@ def _lstsq_pyfunc(x, y):
 
 
 class AbstractCubQMCLDG(AbstractStoppingCriterion):
+    """Abstract base class for guaranteed low-discrepancy QMC stopping criteria.
+
+    Implements the fast-transform (FFT/FWT) cubature error bound shared by
+    `CubQMCLatticeG`, `CubQMCNetG`, and similar guaranteed lattice/digital-net
+    stopping criteria: doubling sample counts each iteration, maintaining the
+    running transform coefficients (`_ytildefull`, `_kappanumap`), optional
+    control-variate correction, and the cone-condition check that certifies
+    the error bound.
+    """
+
     _RESUME_REQUIRED_FIELDS = (
         "solution", "comb_bound_low", "comb_bound_high", "comb_bound_diff", "comb_flags", "n", "n_max", "xfull", "yfull"
     )
@@ -41,7 +52,7 @@ class AbstractCubQMCLDG(AbstractStoppingCriterion):
         allowed_distribs,
         cast_complex,
         error_fun,
-    ):
+    ) -> None:
         self.parameters = ["abs_tol", "rel_tol", "n_init", "n_limit"]
         # Input Checks
         if np.log2(n_init) % 1 != 0 or n_init < 2**8:
@@ -74,7 +85,8 @@ class AbstractCubQMCLDG(AbstractStoppingCriterion):
                 ParameterWarning,
             )
             self.n_limit = dd_n_limit
-        assert isinstance(error_fun, str) or callable(error_fun)
+        if not (isinstance(error_fun, str) or callable(error_fun)):
+            raise AssertionError
         # _error_fun_key stores a simple, serializable string and ensures correct state saving
         # in __getstate__(), bypassing serialization of complex lambda functions, which often fails.
         self.error_fun, self._error_fun_key = self._resolve_error_fun(error_fun)
@@ -97,20 +109,23 @@ class AbstractCubQMCLDG(AbstractStoppingCriterion):
         super(AbstractCubQMCLDG, self).__init__(
             allowed_distribs=allowed_distribs, allow_vectorized_integrals=True
         )
-        assert (
+        if not (
             self.integrand.discrete_distrib.no_replications == True
-        ), "Require the discrete distribution has replications=None"
-        assert (
+        ):
+            raise AssertionError("Require the discrete distribution has replications=None")
+        if not (
             self.integrand.discrete_distrib.randomize != "FALSE"
-        ), "Require discrete distribution is randomized"
+        ):
+            raise AssertionError("Require discrete distribution is randomized")
         self.set_tolerance(abs_tol, rel_tol)
         # control variates
         self._init_control_variates(control_variates, control_variate_means)
         self.update_beta = update_beta
         if self.ncv > 0:
-            assert self.cv_mu.shape == (
+            if not (self.cv_mu.shape == (
                 (self.ncv,) + self.integrand.d_indv
-            ), "Control variate means should have shape (len(control variates),d_indv)."
+            )):
+                raise AssertionError("Control variate means should have shape (len(control variates),d_indv).")
             self.parameters += ["cv", "cv_mu", "update_beta"]
         else:
             self.update_beta = False
@@ -217,7 +232,24 @@ class AbstractCubQMCLDG(AbstractStoppingCriterion):
                 "beta", data.beta, self.integrand.d_indv + (self.ncv,)
             )
 
-    def integrate(self, resume=None):
+    def integrate(self, resume: Union[None, Data] = None) -> tuple:
+        """Determine the samples needed to satisfy the target tolerance.
+
+        Doubles the sample count each iteration, updates the running fast
+        transform (`_ytildefull`) and its permutation (`_kappanumap`),
+        optionally corrects for control variates, and (if `self.check_cone`)
+        checks the cone condition that certifies the low-discrepancy error
+        bound. Stops once every combined output is within tolerance or
+        `self.n_limit` would be exceeded.
+
+        Args:
+            resume (Union[None, Data]): Existing integration state to resume from, if
+                supported. Defaults to None.
+
+        Returns:
+            tuple: Approximation to the integral with shape ``integrand.d_comb``
+                and the corresponding data object.
+        """
         t_start = time()
         resume_provenance = self._capture_resume_provenance(resume)
         first_resume_iter = False
@@ -475,8 +507,21 @@ class AbstractCubQMCLDG(AbstractStoppingCriterion):
         trace.finalize()
         return data.solution, data
 
-    def set_tolerance(self, abs_tol=None, rel_tol=None, rmse_tol=None):
-        assert rmse_tol is None, "rmse_tol not supported by this stopping criterion."
+    def set_tolerance(self, abs_tol: Union[None, float] = None, rel_tol: Union[None, float] = None, rmse_tol: Union[None, float] = None) -> None:
+        """Update the stopping criterion's target tolerance.
+
+        Args:
+            abs_tol (Union[None, float]): Absolute error tolerance, broadcast to
+                `self.abs_tols` with shape `integrand.d_comb`.
+            rel_tol (Union[None, float]): Relative error tolerance, broadcast to
+                `self.rel_tols` with shape `integrand.d_comb`.
+            rmse_tol (Union[None, float]): Unsupported; must be `None`.
+
+        Raises:
+            AssertionError: If `rmse_tol` is supplied.
+        """
+        if not (rmse_tol is None):
+            raise AssertionError("rmse_tol not supported by this stopping criterion.")
         if abs_tol is not None:
             self.abs_tol = abs_tol
             self.abs_tols = np.full(self.integrand.d_comb, self.abs_tol)

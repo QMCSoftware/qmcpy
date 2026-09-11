@@ -1,4 +1,7 @@
+from typing import Union
 from .abstract_cub_mlmc import AbstractCubMLMC
+from ..integrand.abstract_integrand import AbstractIntegrand
+from ..util.data import Data
 import copy
 from ..discrete_distribution import IIDStdUniform
 from ..discrete_distribution.abstract_discrete_distribution import (
@@ -13,10 +16,6 @@ import warnings
 
 
 class CubMLMC(AbstractCubMLMC):
-    _RESUME_REQUIRED_FIELDS = (
-        "levels", "n_level", "sum_level", "diff_n_level", "cost_level", "level_integrands"
-    )
-
     """
     Multilevel IID Monte Carlo stopping criterion.
 
@@ -27,7 +26,7 @@ class CubMLMC(AbstractCubMLMC):
         >>> data
         Data (Data)
             solution        1.785
-            n_total         3577556
+            n_total         3199033
             levels          2^(2)
             n_level         [2438191  490331  207606   62905]
             mean_level      [1.715 0.053 0.013 0.003]
@@ -35,7 +34,7 @@ class CubMLMC(AbstractCubMLMC):
             cost_per_sample [ 2.  4.  8. 16.]
             alpha           2.008
             beta            1.997
-            gamma           1.000
+            gamma           ...
             time_integrate  ...
         CubMLMC (AbstractStoppingCriterion)
             rmse_tol        0.006
@@ -73,34 +72,45 @@ class CubMLMC(AbstractCubMLMC):
     2. [http://people.maths.ox.ac.uk/~gilesm/mlmc/#MATLAB](http://people.maths.ox.ac.uk/~gilesm/mlmc/#MATLAB).
     """
 
+    _RESUME_REQUIRED_FIELDS = (
+        "levels", "n_level", "sum_level", "diff_n_level", "cost_level", "level_integrands"
+    )
+
     def __init__(
         self,
-        integrand,
-        abs_tol=0.05,
-        rmse_tol=None,
-        n_init=256,
-        n_limit=1e10,
-        alpha=0.01,
-        levels_min=2,
-        levels_max=10,
-        alpha0=-1.0,
-        beta0=-1.0,
-        gamma0=-1.0,
-    ):
-        r"""
+        integrand: AbstractIntegrand,
+        abs_tol: Union[float, np.ndarray] = 0.05,
+        rmse_tol: Union[None, np.ndarray] = None,
+        n_init: int = 256,
+        n_limit: int = 10**10,
+        alpha: Union[float, np.ndarray] = 0.01,
+        levels_min: int = 2,
+        levels_max: int = 10,
+        alpha0: float = -1.0,
+        beta0: float = -1.0,
+        gamma0: float = -1.0,
+    ) -> None:
+        r"""Initialize a CubMLMC stopping criterion.
+
         Args:
             integrand (AbstractIntegrand): The integrand.
-            abs_tol (np.ndarray): Absolute error tolerance.
-            rmse_tol (np.ndarray): Root mean squared error tolerance.
-                If supplied, then absolute tolerance and alpha are ignored in favor of the rmse tolerance.
+            abs_tol (Union[float, np.ndarray]): Absolute error tolerance.
+            rmse_tol (Union[None, np.ndarray]): Root mean squared error tolerance. If
+                supplied, then absolute tolerance and alpha are ignored in
+                favor of the rmse tolerance.
             n_init (int): Initial number of samples.
             n_limit (int): Maximum number of samples.
-            alpha (np.ndarray): Uncertainty level in $(0,1)$.
+            alpha (Union[float, np.ndarray]): Uncertainty level in $(0,1)$.
             levels_min (int): Minimum level of refinement $\geq 2$.
             levels_max (int): Maximum level of refinement $\geq$ `levels_min`.
-            alpha0 (float): Weak error is $\mathcal{O}(2^{-\alpha_0\ell})$ in the level $\ell$. If `alpha0`$\leq 0$ then it will be estimated.
-            beta0 (float): Variance is $\mathcal{O}(2^{-\beta_0\ell})$ in the level $\ell$. If `beta0`$\leq 0$ then it will be estimated.
-            gamma0 (float): Sample cost is $\mathcal{O}(2^{\gamma_0\ell})$ in the level $\ell$. If `gamma0`$\leq 0$ then it will be estimated.
+            alpha0 (float): Weak error is $\mathcal{O}(2^{-\alpha_0\ell})$ in
+                the level $\ell$. If `alpha0`$\leq 0$ then it will be
+                estimated.
+            beta0 (float): Variance is $\mathcal{O}(2^{-\beta_0\ell})$ in the
+                level $\ell$. If `beta0`$\leq 0$ then it will be estimated.
+            gamma0 (float): Sample cost is $\mathcal{O}(2^{\gamma_0\ell})$ in
+                the level $\ell$. If `gamma0`$\leq 0$ then it will be
+                estimated.
         """
         self.parameters = ["rmse_tol", "n_init", "levels_min", "levels_max", "theta"]
         if levels_min < 2:
@@ -115,7 +125,8 @@ class CubMLMC(AbstractCubMLMC):
         else:  # use absolute tolerance
             self.rmse_tol = float(abs_tol) / norm.ppf(1 - alpha / 2)
         self.alpha = alpha
-        assert 0 < self.alpha < 1
+        if not (0 < self.alpha < 1):
+            raise AssertionError
         self.n_init = n_init
         self.n_limit = n_limit
         self.levels_min = levels_min
@@ -222,7 +233,9 @@ class CubMLMC(AbstractCubMLMC):
         return snapshots
 
     def _replay_resume_exactly(self, checkpoint, t_start=None, resume_provenance=None):
-        """Replay cached per-level diffs to reconstruct checkpoint state and trace rows."""
+        """Replay cached per-level diffs to reconstruct checkpoint state and
+        trace rows.
+        """
         shadow = self._construct_data()
         shadow.level_integrands = list(checkpoint.level_integrands)
         shadow.cached_level_diffs = [
@@ -262,17 +275,17 @@ class CubMLMC(AbstractCubMLMC):
                 delattr(shadow, attr)
         return shadow, snapshots[absorb_index:], replay_iter_count
 
-    def integrate(self, resume=None) -> tuple:
+    def integrate(self, resume: Union[None, Data] = None) -> tuple:
         """Run (or continue) the MLMC integration.
 
         Args:
-            resume (Data, optional): Checkpoint returned by a previous
-                ``integrate()`` call.  The new tolerance may be tighter *or*
-                looser than the one used when the checkpoint was created.
-                With a tighter tolerance the algorithm draws additional samples
-                from where it left off.  With a looser tolerance the existing
-                samples already satisfy the requirement and the method returns
-                immediately with no new sampling.
+            resume (Union[None, Data]): Checkpoint returned by a previous ``integrate()``
+                call.  The new tolerance may be tighter *or* looser than the
+                one used when the checkpoint was created. With a tighter
+                tolerance the algorithm draws additional samples from where it
+                left off.  With a looser tolerance the existing samples already
+                satisfy the requirement and the method returns immediately with
+                no new sampling.
 
         Returns:
             tuple: ``(solution, data)``.

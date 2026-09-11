@@ -1,3 +1,8 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
 from .copula import (
     AbstractCopula,
     _clip_unit_interval,
@@ -13,19 +18,18 @@ import scipy.stats as stats
 
 
 class StudentTCopula(AbstractCopula):
-    r"""
-    Student-t copula transform with user supplied univariate marginals.
+    r"""Student-t copula transform with user supplied univariate marginals.
 
-    This TrueMeasure uses the same marginal workflow as ``GaussianCopula``,
-    but builds dependent uniforms through a multivariate Student-t copula with
+    This TrueMeasure uses the same marginal workflow as ``GaussianCopula``, but
+    builds dependent uniforms through a multivariate Student-t copula with
     correlation matrix ``correlation`` and degrees of freedom ``df``.
 
-    The transform uses the inverse Rosenblatt construction for the
-    multivariate Student-t distribution. This is equivalent in distribution to
-    the standard correlated-normal plus shared chi-square scaling construction,
-    but it only needs d deterministic uniforms from the base QMCPy sampler.
-    It is not the incorrect shortcut of applying univariate ``t.ppf``, a
-    Cholesky factor, and then univariate ``t.cdf``.
+    The transform uses the inverse Rosenblatt construction for the multivariate
+    Student-t distribution. This is equivalent in distribution to the standard
+    correlated-normal plus shared chi-square scaling construction, but it only
+    needs d deterministic uniforms from the base QMCPy sampler. It is not the
+    incorrect shortcut of applying univariate ``t.ppf``, a Cholesky factor, and
+    then univariate ``t.cdf``.
 
     Examples:
         >>> import numpy as np
@@ -87,15 +91,17 @@ class StudentTCopula(AbstractCopula):
         "Weights will be treated as 1."
     )
 
-    def __init__(self, sampler, marginals, correlation, df):
-        r"""
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], marginals: list, correlation: np.ndarray, df: float) -> None:
+        r"""Initialize a StudentTCopula true measure.
+
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
                 A sampler or transform whose range is the unit cube.
             marginals (list): Length d list of SciPy-like univariate
                 distributions implementing a quantile function, called ``ppf``
                 in SciPy.
-            correlation (np.ndarray): d x d positive definite correlation matrix.
+            correlation (np.ndarray): d x d positive definite correlation
+                matrix.
             df (float): Positive Student-t degrees of freedom.
         """
         self.parameters = ["marginals", "correlation", "df"]
@@ -120,8 +126,7 @@ class StudentTCopula(AbstractCopula):
         return df
 
     def _dependent_t_samples(self, u):
-        """
-        Map independent uniforms to a multivariate Student-t sample.
+        """Map independent uniforms to a multivariate Student-t sample.
 
         A direct scale-mixture construction would need d normal uniforms plus
         one extra chi-square uniform for the shared radial scale. Since

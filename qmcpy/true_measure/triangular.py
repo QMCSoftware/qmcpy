@@ -5,15 +5,13 @@ from .scipy_wrapper import SciPyWrapper
 
 
 class TriangularDistribution:
-    """
-    Triangular distribution matching scipy.stats.triang behavior.
+    """Triangular distribution matching scipy.stats.triang behavior.
 
-    Support: [loc, loc + scale]
-    Mode: loc + c*scale, with 0 < c < 1
-    Provides ppf and pdf for SciPyWrapper custom-marginal usage.
+    Support: [loc, loc + scale] Mode: loc + c*scale, with 0 < c < 1 Provides
+    ppf and pdf for SciPyWrapper custom-marginal usage.
     """
 
-    def __init__(self, c=0.5, loc=0.0, scale=1.0):
+    def __init__(self, c=0.5, loc=0.0, scale=1.0) -> None:
         c = float(c)
         loc = float(loc)
         scale = float(scale)
@@ -31,7 +29,15 @@ class TriangularDistribution:
         self._b = loc + scale
         self._m = loc + c * scale
 
-    def pdf(self, x):
+    def pdf(self, x: np.ndarray) -> np.ndarray:
+        """Probability density function of the triangular distribution.
+
+        Args:
+            x (np.ndarray): Points at which to evaluate the density.
+
+        Returns:
+            np.ndarray: Density values, same shape as `x`.
+        """
         x = np.asarray(x, dtype=float)
         a, m, b = self._a, self._m, self._b
         out = np.zeros_like(x, dtype=float)
@@ -43,7 +49,15 @@ class TriangularDistribution:
         out[right] = 2.0 * (b - x[right]) / ((b - a) * (b - m))
         return out
 
-    def ppf(self, u):
+    def ppf(self, u: np.ndarray) -> np.ndarray:
+        """Percent point function (inverse CDF) of the triangular distribution.
+
+        Args:
+            u (np.ndarray): Probabilities in `[0,1]` at which to evaluate the inverse CDF.
+
+        Returns:
+            np.ndarray: Quantile values, same shape as `u`.
+        """
         u = np.asarray(u, dtype=float)
         a, m, b = self._a, self._m, self._b
         Fm = (m - a) / (b - a)
@@ -60,7 +74,7 @@ class TriangularDistribution:
 class Triangular(SciPyWrapper):
     """Convenience TrueMeasure wrapper around TriangularDistribution."""
 
-    def __init__(self, sampler, c=0.5, loc=0.0, scale=1.0):
+    def __init__(self, sampler, c=0.5, loc=0.0, scale=1.0) -> None:
         super().__init__(
             sampler=sampler,
             scipy_distribs=TriangularDistribution(c=c, loc=loc, scale=scale),

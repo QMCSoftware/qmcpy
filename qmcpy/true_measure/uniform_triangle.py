@@ -1,18 +1,20 @@
+from typing import Union
 import numpy as np
 
 from ..util import DimensionError
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
 from .scipy_wrapper import SciPyWrapper
 from ..discrete_distribution import DigitalNetB2
 
 
 class _UniformTriangleAdapter:
-    """
-    Uniform on triangle T = {(x, y): 0 <= y <= x <= 1}
+    """Uniform on triangle T = {(x, y): 0 <= y <= x <= 1}
 
     Exact transform:
-      u1, u2 ~ U(0, 1)
-      x = sqrt(u1)
-      y = u2 * x
+      u1, u2 ~ U(0, 1) x = sqrt(u1) y = u2 * x
     """
 
     def __init__(self):
@@ -50,10 +52,9 @@ class _UniformTriangleAdapter:
 
 
 class UniformTriangle(SciPyWrapper):
-    """
-    Uniform distribution on the triangle {(x, y): 0 <= y <= x <= 1}.
+    """Uniform distribution on the triangle {(x, y): 0 <= y <= x <= 1}.
 
-    Example:
+    Examples:
     >>> tm = UniformTriangle(sampler=DigitalNetB2(2, seed=7))
     >>> x = tm(4)
     >>> x.shape
@@ -62,5 +63,12 @@ class UniformTriangle(SciPyWrapper):
     True
     """
 
-    def __init__(self, sampler):
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure]) -> None:
+        """Initialize a UniformTriangle true measure.
+
+        Args:
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): A
+                2-dimensional sampler generating unit-cube samples to be
+                transformed to the triangle.
+        """
         super().__init__(sampler=sampler, scipy_distribs=_UniformTriangleAdapter())

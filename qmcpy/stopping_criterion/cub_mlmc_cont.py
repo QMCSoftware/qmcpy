@@ -1,4 +1,7 @@
+from typing import Union
 from .abstract_cub_mlmc import AbstractCubMLMC
+from ..integrand.abstract_integrand import AbstractIntegrand
+from ..util.data import Data
 import copy
 from ..discrete_distribution import IIDStdUniform
 from ..discrete_distribution.abstract_discrete_distribution import (
@@ -13,10 +16,6 @@ import warnings
 
 
 class CubMLMCCont(AbstractCubMLMC):
-    _RESUME_REQUIRED_FIELDS = (
-        "levels", "n_level", "sum_level", "diff_n_level", "cost_level", "level_integrands"
-    )
-
     r"""
     Multilevel IID Monte Carlo stopping criterion with continuation.
 
@@ -27,15 +26,15 @@ class CubMLMCCont(AbstractCubMLMC):
         >>> data
         Data (Data)
             solution        1.771
-            n_total         2291120
+            n_total         1480870
             levels          3
-            n_level         [1094715  222428   79666     912     256]
-            mean_level      [1.71  0.048 0.012]
-            var_level       [21.826  1.768  0.453]
+            n_level         [1145480  230538  104852]
+            mean_level      [1.71  0.048 0.013]
+            var_level       [21.819  1.766  0.451]
             cost_per_sample [2. 4. 8.]
-            alpha           1.970
-            beta            1.965
-            gamma           1.000
+            alpha           1.868
+            beta            1.969
+            gamma           ...
             time_integrate  ...
         CubMLMCCont (AbstractStoppingCriterion)
             rmse_tol        0.006
@@ -45,7 +44,7 @@ class CubMLMCCont(AbstractCubMLMC):
             n_tols          10
             inflate         1.668
             theta_init      2^(-1)
-            theta           0.010
+            theta           0.051
         FinancialOption (AbstractIntegrand)
             option          ASIAN
             call_put        CALL
@@ -72,30 +71,36 @@ class CubMLMCCont(AbstractCubMLMC):
     1. [https://github.com/PieterjanRobbe/MultilevelEstimators.jl](https://github.com/PieterjanRobbe/MultilevelEstimators.jl).
     """
 
+    _RESUME_REQUIRED_FIELDS = (
+        "levels", "n_level", "sum_level", "diff_n_level", "cost_level", "level_integrands"
+    )
+
     def __init__(
         self,
-        integrand,
-        abs_tol=0.05,
-        rmse_tol=None,
-        n_init=256,
-        n_limit=1e10,
-        inflate=100 ** (1 / 9),
-        alpha=0.01,
-        levels_min=2,
-        levels_max=10,
-        n_tols=10,
-        theta_init=0.5,
-    ):
-        r"""
+        integrand: AbstractIntegrand,
+        abs_tol: Union[float, np.ndarray] = 0.05,
+        rmse_tol: Union[None, np.ndarray] = None,
+        n_init: int = 256,
+        n_limit: int = 10**10,
+        inflate: float = 100 ** (1 / 9),
+        alpha: Union[float, np.ndarray] = 0.01,
+        levels_min: int = 2,
+        levels_max: int = 10,
+        n_tols: int = 10,
+        theta_init: float = 0.5,
+    ) -> None:
+        r"""Initialize a CubMLMCCont stopping criterion.
+
         Args:
             integrand (AbstractIntegrand): The integrand.
-            abs_tol (np.ndarray): Absolute error tolerance.
-            rmse_tol (np.ndarray): Root mean squared error tolerance.
-                If supplied, then absolute tolerance and alpha are ignored in favor of the rmse tolerance.
+            abs_tol (Union[float, np.ndarray]): Absolute error tolerance.
+            rmse_tol (Union[None, np.ndarray]): Root mean squared error tolerance. If
+                supplied, then absolute tolerance and alpha are ignored in
+                favor of the rmse tolerance.
             n_init (int): Initial number of samples.
             n_limit (int): Maximum number of samples.
             inflate (float): Coarser tolerance multiplication factor $\geq 1$.
-            alpha (np.ndarray): Uncertainty level in $(0,1)$.
+            alpha (Union[float, np.ndarray]): Uncertainty level in $(0,1)$.
             levels_min (int): Minimum level of refinement $\geq 2$.
             levels_max (int): Maximum level of refinement $\geq$ `levels_min`.
             n_tols (int): Number of coarser tolerances to run.
@@ -140,8 +145,10 @@ class CubMLMCCont(AbstractCubMLMC):
         self._active_trace = None
         self.alpha = alpha
         self.inflate = inflate
-        assert self.inflate >= 1
-        assert 0 < self.alpha < 1
+        if not (self.inflate >= 1):
+            raise AssertionError
+        if not (0 < self.alpha < 1):
+            raise AssertionError
         super(CubMLMCCont, self).__init__(
             allowed_distribs=[AbstractIIDDiscreteDistribution],
             allow_vectorized_integrals=False,
@@ -161,18 +168,18 @@ class CubMLMCCont(AbstractCubMLMC):
             return False
         return hasattr(data, "level_diffs") and len(data.level_diffs) == len(data.n_level)
 
-    def integrate(self, resume=None) -> tuple:
+    def integrate(self, resume: Union[None, Data] = None) -> tuple:
         """Run (or continue) the continuation-MLMC integration.
 
         Args:
-            resume (Data, optional): Checkpoint returned by a previous
-                ``integrate()`` call.  The new tolerance may be tighter *or*
-                looser than the one used when the checkpoint was created.
-                With a tighter tolerance the algorithm picks up the tolerance
-                ladder from ``max(checkpoint_rmse_tol, target_rmse_tol)`` and
-                continues down to ``target_rmse_tol``.  With a looser tolerance
-                the first step immediately converges on the existing samples
-                and no additional ladder steps are needed.
+            resume (Union[None, Data]): Checkpoint returned by a previous ``integrate()``
+                call.  The new tolerance may be tighter *or* looser than the
+                one used when the checkpoint was created. With a tighter
+                tolerance the algorithm picks up the tolerance ladder from
+                ``max(checkpoint_rmse_tol, target_rmse_tol)`` and continues
+                down to ``target_rmse_tol``.  With a looser tolerance the first
+                step immediately converges on the existing samples and no
+                additional ladder steps are needed.
 
         Returns:
             tuple: ``(solution, data)``.
@@ -261,8 +268,10 @@ class CubMLMCCont(AbstractCubMLMC):
             ).sum()
 
     def _replay_resume_exactly(self, checkpoint, t_start=None, resume_provenance=None):
-        """Ensure iteration number in `replay_iter_count` same in LOOSE-last and RESUMED-first iterations, 
-            by simply saving `level_rep_sums` and `level_n_increments`."""
+        """Ensure iteration number in `replay_iter_count` same in LOOSE-last
+        and RESUMED-first iterations, by simply saving `level_rep_sums` and
+        `level_n_increments`.
+        """
         shadow_trace = self._active_trace = None
         try:
             shadow = self._construct_data()

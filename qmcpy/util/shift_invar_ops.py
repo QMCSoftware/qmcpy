@@ -1,3 +1,9 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Union
+if TYPE_CHECKING:
+    import torch
+
 import numpy as np
 
 
@@ -10,17 +16,19 @@ class Polynomial:
     >>> assert np.allclose(y,y_true,atol=1e-12)
     """
 
-    def __init__(self, coeffs):
-        """
-        Polynomial evaluation with Horner's rule
+    def __init__(self, coeffs: Union[list, np.ndarray, torch.Tensor]) -> None:
+        """Polynomial evaluation with Horner's rule
 
         Args:
-            coeffs (list or np.ndarray or torch.Tensor): vector of coefficients
-            e.g. coeffs = [a, b, c] corresponds to the quadratic polynomial a*x**2 + b*x + c
+            coeffs (Union[list, np.ndarray, torch.Tensor]): Vector of
+                coefficients, e.g., `coeffs = [a, b, c]` corresponds to the
+                quadratic polynomial `a*x**2 + b*x + c`.
         """
-        assert isinstance(coeffs, list)
+        if not (isinstance(coeffs, list)):
+            raise AssertionError
         self.order = len(coeffs)
-        assert self.order >= 1
+        if not (self.order >= 1):
+            raise AssertionError
         self.coeffs = coeffs
 
     def __call__(self, x):
@@ -52,9 +60,8 @@ BERNOULLIPOLYSDICT = {
 }
 
 
-def bernoulli_poly(n, x):
-    r"""
-    $n^\text{th}$ Bernoulli polynomial
+def bernoulli_poly(n: int, x: Union[np.ndarray, torch.Tensor]) -> Union[np.ndarray, torch.Tensor]:
+    r"""$n^\text{th}$ Bernoulli polynomial
 
     Examples:
         >>> x = np.arange(6).reshape((2,3))/6
@@ -103,13 +110,16 @@ def bernoulli_poly(n, x):
 
     Args:
         n (int): Polynomial order.
-        x (Union[np.ndarray, torch.Tensor]): Points at which to evaluate the Bernoulli polynomial.
+        x (Union[np.ndarray, torch.Tensor]): Points at which to evaluate the
+            Bernoulli polynomial.
 
     Returns:
-        y (Union[np.ndarray, torch.Tensor]): Bernoulli polynomial values.
+        Union[np.ndarray, torch.Tensor]: Bernoulli polynomial values.
     """
-    assert isinstance(n, int)
-    assert n in BERNOULLIPOLYSDICT, "n = %d not in BERNOULLIPOLYSDICT" % n
+    if not (isinstance(n, int)):
+        raise AssertionError
+    if not (n in BERNOULLIPOLYSDICT):
+        raise AssertionError("n = %d not in BERNOULLIPOLYSDICT" % n)
     bpoly = BERNOULLIPOLYSDICT[n]
     y = bpoly(x)
     return y

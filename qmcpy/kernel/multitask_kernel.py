@@ -1,3 +1,9 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Union, Tuple, Callable
+if TYPE_CHECKING:
+    import torch
+
 from .abstract_kernel import AbstractKernel
 from .common_kernels import KernelGaussian
 from ..util.transforms import tf_identity, tf_exp_eps, tf_exp_eps_inv, insert_batch_dims
@@ -5,14 +11,16 @@ import numpy as np
 
 
 class KernelMultiTask(AbstractKernel):
-    r"""
-    Multi-task kernel
+    r"""Multi-task kernel
 
-    $$K((i,\boldsymbol{x}),(j,\boldsymbol{z})) = K_{\mathrm{task}}(i,j) K_{\mathrm{base}}(\boldsymbol{x},\boldsymbol{z})$$
+    $$K((i,\boldsymbol{x}),(j,\boldsymbol{z})) = K_{\mathrm{task}}(i,j)
+    K_{\mathrm{base}}(\boldsymbol{x},\boldsymbol{z})$$
 
-    parameterized for $T$ tasks by a factor $\mathsf{F} \in \mathbb{R}^{T \times r}$ and a diagonal $\boldsymbol{v} \in \mathbb{R}^T$ so that
+    parameterized for $T$ tasks by a factor $\mathsf{F} \in \mathbb{R}^{T
+    \times r}$ and a diagonal $\boldsymbol{v} \in \mathbb{R}^T$ so that
 
-    $$\left[K_{\mathrm{task}}(i,j)\right]_{i,j=1}^T = \mathsf{F} \mathsf{F}^T + \mathrm{diag}(\boldsymbol{v}).$$
+    $$\left[K_{\mathrm{task}}(i,j)\right]_{i,j=1}^T = \mathsf{F} \mathsf{F}^T +
+    \mathrm{diag}(\boldsymbol{v}).$$
 
     Examples:
         >>> kmt = KernelMultiTask(KernelGaussian(d=2),num_tasks=3,diag=[1,2,3])
@@ -326,34 +334,46 @@ class KernelMultiTask(AbstractKernel):
 
     def __init__(
         self,
-        base_kernel,
-        num_tasks,
-        factor=1.0,
-        diag=1.0,
-        shape_factor=None,
-        shape_diag=None,
-        tfs_factor=(tf_identity, tf_identity),
-        tfs_diag=(tf_exp_eps_inv, tf_exp_eps),
-        requires_grad_factor=True,
-        requires_grad_diag=True,
-        rank_factor=1,
-        method="LOW RANK",
-    ):
-        r"""
+        base_kernel: AbstractKernel,
+        num_tasks: int,
+        factor: Union[float, np.ndarray, torch.Tensor] = 1.0,
+        diag: Union[float, np.ndarray, torch.Tensor] = 1.0,
+        shape_factor: Union[None, list] = None,
+        shape_diag: Union[None, list] = None,
+        tfs_factor: Tuple[Callable, Callable] = (tf_identity, tf_identity),
+        tfs_diag: Tuple[Callable, Callable] = (tf_exp_eps_inv, tf_exp_eps),
+        requires_grad_factor: bool = True,
+        requires_grad_diag: bool = True,
+        rank_factor: int = 1,
+        method: str = "LOW RANK",
+    ) -> None:
+        r"""Initialize a KernelMultiTask kernel.
+
         Args:
             base_kernel (AbstractKernel): $K_{\mathrm{base}}$.
             num_tasks (int): Number of tasks $T>1$.
-            factor (Union[np.ndarray, torch.Tensor]): Factor $\mathsf{F}$.
-            diag (Union[np.ndarray, torch.Tensor]): Diagonal parameter $\boldsymbol{v}$.
-            shape_factor (list): Shape of `factor` when `np.isscalar(factor)`.
-            shape_diag (list): Shape of `diag` when `np.isscalar(diag)`.
-            tfs_factor (Tuple[callable,callable]): The first argument transforms to the raw value to be optimized; the second applies the inverse transform.
-            tfs_diag (Tuple[callable,callable]): The first argument transforms to the raw value to be optimized; the second applies the inverse transform.
-            requires_grad_factor (bool): If `True` and `torchify`, set `requires_grad=True` for `factor`.
-            requires_grad_diag (bool): If `True` and `torchify`, set `requires_grad=True` for `diag`.
+            factor (Union[float, np.ndarray, torch.Tensor]): Factor $\mathsf{F}$.
+            diag (Union[float, np.ndarray, torch.Tensor]): Diagonal parameter
+                $\boldsymbol{v}$.
+            shape_factor (Union[None, list]): Shape of `factor` when `np.isscalar(factor)`.
+            shape_diag (Union[None, list]): Shape of `diag` when `np.isscalar(diag)`.
+            tfs_factor (Tuple[Callable, Callable]): The first argument
+                transforms to the raw value to be optimized; the second applies
+                the inverse transform.
+            tfs_diag (Tuple[Callable, Callable]): The first argument transforms
+                to the raw value to be optimized; the second applies the
+                inverse transform.
+            requires_grad_factor (bool): If `True` and `torchify`, set
+                `requires_grad=True` for `factor`.
+            requires_grad_diag (bool): If `True` and `torchify`, set
+                `requires_grad=True` for `diag`.
+            rank_factor (int): Rank of the low-rank `factor` matrix when
+                `method="LOW RANK"` and `shape_factor` is not given; must
+                satisfy `0 <= rank_factor <= num_tasks`.
             method (str): `"LOW RANK"` or "CHOLESKY"
         """
-        assert isinstance(base_kernel, AbstractKernel)
+        if not (isinstance(base_kernel, AbstractKernel)):
+            raise AssertionError
         super().__init__(
             d=base_kernel.d,
             torchify=base_kernel.torchify,
@@ -363,13 +383,15 @@ class KernelMultiTask(AbstractKernel):
         )
         self.base_kernel = base_kernel
         self.AUTOGRADKERNEL = base_kernel.AUTOGRADKERNEL
-        assert np.isscalar(num_tasks) and num_tasks % 1 == 0
+        if not (np.isscalar(num_tasks) and num_tasks % 1 == 0):
+            raise AssertionError
         self.num_tasks = num_tasks
-        assert (
+        if not (
             np.isscalar(rank_factor)
             and rank_factor % 1 == 0
             and 0 <= rank_factor <= self.num_tasks
-        )
+        ):
+            raise AssertionError
         self.method = str(method).upper().replace("_", " ").strip()
         if self.method == "LOW RANK":
             if shape_factor is None:
@@ -400,7 +422,8 @@ class KernelMultiTask(AbstractKernel):
         )
         self.tfs_factor = tfs_factor
         if self.method == "LOW RANK":
-            assert self.raw_factor.shape[-2] == self.num_tasks
+            if not (self.raw_factor.shape[-2] == self.num_tasks):
+                raise AssertionError
         self.raw_diag = self.parse_assign_param(
             pname="diag",
             param=diag,
@@ -417,20 +440,33 @@ class KernelMultiTask(AbstractKernel):
 
     @property
     def nbdim_base(self):
+        """int: `nbdim` of the wrapped `base_kernel` (cached after first access)."""
         if self._nbdim_base is None:
             self._nbdim_base = self.base_kernel.nbdim
         return self._nbdim_base
 
     @property
     def factor(self):
+        """Union[np.ndarray, torch.Tensor]: Low-rank/Cholesky factor used to
+        build the task covariance matrix `taskmat`, computed from the raw
+        stored value via `tfs_factor`'s inverse transform.
+        """
         return self.tfs_factor[1](self.raw_factor)
 
     @property
     def diag(self):
+        """Union[np.ndarray, torch.Tensor]: Diagonal term added to the task
+        covariance matrix `taskmat`, computed from the raw stored value via
+        `tfs_diag`'s inverse transform.
+        """
         return self.tfs_diag[1](self.raw_diag)
 
     @property
     def taskmat(self):
+        """Union[np.ndarray, torch.Tensor]: The `(num_tasks, num_tasks)` task
+        covariance matrix, built from `factor` and `diag` using either the
+        `"LOW RANK"` or `"CHOLESKY"` parameterization (see `method`).
+        """
         factor = self.factor
         diag = self.diag
         if self.method == "LOW RANK":
@@ -463,67 +499,93 @@ class KernelMultiTask(AbstractKernel):
         kmat = k_x * kmat_tasks
         return kmat[..., 0]
 
-    def __call__(self, task0, task1, x0, x1, beta0=None, beta1=None, c=None):
-        r"""
-        Evaluate the kernel with (optional) partial derivatives
+    def __call__(self, task0: Union[int, np.ndarray, torch.Tensor], task1: Union[int, np.ndarray, torch.Tensor], x0: Union[np.ndarray, torch.Tensor], x1: Union[np.ndarray, torch.Tensor], beta0: Union[None, np.ndarray, torch.Tensor] = None, beta1: Union[None, np.ndarray, torch.Tensor] = None, c: Union[None, np.ndarray, torch.Tensor] = None) -> Union[np.ndarray, torch.Tensor]:
+        r"""Evaluate the kernel with (optional) partial derivatives
 
-        $$\sum_{\ell=1}^p c_\ell \partial_{\boldsymbol{x}_0}^{\boldsymbol{\beta}_{\ell,0}} \partial_{\boldsymbol{x}_1}^{\boldsymbol{\beta}_{\ell,1}} K((i_0,\boldsymbol{x}_0),(i_1,\boldsymbol{x}_1)).$$
+        $$\sum_{\ell=1}^p c_\ell
+        \partial_{\boldsymbol{x}_0}^{\boldsymbol{\beta}_{\ell,0}}
+        \partial_{\boldsymbol{x}_1}^{\boldsymbol{\beta}_{\ell,1}}
+        K((i_0,\boldsymbol{x}_0),(i_1,\boldsymbol{x}_1)).$$
 
         Args:
-            task0 (Union[int, np.ndarray, torch.Tensor]): First task indices $i_0$.
-            task1 (Union[int, np.ndarray, torch.Tensor]): Second task indices $i_1$.
-            x0 (Union[np.ndarray, torch.Tensor]): Shape `x0.shape=(...,d)` first input to kernel.
-            x1 (Union[np.ndarray, torch.Tensor]): Shape `x1.shape=(...,d)` second input to kernel.
-            beta0 (Union[np.ndarray, torch.Tensor]): Shape `beta0.shape=(p,d)` derivative orders with respect to first inputs, $\boldsymbol{\beta}_0$.
-            beta1 (Union[np.ndarray, torch.Tensor]): Shape `beta1.shape=(p,d)` derivative orders with respect to first inputs, $\boldsymbol{\beta}_1$.
-            c (Union[np.ndarray, torch.Tensor]): Shape `c.shape=(p,)` coefficients of derivatives.
+            task0 (Union[int, np.ndarray, torch.Tensor]): First task indices
+                $i_0$.
+            task1 (Union[int, np.ndarray, torch.Tensor]): Second task indices
+                $i_1$.
+            x0 (Union[np.ndarray, torch.Tensor]): Shape `x0.shape=(...,d)`
+                first input to kernel.
+            x1 (Union[np.ndarray, torch.Tensor]): Shape `x1.shape=(...,d)`
+                second input to kernel.
+            beta0 (Union[None, np.ndarray, torch.Tensor]): Shape `beta0.shape=(p,d)`
+                derivative orders with respect to first inputs,
+                $\boldsymbol{\beta}_0$.
+            beta1 (Union[None, np.ndarray, torch.Tensor]): Shape `beta1.shape=(p,d)`
+                derivative orders with respect to first inputs,
+                $\boldsymbol{\beta}_1$.
+            c (Union[None, np.ndarray, torch.Tensor]): Shape `c.shape=(p,)`
+                coefficients of derivatives.
 
         Returns:
-            k (Union[np.ndarray, torch.Tensor]): Kernel evaluations with batched shape, see the doctests for examples.
+            Union[np.ndarray, torch.Tensor]: Kernel evaluations with batched shape, see the doctests for
+                examples.
         """
         kmat_x = self.base_kernel.__call__(x0, x1, beta0, beta1, c)
         return self._parsed__call__(task0, task1, kmat_x)
 
-    def single_integral_01d(self, task0, task1, x):
-        r"""
-        Evaluate the integral of the kernel over the unit cube
+    def single_integral_01d(self, task0: Union[int, np.ndarray, torch.Tensor], task1: Union[int, np.ndarray, torch.Tensor], x: Union[np.ndarray, torch.Tensor]) -> Union[np.ndarray, torch.Tensor]:
+        r"""Evaluate the integral of the kernel over the unit cube
 
-        $$\tilde{K}((i_0,\boldsymbol{x}),i_1) = \int_{[0,1]^d} K((i_0,\boldsymbol{x}),(i_1,\boldsymbol{z}) \; \mathrm{d} \boldsymbol{z}.$$
+        $$\tilde{K}((i_0,\boldsymbol{x}),i_1) = \int_{[0,1]^d}
+        K((i_0,\boldsymbol{x}),(i_1,\boldsymbol{z}) \; \mathrm{d}
+        \boldsymbol{z}.$$
 
         Args:
-            task0 (Union[int, np.ndarray, torch.Tensor]): First task indices $i_0$.
-            task1 (Union[int, np.ndarray, torch.Tensor]): Second task indices $i_1$.
-            x (Union[np.ndarray, torch.Tensor]): Shape `x0.shape=(...,d)` first input to kernel with
+            task0 (Union[int, np.ndarray, torch.Tensor]): First task indices
+                $i_0$.
+            task1 (Union[int, np.ndarray, torch.Tensor]): Second task indices
+                $i_1$.
+            x (Union[np.ndarray, torch.Tensor]): Shape `x0.shape=(...,d)` first
+                input to kernel with
 
         Returns:
-            tildek (Union[np.ndarray, torch.Tensor]): Shape `y.shape=x.shape[:-1]` integral kernel evaluations.
+            Union[np.ndarray, torch.Tensor]: Shape `y.shape=x.shape[:-1]` integral kernel evaluations.
         """
         kint_x = self.base_kernel.single_integral_01d(x)
         return self._parsed__call__(task0, task1, kint_x)
 
-    def double_integral_01d(self, task0, task1):
-        r"""
-        Evaluate the integral of the kernel over the unit cube
+    def double_integral_01d(self, task0: Union[int, np.ndarray, torch.Tensor], task1: Union[int, np.ndarray, torch.Tensor]) -> Union[np.ndarray, torch.Tensor]:
+        r"""Evaluate the integral of the kernel over the unit cube
 
-        $$\tilde{K}(i_0,i_1) = \int_{[0,1]^d} \int_{[0,1]^d} K((i_0,\boldsymbol{x}),(i_1,\boldsymbol{z})) \; \mathrm{d} \boldsymbol{x} \; \mathrm{d} \boldsymbol{z}.$$
+        $$\tilde{K}(i_0,i_1) = \int_{[0,1]^d} \int_{[0,1]^d}
+        K((i_0,\boldsymbol{x}),(i_1,\boldsymbol{z})) \; \mathrm{d}
+        \boldsymbol{x} \; \mathrm{d} \boldsymbol{z}.$$
 
         Args:
-            task0 (Union[int, np.ndarray, torch.Tensor]): First task indices $i_0$.
-            task1 (Union[int, np.ndarray, torch.Tensor]): Second task indices $i_1$.
+            task0 (Union[int, np.ndarray, torch.Tensor]): First task indices
+                $i_0$.
+            task1 (Union[int, np.ndarray, torch.Tensor]): Second task indices
+                $i_1$.
 
         Returns:
-            tildek (Union[np.ndarray, torch.Tensor]): Double integral kernel evaluations.
+            Union[np.ndarray, torch.Tensor]: Double integral kernel evaluations.
         """
         kint_x = self.base_kernel.double_integral_01d()
         return self._parsed__call__(task0, task1, kint_x)
 
 
 class KernelMultiTaskDerivs(KernelMultiTask):
+    """`KernelMultiTask` specialized for taking derivatives across tasks.
+
+    Fixes the task covariance matrix to the identity (`factor=1.0`,
+    `diag=0.0`, both non-trainable), so tasks are treated as independent and
+    the multi-task kernel reduces to `base_kernel` applied per task.
+    """
+
     def __init__(
         self,
         base_kernel,
         num_tasks,
-    ):
+    ) -> None:
         super().__init__(
             base_kernel=base_kernel,
             num_tasks=num_tasks,

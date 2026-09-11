@@ -70,10 +70,7 @@ python -m pip install "qmcpy[mpmc]"
 qmcpy-install-mpmc
 ```
 
-The second command selects the `pyg_lib` wheel page matching the installed
-PyTorch and accelerator builds. For GPU support or platform-specific wheels,
-see the [PyTorch installation guide](https://pytorch.org/get-started/locally/)
-and the [PyTorch Geometric installation guide](https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html).
+The second command selects the `pyg_lib` wheel page matching the installed PyTorch and accelerator builds. For GPU support or platform-specific wheels, see the [PyTorch installation guide](https://pytorch.org/get-started/locally/) and the [PyTorch Geometric installation guide](https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html).
 
 ::: qmcpy.discrete_distribution.mpmc.mpmc.MPMC
 

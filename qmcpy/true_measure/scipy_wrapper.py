@@ -1,3 +1,4 @@
+from typing import Union
 from .abstract_true_measure import AbstractTrueMeasure
 from ..util import DimensionError, ParameterError
 from ..discrete_distribution.abstract_discrete_distribution import (
@@ -60,8 +61,7 @@ def _custom_univariate_sanity_issues(dist, n_grid=64):
 
 
 class _MVNAdapter:
-    """
-    Small adapter that turns a SciPy multivariate normal like object into
+    """Small adapter that turns a SciPy multivariate normal like object into
     something with a simple ``transform(u)`` interface.
 
     Idea:
@@ -97,8 +97,7 @@ class _MVNAdapter:
         self._chol = np.linalg.cholesky(cov)
 
     def transform(self, u):
-        """
-        Take u in (0,1)^d and turn it into correlated normal samples.
+        """Take u in (0,1)^d and turn it into correlated normal samples.
         """
         u = np.asarray(u, dtype=float)
         if u.shape[-1] != self.dim:
@@ -119,8 +118,7 @@ class _MVNAdapter:
         return x_flat.reshape(z.shape)
 
     def logpdf(self, x):
-        """
-        Forward to the SciPy logpdf, keeping shapes tidy.
+        """Forward to the SciPy logpdf, keeping shapes tidy.
         """
         x = np.asarray(x, dtype=float)
         if x.shape[-1] != self.dim:
@@ -134,12 +132,10 @@ class _MVNAdapter:
 
 
 class SciPyWrapper(AbstractTrueMeasure):
-    r"""
-    True measure that wraps SciPy style distributions.
+    r"""True measure that wraps SciPy style distributions.
 
-    This class keeps the original behavior of SciPyWrapper with
-    independent 1D marginals and adds an optional "joint" mode for
-    dependent distributions.
+    This class keeps the original behavior of SciPyWrapper with independent 1D
+    marginals and adds an optional "joint" mode for dependent distributions.
 
     Examples:
         Independent marginals from ``scipy.stats``:
@@ -180,23 +176,23 @@ class SciPyWrapper(AbstractTrueMeasure):
         (4, 2)
     """
 
-    def __init__(self, sampler, scipy_distribs):
-        """
-        Parameters
-        ----------
-        sampler : AbstractDiscreteDistribution
-            Low discrepancy or iid sampler in dimension d, living on [0,1)^d.
-        scipy_distribs :
-            One of the following:
+    def __init__(self, sampler: AbstractDiscreteDistribution, scipy_distribs: Union[scipy.stats._distn_infrastructure.rv_continuous_frozen, list, object]) -> None:
+        """Wrap one or more SciPy distributions as a QMCPy true measure.
 
-            - A single SciPy 1D continuous frozen distribution.
-            - A list of such frozen distributions (independent marginals).
-            - A custom 1D distribution object with ``ppf`` and ``pdf`` or
-              ``logpdf`` methods.
-            - A joint object with:
-                * ``transform(u)`` method
-                * optional ``logpdf(x)`` method
-                * ``dim`` or ``dimension`` attribute (otherwise ``sampler.d``).
+        Args:
+            sampler (AbstractDiscreteDistribution): Low discrepancy or iid
+                sampler in dimension d, living on [0,1)^d.
+            scipy_distribs (Union[scipy.stats._distn_infrastructure.rv_continuous_frozen, list, object]): One
+                of the following:
+
+                - A single SciPy 1D continuous frozen distribution.
+                - A list of such frozen distributions (independent marginals).
+                - A custom 1D distribution object with ``ppf`` and ``pdf`` or
+                  ``logpdf`` methods.
+                - A joint object with:
+                    * ``transform(u)`` method
+                    * optional ``logpdf(x)`` method
+                    * ``dim`` or ``dimension`` attribute (otherwise ``sampler.d``).
         """
         self.domain = np.array([[0.0, 1.0]])
 
@@ -234,8 +230,7 @@ class SciPyWrapper(AbstractTrueMeasure):
     # ------------------------------------------------------------------
 
     def _looks_like_joint(self, obj):
-        """
-        Heuristic check to decide if the user passed a joint distribution.
+        """Heuristic check to decide if the user passed a joint distribution.
 
         We treat it as "joint" if:
           - it already has a ``transform(u)`` method, or
@@ -257,8 +252,7 @@ class SciPyWrapper(AbstractTrueMeasure):
         return False
 
     def _setup_joint(self, joint_obj):
-        """
-        Configure the wrapper in "joint" mode.
+        """Configure the wrapper in "joint" mode.
 
         Either:
           - wrap a SciPy style multivariate normal in _MVNAdapter, or
@@ -308,11 +302,10 @@ class SciPyWrapper(AbstractTrueMeasure):
         self.range = np.tile(np.array([-np.inf, np.inf]), (self.d, 1))
 
     def _setup_marginals(self, scipy_distribs):
-        """
-        Configure the wrapper in "independent marginals" mode.
+        """Configure the wrapper in "independent marginals" mode.
 
-        We accept a single frozen dist or a list, and we also allow
-        user defined 1D distributions that have the right methods.
+        We accept a single frozen dist or a list, and we also allow user
+        defined 1D distributions that have the right methods.
         """
         rv_cont = scipy.stats._distn_infrastructure.rv_continuous_frozen
 
@@ -373,14 +366,14 @@ class SciPyWrapper(AbstractTrueMeasure):
         self.range = np.asarray(ranges)
         self._is_joint = False
 
-        assert len(self.sds) == self.d
+        if not (len(self.sds) == self.d):
+            raise AssertionError
 
     def _sanity_check_univariate(self, dist):
-        """
-        Light sanity check for a custom 1D distribution.
+        """Light sanity check for a custom 1D distribution.
 
-        The goal is not to be perfect, just to catch obvious mistakes and
-        warn the user. We never raise here, only emit warnings.
+        The goal is not to be perfect, just to catch obvious mistakes and warn
+        the user. We never raise here, only emit warnings.
 
         We check on a grid 0.01..0.99 that:
           - ppf is finite and roughly increasing,
@@ -444,11 +437,10 @@ class SciPyWrapper(AbstractTrueMeasure):
     # ------------------------------------------------------------------
 
     def _transform(self, x):
-        """
-        Map unit cube samples to the physical space.
+        """Map unit cube samples to the physical space.
 
-        For joint mode we delegate to the joint object.
-        For marginal mode we call ``ppf`` dimension wise.
+        For joint mode we delegate to the joint object. For marginal mode we
+        call ``ppf`` dimension wise.
         """
         x = np.asarray(x, dtype=float)
 
@@ -461,8 +453,7 @@ class SciPyWrapper(AbstractTrueMeasure):
         return t
 
     def _weight(self, x):
-        """
-        Compute unnormalised density weights.
+        """Compute unnormalised density weights.
 
         - For joint distributions with logpdf we simply exp(logpdf).
         - For joint distributions with no density we return 1.
@@ -501,8 +492,7 @@ class SciPyWrapper(AbstractTrueMeasure):
         return rho
 
     def _spawn(self, sampler, dimension):
-        """
-        Create a child true measure that shares the same distribution
+        """Create a child true measure that shares the same distribution
         configuration but uses a new sampler.
 
         We simply reuse the original ``scipy_distribs`` argument so the

@@ -1,3 +1,5 @@
+from ..integrand.abstract_integrand import AbstractIntegrand
+from typing import Union, Callable
 from .abstract_cub_qmc_ld_g import AbstractCubQMCLDG, _default_fudge
 from ..discrete_distribution import Lattice
 from ..true_measure import Gaussian, Uniform
@@ -10,9 +12,9 @@ import numpy as np
 
 
 class CubQMCLatticeG(AbstractCubQMCLDG):
-    r"""
-    Quasi-Monte Carlo stopping criterion using rank-1 lattice cubature
-    with guarantees for cones of functions with a predictable decay in the Fourier coefficients.
+    r"""Quasi-Monte Carlo stopping criterion using rank-1 lattice cubature
+    with guarantees for cones of functions with a predictable decay in the
+    Fourier coefficients.
 
     Examples:
         >>> k = Keister(Lattice(seed=7))
@@ -175,38 +177,44 @@ class CubQMCLatticeG(AbstractCubQMCLDG):
 
     def __init__(
         self,
-        integrand,
-        abs_tol=1e-2,
-        rel_tol=0.0,
-        n_init=2**10,
-        n_limit=2**30,
-        error_fun="EITHER",
-        fudge=_default_fudge,
-        check_cone=False,
-        ptransform="BAKER",
-    ):
-        r"""
+        integrand: AbstractIntegrand,
+        abs_tol: Union[float, np.ndarray] = 1e-2,
+        rel_tol: Union[float, np.ndarray] = 0.0,
+        n_init: int = 2**10,
+        n_limit: int = 2**30,
+        error_fun: Union[str, Callable] = "EITHER",
+        fudge: Callable = _default_fudge,
+        check_cone: bool = False,
+        ptransform: str = "BAKER",
+    ) -> None:
+        r"""Initialize a CubQMCLatticeG stopping criterion.
+
         Args:
             integrand (AbstractIntegrand): The integrand.
-            abs_tol (np.ndarray): Absolute error tolerance.
-            rel_tol (np.ndarray): Relative error tolerance.
+            abs_tol (Union[float, np.ndarray]): Absolute error tolerance.
+            rel_tol (Union[float, np.ndarray]): Relative error tolerance.
             n_init (int): Initial number of samples.
             n_limit (int): Maximum number of samples.
-            error_fun (Union[str, callable]): Function mapping the approximate solution, absolute error tolerance, and relative error tolerance to the current error bound.
+            error_fun (Union[str, Callable]): Function mapping the approximate
+                solution, absolute error tolerance, and relative error
+                tolerance to the current error bound.
 
-                - `'EITHER'`, the default, requires the approximation error must be below either the absolue *or* relative tolerance.
+                - `'EITHER'`, the default, requires the approximation error to be below either the absolute *or* relative tolerance.
                     Equivalent to setting
                     ```python
                     error_fun = lambda sv,abs_tol,rel_tol: np.maximum(abs_tol,abs(sv)*rel_tol)
                     ```
-                - `'BOTH'` requires the approximation error to be below both the absolue *and* relative tolerance.
+                - `'BOTH'` requires the approximation error to be below both the absolute *and* relative tolerance.
                     Equivalent to setting
                     ```python
                     error_fun = lambda sv,abs_tol,rel_tol: np.minimum(abs_tol,abs(sv)*rel_tol)
                     ```
-            fudge (function): Positive function multiplying the finite sum of the Fourier coefficients specified in the cone of functions.
-            check_cone (bool): Whether or not to check if the function falls in the cone.
-            ptransform (str): Periodization transform, see the options in `AbstractIntegrand.f`.
+            fudge (Callable): Positive function multiplying the finite sum of
+                the Fourier coefficients specified in the cone of functions.
+            check_cone (bool): Whether or not to check if the function falls in
+                the cone.
+            ptransform (str): Periodization transform, see the options in
+                `AbstractIntegrand.f`.
         """
         super(CubQMCLatticeG, self).__init__(
             integrand,

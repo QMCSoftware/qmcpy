@@ -1,3 +1,4 @@
+from typing import Union
 from ..util import (
     ParameterError,
     MethodImplementationError,
@@ -7,8 +8,14 @@ import numpy as np
 
 
 class AbstractDiscreteDistribution(object):
+    """Abstract base class for QMCPy discrete distributions (samplers).
 
-    def __init__(self, dimension, replications, seed, d_limit, n_limit):
+    Every concrete discrete distribution (e.g. `DigitalNetB2`, `Lattice`,
+    `IIDStdUniform`) subclasses this and implements `_gen_samples` and
+    `_spawn`.
+    """
+
+    def __init__(self, dimension, replications, seed, d_limit, n_limit) -> None:
         self.mimics = "StdUniform"
         if not hasattr(self, "parameters"):
             self.parameters = []
@@ -26,7 +33,7 @@ class AbstractDiscreteDistribution(object):
         self.no_replications = replications is None
         self.replications = 1 if self.no_replications else int(replications)
         if self.replications < 0:
-            raise ParameterError("replications must be None or a postive int")
+            raise ParameterError("replications must be None or a positive int")
         if (
             isinstance(dimension, list)
             or isinstance(dimension, tuple)
@@ -52,7 +59,7 @@ class AbstractDiscreteDistribution(object):
         self.spawn_key = self._base_seed.spawn_key
         self.rng = np.random.Generator(np.random.SFC64(self._base_seed))
 
-    def __call__(self, n=None, n_min=None, n_max=None, return_binary=False, warn=True):
+    def __call__(self, n: Union[None, int] = None, n_min: Union[None, int] = None, n_max: Union[None, int] = None, return_binary: bool = False, warn: bool = True) -> np.ndarray:
         r"""
         - If just `n` is supplied, generate samples from the sequence at indices 0,...,`n`-1.
         - If `n_min` and `n_max` are supplied, generate samples from the sequence at indices `n_min`,...,`n_max`-1.
@@ -62,17 +69,19 @@ class AbstractDiscreteDistribution(object):
             n (Union[None, int]): Number of points to generate.
             n_min (Union[None, int]): Starting index of sequence.
             n_max (Union[None, int]): Final index of sequence.
-            return_binary (bool): Only used for `DigitalNetB2`.
-                If `True`, *only* return the integer representation `x_integer` of base 2 digital net.
+            return_binary (bool): Only used for `DigitalNetB2`. If `True`,
+                *only* return the integer representation `x_integer` of base 2
+                digital net.
             warn (bool): If `False`, disable warnings when generating samples.
 
         Returns:
-            x (np.ndarray): Samples from the sequence.
+            np.ndarray: Samples from the sequence.
 
                 - If `replications` is `None` then this will be of size (`n_max`-`n_min`) $\times$ `dimension`
                 - If `replications` is a positive int, then `x` will be of size `replications` $\times$ (`n_max`-`n_min`) $\times$ `dimension`
 
-                Note that if `return_binary=True` then `x` is returned where `x` are integer representations of the digital net points.
+                Note that if `return_binary=True` then `x` is returned where `x`
+                are integer representations of the digital net points.
         """
         return self.gen_samples(
             n=n, n_min=n_min, n_max=n_max, return_binary=return_binary, warn=warn
@@ -81,6 +90,9 @@ class AbstractDiscreteDistribution(object):
     def gen_samples(
         self, n=None, n_min=None, n_max=None, return_binary=False, warn=True
     ):
+        r"""Generate samples from the sequence. Called by `__call__`; see its
+        docstring for the full `Args:`/`Returns:` description.
+        """
         if n is not None and n_min is None and n_max is None:
             n_min = 0
             n_max = int(n)
@@ -122,20 +134,22 @@ class AbstractDiscreteDistribution(object):
     def _gen_samples(self, *args, **kwargs):
         raise MethodImplementationError(self, "_gen_samples")
 
-    def spawn(self, s=1, dimensions=None):
-        r"""
-        Spawn new instances of the current discrete distribution but with new seeds and dimensions.
-        Used by multi-level QMC algorithms which require different seeds and dimensions on each level.
+    def spawn(self, s: int = 1, dimensions: Union[None, np.ndarray] = None) -> list:
+        r"""Spawn new instances of the current discrete distribution but with
+        new seeds and dimensions. Used by multi-level QMC algorithms which
+        require different seeds and dimensions on each level.
 
-        Note:
-            Use `replications` instead of using `spawn` when possible, e.g., when spawning copies which all have the same dimension.
+        Notes:
+            Use `replications` instead of using `spawn` when possible, e.g.,
+            when spawning copies which all have the same dimension.
 
         Args:
             s (int): Number of copies to spawn
-            dimensions (np.ndarray): Length `s` array of dimensions for each copy. Defaults to the current dimension.
+            dimensions (Union[None, np.ndarray]): Length `s` array of dimensions for each
+                copy. Defaults to the current dimension.
 
         Returns:
-            spawned_discrete_distribs (list): Discrete distributions with new seeds and dimensions.
+            list: Discrete distributions with new seeds and dimensions.
         """
         s = int(s)
         if s <= 0:
@@ -161,7 +175,17 @@ class AbstractDiscreteDistribution(object):
     def _spawn(self, child_seed, dimension):
         raise MethodImplementationError(self, "_spawn")
 
-    def pdf(self, x):
+    def pdf(self, x: np.ndarray) -> np.ndarray:
+        """Probability density function of the distribution this sampler mimics.
+
+        Args:
+            x (np.ndarray): Points at which to evaluate the density, shape `(*batch_shape, d)`.
+
+        Returns:
+            np.ndarray: Density values with shape `batch_shape`. The base
+                implementation is uniform on `[0,1]^d` (density 1 everywhere);
+                subclasses that mimic a different distribution override this.
+        """
         return np.ones_like(x[..., 0])
 
     def __repr__(self, abc_class_name):
@@ -171,14 +195,18 @@ class AbstractDiscreteDistribution(object):
 
 
 class AbstractLDDiscreteDistribution(AbstractDiscreteDistribution):
-    """Low discrepancy sequence. Alias for `AbstractDiscreteDistribution` used for compatibility checks."""
+    """Low discrepancy sequence. Alias for `AbstractDiscreteDistribution`
+    used for compatibility checks.
+    """
 
     def __repr__(self):
         return super().__repr__("AbstractLDDiscreteDistribution")
 
 
 class AbstractIIDDiscreteDistribution(AbstractDiscreteDistribution):
-    """IID sequence. Alias for `AbstractDiscreteDistribution` used for compatibility checks."""
+    """IID sequence. Alias for `AbstractDiscreteDistribution` used for
+    compatibility checks.
+    """
 
     def __repr__(self):
         return super().__repr__("AbstractIIDDiscreteDistribution")

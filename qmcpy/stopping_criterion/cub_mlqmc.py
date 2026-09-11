@@ -1,4 +1,6 @@
+from typing import Union
 from .abstract_cub_mlqmc import AbstractCubMLQMC
+from ..integrand.abstract_integrand import AbstractIntegrand
 from ..util.data import Data
 import copy
 from ..discrete_distribution import DigitalNetB2, Lattice, Halton
@@ -14,11 +16,6 @@ import warnings
 
 
 class CubMLQMC(AbstractCubMLQMC):
-    _RESUME_REQUIRED_FIELDS = (
-        "levels", "n_level", "eval_level", "mean_level_reps", "mean_level",
-        "var_level", "cost_level", "var_cost_ratio_level", "bias_estimate", "level_integrands"
-    )
-
     """
     Multilevel Quasi-Monte Carlo stopping criterion.
 
@@ -76,26 +73,33 @@ class CubMLQMC(AbstractCubMLQMC):
         [http://people.maths.ox.ac.uk/~gilesm/files/radon.pdf](http://people.maths.ox.ac.uk/~gilesm/files/radon.pdf).
     """
 
+    _RESUME_REQUIRED_FIELDS = (
+        "levels", "n_level", "eval_level", "mean_level_reps", "mean_level",
+        "var_level", "cost_level", "var_cost_ratio_level", "bias_estimate", "level_integrands"
+    )
+
     def __init__(
         self,
-        integrand,
-        abs_tol=0.05,
-        rmse_tol=None,
-        n_init=256,
-        n_limit=1e10,
-        alpha=0.01,
-        levels_min=2,
-        levels_max=10,
-    ):
-        r"""
+        integrand: AbstractIntegrand,
+        abs_tol: Union[float, np.ndarray] = 0.05,
+        rmse_tol: Union[None, np.ndarray] = None,
+        n_init: int = 256,
+        n_limit: int = 10**10,
+        alpha: Union[float, np.ndarray] = 0.01,
+        levels_min: int = 2,
+        levels_max: int = 10,
+    ) -> None:
+        r"""Initialize a CubMLQMC stopping criterion.
+
         Args:
             integrand (AbstractIntegrand): The integrand.
-            abs_tol (np.ndarray): Absolute error tolerance.
-            rmse_tol (np.ndarray): Root mean squared error tolerance.
-                If supplied, then absolute tolerance and alpha are ignored in favor of the rmse tolerance.
+            abs_tol (Union[float, np.ndarray]): Absolute error tolerance.
+            rmse_tol (Union[None, np.ndarray]): Root mean squared error tolerance. If
+                supplied, then absolute tolerance and alpha are ignored in
+                favor of the rmse tolerance.
             n_init (int): Initial number of samples.
             n_limit (int): Maximum number of samples.
-            alpha (np.ndarray): Uncertainty level in $(0,1)$.
+            alpha (Union[float, np.ndarray]): Uncertainty level in $(0,1)$.
             levels_min (int): Minimum level of refinement $\geq 2$.
             levels_max (int): Maximum level of refinement $\geq$ `levels_min`.
         """
@@ -106,7 +110,8 @@ class CubMLQMC(AbstractCubMLQMC):
         else:  # use absolute tolerance
             self.rmse_tol = float(abs_tol) / norm.ppf(1 - alpha / 2)
         self.alpha = alpha
-        assert 0 < self.alpha < 1
+        if not (0 < self.alpha < 1):
+            raise AssertionError
         self.n_init = n_init
         self.n_limit = n_limit
         self.levels_min = levels_min
@@ -120,7 +125,8 @@ class CubMLQMC(AbstractCubMLQMC):
             allow_vectorized_integrals=False,
         )
         self.replications = self.discrete_distrib.replications
-        assert self.replications >= 4, "require at least 4 replications"
+        if not (self.replications >= 4):
+            raise AssertionError("require at least 4 replications")
 
     def _validate_resume(self, data):
         self._validate_resume_data(data, required_fields=self._RESUME_REQUIRED_FIELDS)
@@ -218,17 +224,17 @@ class CubMLQMC(AbstractCubMLQMC):
                 break
         return snapshots
 
-    def integrate(self, resume=None) -> tuple:
+    def integrate(self, resume: Union[None, Data] = None) -> tuple:
         """Run (or continue) the MLQMC integration.
 
         Args:
-            resume (Data, optional): Checkpoint returned by a previous
-                ``integrate()`` call.  The new tolerance may be tighter *or*
-                looser than the one used when the checkpoint was created.
-                With a tighter tolerance the algorithm draws additional samples
-                from where it left off.  With a looser tolerance the existing
-                samples already satisfy the requirement and the method returns
-                immediately with no new sampling.
+            resume (Union[None, Data]): Checkpoint returned by a previous ``integrate()``
+                call.  The new tolerance may be tighter *or* looser than the
+                one used when the checkpoint was created. With a tighter
+                tolerance the algorithm draws additional samples from where it
+                left off.  With a looser tolerance the existing samples already
+                satisfy the requirement and the method returns immediately with
+                no new sampling.
 
         Returns:
             tuple: ``(solution, data)``.

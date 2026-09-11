@@ -1,3 +1,7 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from typing import Union
 from .abstract_true_measure import AbstractTrueMeasure
 from ..util import DimensionError, ParameterError
 from ..discrete_distribution import DigitalNetB2
@@ -6,8 +10,9 @@ from scipy.stats import norm
 
 
 class JohnsonsSU(AbstractTrueMeasure):
-    r"""
-    Johnson's $S_U$-distribution with independent marginals as described in [https://en.wikipedia.org/wiki/Johnson%27s_SU-distribution](https://en.wikipedia.org/wiki/Johnson%27s_SU-distribution).
+    r"""Johnson's $S_U$-distribution with independent marginals as described
+    in
+    [https://en.wikipedia.org/wiki/Johnson%27s_SU-distribution](https://en.wikipedia.org/wiki/Johnson%27s_SU-distribution).
 
     Examples:
         >>> true_measure = JohnsonsSU(DigitalNetB2(2,seed=7),gamma=1,xi=2,delta=3,lam=4)
@@ -40,10 +45,12 @@ class JohnsonsSU(AbstractTrueMeasure):
                 [ 1.57765245,  1.00275   ,  1.64972468]]])
     """
 
-    def __init__(self, sampler, gamma=1, xi=1, delta=2, lam=2):
-        r"""
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], gamma: Union[float, np.ndarray] = 1, xi: Union[float, np.ndarray] = 1, delta: Union[float, np.ndarray] = 2, lam: Union[float, np.ndarray] = 2) -> None:
+        r"""Initialize a JohnsonsSU true measure.
+
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.
@@ -84,12 +91,13 @@ class JohnsonsSU(AbstractTrueMeasure):
         if not ((self._delta > 0).all() and (self._lam > 0).all()):
             raise ParameterError("delta and lam must be all be positive")
         super(JohnsonsSU, self).__init__()
-        assert (
+        if not (
             self._gamma.shape == (self.d,)
             and self._xi.shape == (self.d,)
             and self._delta.shape == (self.d,)
             and self._lam.shape == (self.d,)
-        )
+        ):
+            raise AssertionError
 
     def _transform(self, x):
         return self._lam * np.sinh((norm.ppf(x) - self._gamma) / self._delta) + self._xi

@@ -1,3 +1,8 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
 from .abstract_integrand import AbstractIntegrand
 from ..discrete_distribution import DigitalNetB2
 from ..true_measure import Gaussian
@@ -6,10 +11,10 @@ from scipy.special import gamma
 
 
 class Keister(AbstractIntegrand):
-    r"""
-    Keister function from [1].
+    r"""Keister function from [1].
 
-    $$f(\boldsymbol{t}) = \pi^{d/2} \cos(\lVert \boldsymbol{t} \rVert_2) \qquad \boldsymbol{T} \sim \mathcal{N}(\boldsymbol{0},\mathsf{I}/2).$$
+    $$f(\boldsymbol{t}) = \pi^{d/2} \cos(\lVert \boldsymbol{t} \rVert_2) \qquad
+    \boldsymbol{T} \sim \mathcal{N}(\boldsymbol{0},\mathsf{I}/2).$$
 
     Examples:
         >>> integrand = Keister(DigitalNetB2(2,seed=7))
@@ -44,10 +49,12 @@ class Keister(AbstractIntegrand):
         Computers in Physics, 10, pp. 119-122, 1996.
     """
 
-    def __init__(self, sampler):
-        r"""
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure]) -> None:
+        r"""Initialize a Keister integrand.
+
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.
@@ -58,7 +65,15 @@ class Keister(AbstractIntegrand):
             dimension_indv=(), dimension_comb=(), parallel=False
         )
 
-    def g(self, t):
+    def g(self, t: np.ndarray) -> np.ndarray:
+        r"""Evaluate the Keister function.
+
+        Args:
+            t (np.ndarray): Points, dimensions along the last axis.
+
+        Returns:
+            np.ndarray: $\pi^{d/2}\cos(\lVert t \rVert_2)$.
+        """
         d = t.shape[-1]
         norm = np.linalg.norm(t, axis=-1)
         k = np.pi ** (d / 2) * np.cos(norm)
@@ -68,15 +83,15 @@ class Keister(AbstractIntegrand):
         return Keister(sampler=sampler)
 
     @classmethod
-    def get_exact_value(self, d):
-        """
-        Compute the exact analytic value of the Keister integral with dimension $d$.
+    def get_exact_value(cls, d: int) -> float:
+        """Compute the exact analytic value of the Keister integral with
+        dimension $d$.
 
         Args:
             d (int): Dimension.
 
         Returns:
-            mean (float): Exact value of the integral.
+            float: Exact value of the integral.
         """
         cosinteg = np.zeros(shape=(d))
         cosinteg[0] = np.sqrt(np.pi) / (2 * np.exp(1 / 4))
@@ -91,5 +106,16 @@ class Keister(AbstractIntegrand):
         I = (2 * (np.pi ** (d / 2)) / gamma(d / 2)) * cosinteg[d - 1]
         return I
 
-    def exact_integ(self, *args, **kwargs):
+    def exact_integ(self, *args: tuple, **kwargs: dict) -> float:
+        """Return the exact value of the Keister integral.
+
+        Deprecated alias for :meth:`get_exact_value`.
+
+        Args:
+            *args (tuple): Forwarded to :meth:`get_exact_value`.
+            **kwargs (dict): Forwarded to :meth:`get_exact_value`.
+
+        Returns:
+            float: The exact integral value.
+        """
         return self.get_exact_value(*args, **kwargs)

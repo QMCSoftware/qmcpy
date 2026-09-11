@@ -1,3 +1,4 @@
+from typing import Union
 from types import SimpleNamespace
 from io import BytesIO
 import os
@@ -26,16 +27,16 @@ _DISCREPANCY = {
 }
 
 class MPMC(AbstractLDDiscreteDistribution):
-    """
-    Low-discrepancy generator trained by MPMC. Produces nbatch independent pointsets of size n in [0,1]^d.
-    
+    """Low-discrepancy generator trained by MPMC. Produces nbatch independent
+    pointsets of size n in [0,1]^d.
+
     Requires PyTorch and PyTorch Geometric. Install with:
 
-        python -m pip install "qmcpy[mpmc]"
-        qmcpy-install-mpmc
-    
-    For GPU support or platform-specific details, see https://pytorch.org/get-started/locally/
-    
+    python -m pip install "qmcpy[mpmc]" qmcpy-install-mpmc
+
+    For GPU support or platform-specific details, see
+    https://pytorch.org/get-started/locally/
+
     Examples:
         >>> mpmc = MPMC(
         ...     dimension=2,
@@ -66,26 +67,69 @@ class MPMC(AbstractLDDiscreteDistribution):
 
     def __init__(
         self,
-        randomize='shift',
-        seed=None,
-        dimension=2,
-        replications=1,
-        d_max=None,
-        lr=1e-3,
-        nlayers=3,
-        weight_decay=1e-6,
-        nhid=32,
-        epochs=50_000,
-        start_reduce=40_000,
-        radius=0.35,
-        nbatch=1,
-        loss_fn='L2star',
-        weights=None,
-        use_pretrained=True,
-        pretrained_local_dir=None,
-        pretrained_base_url='https://github.com/QMCSoftware/LDData/tree/main/pregenerated_pointsets/mpmc',
-        prompt_on_missing=True,
-    ):
+        randomize: str = 'shift',
+        seed: Union[None, int, np.random.SeedSequence] = None,
+        dimension: int = 2,
+        replications: int = 1,
+        d_max: Union[None, int] = None,
+        lr: float = 1e-3,
+        nlayers: int = 3,
+        weight_decay: float = 1e-6,
+        nhid: int = 32,
+        epochs: int = 50_000,
+        start_reduce: int = 40_000,
+        radius: float = 0.35,
+        nbatch: int = 1,
+        loss_fn: str = 'L2star',
+        weights: Union[None, list, np.ndarray, torch.Tensor] = None,
+        use_pretrained: bool = True,
+        pretrained_local_dir: Union[None, str] = None,
+        pretrained_base_url: str = 'https://github.com/QMCSoftware/LDData/tree/main/pregenerated_pointsets/mpmc',
+        prompt_on_missing: bool = True,
+    ) -> None:
+        """Initialize an MPMC discrete distribution.
+
+        Args:
+            randomize (str): `'shift'`/`'true'` for a random shift, or
+                `'false'`/`'none'`/`'no'` for no randomization.
+            seed (Union[None, int, np.random.SeedSequence]): Seed the random
+                number generator for reproducibility.
+            dimension (int): Dimension of the generated pointsets.
+            replications (int): Number of independent pointsets to
+                generate. Ignored if `nbatch` is set.
+            d_max (Union[None, int]): Unused; kept for backward compatibility.
+                `self.d_max` always mirrors `dimension`.
+            lr (float): Learning rate for the MPMC network optimizer.
+            nlayers (int): Number of message-passing layers in the MPMC
+                network.
+            weight_decay (float): Weight decay (L2 regularization) for the
+                optimizer.
+            nhid (int): Hidden dimension of the MPMC network layers.
+            epochs (int): Number of training epochs.
+            start_reduce (int): Epoch at which learning-rate reduction
+                begins.
+            radius (float): Radius parameter for the discrepancy loss.
+            nbatch (int): Number of independent pointsets to train and
+                generate (overrides `replications` when not `None`).
+            loss_fn (str): Name of the discrepancy loss to train against; one
+                of the keys in `qmcpy.discrete_distribution.mpmc.utils`'s
+                discrepancy registry (e.g. `'L2star'`), optionally suffixed
+                `'_weighted'`.
+            weights (Union[None, list, np.ndarray, torch.Tensor]): Per-
+                coordinate weights, required when `loss_fn` names a weighted
+                discrepancy (or supplying them switches `loss_fn` to its
+                weighted variant automatically).
+            use_pretrained (bool): If `True`, load a pretrained pointset
+                generator instead of training a new one, when one is
+                available for the requested `dimension`/`nbatch`.
+            pretrained_local_dir (Union[None, str]): Local directory to search for (and
+                cache) pretrained generators. Defaults to a package cache
+                directory when `None`.
+            pretrained_base_url (str): Base URL to download pretrained
+                generators from when not already cached locally.
+            prompt_on_missing (bool): If `True`, prompt interactively before
+                training a new generator when no pretrained one is found.
+        """
         self.mimics = 'StdUniform'
         self.low_discrepancy = True
 
@@ -298,9 +342,15 @@ class MPMC(AbstractLDDiscreteDistribution):
     # Training
     # --------------------------
     def _train(self, args: SimpleNamespace):
-        """
+        """Train an MPMC network and return its generated pointsets.
+
+        Args:
+            args (SimpleNamespace): Training configuration, carrying `dim`,
+                `nhid`, `nlayers`, `nsamples`, `nbatch`, `radius`, `loss_fn`,
+                `weights`, `lr`, `weight_decay`, `epochs`, and `start_reduce`.
+
         Returns:
-            x (np.ndarray): shape `(nbatch, nsamples, dim)`
+            np.ndarray: shape `(nbatch, nsamples, dim)`
         """
         model = MPMC_net(
             dim=args.dim, nhid=args.nhid, nlayers=args.nlayers,

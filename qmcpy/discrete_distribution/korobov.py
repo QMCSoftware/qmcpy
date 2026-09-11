@@ -1,3 +1,4 @@
+from typing import Union
 import numpy as np
 from qmcpy.util import ParameterError, ParameterWarning
 from pathlib import Path
@@ -11,8 +12,9 @@ def load_korobov_table(
         npz_path=Path(__file__).resolve().parent / "generating_params" / "korobov_p2_table.npz"
     ):
     """Load the Korobov table from the compressed .npz file. Cached via
-       lru_cache: the file is only actually read once per process, with no
-       explicit module-level global variable."""
+    lru_cache: the file is only actually read once per process, with no
+    explicit module-level global variable.
+    """
     with np.load(npz_path) as data:
         raw = data["raw"]
         lut = {
@@ -24,7 +26,18 @@ def load_korobov_table(
         }
     return raw, lut
 
-def get_a(lut, n, d):
+def get_a(lut: dict, n: int, d: int) -> int:
+    """Look up the tabulated Korobov generator `a` for a given `n` and `d`.
+
+    Args:
+        lut (dict): Lookup table returned by the module's table loader, with
+            keys `n_values`, `d_values`, and `a`.
+        n (int): Number of points; must be one of `lut["n_values"]`.
+        d (int): Dimension; must be one of `lut["d_values"]`.
+
+    Returns:
+        int: The tabulated generator value `a` for this `(n, d)` pair.
+    """
     i = np.searchsorted(lut["n_values"], n)
     if i >= len(lut["n_values"]) or lut["n_values"][i] != n:
         raise ParameterError(
@@ -42,21 +55,22 @@ def get_a(lut, n, d):
 
 
 class KorobovLattice(AbstractLDDiscreteDistribution):
-    r"""
-    Korobov lattice rule with a tabulated, quality-optimized generating parameter.
+    r"""Korobov lattice rule with a tabulated, quality-optimized generating
+    parameter.
 
-    A rank-1 lattice rule with $n$ points and generating vector $z\in\mathbb{Z}^d$ is
-    $P_n(z) = \{(\{k z_1/n\},\dots,\{k z_d/n\}) : k=0,\dots,n-1\}$. The Korobov
-    construction restricts $z$ to a single integer parameter $a$:
-    $z(a) = (1,a,a^2,\dots,a^{d-1}) \bmod n$, with $\gcd(a,n)=1$.
+    A rank-1 lattice rule with $n$ points and generating vector
+    $z\in\mathbb{Z}^d$ is $P_n(z) = \{(\{k z_1/n\},\dots,\{k z_d/n\}) :
+    k=0,\dots,n-1\}$. The Korobov construction restricts $z$ to a single
+    integer parameter $a$: $z(a) = (1,a,a^2,\dots,a^{d-1}) \bmod n$, with
+    $\gcd(a,n)=1$.
 
     Rather than searching for $a$ at construction time, this class looks up $a$
     in a precomputed table, for every $(n,d)$ pair in the table, minimizing the
     weighted $P_2$ figure of merit (the squared worst-case integration error in
-    the weighted Korobov space of smoothness 2) with product weights
-    $\gamma_j = 1/j^2$.
+    the weighted Korobov space of smoothness 2) with product weights $\gamma_j
+    = 1/j^2$.
 
-    Note:
+    Notes:
         - Because the optimal $a$ depends on the *total* number of points $n$,
           a Korobov lattice cannot be incrementally extended the way `Lattice`
           can: `n_min` must be 0, and `n` must be one of the values in the
@@ -135,18 +149,19 @@ class KorobovLattice(AbstractLDDiscreteDistribution):
     """
     def __init__(
             self,
-            dimension=1,
-            replications=None,
-            seed=None,
-            randomize="SHIFT",
-        ):
-        r"""
+            dimension: int = 1,
+            replications: Union[None, int] = None,
+            seed: Union[None, int, np.random.SeedSequence] = None,
+            randomize: str = "SHIFT",
+        ) -> None:
+        r"""Initialize a KorobovLattice discrete distribution.
+
         Args:
             dimension (int): Dimension of the samples. Must be between 1 and
                 250 (the range covered by the precomputed table).
 
-            replications (int): Number of independent Cranley-Patterson
-                shifts of the same underlying deterministic lattice.
+            replications (Union[None, int]): Number of independent Cranley-Patterson shifts
+                of the same underlying deterministic lattice.
 
             seed (Union[None, int, np.random.SeedSequence]): Seed the random
                 number generator for reproducibility.
@@ -156,7 +171,7 @@ class KorobovLattice(AbstractLDDiscreteDistribution):
                 - `'SHIFT'` or `'TRUE'`: Random Cranley-Patterson shift (the default).
                 - `'FALSE'`, `'NONE'`, or `'NO'`: No randomization. In this
                 case the first point will be the origin.
-    """
+        """
         super().__init__(dimension, replications, seed, d_limit = 250, n_limit = 131072)
 
         self.randomize = str(randomize).upper()
@@ -166,7 +181,8 @@ class KorobovLattice(AbstractLDDiscreteDistribution):
             self.randomize = "FALSE"
         if self.randomize == "NO":
             self.randomize = "FALSE"
-        assert self.randomize in ["SHIFT", "FALSE"]
+        if not (self.randomize in ["SHIFT", "FALSE"]):
+            raise AssertionError
         if self.randomize not in ("SHIFT", "FALSE"):
             raise ParameterError(
             f"randomize must be one of 'SHIFT', 'TRUE', 'FALSE', 'NONE', or 'NO' (case-insensitive), got {randomize!r}."

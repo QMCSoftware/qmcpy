@@ -1,38 +1,62 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Union
 import numpy as np
 import os
 import qmcpy as qp
 
+if TYPE_CHECKING:
+    from ..discrete_distribution.abstract_discrete_distribution import (
+        AbstractDiscreteDistribution,
+    )
+    from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+    import matplotlib.figure
+
 
 def plot_proj(
-    sampler,
-    n=64,
-    d_horizontal=1,
-    d_vertical=2,
-    math_ind=True,
-    marker_size=5,
-    figfac=5,
-    fig_title="Projection of Samples",
-    axis_pad=0,
-    want_grid=True,
-    font_family="sans-serif",
-    where_title=1,
-    **kwargs
-):
-    """
+    sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure],
+    n: Union[int, list] = 64,
+    d_horizontal: Union[int, list] = 1,
+    d_vertical: Union[int, list] = 2,
+    math_ind: bool = True,
+    marker_size: float = 5,
+    figfac: float = 5,
+    fig_title: str = "Projection of Samples",
+    axis_pad: float = 0,
+    want_grid: bool = True,
+    font_family: str = "sans-serif",
+    where_title: float = 1,
+    **kwargs: dict
+) -> matplotlib.figure.Figure:
+    """Plot two-dimensional projections of a point set.
+
     Args:
-        sampler (DiscreteDistribution,TrueMeasure): The generator of samples to be plotted.
-        n (Union[int, list]): The number of samples or a list of samples(used for extensibility) to be plotted.
-        d_horizontal (Union[int, list]): The dimension or list of dimensions to be plotted on the horizontal axes.
-        d_vertical (Union[int, list]): The dimension or list of dimensions to be plotted on the vertical axes.
-        math_ind (bool): Setting to `True` will enable user to pass in math indices.
+        sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): The generator of samples
+            to be plotted.
+        n (Union[int, list]): The number of samples or a list of samples(used
+            for extensibility) to be plotted.
+        d_horizontal (Union[int, list]): The dimension or list of dimensions to
+            be plotted on the horizontal axes.
+        d_vertical (Union[int, list]): The dimension or list of dimensions to
+            be plotted on the vertical axes.
+        math_ind (bool): Setting to `True` will enable user to pass in math
+            indices.
         marker_size (float): The marker size (typographic points are 1/72 in.).
         figfac (float): The figure size factor.
         fig_title (str): The title of the figure.
-        axis_pad (float): The padding of the axis so that points on the boundaries can be seen.
+        axis_pad (float): The padding of the axis so that points on the
+            boundaries can be seen.
         want_grid (bool): Setting to `True` will enable grid on the plot.
         font_family (str): The font family of the plot.
-        where_title (float): the position of the title on the plot. Default value is 1.
-        **kwargs (dict): Additional keyword arguments passed to `matplotlib.pyplot.scatter`.
+        where_title (float): the position of the title on the plot. Default
+            value is 1.
+        **kwargs (dict): Additional keyword arguments passed to
+            `matplotlib.pyplot.scatter`.
+
+    Returns:
+        matplotlib.figure.Figure: The created figure.
+        matplotlib.axes.Axes: Array of subplot axes, one per
+            (`d_horizontal`, `d_vertical`) pair.
     """
     try:
         import matplotlib.pyplot as plt

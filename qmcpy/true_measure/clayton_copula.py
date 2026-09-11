@@ -1,3 +1,8 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
 from .copula import (
     AbstractCopula,
     _clip_unit_interval,
@@ -11,24 +16,22 @@ import numpy as np
 
 
 class ClaytonCopula(AbstractCopula):
-    r"""
-    Clayton copula transform with user supplied marginals.
+    r"""Clayton copula transform with user supplied marginals.
 
     This implementation supports general dimension for ``theta > 0``. It maps
     independent uniforms to Clayton-dependent uniforms using the conditional
     inverse / inverse Rosenblatt transform. For coordinate ``j`` after
-    observing the previous ``m = j - 1`` coordinates, the conditional inverse is
+    observing the previous ``m = j - 1`` coordinates, the conditional inverse
+    is
 
-    $$
-    v = \left(1 + A
-        \left(w^{-\theta/(1 + m \theta)} - 1\right)\right)^{-1/\theta},
-    $$
+    $$ v = \left(1 + A \left(w^{-\theta/(1 + m \theta)} -
+    1\right)\right)^{-1/\theta}, $$
 
-    where ``A = 1 + sum(phi(u_i))`` over previous coordinates and
-    ``phi(u) = u^{-theta} - 1``.
+    where ``A = 1 + sum(phi(u_i))`` over previous coordinates and ``phi(u) =
+    u^{-theta} - 1``.
 
-    The base ``AbstractCopula`` class then applies each marginal quantile function.
-    SciPy calls the quantile function ``ppf``.
+    The base ``AbstractCopula`` class then applies each marginal quantile
+    function. SciPy calls the quantile function ``ppf``.
 
     Clayton copulas have positive lower-tail dependence for ``theta > 0``.
 
@@ -81,8 +84,9 @@ class ClaytonCopula(AbstractCopula):
         [doi:10.1016/j.jmva.2012.02.019](https://doi.org/10.1016/j.jmva.2012.02.019).
     """
 
-    def __init__(self, sampler, marginals, theta):
-        r"""
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], marginals: list, theta: float) -> None:
+        r"""Initialize a ClaytonCopula true measure.
+
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
                 A sampler or transform whose range is the unit cube.

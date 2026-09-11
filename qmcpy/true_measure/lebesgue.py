@@ -7,8 +7,8 @@ import numpy as np
 
 
 class Lebesgue(AbstractTrueMeasure):
-    r"""
-    Lebesgue measure as described in [https://en.wikipedia.org/wiki/Lebesgue_measure](https://en.wikipedia.org/wiki/Lebesgue_measure).
+    r"""Lebesgue measure as described in
+    [https://en.wikipedia.org/wiki/Lebesgue_measure](https://en.wikipedia.org/wiki/Lebesgue_measure).
 
     Examples:
         >>> Lebesgue(Gaussian(DigitalNetB2(2,seed=7)))
@@ -35,10 +35,12 @@ class Lebesgue(AbstractTrueMeasure):
                                                   (1, 1) 0.08333333333333333
     """
 
-    def __init__(self, sampler):
-        r"""
+    def __init__(self, sampler: AbstractTrueMeasure) -> None:
+        r"""Initialize a Lebesgue true measure.
+
         Args:
-            sampler (AbstractTrueMeasure): A true measure by which to compose a transform.
+            sampler (AbstractTrueMeasure): A true measure by which to compose a
+                transform.
         """
         self.parameters = []
         if not isinstance(sampler, AbstractTrueMeasure):

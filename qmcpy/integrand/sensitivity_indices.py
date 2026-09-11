@@ -1,3 +1,4 @@
+from typing import Union
 from .abstract_integrand import AbstractIntegrand
 from .keister import Keister
 from .box_integral import BoxIntegral
@@ -8,8 +9,7 @@ import scipy.special
 
 
 class SensitivityIndices(AbstractIntegrand):
-    r"""
-    Sensitivity indices i.e. normalized Sobol' Indices.
+    r"""Sensitivity indices i.e., normalized Sobol' Indices.
 
     Examples:
         Singleton indices
@@ -111,11 +111,15 @@ class SensitivityIndices(AbstractIntegrand):
         [https://artowen.su.domains/mc/A-anova.pdf](https://artowen.su.domains/mc/A-anova.pdf).
     """
 
-    def __init__(self, integrand, indices="singletons"):
-        r"""
+    def __init__(self, integrand: AbstractIntegrand, indices: Union[str, np.ndarray] = "singletons") -> None:
+        r"""Initialize a SensitivityIndices integrand.
+
         Args:
-            integrand (AbstractIntegrand): Integrand to find sensitivity indices of.
-            indices (np.ndarray): Bool array with shape $(\dots,d)$ where each length $d$ vector item indicates which dimensions are active in the subset.
+            integrand (AbstractIntegrand): Integrand to find sensitivity
+                indices of.
+            indices (Union[str, np.ndarray]): Bool array with shape $(\dots,d)$ where each
+                length $d$ vector item indicates which dimensions are active in
+                the subset.
 
                 - The default `indices='singletons'` sets `indices=np.eye(d,dtype=bool)`.
                 - Setting `incides='all'` sets `indices = np.array([[bool(int(b)) for b in np.binary_repr(i,width=d)] for i in range(1,2**d-1)],dtype=bool)`
@@ -123,7 +127,8 @@ class SensitivityIndices(AbstractIntegrand):
         self.parameters = ["indices"]
         self.integrand = integrand
         self.dtilde = self.integrand.d
-        assert self.dtilde > 1, "SensitivityIndices does not make sense for d=1"
+        if not (self.dtilde > 1):
+            raise AssertionError("SensitivityIndices does not make sense for d=1")
         self.indices = indices
         if isinstance(self.indices, str) and self.indices == "singletons":
             self.indices = np.eye(self.dtilde, dtype=bool)
@@ -137,14 +142,16 @@ class SensitivityIndices(AbstractIntegrand):
                     idxs_r[i, comb] = True
                 self.indices = np.vstack([self.indices, idxs_r])
         self.indices = np.atleast_1d(self.indices)
-        assert (
+        if not (
             self.indices.dtype == bool
             and self.indices.ndim >= 1
             and self.indices.shape[-1] == self.dtilde
-        )
-        assert (
+        ):
+            raise AssertionError
+        if not (
             not (self.indices == self.indices[..., 0, None]).all(-1).any()
-        ), "indices cannot include the emptyset or the set of all dimensions"
+        ):
+            raise AssertionError("indices cannot include the emptyset or the set of all dimensions")
         self.not_indices = ~self.indices
         # sensitivity_index
         self.true_measure = self.integrand.true_measure
@@ -160,13 +167,25 @@ class SensitivityIndices(AbstractIntegrand):
         )
         self.d = 2 * self.dtilde
 
-    def f(self, x, *args, **kwargs):
+    def f(self, x: np.ndarray, *args: tuple, **kwargs: dict) -> np.ndarray:
+        r"""Evaluate the numerator and moment terms needed for the sensitivity indices.
+
+        Args:
+            x (np.ndarray): Points from the discrete distribution.
+            *args (tuple): Forwarded to the wrapped integrand.
+            **kwargs (dict): Forwarded to the wrapped integrand; ``compute_flags``
+                selects which outputs to evaluate.
+
+        Returns:
+            np.ndarray: The $\tau$, mean, and second-moment terms.
+        """
         if "compute_flags" in kwargs:
             compute_flags = kwargs["compute_flags"]
             del kwargs["compute_flags"]
         else:
             compute_flags = np.ones(self.d_indv, dtype=bool)
-        assert compute_flags.shape == self.d_indv
+        if not (compute_flags.shape == self.d_indv):
+            raise AssertionError
         z = x[..., self.dtilde :]
         x = x[..., : self.dtilde]
         v = np.zeros_like(x)
@@ -190,16 +209,28 @@ class SensitivityIndices(AbstractIntegrand):
             y[(slice(None), 2) + i + self.i_slice] = (
                 f_x[(None,) + self.i_slice] ** 2
             )  # sigma^2+mu^2
-            # here we copy mu and sigma^2+mu^2 since if these these were not copied there is a chance the bounds could change
-            # for mu and/or sigma and then an index which was previously approximated sufficiently woulud become insufficientlly approximated
-            # and it would then be difficult ot go back and resample the numerator for that approximation
+            # Here we copy mu and sigma^2+mu^2 since, if these were not copied,
+            # there is a chance the bounds could change for mu and/or sigma.
+            # Then an index that was previously approximated sufficiently could
+            # become insufficiently approximated, and it would be difficult to
+            # go back and resample the numerator for that approximation.
         return y
 
     def _spawn(self, level, sampler):
         new_integrand = self.integrand.spawn(level, sampler)
         return SensitivityIndices(integrand=new_integrand, indices=self.indices)
 
-    def bound_fun(self, bound_low, bound_high):
+    def bound_fun(self, bound_low: np.ndarray, bound_high: np.ndarray) -> tuple:
+        r"""Combine bounds on the moment terms into bounds on the sensitivity indices.
+
+        Args:
+            bound_low (np.ndarray): Lower bounds on $\tau$, the mean, and the second moment.
+            bound_high (np.ndarray): Upper bounds on the same terms.
+
+        Returns:
+            tuple: Lower and upper bounds on the indices, clipped to $[0,1]$ and
+                widened to $[0,1]$ where the variance bound is non-positive.
+        """
         tau_low, mu_low, f2_low = bound_low[:, 0], bound_low[:, 1], bound_low[:, 2]
         tau_high, mu_high, f2_high = (
             bound_high[:, 0],
@@ -218,5 +249,13 @@ class SensitivityIndices(AbstractIntegrand):
         comb_bounds_low[violated], comb_bounds_high[violated] = 0, 1
         return comb_bounds_low, comb_bounds_high
 
-    def dependency(self, comb_flags):
+    def dependency(self, comb_flags: np.ndarray) -> np.ndarray:
+        """Map combined-output flags onto the individual outputs they require.
+
+        Args:
+            comb_flags (np.ndarray): Flags for the combined outputs.
+
+        Returns:
+            np.ndarray: Flags for the three moment terms behind each index.
+        """
         return np.repeat(comb_flags[:, None], 3, axis=1)

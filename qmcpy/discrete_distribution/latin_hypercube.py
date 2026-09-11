@@ -1,3 +1,4 @@
+from typing import Union
 from .abstract_discrete_distribution import AbstractDiscreteDistribution
 import numpy as np
 from qmcpy.util import ParameterError, ParameterWarning
@@ -5,23 +6,22 @@ import warnings
 
 
 class LatinHypercube(AbstractDiscreteDistribution):
-    r"""
-    Latin Hypercube Sampler for quasi-Monte Carlo and experimental design.
+    r"""Latin Hypercube Sampler for quasi-Monte Carlo and experimental design.
 
     Latin Hypercube Sampling (LHS) generates points with excellent univariate
     stratification: splitting $[0,1)$ into `n` equal strata along *any* single
     coordinate axis places exactly one point in each stratum. Introduced by
     McKay, Beckman, and Conover as a variance-reduction alternative to simple
-    random sampling for computer experiments, LHS is asymptotically at least
-    as accurate as Monte Carlo for the additive part of an integrand, with the
+    random sampling for computer experiments, LHS is asymptotically at least as
+    accurate as Monte Carlo for the additive part of an integrand, with the
     rate of improvement characterized by Stein and later by Loh via a
     multivariate central limit theorem.
 
-    Note:
+    Notes:
         - Unlike the low discrepancy sequences in this package (e.g. `Lattice`,
           `Halton`, `DigitalNetB2`), `LatinHypercube` points are *not* extensible
           in `n`: the entire point set must be regenerated whenever `n` changes,
-          since the strata boundaries themselves depend on `n`. 
+          since the strata boundaries themselves depend on `n`.
           Consequently `LatinHypercube` requires `n_min=0`, it cannot be generated starting from a nonzero offset.
         - `replications` produces independent randomizations (independent random
           permutations, and independent within-stratum jitter when `randomize`
@@ -69,50 +69,53 @@ class LatinHypercube(AbstractDiscreteDistribution):
 
     **References:**
 
-    1.  M. D. McKay, R. J. Beckman, and W. J. Conover.  
-        A Comparison of Three Methods for Selecting Values of Input Variables in the Analysis of Output from a Computer Code.  
-        Technometrics, 21(2):239-245, 1979.  
+    1.  M. D. McKay, R. J. Beckman, and W. J. Conover.
+        A Comparison of Three Methods for Selecting Values of Input Variables in the Analysis of Output from a Computer Code.
+        Technometrics, 21(2):239-245, 1979.
         [https://doi.org/10.1080/00401706.1979.10489755](https://doi.org/10.1080/00401706.1979.10489755).
 
-    2.  M. Stein.  
-        Large Sample Properties of Simulations Using Latin Hypercube Sampling.  
-        Technometrics, 29(2):143-151, 1987.  
+    2.  M. Stein.
+        Large Sample Properties of Simulations Using Latin Hypercube Sampling.
+        Technometrics, 29(2):143-151, 1987.
         [https://doi.org/10.1080/00401706.1987.10488205](https://doi.org/10.1080/00401706.1987.10488205).
 
-    3.  A. B. Owen.  
-        Controlling Correlations in Latin Hypercube Samples.  
-        Journal of the American Statistical Association, 89(428):1517-1522, 1994.  
+    3.  A. B. Owen.
+        Controlling Correlations in Latin Hypercube Samples.
+        Journal of the American Statistical Association, 89(428):1517-1522, 1994.
         [https://doi.org/10.1080/01621459.1994.10476891](https://doi.org/10.1080/01621459.1994.10476891).
 
-    4.  W.-L. Loh.  
-        On Latin Hypercube Sampling.  
-        The Annals of Statistics, 24(5):2058-2080, 1996.  
+    4.  W.-L. Loh.
+        On Latin Hypercube Sampling.
+        The Annals of Statistics, 24(5):2058-2080, 1996.
         [https://doi.org/10.1214/aos/1069362310](https://doi.org/10.1214/aos/1069362310).
 
-    5.  B. Tang.  
-        Orthogonal Array-Based Latin Hypercubes.  
-        Journal of the American Statistical Association, 88(424):1392-1397, 1993.  
+    5.  B. Tang.
+        Orthogonal Array-Based Latin Hypercubes.
+        Journal of the American Statistical Association, 88(424):1392-1397, 1993.
         [https://doi.org/10.1080/01621459.1993.10476423](https://doi.org/10.1080/01621459.1993.10476423).
     """
 
     def __init__(
-            self, dimension, replications, seed, randomize="TRUE"
-            ):
-        r"""
+            self, dimension: int, replications: Union[None, int], seed: Union[None, int, np.random.SeedSequence], randomize: str = "TRUE"
+            ) -> None:
+        r"""Initialize a LatinHypercube discrete distribution.
+
         Args:
             dimension (int): Dimension of the samples.
 
             replications (Union[None, int]): Number of independent LHS designs
-                to generate. Each replication is its own independently permuted,
-                independently jittered stratification into `n` strata.
+                to generate. Each replication is its own independently
+                permuted, independently jittered stratification into `n`
+                strata.
 
-            seed (Union[None, int, np.random.SeedSequence]): Seed for the random
-                number generator to ensure reproducibility.
+            seed (Union[None, int, np.random.SeedSequence]): Seed for the
+                random number generator to ensure reproducibility.
 
             randomize (str): Whether to jitter each point uniformly within its
                 stratum (`True`, the default) or place it at the stratum's
-                center (`False`), must be one of 'TRUE', 'FALSE', 'NONE', or 'NO' (case-insensitive).
-    """
+                center (`False`), must be one of 'TRUE', 'FALSE', 'NONE', or
+                'NO' (case-insensitive).
+        """
         super().__init__(dimension=dimension, replications=replications, seed=seed, d_limit=np.inf, n_limit=np.inf)
         self.randomize = str(randomize).upper()
         if self.randomize in ("NONE", "NO", "FALSE"):
@@ -127,7 +130,7 @@ class LatinHypercube(AbstractDiscreteDistribution):
     def _gen_samples(
             self, n=None, n_min=None, n_max=None, return_binary=False, warn=True
         ):
-        r"""..."""  # (inchangee)
+        r"""..."""  # (unchanged)
         if return_binary:
             raise ParameterError("LatinHypercube does not support return_binary=True")
         if n_min != 0:

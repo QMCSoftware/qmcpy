@@ -1,3 +1,8 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
 from .abstract_integrand import AbstractIntegrand
 from ..discrete_distribution import DigitalNetB2  #pylint: disable=unused-import
 from ..true_measure import Gaussian
@@ -6,8 +11,8 @@ import numpy as np
 
 
 class BayesianLRCoeffs(AbstractIntegrand):
-    r"""
-    Logistic Regression Coefficients computed as the posterior mean in a Bayesian framework.
+    r"""Logistic Regression Coefficients computed as the posterior mean in a
+    Bayesian framework.
 
     Examples:
         >>> integrand = BayesianLRCoeffs(DigitalNetB2(3,seed=7),feature_array=np.arange(8).reshape((4,2)),response_vector=[0,0,1,1])
@@ -33,21 +38,28 @@ class BayesianLRCoeffs(AbstractIntegrand):
     """
 
     def __init__(
-        self, sampler, feature_array, response_vector, prior_mean=0, prior_covariance=10
-    ):
-        r"""
+        self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], feature_array: np.ndarray, response_vector: np.ndarray, prior_mean: Union[float, np.ndarray] = 0, prior_covariance: Union[float, np.ndarray] = 10
+    ) -> None:
+        r"""Initialize a BayesianLRCoeffs integrand.
+
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.
-            feature_array (np.ndarray): Array of features with shape $(N,d-1)$ where $N$ is the number of observations and $d$ is the dimension.
-            response_vector (np.ndarray): Binary responses vector of length $N$.
-            prior_mean (np.ndarray): Length $d$ vector of prior means, one for each coefficient.
+            feature_array (np.ndarray): Array of features with shape $(N,d-1)$
+                where $N$ is the number of observations and $d$ is the
+                dimension.
+            response_vector (np.ndarray): Binary responses vector of length
+                $N$.
+            prior_mean (Union[float, np.ndarray]): Length $d$ vector of prior means, one for
+                each coefficient.
 
                 - The first $d-1$ inputs correspond to the $d-1$ features.
                 - The last input corresponds to the intercept coefficient.
-            prior_covariance (np.ndarray): Prior covariance array with shape $(d,d)$ d x d where indexing is consistent with the prior mean.
+            prior_covariance (Union[float, np.ndarray]): Prior covariance array with shape
+                $(d,d)$ d x d where indexing is consistent with the prior mean.
         """
         self.prior_mean = prior_mean
         self.prior_covariance = prior_covariance
@@ -77,7 +89,16 @@ class BayesianLRCoeffs(AbstractIntegrand):
             parallel=False,
         )
 
-    def g(self, x):
+    def g(self, x: np.ndarray) -> np.ndarray:
+        """Evaluate the unnormalized posterior numerator and denominator.
+
+        Args:
+            x (np.ndarray): Coefficient vectors, coefficients along the last axis.
+
+        Returns:
+            np.ndarray: Stacked numerator (coefficient-weighted likelihood) and
+                denominator (likelihood), whose ratio is the posterior mean.
+        """
         z = np.einsum("...j,ij->...i", x, self.feature_array)
         z1 = z * self.response_vector
         with np.errstate(over="ignore"):
@@ -96,7 +117,17 @@ class BayesianLRCoeffs(AbstractIntegrand):
             prior_covariance=self.prior_covariance,
         )
 
-    def bound_fun(self, bound_low, bound_high):
+    def bound_fun(self, bound_low: np.ndarray, bound_high: np.ndarray) -> tuple:
+        """Combine numerator and denominator bounds into bounds on their ratio.
+
+        Args:
+            bound_low (np.ndarray): Lower bounds on the numerator and denominator.
+            bound_high (np.ndarray): Upper bounds on the numerator and denominator.
+
+        Returns:
+            tuple: Lower and upper bounds on the ratio, infinite where the
+                denominator interval straddles zero.
+        """
         num_bounds_low, den_bounds_low = bound_low[0], bound_low[1]
         num_bounds_high, den_bounds_high = bound_high[0], bound_high[1]
         comb_bounds_low = np.minimum.reduce(
@@ -119,5 +150,13 @@ class BayesianLRCoeffs(AbstractIntegrand):
         comb_bounds_low[violated], comb_bounds_high[violated] = -np.inf, np.inf
         return comb_bounds_low, comb_bounds_high
 
-    def dependency(self, comb_flags):
+    def dependency(self, comb_flags: np.ndarray) -> np.ndarray:
+        """Map combined-output flags onto the individual outputs they require.
+
+        Args:
+            comb_flags (np.ndarray): Flags for the combined outputs.
+
+        Returns:
+            np.ndarray: Flags for the numerator and denominator outputs.
+        """
         return np.vstack((comb_flags, comb_flags))

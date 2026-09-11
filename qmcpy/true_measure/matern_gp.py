@@ -12,8 +12,7 @@ from typing import Union
 
 
 class MaternGP(Gaussian):
-    r"""
-    A Gaussian process with Matérn covariance kernel.
+    r"""A Gaussian process with Matérn covariance kernel.
 
     Examples:
         >>> true_measure = MaternGP(DigitalNetB2(dimension=3,seed=7),points=np.linspace(0,1,3)[:,None],nu=3/2,length_scale=[3,4,5],variance=0.01,mean=np.array([.3,.4,.5]))
@@ -67,22 +66,28 @@ class MaternGP(Gaussian):
 
     def __init__(
         self,
-        sampler,
-        points,
-        length_scale=1.0,
-        nu=1.5,
-        variance=1.0,
-        mean=0.0,
-        nugget=1e-6,
-        decomp_type="PCA",
-    ):
-        r"""
+        sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure],
+        points: np.ndarray,
+        length_scale: Union[float, np.ndarray] = 1.0,
+        nu: float = 1.5,
+        variance: float = 1.0,
+        mean: Union[float, np.ndarray] = 0.0,
+        nugget: float = 1e-6,
+        decomp_type: str = "PCA",
+    ) -> None:
+        r"""Initialize a MaternGP true measure.
+
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.
-            points (np.ndarray): The positions of points on a metric space. The array should have shape $(d,k)$ where $d$ is the dimension of the sampler and $k$ is the latent dimension.
+            points (np.ndarray): The positions of points on a metric space. The
+                array should have shape $(d,k)$ where $d$ is the dimension of
+                the sampler and $k$ is the latent dimension.
+            length_scale (Union[float, np.ndarray]): Determines "peakiness", or
+                how correlated two points are based on their distance.
             nu (float): The "smoothness" of the MaternGP function, e.g.,
 
                 - $\nu = 1/2$ is equivalent to the absolute exponential kernel,
@@ -90,15 +95,17 @@ class MaternGP(Gaussian):
                 - $\nu = 5/2$ implies twice differentiability.
                 - as $\nu \to \infty$ the kernel becomes equivalent to the RBF kernel, see [`sklearn.gaussian_process.kernels.RBF`](https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.kernels.RBF.html#sklearn.gaussian_process.kernels.RBF).
 
-                Note that when $\nu \notin \{1/2, 3/2, 5/2, \infty \}$ the kernel is around $10$ times slower to evaluate.
-            length_scale (Union[float, np.ndarray]): Determines "peakiness", or how correlated two points are based on their distance.
+                Note that when $\nu \notin \{1/2, 3/2, 5/2, \infty \}$ the
+                kernel is around $10$ times slower to evaluate.
             variance (float): Global scaling factor of the kernel. Retrievable
                 after construction via the `kernel_variance` property. (The
                 inherited `variance` attribute is the vector of marginal
-                variances, i.e. the diagonal of `covariance`.)
-            mean (Union[float, np.ndarray]): Mean vector for multivariate `Gaussian`.
+                variances, i.e., the diagonal of `covariance`.)
+            mean (Union[float, np.ndarray]): Mean vector for multivariate
+                `Gaussian`.
             nugget (float): Positive nugget to add to diagonal.
-            decomp_type (str): Method for decomposition for covariance matrix. Options include
+            decomp_type (str): Method for decomposition for covariance matrix.
+                Options include
 
                 - `'PCA'` for principal component analysis, or
                 - `'Cholesky'` for cholesky decomposition.
@@ -116,24 +123,30 @@ class MaternGP(Gaussian):
             raise ParameterError("points must be a one or two dimensional np.ndarray.")
         if points.ndim == 1:
             points = points[:, None]
-        assert (
+        if not (
             points.ndim == 2 and points.shape[0] == sampler.d
-        ), "points should be a two dimension array with the number of points equal to the dimension of the sampler"
+        ):
+            raise AssertionError("points should be a two dimension array with the number of points equal to the dimension of the sampler")
         mean = np.array(mean)
         if mean.size == 1:
             mean = mean.item() * np.ones(sampler.d)
-        assert mean.shape == (sampler.d,), "mean should be a length d vector"
-        assert np.isscalar(nu) and nu > 0, "nu should be a positive scalar"
+        if not (mean.shape == (sampler.d,)):
+            raise AssertionError("mean should be a length d vector")
+        if not (np.isscalar(nu) and nu > 0):
+            raise AssertionError("nu should be a positive scalar")
         length_scale = np.array(length_scale)
         if length_scale.size == 1:
             length_scale = length_scale.item() * np.ones(sampler.d)
-        assert (
+        if not (
             length_scale.shape == (sampler.d,) and (length_scale > 0).all()
-        ), "length_scale should be a vector with length equal to the dimension of the sampler"
-        assert (
+        ):
+            raise AssertionError("length_scale should be a vector with length equal to the dimension of the sampler")
+        if not (
             np.isscalar(variance) and variance > 0
-        ), "variance should be a positive scalar"
-        assert np.isscalar(nugget) and nugget > 0, "nugget should be a positive scalar"
+        ):
+            raise AssertionError("variance should be a positive scalar")
+        if not (np.isscalar(nugget) and nugget > 0):
+            raise AssertionError("nugget should be a positive scalar")
         self.points = points
         self.length_scale = length_scale
         self.nu = nu

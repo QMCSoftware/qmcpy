@@ -1,3 +1,4 @@
+from typing import Union
 from ..abstract_discrete_distribution import AbstractLDDiscreteDistribution
 from ...util import ParameterError, ParameterWarning
 import qmctoolscl
@@ -9,10 +10,9 @@ from copy import deepcopy
 import platform
 
 class DigitalNetB2(AbstractLDDiscreteDistribution):
-    r"""
-    Low discrepancy digital net in base 2.
+    r"""Low discrepancy digital net in base 2.
 
-    Note:
+    Notes:
         - Digital net sample sizes should be powers of $2$ e.g. $1$, $2$, $4$, $8$, $16$, $\dots$.
         - The first point of an unrandomized digital nets is the origin.
         - `Sobol` is an alias for `DigitalNetB2`.
@@ -21,7 +21,8 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
             - Pass in `generating_matrices` *without* interlacing and supply `alpha`>1 to apply interlacing, or
             - Pass in `generating_matrices` *with* interlacing and set `alpha=1` to avoid additional interlacing
 
-            i.e. do *not* pass in interlaced `generating_matrices` and set `alpha>1`, this will apply additional interlacing.
+            i.e., do *not* pass in interlaced `generating_matrices` and set
+            `alpha>1`, this will apply additional interlacing.
 
     Examples:
         >>> discrete_distrib = DigitalNetB2(2,seed=7)
@@ -69,7 +70,8 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
         array([[0.25, 0.75],
                [0.75, 0.25]])
 
-        Generating matrices from [https://github.com/QMCSoftware/LDData/tree/main/dnet](https://github.com/QMCSoftware/LDData/tree/main/dnet)
+        Generating matrices from
+        [https://github.com/QMCSoftware/LDData/tree/main/dnet](https://github.com/QMCSoftware/LDData/tree/main/dnet)
 
         >>> DigitalNetB2(dimension=3,randomize=False,generating_matrices="mps.nx_s5_alpha2_m32.txt")(8,warn=False)
         array([[0.        , 0.        , 0.        ],
@@ -214,30 +216,33 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
 
     def __init__(
         self,
-        dimension=1,
-        replications=None,
-        seed=None,
-        randomize="LMS DS",
-        generating_matrices="joe_kuo.6.21201.txt",
-        order="RADICAL INVERSE",
-        t=63,
-        alpha=1,
-        msb=None,
-        _verbose=False,
+        dimension: Union[int, np.ndarray] = 1,
+        replications: Union[None, int] = None,
+        seed: Union[None, int, np.random.SeedSequence] = None,
+        randomize: str = "LMS DS",
+        generating_matrices: Union[str, np.ndarray, int] = "joe_kuo.6.21201.txt",
+        order: str = "RADICAL INVERSE",
+        t: int = 63,
+        alpha: int = 1,
+        msb: Union[None, bool] = None,
+        _verbose: bool = False,
         # deprecated
-        graycode=None,
-        t_max=None,
-        t_lms=None,
-    ):
-        r"""
+        graycode: Union[None, bool] = None,
+        t_max: Union[None, int] = None,
+        t_lms: Union[None, int] = None,
+    ) -> None:
+        r"""Initialize a DigitalNetB2 discrete distribution.
+
         Args:
             dimension (Union[int, np.ndarray]): Dimension of the generator.
 
                 - If an `int` is passed in, use generating vector components at indices 0,...,`dimension`-1.
                 - If an `np.ndarray` is passed in, use generating vector components at these indices.
 
-            replications (int): Number of independent randomizations of a pointset.
-            seed (Union[None, int, np.random.SeedSeq): Seed the random number generator for reproducibility.
+            replications (Union[None, int]): Number of independent randomizations of a
+                pointset.
+            seed (Union[None, int, np.random.SeedSequence]): Seed the random
+                number generator for reproducibility.
             randomize (str): Options are
 
                 - `'LMS DS'`: Linear matrix scramble with digital shift.
@@ -246,19 +251,33 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
                 - `'NUS'`: Nested uniform scrambling. Also known as Owen scrambling.
                 - `'FALSE'`: No randomization. In this case the first point will be the origin.
 
-            generating_matrices (Union[str, np.ndarray, int]): Specify the generating matrices.
+            generating_matrices (Union[str, np.ndarray, int]): Specify the
+                generating matrices.
 
                 - A `str` should be the name (or path) of a file from the LDData repo at [https://github.com/QMCSoftware/LDData/tree/main/dnet](https://github.com/QMCSoftware/LDData/tree/main/dnet).
                 - An `np.ndarray` of integers with shape $(d,m_\mathrm{max})$ or $(r,d,m_\mathrm{max})$ where $d$ is the number of dimensions, $r$ is the number of replications, and $2^{m_\mathrm{max}}$ is the maximum number of supported points. Setting `msb=False` will flip the bits of ints in the generating matrices.
 
-            order (str): `'RADICAL INVERSE'`, or `'GRAY'` ordering. See the doctest example above.
-            t (int): Number of bits in integer represetation of points *after* randomization. The number of bits in the generating matrices is inferred based on the largest value.
-            alpha (int): Interlacing factor for higher order nets.
-                When `alpha`>1, interlacing is performed regardless of the generating matrices,
-                i.e., for `alpha`>1 do *not* pass in generating matrices which are already interlaced.
-                The Note for this class contains more info.
-            msb (bool): Flag for Most Significant Bit (MSB) vs Least Significant Bit (LSB) integer representations in generating matrices. If `msb=False` (LSB order), then integers in generating matrices will be bit-reversed.
-            _verbose (bool): If `True`, print linear matrix scrambling matrices.
+            order (str): `'RADICAL INVERSE'`, or `'GRAY'` ordering. See the
+                doctest example above.
+            t (int): Number of bits in integer representation of points *after*
+                randomization. The number of bits in the generating matrices is
+                inferred based on the largest value.
+            alpha (int): Interlacing factor for higher order nets. When
+                `alpha`>1, interlacing is performed regardless of the
+                generating matrices, i.e., for `alpha`>1 do *not* pass in
+                generating matrices which are already interlaced. The Note for
+                this class contains more info.
+            msb (Union[None, bool]): Flag for Most Significant Bit (MSB) vs Least
+                Significant Bit (LSB) integer representations in generating
+                matrices. If `msb=False` (LSB order), then integers in
+                generating matrices will be bit-reversed.
+            _verbose (bool): If `True`, print linear matrix scrambling
+                matrices.
+            graycode (Union[None, bool]): Deprecated; set `order='GRAY'` or
+                `order='RADICAL INVERSE'` instead.
+            t_max (Union[None, int]): Deprecated; has no effect, as it can be inferred
+                from the generating matrices.
+            t_lms (Union[None, int]): Deprecated; set `t` instead.
         """
         if graycode is not None:
             order = "GRAY" if graycode else "RADICAL INVERSE"
@@ -318,7 +337,8 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
             gen_mats = gen_mats >> compat_shift
         elif isinstance(generating_matrices, str):
             self.gen_mats_source = generating_matrices
-            assert generating_matrices[-4:] == ".txt"
+            if not (generating_matrices[-4:] == ".txt"):
+                raise AssertionError
             local_root = dirname(abspath(__file__)) + "/generating_matrices/"
             repos = DataSource()
             if repos.exists(local_root + generating_matrices):
@@ -362,7 +382,8 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
             contents = [line.split("#", 1)[0] for line in contents if line[0] != "#"]
             datafile.close()
             msb = True
-            assert int(contents[0]) == 2, "DigitalNetB2 requires base=2 "  # base 2
+            if not (int(contents[0]) == 2):  # base 2
+                raise AssertionError("DigitalNetB2 requires base=2 ")
             d_limit = int(contents[1])
             n_limit = int(contents[2])
             self._t_curr = int(contents[3])
@@ -381,17 +402,20 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
             )[None, :]
         elif isinstance(generating_matrices, np.ndarray):
             self.gen_mats_source = "custom"
-            assert generating_matrices.ndim == 2 or generating_matrices.ndim == 3
+            if not (generating_matrices.ndim == 2 or generating_matrices.ndim == 3):
+                raise AssertionError
             gen_mats = (
                 generating_matrices[None, :, :]
                 if generating_matrices.ndim == 2
                 else generating_matrices
             )
-            assert isinstance(
+            if not (isinstance(
                 msb, bool
-            ), "when generating_matrices is a np.ndarray you must set either msb=True (for most significant bit ordering) or msb=False (for least significant bit ordering which will require a bit reversal)"
+            )):
+                raise AssertionError("when generating_matrices is a np.ndarray you must set either msb=True (for most significant bit ordering) or msb=False (for least significant bit ordering which will require a bit reversal)")
             gen_mat_max = gen_mats.max()
-            assert gen_mat_max > 0, "generating matrix must have positive ints"
+            if not (gen_mat_max > 0):
+                raise AssertionError("generating matrix must have positive ints")
             self._t_curr = int(np.ceil(np.log2(gen_mat_max + 1)))
             d_limit = gen_mats.shape[1]
             n_limit = int(2 ** (gen_mats.shape[2]))
@@ -402,12 +426,13 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
         super(DigitalNetB2, self).__init__(
             dimension, replications, seed, d_limit, n_limit
         )
-        assert (
+        if not (
             gen_mats.ndim == 3
             and gen_mats.shape[1] >= self.d
             and (gen_mats.shape[0] == 1 or gen_mats.shape[0] == self.replications)
             and gen_mats.shape[2] > 0
-        ), "invalid gen_mats.shape = %s" % str(gen_mats.shape)
+        ):
+            raise AssertionError("invalid gen_mats.shape = %s" % str(gen_mats.shape))
         self.m_max = int(gen_mats.shape[-1])
         if isinstance(generating_matrices, np.ndarray) and (not msb):
             qmctoolscl.dnb2_gmat_lsb_to_msb(
@@ -424,18 +449,23 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
             self.order = "GRAY"
         if self.order == "NATURAL":
             self.order = "RADICAL INVERSE"
-        assert self.order in ["RADICAL INVERSE", "GRAY"]
-        assert isinstance(t, int) and t > 0
-        assert self._t_curr <= t <= 64, (
-            "t must no more than 64 and no less than %d (the number of bits used to represent the generating matrices)"
-            % (self._t_curr)
-        )
-        assert isinstance(alpha, int) and alpha > 0
+        if not (self.order in ["RADICAL INVERSE", "GRAY"]):
+            raise AssertionError
+        if not (isinstance(t, int) and t > 0):
+            raise AssertionError
+        if not (self._t_curr <= t <= 64):
+            raise AssertionError(
+                "t must no more than 64 and no less than %d (the number of bits used to represent the generating matrices)"
+                % (self._t_curr)
+            )
+        if not (isinstance(alpha, int) and alpha > 0):
+            raise AssertionError
         self.alpha = alpha
         if self.alpha > 1:
-            assert (
+            if not ((
                 self.dvec == np.arange(self.d)
-            ).all(), "digital interlacing requires dimension is an int"
+            ).all()):
+                raise AssertionError("digital interlacing requires dimension is an int")
             if self.m_max != self._t_curr:
                 warnings.warn(
                     "Digital interlacing is often performed on matrices with the number of columns (m_max = %d) equal to the number of bits in each int (%d), but this is not the case. Ensure you are NOT setting alpha>1 when generating matrices are already interlaced."
@@ -452,7 +482,8 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
             self.randomize = "FALSE"
         if self.randomize == "NO":
             self.randomize = "FALSE"
-        assert self.randomize in ["LMS DS", "LMS", "DS", "NUS", "FALSE"]
+        if not (self.randomize in ["LMS DS", "LMS", "DS", "NUS", "FALSE"]):
+            raise AssertionError
         self.dtalpha = self.alpha * self.d
         if self.randomize == "FALSE":
             if self.alpha == 1:
@@ -615,19 +646,23 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
             raise ParameterError("self.randomize parsing error")
         self.gen_mats = np.ascontiguousarray(self.gen_mats)
         gen_mat_max = self.gen_mats.max()
-        assert gen_mat_max > 0, "generating matrix must have positive ints"
-        assert self._t_curr == int(np.ceil(np.log2(gen_mat_max + 1)))
-        assert (
+        if not (gen_mat_max > 0):
+            raise AssertionError("generating matrix must have positive ints")
+        if not (self._t_curr == int(np.ceil(np.log2(gen_mat_max + 1)))):
+            raise AssertionError
+        if not (
             0 < self._t_curr <= self.t <= 64
-        ), "invalid 0 <= self._t_curr (%d) <= self.t (%d) <= 64" % (
-            self._t_curr,
-            self.t,
-        )
+        ):
+            raise AssertionError("invalid 0 <= self._t_curr (%d) <= self.t (%d) <= 64" % (
+                self._t_curr,
+                self.t,
+            ))
         if self.randomize == "FALSE":
-            assert self.gen_mats.shape[0] == self.replications, (
-                "randomize='FALSE' but replications = %d does not equal the number of sets of generating matrices %d"
-                % (self.replications, self.gen_mats.shape[0])
-            )
+            if not (self.gen_mats.shape[0] == self.replications):
+                raise AssertionError(
+                    "randomize='FALSE' but replications = %d does not equal the number of sets of generating matrices %d"
+                    % (self.replications, self.gen_mats.shape[0])
+                )
 
     def _try_gen_samples_float(self, r, n, d, n_start, mmax, r_x, return_binary):
         if return_binary or "NUS" in self.randomize:
@@ -673,7 +708,7 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
     def _gen_samples(self, n_min, n_max, return_binary, warn):
         if n_min == 0 and self.randomize in ["FALSE", "LMS"] and warn:
             warnings.warn(
-                "Without randomization, the first digtial net point is the origin",
+                "Without randomization, the first digital net point is the origin",
                 ParameterWarning,
             )
         r_x = np.uint64(self.gen_mats.shape[0])

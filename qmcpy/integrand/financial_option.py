@@ -1,3 +1,8 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
 from .abstract_integrand import AbstractIntegrand
 from ..discrete_distribution import DigitalNetB2
 from ..true_measure import GeometricBrownianMotion
@@ -7,8 +12,7 @@ from scipy.stats import norm
 
 
 class FinancialOption(AbstractIntegrand):
-    r"""
-    Financial options.
+    r"""Financial options.
 
     - Start price $S_0$
     - Strike price $K$
@@ -17,11 +21,15 @@ class FinancialOption(AbstractIntegrand):
     - Drift $\gamma$
     - Equidistant monitoring times $\boldsymbol{\tau} = (\tau_1,\dots,\tau_d)^T$ with $\tau_d$ the final (exercise) time and $\tau_j = \tau_d j/d$.
 
-    Define the [geometric brownian motion](https://en.wikipedia.org/wiki/Geometric_Brownian_motion) as
+    Define the [geometric brownian
+    motion](https://en.wikipedia.org/wiki/Geometric_Brownian_motion) as
 
-    $$\boldsymbol{S}(\boldsymbol{t}) = S_0 e^{(\gamma-\sigma^2/2)\boldsymbol{\tau}+\sigma\boldsymbol{t}}, \qquad \boldsymbol{T} \sim \mathcal{N}(\boldsymbol{0},\mathsf{\Sigma})$$
+    $$\boldsymbol{S}(\boldsymbol{t}) = S_0
+    e^{(\gamma-\sigma^2/2)\boldsymbol{\tau}+\sigma\boldsymbol{t}}, \qquad
+    \boldsymbol{T} \sim \mathcal{N}(\boldsymbol{0},\mathsf{\Sigma})$$
 
-    where $\boldsymbol{T}$ is a standard Brownian motion so $\mathsf{\Sigma} = \left(\min\{\tau_j,\tau_{j'}\}\right)_{j,j'=1}^d$.
+    where $\boldsymbol{T}$ is a standard Brownian motion so $\mathsf{\Sigma} =
+    \left(\min\{\tau_j,\tau_{j'}\}\right)_{j,j'=1}^d$.
 
     The discounted payoff is
 
@@ -29,56 +37,77 @@ class FinancialOption(AbstractIntegrand):
 
     where the payoff function $P$ will be defined depending on the option.
 
-    Below we will use $S_{-1}$ to denote the final element of $\boldsymbol{S}$, the value of the path at exercise time.
+    Below we will use $S_{-1}$ to denote the final element of $\boldsymbol{S}$,
+    the value of the path at exercise time.
 
     # European Options
 
     *European Call and Put Options* have respective payoffs
 
-    $$P(\boldsymbol{S}) = \max\{S_{-1}-K,0\}, \qquad P(\boldsymbol{S}) = \max\{K-S_{-1},0\}.$$
+    $$P(\boldsymbol{S}) = \max\{S_{-1}-K,0\}, \qquad P(\boldsymbol{S}) =
+    \max\{K-S_{-1},0\}.$$
 
     # Asian Options
 
-    An asian option considers the average value of an asset path across time. We use the trapezoidal rule to approximate either the *arithmetic mean* by
+    An asian option considers the average value of an asset path across time.
+    We use the trapezoidal rule to approximate either the *arithmetic mean* by
 
-    $$A(\boldsymbol{S}) = \frac{1}{d}\left[\frac{1}{2} S_0 + \sum_{j=1}^{d-1} S_j + \frac{1}{2} S_{-1}\right]$$
+    $$A(\boldsymbol{S}) = \frac{1}{d}\left[\frac{1}{2} S_0 + \sum_{j=1}^{d-1}
+    S_j + \frac{1}{2} S_{-1}\right]$$
 
     or the *geometric mean* by
 
-    $$A(\boldsymbol{S}) = \left[\sqrt{S_0} \prod_{j=1}^{d-1} S_j \sqrt{S_{-1}}\right]^{1/d}.$$
+    $$A(\boldsymbol{S}) = \left[\sqrt{S_0} \prod_{j=1}^{d-1} S_j
+    \sqrt{S_{-1}}\right]^{1/d}.$$
 
     *Asian Call and Put Option* have respective payoffs
 
-    $$P(\boldsymbol{S}) = \max\{A(\boldsymbol{S})-K,0\}, \qquad P(\boldsymbol{S}) = \max\{K-A(\boldsymbol{S}),0\}.$$
+    $$P(\boldsymbol{S}) = \max\{A(\boldsymbol{S})-K,0\}, \qquad
+    P(\boldsymbol{S}) = \max\{K-A(\boldsymbol{S}),0\}.$$
 
     # Barrier Options
 
     - Barrier $B$.
 
-    *In* options are activate when the path crosses the barrier $B$, while *out* options are activated only if the path never crosses the barrier $B$.
-    An *up* option satisfies $S_0<B$ while a *down* option satisfies $S_0>B$, both indicating the direction of the barrier from the start price.
+    *In* options are activate when the path crosses the barrier $B$, while
+    *out* options are activated only if the path never crosses the barrier $B$.
+    An *up* option satisfies $S_0<B$ while a *down* option satisfies $S_0>B$,
+    both indicating the direction of the barrier from the start price.
 
     *Barrier Up-In Call and Put Options* have respective payoffs
 
-    $$P(\boldsymbol{S}) = \begin{cases} \max\{S_{-1})-K,0\}, & \text{any } \boldsymbol{S} \geq B \\ 0, & \mathrm{otherwise} \end{cases}, \qquad P(\boldsymbol{S}) = \begin{cases} \max\{K-S_{-1}),0\}, & \text{any } \boldsymbol{S} \geq B \\ 0, & \mathrm{otherwise} \end{cases}.$$
+    $$P(\boldsymbol{S}) = \begin{cases} \max\{S_{-1})-K,0\}, & \text{any }
+    \boldsymbol{S} \geq B \\ 0, & \mathrm{otherwise} \end{cases}, \qquad
+    P(\boldsymbol{S}) = \begin{cases} \max\{K-S_{-1}),0\}, & \text{any }
+    \boldsymbol{S} \geq B \\ 0, & \mathrm{otherwise} \end{cases}.$$
 
     *Barrier Up-Out Call and Put Options* have respective payoffs
 
-    $$P(\boldsymbol{S}) = \begin{cases} \max\{S_{-1})-K,0\}, & \text{all } \boldsymbol{S} < B \\ 0, & \mathrm{otherwise} \end{cases}, \qquad P(\boldsymbol{S}) = \begin{cases} \max\{K-S_{-1}),0\}, & \text{all } \boldsymbol{S} < B \\ 0, & \mathrm{otherwise} \end{cases}.$$
+    $$P(\boldsymbol{S}) = \begin{cases} \max\{S_{-1})-K,0\}, & \text{all }
+    \boldsymbol{S} < B \\ 0, & \mathrm{otherwise} \end{cases}, \qquad
+    P(\boldsymbol{S}) = \begin{cases} \max\{K-S_{-1}),0\}, & \text{all }
+    \boldsymbol{S} < B \\ 0, & \mathrm{otherwise} \end{cases}.$$
 
     *Barrier Down-In Call and Put Options* have respective payoffs
 
-    $$P(\boldsymbol{S}) = \begin{cases} \max\{S_{-1})-K,0\}, & \text{any } \boldsymbol{S} \leq B \\ 0, & \mathrm{otherwise} \end{cases}, \qquad P(\boldsymbol{S}) = \begin{cases} \max\{K-S_{-1}),0\}, & \text{any } \boldsymbol{S} \leq B \\ 0, & \mathrm{otherwise} \end{cases}.$$
+    $$P(\boldsymbol{S}) = \begin{cases} \max\{S_{-1})-K,0\}, & \text{any }
+    \boldsymbol{S} \leq B \\ 0, & \mathrm{otherwise} \end{cases}, \qquad
+    P(\boldsymbol{S}) = \begin{cases} \max\{K-S_{-1}),0\}, & \text{any }
+    \boldsymbol{S} \leq B \\ 0, & \mathrm{otherwise} \end{cases}.$$
 
     *Barrier Down-Out Call and Put Options* have respective payoffs
 
-    $$P(\boldsymbol{S}) = \begin{cases} \max\{S_{-1})-K,0\}, & \text{all } \boldsymbol{S} > B \\ 0, & \mathrm{otherwise} \end{cases}, \qquad P(\boldsymbol{S}) = \begin{cases} \max\{K-S_{-1}),0\}, & \text{all } \boldsymbol{S} > B \\ 0, & \mathrm{otherwise} \end{cases}.$$
+    $$P(\boldsymbol{S}) = \begin{cases} \max\{S_{-1})-K,0\}, & \text{all }
+    \boldsymbol{S} > B \\ 0, & \mathrm{otherwise} \end{cases}, \qquad
+    P(\boldsymbol{S}) = \begin{cases} \max\{K-S_{-1}),0\}, & \text{all }
+    \boldsymbol{S} > B \\ 0, & \mathrm{otherwise} \end{cases}.$$
 
     # Lookback Options
 
     *Lookback Call and Put Options* have respective payoffs
 
-    $$P(\boldsymbol{S}) = S_{-1}-\min(S_0, \ldots S_{-1}), \qquad P(\boldsymbol{S}) = \max(S_0, \ldots S_{-1})-S_{-1}.$$
+    $$P(\boldsymbol{S}) = S_{-1}-\min(S_0, \ldots S_{-1}), \qquad
+    P(\boldsymbol{S}) = \max(S_0, \ldots S_{-1})-S_{-1}.$$
 
     # Digital Option
 
@@ -86,21 +115,30 @@ class FinancialOption(AbstractIntegrand):
 
     *Digital Call and Put Options* have respective payoffs
 
-    $$P(\boldsymbol{S}) = \begin{cases} \rho, & S_{-1} \geq K \\ 0, & \mathrm{otherwise} \end{cases}, \qquad P(\boldsymbol{S}) =  \begin{cases} \rho, & S_{-1} \leq K \\ 0, & \mathrm{otherwise} \end{cases}.$$
+    $$P(\boldsymbol{S}) = \begin{cases} \rho, & S_{-1} \geq K \\ 0, &
+    \mathrm{otherwise} \end{cases}, \qquad P(\boldsymbol{S}) =  \begin{cases}
+    \rho, & S_{-1} \leq K \\ 0, & \mathrm{otherwise} \end{cases}.$$
 
     # Multilevel Options
 
     - Initial level $\ell_0 \geq 0$.
     - Level $\ell \geq \ell_0$.
 
-    Let $\boldsymbol{S}_\mathrm{fine}=\boldsymbol{S}$ be the *fine* full path. For $\ell>\ell_0$ write the *coarse* path as $\boldsymbol{S}_\mathrm{coarse} = (S_j)_{j \text{ even}}$ which only considers every other element of $\boldsymbol{S}$.
-    In this multilevel setting the payoff is
+    Let $\boldsymbol{S}_\mathrm{fine}=\boldsymbol{S}$ be the *fine* full path.
+    For $\ell>\ell_0$ write the *coarse* path as
+    $\boldsymbol{S}_\mathrm{coarse} = (S_j)_{j \text{ even}}$ which only
+    considers every other element of $\boldsymbol{S}$. In this multilevel
+    setting the payoff is
 
-    $$P_\ell(\boldsymbol{S}) = \begin{cases} P(\boldsymbol{S}_\mathrm{fine}), & \ell = \ell_0, \\ P(\boldsymbol{S}_\mathrm{fine})-P(\boldsymbol{S}_\mathrm{coarse}), & \ell > \ell_0 \end{cases}.$$
+    $$P_\ell(\boldsymbol{S}) = \begin{cases} P(\boldsymbol{S}_\mathrm{fine}), &
+    \ell = \ell_0, \\
+    P(\boldsymbol{S}_\mathrm{fine})-P(\boldsymbol{S}_\mathrm{coarse}), & \ell >
+    \ell_0 \end{cases}.$$
 
     Cancellations from the telescoping sum allow us to write
 
-    $$\lim_{\ell \to \infty} P_\ell = P_{\ell_0} + \sum_{\ell=\ell_0+1}^\infty P_\ell.$$
+    $$\lim_{\ell \to \infty} P_\ell = P_{\ell_0} + \sum_{\ell=\ell_0+1}^\infty
+    P_\ell.$$
 
     Examples:
         >>> integrand = FinancialOption(DigitalNetB2(dimension=3,seed=7),option="EUROPEAN")
@@ -205,43 +243,48 @@ class FinancialOption(AbstractIntegrand):
 
     def __init__(
         self,
-        sampler,
-        option="ASIAN",
-        call_put="CALL",
-        volatility=0.5,
-        start_price=30,
-        strike_price=35,
-        interest_rate=0,
-        t_final=1,
-        decomp_type="PCA",
-        level=None,
-        d_coarsest=2,
-        asian_mean="ARITHMETIC",
-        asian_mean_quadrature_rule="TRAPEZOIDAL",
-        barrier_in_out="IN",
-        barrier_price=38,
-        digital_payout=10,
-    ):
-        r"""
+        sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure],
+        option: str = "ASIAN",
+        call_put: str = "CALL",
+        volatility: float = 0.5,
+        start_price: float = 30,
+        strike_price: float = 35,
+        interest_rate: float = 0,
+        t_final: float = 1,
+        decomp_type: str = "PCA",
+        level: Union[None, int] = None,
+        d_coarsest: Union[None, int] = 2,
+        asian_mean: str = "ARITHMETIC",
+        asian_mean_quadrature_rule: str = "TRAPEZOIDAL",
+        barrier_in_out: str = "IN",
+        barrier_price: float = 38,
+        digital_payout: float = 10,
+    ) -> None:
+        r"""Initialize a FinancialOption integrand.
+
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.
-            option (str): Option type in `['ASIAN', 'EUROPEAN', 'BARRIER', 'LOOKBACK', 'DIGITAL']`
+            option (str): Option type in `['ASIAN', 'EUROPEAN', 'BARRIER',
+                'LOOKBACK', 'DIGITAL']`
             call_put (str): Either `'CALL'` or `'PUT'`.
             volatility (float): $\sigma$.
             start_price (float): $S_0$.
             strike_price (float): $K$.
             interest_rate (float): $r$.
             t_final (float): $\tau_d$.
-            decomp_type (str): Method for decomposition for covariance matrix. Options include
+            decomp_type (str): Method for decomposition for covariance matrix.
+                Options include
 
                 - `'PCA'` for principal component analysis,
                 - `'Cholesky'` for cholesky decomposition, or
                 - `'BrownianBridge'` or `'Bridge'` for brownian bridge construction.
             level (Union[None, int]): Level for multilevel problems
-            d_coarsest (Union[None, int]): Dimension of the problem on the coarsest level.
+            d_coarsest (Union[None, int]): Dimension of the problem on the
+                coarsest level.
             asian_mean (str): Either `'ARITHMETIC'` or `'GEOMETRIC'`.
             asian_mean_quadrature_rule (str): Either 'TRAPEZOIDAL' or 'RIGHT'.
             barrier_in_out (str): Either `'IN'` or `'OUT'`.
@@ -278,34 +321,40 @@ class FinancialOption(AbstractIntegrand):
         if self.level is not None:
             self.multilevel = True
             self.parameters += ["level", "d_coarsest"]
-            assert np.isscalar(self.level) and self.level % 1 == 0
-            assert (
+            if not (np.isscalar(self.level) and self.level % 1 == 0):
+                raise AssertionError
+            if not (
                 np.isscalar(self.d_coarsest)
                 and self.d_coarsest % 1 == 0
                 and d_coarsest > 0
                 and np.log2(d_coarsest) % 1 == 0
-            ), "d_coarsest must be an integer power of 2"
+            ):
+                raise AssertionError("d_coarsest must be an integer power of 2")
             self.level = int(self.level)
             self.d_coarsest = int(self.d_coarsest)
-            assert (
+            if not (
                 self.sampler.d == self.d_coarsest * 2**self.level
-            ), "the dimension of the sampler must equal d_coarsest*2^level = %d" % (
-                d_coarsest * 2**self.level
-            )
+            ):
+                raise AssertionError("the dimension of the sampler must equal d_coarsest*2^level = %d" % (
+                    d_coarsest * 2**self.level
+                ))
             self.cost = self.d_coarsest * 2**self.level
             dim_shape = (2,)
         else:
             self.multilevel = False
             dim_shape = ()
         self.call_put = str(call_put).upper()
-        assert self.call_put in ["CALL", "PUT"], "invalid call_put = %s" % self.call_put
+        if not (self.call_put in ["CALL", "PUT"]):
+            raise AssertionError("invalid call_put = %s" % self.call_put)
         self.option = str(option).upper()
         self.asian_mean = str(asian_mean).upper()
         self.asian_mean_quadrature_rule = str(asian_mean_quadrature_rule).upper()
         self.barrier_in_out = str(barrier_in_out).upper()
-        assert np.isscalar(barrier_price)
+        if not (np.isscalar(barrier_price)):
+            raise AssertionError
         self.barrier_price = float(barrier_price)
-        assert np.isscalar(digital_payout) and digital_payout > 0
+        if not (np.isscalar(digital_payout) and digital_payout > 0):
+            raise AssertionError
         self.digital_payout = float(digital_payout)
         if self.option == "EUROPEAN":
             self.payoff = (
@@ -315,13 +364,15 @@ class FinancialOption(AbstractIntegrand):
             )
         elif self.option == "ASIAN":
             self.parameters += ["asian_mean"]
-            assert self.asian_mean in ["ARITHMETIC", "GEOMETRIC"], (
-                "invalid asian_mean = %s" % self.asian_mean
-            )
-            assert self.asian_mean_quadrature_rule in ["TRAPEZOIDAL", "RIGHT"], (
-                "invalid asian_mean_quadrature_rule = %s"
-                % self.asian_mean_quadrature_rule
-            )
+            if not (self.asian_mean in ["ARITHMETIC", "GEOMETRIC"]):
+                raise AssertionError(
+                    "invalid asian_mean = %s" % self.asian_mean
+                )
+            if not (self.asian_mean_quadrature_rule in ["TRAPEZOIDAL", "RIGHT"]):
+                raise AssertionError(
+                    "invalid asian_mean_quadrature_rule = %s"
+                    % self.asian_mean_quadrature_rule
+                )
             if self.asian_mean == "ARITHMETIC":
                 if self.asian_mean_quadrature_rule == "TRAPEZOIDAL":
                     self.payoff = (
@@ -401,7 +452,17 @@ class FinancialOption(AbstractIntegrand):
             dimension_indv=dim_shape, dimension_comb=dim_shape, parallel=False
         )
 
-    def g(self, t, **kwargs):
+    def g(self, t: np.ndarray, **kwargs: dict) -> np.ndarray:
+        """Evaluate the discounted option payoff along each price path.
+
+        Args:
+            t (np.ndarray): Geometric Brownian motion paths from the true measure.
+            **kwargs (dict): Unused; accepted for API consistency.
+
+        Returns:
+            np.ndarray: Discounted payoffs; for a multilevel problem, the coarse
+                and fine payoffs stacked together.
+        """
         gbm = t  # GeometricBrownianMotion already provides GBM paths directly
         discounted_payoffs = self.payoff(gbm) * self.discount_factor
         if self.multilevel:
@@ -416,13 +477,37 @@ class FinancialOption(AbstractIntegrand):
             )
         return discounted_payoffs
 
-    def payoff_european_call(self, gbm):
+    def payoff_european_call(self, gbm: np.ndarray) -> np.ndarray:
+        """European call payoff at maturity.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         return np.maximum(gbm[..., -1] - self.strike_price, 0)
 
-    def payoff_european_put(self, gbm):
+    def payoff_european_put(self, gbm: np.ndarray) -> np.ndarray:
+        """European put payoff at maturity.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         return np.maximum(self.strike_price - gbm[..., -1], 0)
 
-    def payoff_asian_arithmetic_trap_call(self, gbm):
+    def payoff_asian_arithmetic_trap_call(self, gbm: np.ndarray) -> np.ndarray:
+        """Asian arithmetic-mean call payoff, trapezoidal averaging.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         return np.maximum(
             (self.start_price / 2 + gbm[..., :-1].sum(-1) + gbm[..., -1] / 2)
             / gbm.shape[-1]
@@ -430,7 +515,15 @@ class FinancialOption(AbstractIntegrand):
             0,
         )
 
-    def payoff_asian_arithmetic_trap_put(self, gbm):
+    def payoff_asian_arithmetic_trap_put(self, gbm: np.ndarray) -> np.ndarray:
+        """Asian arithmetic-mean put payoff, trapezoidal averaging.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         return np.maximum(
             self.strike_price
             - (self.start_price / 2 + gbm[..., :-1].sum(-1) + gbm[..., -1] / 2)
@@ -438,7 +531,15 @@ class FinancialOption(AbstractIntegrand):
             0,
         )
 
-    def payoff_asian_geometric_trap_call(self, gbm):
+    def payoff_asian_geometric_trap_call(self, gbm: np.ndarray) -> np.ndarray:
+        """Asian geometric-mean call payoff, trapezoidal averaging.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         return np.maximum(
             np.exp(
                 (
@@ -452,7 +553,15 @@ class FinancialOption(AbstractIntegrand):
             0,
         )
 
-    def payoff_asian_geometric_trap_put(self, gbm):
+    def payoff_asian_geometric_trap_put(self, gbm: np.ndarray) -> np.ndarray:
+        """Asian geometric-mean put payoff, trapezoidal averaging.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         return np.maximum(
             self.strike_price
             - np.exp(
@@ -466,101 +575,229 @@ class FinancialOption(AbstractIntegrand):
             0,
         )
 
-    def payoff_asian_arithmetic_right_call(self, gbm):
+    def payoff_asian_arithmetic_right_call(self, gbm: np.ndarray) -> np.ndarray:
+        """Asian arithmetic-mean call payoff, right-endpoint averaging.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         return np.maximum(gbm.sum(-1) / gbm.shape[-1] - self.strike_price, 0)
 
-    def payoff_asian_arithmetic_right_put(self, gbm):
+    def payoff_asian_arithmetic_right_put(self, gbm: np.ndarray) -> np.ndarray:
+        """Asian arithmetic-mean put payoff, right-endpoint averaging.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         return np.maximum((self.strike_price - gbm.sum(-1)) / gbm.shape[-1], 0)
 
-    def payoff_asian_geometric_right_call(self, gbm):
+    def payoff_asian_geometric_right_call(self, gbm: np.ndarray) -> np.ndarray:
+        """Asian geometric-mean call payoff, right-endpoint averaging.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         return np.maximum(
             np.exp(np.log(gbm).sum(-1) / gbm.shape[-1]) - self.strike_price, 0
         )
 
-    def payoff_asian_geometric_right_put(self, gbm):
+    def payoff_asian_geometric_right_put(self, gbm: np.ndarray) -> np.ndarray:
+        """Asian geometric-mean put payoff, right-endpoint averaging.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         return np.maximum(
             self.strike_price - np.exp(np.log(gbm).sum(-1) / gbm.shape[-1]), 0
         )
 
-    def payoff_barrier_in_up_call(self, gbm):
+    def payoff_barrier_in_up_call(self, gbm: np.ndarray) -> np.ndarray:
+        """Up-and-in barrier call payoff; pays only if the barrier is reached from below.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         v = gbm[..., -1].copy()
         flag = (gbm >= self.barrier_price).any(-1)
         v[~flag] = 0
         v[flag] = np.maximum(v[flag] - self.strike_price, 0)
         return v
 
-    def payoff_barrier_out_up_call(self, gbm):
+    def payoff_barrier_out_up_call(self, gbm: np.ndarray) -> np.ndarray:
+        """Up-and-out barrier call payoff; pays only if the barrier is never reached.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         v = gbm[..., -1].copy()
         flag = (gbm < self.barrier_price).all(-1)
         v[~flag] = 0
         v[flag] = np.maximum(v[flag] - self.strike_price, 0)
         return v
 
-    def payoff_barrier_in_down_call(self, gbm):
+    def payoff_barrier_in_down_call(self, gbm: np.ndarray) -> np.ndarray:
+        """Down-and-in barrier call payoff; pays only if the barrier is reached from above.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         v = gbm[..., -1].copy()
         flag = (gbm <= self.barrier_price).any(-1)
         v[~flag] = 0
         v[flag] = np.maximum(v[flag] - self.strike_price, 0)
         return v
 
-    def payoff_barrier_out_down_call(self, gbm):
+    def payoff_barrier_out_down_call(self, gbm: np.ndarray) -> np.ndarray:
+        """Down-and-out barrier call payoff; pays only if the barrier is never reached.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         v = gbm[..., -1].copy()
         flag = (gbm > self.barrier_price).all(-1)
         v[~flag] = 0
         v[flag] = np.maximum(v[flag] - self.strike_price, 0)
         return v
 
-    def payoff_barrier_in_up_put(self, gbm):
+    def payoff_barrier_in_up_put(self, gbm: np.ndarray) -> np.ndarray:
+        """Up-and-in barrier put payoff; pays only if the barrier is reached from below.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         v = gbm[..., -1].copy()
         flag = (gbm >= self.barrier_price).any(-1)
         v[~flag] = 0
         v[flag] = np.maximum(self.strike_price - v[flag], 0)
         return v
 
-    def payoff_barrier_out_up_put(self, gbm):
+    def payoff_barrier_out_up_put(self, gbm: np.ndarray) -> np.ndarray:
+        """Up-and-out barrier put payoff; pays only if the barrier is never reached.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         v = gbm[..., -1].copy()
         flag = (gbm < self.barrier_price).all(-1)
         v[~flag] = 0
         v[flag] = np.maximum(self.strike_price - v[flag], 0)
         return v
 
-    def payoff_barrier_in_down_put(self, gbm):
+    def payoff_barrier_in_down_put(self, gbm: np.ndarray) -> np.ndarray:
+        """Down-and-in barrier put payoff; pays only if the barrier is reached from above.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         v = gbm[..., -1].copy()
         flag = (gbm <= self.barrier_price).any(-1)
         v[~flag] = 0
         v[flag] = np.maximum(self.strike_price - v[flag], 0)
         return v
 
-    def payoff_barrier_out_down_put(self, gbm):
+    def payoff_barrier_out_down_put(self, gbm: np.ndarray) -> np.ndarray:
+        """Down-and-out barrier put payoff; pays only if the barrier is never reached.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         v = gbm[..., -1].copy()
         flag = (gbm > self.barrier_price).all(-1)
         v[~flag] = 0
         v[flag] = np.maximum(self.strike_price - v[flag], 0)
         return v
 
-    def payoff_lookback_call(self, gbm):  # include start price in min
+    def payoff_lookback_call(self, gbm: np.ndarray) -> np.ndarray:  # include start price in min
+        """Lookback call payoff: final price less the running minimum, including the start price.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         min_path = np.minimum(gbm.min(-1), self.start_price)
         return gbm[..., -1] - min_path
 
-    def payoff_lookback_put(self, gbm):  # include start price in max
+    def payoff_lookback_put(self, gbm: np.ndarray) -> np.ndarray:  # include start price in max
+        """Lookback put payoff: the running maximum, including the start price, less the final price.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         max_path = np.maximum(gbm.max(-1), self.start_price)
         return max_path - gbm[..., -1]
 
-    def payoff_digital_call(self, gbm):
+    def payoff_digital_call(self, gbm: np.ndarray) -> np.ndarray:
+        """Digital call payoff: a fixed payout when the final price is at or above the strike.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         return np.where(gbm[..., -1] >= self.strike_price, self.digital_payout, 0)
 
-    def payoff_digital_put(self, gbm):
+    def payoff_digital_put(self, gbm: np.ndarray) -> np.ndarray:
+        """Digital put payoff: a fixed payout when the final price is at or below the strike.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion paths, monitoring times last.
+
+        Returns:
+            np.ndarray: Payoff of each path.
+        """
         return np.where(gbm[..., -1] <= self.strike_price, self.digital_payout, 0)
 
-    def get_exact_value(self):
-        """
-        Compute the exact analytic fair price of the option in finite dimensions. Supports
+    def get_exact_value(self) -> float:
+        """Compute the exact analytic fair price of the option in finite
+        dimensions. Supports
 
         - `option='EUROPEAN'`
         - `option='ASIAN'` with `asian_mean='GEOMETRIC'` and `asian_mean_quadrature_rule='RIGHT'`
 
         Returns:
-            mean (float): Exact value of the integral.
+            float: Exact value of the integral.
         """
         if self.option == "EUROPEAN":
             denom = self.volatility * np.sqrt(self.t_final)
@@ -590,10 +827,11 @@ class FinancialOption(AbstractIntegrand):
                     term2 / denom
                 )
         elif self.option == "ASIAN":
-            assert (
+            if not (
                 self.asian_mean == "GEOMETRIC"
                 and self.asian_mean_quadrature_rule == "RIGHT"
-            ), "exact value for Asian options only implemented for self.asian_mean=='GEOMETRIC' and self.asian_mean_quadrature_rule=='RIGHT'"
+            ):
+                raise AssertionError("exact value for Asian options only implemented for self.asian_mean=='GEOMETRIC' and self.asian_mean_quadrature_rule=='RIGHT'")
             Tbar = (1 + 1 / self.d) * self.t_final / 2
             sigmabar = self.volatility * np.sqrt((2 + 1 / self.d) / 3)
             rbar = self.interest_rate + (sigmabar**2 - self.volatility**2) / 2
@@ -611,19 +849,20 @@ class FinancialOption(AbstractIntegrand):
             )
         return fp
 
-    def get_exact_value_inf_dim(self):
-        r"""
-        Get the exact analytic fair price of the option in infinite dimensions. Supports
+    def get_exact_value_inf_dim(self) -> float:
+        r"""Get the exact analytic fair price of the option in infinite
+        dimensions. Supports
 
         - `option='ASIAN'` with `asian_mean='GEOMETRIC'`
 
         Returns:
-            mean (float): Exact value of the integral.
+            float: Exact value of the integral.
         """
         if self.option == "ASIAN":
-            assert (
+            if not (
                 self.asian_mean == "GEOMETRIC"
-            ), "get_exact_value_inf_dim for the Asian option only available for self.asian_mean=='GEOMETRIC'"
+            ):
+                raise AssertionError("get_exact_value_inf_dim for the Asian option only available for self.asian_mean=='GEOMETRIC'")
             sigma_g = self.volatility / np.sqrt(3)
             b = 1 / 2 * (self.interest_rate - 1 / 2 * sigma_g**2)
             d1 = (
@@ -643,7 +882,15 @@ class FinancialOption(AbstractIntegrand):
             )
         return val
 
-    def dimension_at_level(self, level):
+    def dimension_at_level(self, level: int) -> int:
+        """Return the number of monitoring times used at a multilevel level.
+
+        Args:
+            level (int): Multilevel level index.
+
+        Returns:
+            int: Monitoring times at that level, doubling with each level.
+        """
         return self.d_coarsest * 2**level
 
     def _spawn(self, level, sampler):
@@ -677,7 +924,12 @@ def _eurogbmprice(S0, r, T, sigma, K):
 
 
 class AsianOption(FinancialOption):
-    def __init__(self, *args, **kwargs):
+    """Asian option.
+
+    Deprecated, please use :class:`FinancialOption` with ``option="ASIAN"``.
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
         """Deprecated, please use FinancialOption"""
         if "option" in kwargs:
             raise ParameterError("please do not pass 'option' to AsianOption")
@@ -685,7 +937,12 @@ class AsianOption(FinancialOption):
 
 
 class EuropeanOption(FinancialOption):
-    def __init__(self, *args, **kwargs):
+    """European option.
+
+    Deprecated, please use :class:`FinancialOption` with ``option="EUROPEAN"``.
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
         """Deprecated, please use FinancialOption"""
         if "option" in kwargs:
             raise ParameterError("please do not pass 'option' to EuropeanOption")
@@ -693,7 +950,12 @@ class EuropeanOption(FinancialOption):
 
 
 class BarrierOption(FinancialOption):
-    def __init__(self, *args, **kwargs):
+    """Barrier option.
+
+    Deprecated, please use :class:`FinancialOption` with ``option="BARRIER"``.
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
         """Deprecated, please use FinancialOption"""
         if "option" in kwargs:
             raise ParameterError("please do not pass 'option' to BarrierOption")
@@ -701,7 +963,12 @@ class BarrierOption(FinancialOption):
 
 
 class LookbackOption(FinancialOption):
-    def __init__(self, *args, **kwargs):
+    """Lookback option.
+
+    Deprecated, please use :class:`FinancialOption` with ``option="LOOKBACK"``.
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
         """Deprecated, please use FinancialOption"""
         if "option" in kwargs:
             raise ParameterError("please do not pass 'option' to LookbackOption")
@@ -709,7 +976,12 @@ class LookbackOption(FinancialOption):
 
 
 class DigitalOption(FinancialOption):
-    def __init__(self, *args, **kwargs):
+    """Digital option.
+
+    Deprecated, please use :class:`FinancialOption` with ``option="DIGITAL"``.
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
         """Deprecated, please use FinancialOption"""
         if "option" in kwargs:
             raise ParameterError("please do not pass 'option' to DigitalOption")

@@ -1,3 +1,9 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Union, Tuple, Callable
+if TYPE_CHECKING:
+    import torch
+
 from .abstract_kernel import AbstractKernelScaleLengthscales
 from ..util.transforms import tf_exp_eps, tf_exp_eps_inv, tf_identity
 from ..util.shift_invar_ops import BERNOULLIPOLYSDICT, bernoulli_poly
@@ -13,6 +19,18 @@ import scipy.special
 
 
 class AbstractSIDSIKernel(AbstractKernelScaleLengthscales):
+    """Abstract base class for shift-invariant and digitally-shift-invariant
+    (Walsh) kernels, parameterized by smoothness `alpha`, `lengthscales`, and
+    `scale`.
+
+    Subclasses implement `get_per_dim_components`, which builds the family-
+    specific per-dimension building blocks (Bernoulli polynomials for
+    shift-invariant kernels, weighted Walsh functions for digitally-shift-
+    invariant kernels); this base class handles combining them (optionally
+    with derivative orders `beta0`/`beta1`) into the full kernel evaluation,
+    plus the `[0,1]^d` single/double integrals, which are constant (`scale`)
+    for this whole kernel family.
+    """
 
     AUTOGRADKERNEL = False
 
@@ -40,7 +58,7 @@ class AbstractSIDSIKernel(AbstractKernelScaleLengthscales):
         shape_weights,
         tfs_weights,
         requires_grad_weights,
-    ):
+    ) -> None:
         # alias lengthscales with weights
         if weights is not None:
             if lengthscales is not None:
@@ -113,17 +131,45 @@ class AbstractSIDSIKernel(AbstractKernelScaleLengthscales):
 
     @property
     def alpha(self):
+        """Union[np.ndarray, torch.Tensor]: The smoothness parameter
+        $\\boldsymbol{\\alpha}$, computed from the raw stored value via
+        `tfs_alpha`'s inverse transform.
+        """
         return self.tfs_alpha[1](self.raw_alpha)
 
     def parsed_single_integral_01d(self, x, batch_params):
+        """Single integral of this kernel family over `[0,1]^d`, which is
+        the constant `scale` (a reproducing-kernel property of shift-
+        invariant/digitally-shift-invariant kernels).
+        """
         return batch_params["scale"][..., 0] + 0 * x[..., 0]
 
     def double_integral_01d(self):
+        """Double integral of this kernel family over `[0,1]^d x [0,1]^d`,
+        which is the constant `scale` (same reproducing-kernel property as
+        `parsed_single_integral_01d`).
+        """
         return self.scale[..., 0]
 
     def combine_per_dim_components_raw_m1(
-        self, kparts, beta0, beta1, c, batch_params, stable
-    ):
+        self, kparts: Union[np.ndarray, torch.Tensor], beta0: Union[np.ndarray, torch.Tensor], beta1: Union[np.ndarray, torch.Tensor], c: Union[np.ndarray, torch.Tensor], batch_params: dict, stable: bool
+    ) -> tuple[Union[np.ndarray, torch.Tensor], Union[np.ndarray, torch.Tensor]]:
+        """Combine per-dimension kernel components into `(scale_term, remainder)`.
+
+        Args:
+            kparts (Union[np.ndarray, torch.Tensor]): Per-dimension components from `get_per_dim_components`.
+            beta0 (Union[np.ndarray, torch.Tensor]): Derivative orders for the first input.
+            beta1 (Union[np.ndarray, torch.Tensor]): Derivative orders for the second input.
+            c (Union[np.ndarray, torch.Tensor]): Coefficients of the derivative terms.
+            batch_params (dict): Batch-broadcast `scale`/`lengthscales`, from `get_batch_params`.
+            stable (bool): If `True`, use a numerically stabler (but more
+                expensive) product formula.
+
+        Returns:
+            tuple[Union[np.ndarray, torch.Tensor], Union[np.ndarray, torch.Tensor]]:
+                `(sc, v)` such that the full kernel value is `sc + v`;
+                `combine_per_dim_components` adds these back together.
+        """
         scale = batch_params["scale"][..., 0]
         lengthscales = batch_params["lengthscales"]
         ind = 1.0 * ((beta0 + beta1) == 0)
@@ -143,9 +189,27 @@ class AbstractSIDSIKernel(AbstractKernelScaleLengthscales):
         return sc, v
 
     def get_per_dim_components(self, x0, x1, beta0, beta1):
+        """*Abstract method* building this kernel family's per-dimension
+        components (e.g. Bernoulli polynomials or weighted Walsh functions,
+        depending on the subclass), with derivative orders `beta0`/`beta1`
+        applied. Called by `parsed___call__`.
+        """
         raise MethodImplementationError(self, "get_per_dim_components")
 
-    def combine_per_dim_components(self, kparts, beta0, beta1, c, batch_params, stable):
+    def combine_per_dim_components(self, kparts: Union[np.ndarray, torch.Tensor], beta0: Union[np.ndarray, torch.Tensor], beta1: Union[np.ndarray, torch.Tensor], c: Union[np.ndarray, torch.Tensor], batch_params: dict, stable: bool) -> Union[np.ndarray, torch.Tensor]:
+        """Combine per-dimension kernel components into the final kernel value.
+
+        Args:
+            kparts (Union[np.ndarray, torch.Tensor]): Per-dimension components from `get_per_dim_components`.
+            beta0 (Union[np.ndarray, torch.Tensor]): Derivative orders for the first input.
+            beta1 (Union[np.ndarray, torch.Tensor]): Derivative orders for the second input.
+            c (Union[np.ndarray, torch.Tensor]): Coefficients of the derivative terms.
+            batch_params (dict): Batch-broadcast `scale`/`lengthscales`, from `get_batch_params`.
+            stable (bool): If `True`, use a numerically stabler product formula.
+
+        Returns:
+            Union[np.ndarray, torch.Tensor]: The kernel evaluation.
+        """
         sc, v = self.combine_per_dim_components_raw_m1(
             kparts, beta0, beta1, c, batch_params, stable
         )
@@ -153,6 +217,7 @@ class AbstractSIDSIKernel(AbstractKernelScaleLengthscales):
         return k
 
     def parsed___call__(self, x0, x1, beta0, beta1, c, batch_params, stable=False):
+        """Evaluate the kernel by building then combining per-dimension components."""
         kparts = self.get_per_dim_components(x0, x1, beta0, beta1)
         k = self.combine_per_dim_components(
             kparts, beta0, beta1, c, batch_params, stable
@@ -161,17 +226,16 @@ class AbstractSIDSIKernel(AbstractKernelScaleLengthscales):
 
 
 class KernelShiftInvar(AbstractSIDSIKernel):
-    r""" 
-    Shift invariant kernel with 
-    smoothness $\boldsymbol{\alpha}$, product weights (lengthscales) $\boldsymbol{\gamma}$, and scale $S$:
-    
-    $$\begin{aligned}
-        K(\boldsymbol{x},\boldsymbol{z}) &= S \prod_{j=1}^d \left(1+ \gamma_j \tilde{K}_{\alpha_j}((x_j - z_j) \mod 1))\right), \\ 
-        \tilde{K}_\alpha(x) &= (-1)^{\alpha+1}\frac{(2 \pi)^{2 \alpha}}{(2\alpha)!} B_{2\alpha}(x)
-    \end{aligned}$$
+    r"""Shift invariant kernel with smoothness $\boldsymbol{\alpha}$, product
+    weights (lengthscales) $\boldsymbol{\gamma}$, and scale $S$:
+
+    $$\begin{aligned} K(\boldsymbol{x},\boldsymbol{z}) &= S \prod_{j=1}^d
+    \left(1+ \gamma_j \tilde{K}_{\alpha_j}((x_j - z_j) \mod 1))\right), \\
+    \tilde{K}_\alpha(x) &= (-1)^{\alpha+1}\frac{(2 \pi)^{2 \alpha}}{(2\alpha)!}
+    B_{2\alpha}(x) \end{aligned}$$
 
     where $B_n$ is the $n^\text{th}$ Bernoulli polynomial.
-    
+
     Examples:
         >>> from qmcpy import Lattice, fftbr, ifftbr
         >>> n = 8
@@ -183,7 +247,7 @@ class KernelShiftInvar(AbstractSIDSIKernel):
         >>> x.dtype
         dtype('float64')
         >>> kernel = KernelShiftInvar(
-        ...     d = d, 
+        ...     d = d,
         ...     alpha = list(range(1,d+1)),
         ...     scale = 10,
         ...     lengthscales = [1/j**2 for j in range(1,d+1)])
@@ -213,10 +277,10 @@ class KernelShiftInvar(AbstractSIDSIKernel):
         True
         >>> np.allclose(ifftbr(fftbr(y)/lam),np.linalg.solve(kmat,y))
         True
-        >>> import torch 
+        >>> import torch
         >>> xtorch = torch.from_numpy(x)
         >>> kernel_torch = KernelShiftInvar(
-        ...     d = d, 
+        ...     d = d,
         ...     alpha = list(range(1,d+1)),
         ...     scale = 10,
         ...     lengthscales = [1/j**2 for j in range(1,d+1)],
@@ -229,16 +293,16 @@ class KernelShiftInvar(AbstractSIDSIKernel):
         >>> kernel_torch.single_integral_01d(xtorch)
         tensor([10., 10., 10., 10., 10., 10., 10., 10.], dtype=torch.float64,
                grad_fn=<AddBackward0>)
-        
-        Batch Params 
-        
+
+        Batch Params
+
         >>> rng = np.random.Generator(np.random.PCG64(7))
         >>> kernel = KernelShiftInvar(
-        ...     d = 2, 
+        ...     d = 2,
         ...     shape_scale = [4,3,1],
         ...     shape_lengthscales = [3,2])
         >>> x = rng.uniform(low=0,high=1,size=(6,5,2))
-        >>> kernel(x,x).shape 
+        >>> kernel(x,x).shape
         (4, 3, 6, 5)
         >>> kernel(x[:,:,None,:],x[:,None,:,:]).shape
         (4, 3, 6, 5, 5)
@@ -249,7 +313,7 @@ class KernelShiftInvar(AbstractSIDSIKernel):
         >>> np.abs(kfast-kstable).max()
         np.float64(4.440892098500626e-16)
 
-        Derivatives 
+        Derivatives
 
         >>> rng = np.random.Generator(np.random.PCG64(7))
         >>> scale = rng.uniform(low=0,high=1,size=(1,))
@@ -309,54 +373,72 @@ class KernelShiftInvar(AbstractSIDSIKernel):
         >>> np.allclose(ynp,y.numpy())
         True
 
-    **References:** 
-    
-    1.  Kaarnioja, Vesa, Frances Y. Kuo, and Ian H. Sloan.  
-        "Lattice-based kernel approximation and serendipitous weights for parametric PDEs in very high dimensions."  
+    **References:**
+
+    1.  Kaarnioja, Vesa, Frances Y. Kuo, and Ian H. Sloan.
+        "Lattice-based kernel approximation and serendipitous weights for parametric PDEs in very high dimensions."
         International Conference on Monte Carlo and Quasi-Monte Carlo Methods in Scientific Computing. Cham: Springer International Publishing, 2022.
     """
 
     def __init__(
         self,
-        d,
-        scale=1.0,
-        lengthscales=None,
-        alpha=2,
-        shape_scale=None,
-        shape_lengthscales=None,
-        tfs_scale=None,
-        tfs_lengthscales=None,
-        torchify=False,
-        requires_grad_scale=None,
-        requires_grad_lengthscales=None,
-        device="cpu",
-        compile_call=False,
-        compile_call_kwargs=None,
-        weights=None,
-        shape_weights=None,
-        tfs_weights=None,
-        requires_grad_weights=None,
-    ):
-        r"""
+        d: int,
+        scale: Union[float, np.ndarray, torch.Tensor] = 1.0,
+        lengthscales: Union[None, np.ndarray, torch.Tensor] = None,
+        alpha: Union[float, np.ndarray, torch.Tensor] = 2,
+        shape_scale: Union[None, list] = None,
+        shape_lengthscales: Union[None, list] = None,
+        tfs_scale: Union[None, Tuple[Callable, Callable]] = None,
+        tfs_lengthscales: Union[None, Tuple[Callable, Callable]] = None,
+        torchify: bool = False,
+        requires_grad_scale: Union[None, bool] = None,
+        requires_grad_lengthscales: Union[None, bool] = None,
+        device: Union[str, torch.device] = "cpu",
+        compile_call: bool = False,
+        compile_call_kwargs: Union[None, dict] = None,
+        weights: Union[None, np.ndarray, torch.Tensor] = None,
+        shape_weights: Union[None, list] = None,
+        tfs_weights: Union[None, Tuple[Callable, Callable]] = None,
+        requires_grad_weights: Union[None, bool] = None,
+    ) -> None:
+        r"""Initialize a KernelShiftInvar kernel.
+
         Args:
             d (int): Dimension.
-            scale (Union[np.ndarray, torch.Tensor]): Scaling factor $S$.
-            lengthscales (Union[np.ndarray, torch.Tensor]): Product weights $(\gamma_1,\dots,\gamma_d)$.
-            alpha (Union[np.ndarray, torch.Tensor]): Smoothness parameters $(\alpha_1,\dots,\alpha_d)$ where $\alpha_j \geq 1$ for $j=1,\dots,d$.
-            shape_scale (list): Shape of `scale` when `np.isscalar(scale)`.
-            shape_lengthscales (list): Shape of `lengthscales` when `np.isscalar(lengthscales)`
-            tfs_scale (Tuple[callable,callable]): The first argument transforms to the raw value to be optimized; the second applies the inverse transform.
-            tfs_lengthscales (Tuple[callable,callable]): The first argument transforms to the raw value to be optimized; the second applies the inverse transform.
-            torchify (bool): If `True`, use the `torch` backend. Set to `True` if computing gradients with respect to inputs and/or hyperparameters.
-            requires_grad_scale (bool): If `True` and `torchify`, set `requires_grad=True` for `scale`.
-            requires_grad_lengthscales (bool): If `True` and `torchify`, set `requires_grad=True` for `lengthscales`.
-            device (torch.device): If `torchify`, put things onto this device.
-            compile_call (bool): If `True`, `torch.compile` the `parsed___call__` method.
-            compile_call_kwargs (dict): When `compile_call` is `True`, pass these keyword arguments to `torch.compile`.
-            weights (Union[np.ndarray, torch.Tensor]): Alias for `lengthscales`.
-            shape_weights (list): Alias for `shape_lengthscales`.
-            tfs_weights (Tuple[callable,callable]): Alias for `tfs_lengthscales`.
-            requires_grad_weights (bool): Alias for `requires_grad_lengthscales`.
+            scale (Union[float, np.ndarray, torch.Tensor]): Scaling factor $S$.
+            lengthscales (Union[None, np.ndarray, torch.Tensor]): Product weights
+                $(\gamma_1,\dots,\gamma_d)$.
+            alpha (Union[float, np.ndarray, torch.Tensor]): Smoothness parameters
+                $(\alpha_1,\dots,\alpha_d)$ where $\alpha_j \geq 1$ for
+                $j=1,\dots,d$.
+            shape_scale (Union[None, list]): Shape of `scale` when `np.isscalar(scale)`.
+            shape_lengthscales (Union[None, list]): Shape of `lengthscales` when
+                `np.isscalar(lengthscales)`
+            tfs_scale (Union[None, Tuple[Callable, Callable]]): The first argument transforms
+                to the raw value to be optimized; the second applies the
+                inverse transform.
+            tfs_lengthscales (Union[None, Tuple[Callable, Callable]]): The first argument
+                transforms to the raw value to be optimized; the second applies
+                the inverse transform.
+            torchify (bool): If `True`, use the `torch` backend. Set to `True`
+                if computing gradients with respect to inputs and/or
+                hyperparameters.
+            requires_grad_scale (Union[None, bool]): If `True` and `torchify`, set
+                `requires_grad=True` for `scale`.
+            requires_grad_lengthscales (Union[None, bool]): If `True` and `torchify`, set
+                `requires_grad=True` for `lengthscales`.
+            device (Union[str, torch.device]): If `torchify`, put things onto this device.
+            compile_call (bool): If `True`, `torch.compile` the
+                `parsed___call__` method.
+            compile_call_kwargs (Union[None, dict]): When `compile_call` is `True`, pass
+                these keyword arguments to `torch.compile`.
+            weights (Union[None, np.ndarray, torch.Tensor]): Alias for
+                `lengthscales`.
+            shape_weights (Union[None, list]): Alias for `shape_lengthscales`.
+            tfs_weights (Union[None, Tuple[Callable, Callable]]): Alias for
+                `tfs_lengthscales`.
+            requires_grad_weights (Union[None, bool]): Alias for
+                `requires_grad_lengthscales`.
         """
         if shape_scale is None:
             shape_scale = [1]
@@ -386,8 +468,10 @@ class KernelShiftInvar(AbstractSIDSIKernel):
             tfs_weights=tfs_weights,
             requires_grad_weights=requires_grad_weights,
         )
-        assert self.alpha.shape == (self.d,)
-        assert all(int(alphaj) in BERNOULLIPOLYSDICT for alphaj in self.alpha)
+        if not (self.alpha.shape == (self.d,)):
+            raise AssertionError
+        if not (all(int(alphaj) in BERNOULLIPOLYSDICT for alphaj in self.alpha)):
+            raise AssertionError
         if self.torchify:
             import torch
 
@@ -396,12 +480,16 @@ class KernelShiftInvar(AbstractSIDSIKernel):
             self.lgamma = scipy.special.loggamma
 
     def get_per_dim_components(self, x0, x1, beta0, beta1):
+        """Per-dimension Bernoulli-polynomial components; see the class
+        docstring for the kernel formula.
+        """
         p = len(beta0)
         betasum = beta0 + beta1
         order = 2 * self.alpha - betasum
-        assert (
+        if not ((
             2 <= order
-        ).all(), "order must all be at least 2, but got order = %s" % str(order)
+        ).all()):
+            raise AssertionError("order must all be at least 2, but got order = %s" % str(order))
         coeffs = (-1) ** (self.alpha + beta1 + 1) * self.npt.exp(
             2 * self.alpha * np.log(2 * np.pi) - self.lgamma(order + 1)
         )
@@ -423,15 +511,16 @@ class KernelShiftInvar(AbstractSIDSIKernel):
 
 
 class KernelShiftInvarCombined(AbstractSIDSIKernel):
-    r"""
-    Shift invariant kernel with
-    combination weights $\boldsymbol{\alpha}_1,\dots,\boldsymbol{\alpha}_d \in \mathbb{R}_{>0}^4$, product weights (lengthscales) $\boldsymbol{\gamma}$, and scale $S$:
+    r"""Shift invariant kernel with combination weights
+    $\boldsymbol{\alpha}_1,\dots,\boldsymbol{\alpha}_d \in \mathbb{R}_{>0}^4$,
+    product weights (lengthscales) $\boldsymbol{\gamma}$, and scale $S$:
 
-    $$\begin{aligned}
-        K(\boldsymbol{x},\boldsymbol{z}) &= S \prod_{j=1}^d \left(1+ \gamma_j \left(\sum_{p=1}^4 \alpha_{jp} \tilde{K}_p(x_j \mod 1 z_j)\right)\right)
-    \end{aligned}$$
+    $$\begin{aligned} K(\boldsymbol{x},\boldsymbol{z}) &= S \prod_{j=1}^d
+    \left(1+ \gamma_j \left(\sum_{p=1}^4 \alpha_{jp} \tilde{K}_p(x_j \mod 1
+    z_j)\right)\right) \end{aligned}$$
 
-    where, $\tilde{K}_p$ are defined in `KernelShiftInvar` for $p \in \{1,2,3,4\}$
+    where, $\tilde{K}_p$ are defined in `KernelShiftInvar` for $p \in
+    \{1,2,3,4\}$
 
     Examples:
         >>> from qmcpy import Lattice, fftbr, ifftbr
@@ -517,51 +606,72 @@ class KernelShiftInvarCombined(AbstractSIDSIKernel):
 
     def __init__(
         self,
-        d,
-        scale=1.0,
-        lengthscales=None,
-        alpha=1,
-        shape_scale=None,
-        shape_lengthscales=None,
-        shape_alpha=None,
-        tfs_scale=None,
-        tfs_lengthscales=None,
-        tfs_alpha=None,
-        torchify=False,
-        requires_grad_scale=None,
-        requires_grad_lengthscales=None,
-        requires_grad_alpha=None,
-        device="cpu",
-        compile_call=False,
-        compile_call_kwargs=None,
-        weights=None,
-        shape_weights=None,
-        tfs_weights=None,
-        requires_grad_weights=None,
-    ):
-        r"""
+        d: int,
+        scale: Union[float, np.ndarray, torch.Tensor] = 1.0,
+        lengthscales: Union[None, np.ndarray, torch.Tensor] = None,
+        alpha: Union[float, np.ndarray, torch.Tensor] = 1,
+        shape_scale: Union[None, list] = None,
+        shape_lengthscales: Union[None, list] = None,
+        shape_alpha: Union[None, list] = None,
+        tfs_scale: Union[None, Tuple[Callable, Callable]] = None,
+        tfs_lengthscales: Union[None, Tuple[Callable, Callable]] = None,
+        tfs_alpha: Union[None, Tuple[Callable, Callable]] = None,
+        torchify: bool = False,
+        requires_grad_scale: Union[None, bool] = None,
+        requires_grad_lengthscales: Union[None, bool] = None,
+        requires_grad_alpha: Union[None, bool] = None,
+        device: Union[str, torch.device] = "cpu",
+        compile_call: bool = False,
+        compile_call_kwargs: Union[None, dict] = None,
+        weights: Union[None, np.ndarray, torch.Tensor] = None,
+        shape_weights: Union[None, list] = None,
+        tfs_weights: Union[None, Tuple[Callable, Callable]] = None,
+        requires_grad_weights: Union[None, bool] = None,
+    ) -> None:
+        r"""Initialize a KernelShiftInvarCombined kernel.
+
         Args:
             d (int): Dimension.
-            scale (Union[np.ndarray, torch.Tensor]): Scaling factor $S$.
-            lengthscales (Union[np.ndarray, torch.Tensor]): Product weights $(\gamma_1,\dots,\gamma_d)$.
-            alpha (Union[np.ndarray, torch.Tensor]): Weights $\boldsymbol{\alpha}_1,\dots,\boldsymbol{\alpha}_d \in \mathbb{R}_{>0}^4$.
-            shape_scale (list): Shape of `scale` when `np.isscalar(scale)`.
-            shape_lengthscales (list): Shape of `lengthscales` when `np.isscalar(lengthscales)`
-            shape_alpha (list): Shape of `alpha` when `np.isscalar(alpha)`
-            tfs_scale (Tuple[callable,callable]): The first argument transforms to the raw value to be optimized; the second applies the inverse transform.
-            tfs_lengthscales (Tuple[callable,callable]): The first argument transforms to the raw value to be optimized; the second applies the inverse transform.
-            tfs_alpha (Tuple[callable,callable]): The first argument transforms to the raw value to be optimized; the second applies the inverse transform.
-            torchify (bool): If `True`, use the `torch` backend. Set to `True` if computing gradients with respect to inputs and/or hyperparameters.
-            requires_grad_scale (bool): If `True` and `torchify`, set `requires_grad=True` for `scale`.
-            requires_grad_lengthscales (bool): If `True` and `torchify`, set `requires_grad=True` for `lengthscales`.
-            requires_grad_alpha (bool): If `True` and `torchify`, set `requires_grad=True` for `alpha`.
-            device (torch.device): If `torchify`, put things onto this device.
-            compile_call (bool): If `True`, `torch.compile` the `parsed___call__` method.
-            compile_call_kwargs (dict): When `compile_call` is `True`, pass these keyword arguments to `torch.compile`.
-            weights (Union[np.ndarray, torch.Tensor]): Alias for `lengthscales`.
-            shape_weights (list): Alias for `shape_lengthscales`.
-            tfs_weights (Tuple[callable,callable]): Alias for `tfs_lengthscales`.
-            requires_grad_weights (bool): Alias for `requires_grad_lengthscales`.
+            scale (Union[float, np.ndarray, torch.Tensor]): Scaling factor $S$.
+            lengthscales (Union[None, np.ndarray, torch.Tensor]): Product weights
+                $(\gamma_1,\dots,\gamma_d)$.
+            alpha (Union[float, np.ndarray, torch.Tensor]): Weights
+                $\boldsymbol{\alpha}_1,\dots,\boldsymbol{\alpha}_d \in
+                \mathbb{R}_{>0}^4$.
+            shape_scale (Union[None, list]): Shape of `scale` when `np.isscalar(scale)`.
+            shape_lengthscales (Union[None, list]): Shape of `lengthscales` when
+                `np.isscalar(lengthscales)`
+            shape_alpha (Union[None, list]): Shape of `alpha` when `np.isscalar(alpha)`
+            tfs_scale (Union[None, Tuple[Callable, Callable]]): The first argument transforms
+                to the raw value to be optimized; the second applies the
+                inverse transform.
+            tfs_lengthscales (Union[None, Tuple[Callable, Callable]]): The first argument
+                transforms to the raw value to be optimized; the second applies
+                the inverse transform.
+            tfs_alpha (Union[None, Tuple[Callable, Callable]]): The first argument transforms
+                to the raw value to be optimized; the second applies the
+                inverse transform.
+            torchify (bool): If `True`, use the `torch` backend. Set to `True`
+                if computing gradients with respect to inputs and/or
+                hyperparameters.
+            requires_grad_scale (Union[None, bool]): If `True` and `torchify`, set
+                `requires_grad=True` for `scale`.
+            requires_grad_lengthscales (Union[None, bool]): If `True` and `torchify`, set
+                `requires_grad=True` for `lengthscales`.
+            requires_grad_alpha (Union[None, bool]): If `True` and `torchify`, set
+                `requires_grad=True` for `alpha`.
+            device (Union[str, torch.device]): If `torchify`, put things onto this device.
+            compile_call (bool): If `True`, `torch.compile` the
+                `parsed___call__` method.
+            compile_call_kwargs (Union[None, dict]): When `compile_call` is `True`, pass
+                these keyword arguments to `torch.compile`.
+            weights (Union[None, np.ndarray, torch.Tensor]): Alias for
+                `lengthscales`.
+            shape_weights (Union[None, list]): Alias for `shape_lengthscales`.
+            tfs_weights (Union[None, Tuple[Callable, Callable]]): Alias for
+                `tfs_lengthscales`.
+            requires_grad_weights (Union[None, bool]): Alias for
+                `requires_grad_lengthscales`.
         """
         if shape_scale is None:
             shape_scale = [1]
@@ -591,7 +701,8 @@ class KernelShiftInvarCombined(AbstractSIDSIKernel):
             tfs_weights=tfs_weights,
             requires_grad_weights=requires_grad_weights,
         )
-        assert self.alpha.shape[-2:] == (4, d)
+        if not (self.alpha.shape[-2:] == (4, d)):
+            raise AssertionError
         if self.torchify:
             import torch
 
@@ -604,10 +715,15 @@ class KernelShiftInvarCombined(AbstractSIDSIKernel):
         )
 
     def get_per_dim_components(self, x0, x1, beta0, beta1):
+        """Per-dimension Bernoulli-polynomial components for orders 1-4,
+        later combined by `combine_per_dim_components_raw_m1` weighted by
+        `alpha`. Does not support derivatives (`beta0`/`beta1` must be zero).
+        """
         p = len(beta0)
-        assert (beta0 == 0).all() and (
+        if not ((beta0 == 0).all() and (
             beta1 == 0
-        ).all(), "KernelDSICombined does not support derivatives"
+        ).all()):
+            raise AssertionError("KernelDSICombined does not support derivatives")
         delta = (x0 - x1) % 1
         kparts = [None] * 4
         kparts[0] = bernoulli_poly(1, delta)
@@ -621,6 +737,9 @@ class KernelShiftInvarCombined(AbstractSIDSIKernel):
     def combine_per_dim_components_raw_m1(
         self, kparts, beta0, beta1, c, batch_params, stable
     ):
+        """Weight the order-1-4 components by `alpha` and sum, then delegate
+        to the base class's combination logic.
+        """
         kparts = (self.alpha[..., None, :, None, :] * kparts).sum(-3)
         return super().combine_per_dim_components_raw_m1(
             kparts, beta0, beta1, c, batch_params, stable
@@ -628,27 +747,36 @@ class KernelShiftInvarCombined(AbstractSIDSIKernel):
 
 
 class KernelDigShiftInvar(AbstractSIDSIKernel):
-    r""" 
-    Digitally shift invariant kernel in base $b=2$ with 
-    smoothness $\boldsymbol{\alpha}$, product weights $\boldsymbol{\gamma}$, and scale $S$: 
-    
-    $$\begin{aligned}
-        K(\boldsymbol{x},\boldsymbol{z}) &= S \prod_{j=1}^d \left(1+ \gamma_j \tilde{K}_{\alpha_j}(x_j \oplus z_j)\right), \qquad\mathrm{where} \\
-        \tilde{K}_1(x) &= 6 \left(\frac{1}{6} - 2^{\lfloor \log_2(x) \rfloor -1}\right), \\
-        \tilde{K}_2(x) &= \sum_{k \in \mathbb{N}} \frac{\mathrm{wal}_k(x)}{2^{\mu_2(k)}} = -\beta(x) x + \frac{5}{2}\left[1-t_1(x)\right]-1, \\
-        \tilde{K}_3(x) &= \sum_{k \in \mathbb{N}} \frac{\mathrm{wal}_k(x)}{2^{\mu_3(k)}} = \beta(x)x^2-5\left[1-t_1(x)\right]x+\frac{43}{18}\left[1-t_2(x)\right]-1, \\
-        \tilde{K}_4(x) &= \sum_{k \in \mathbb{N}} \frac{\mathrm{wal}_k(x)}{2^{\mu_4(k)}} = - \frac{2}{3}\beta(x)x^3+5\left[1-t_1(x)\right]x^2 - \frac{43}{9}\left[1-t_2(x)\right]x +\frac{701}{294}\left[1-t_3(x)\right]+\beta(x)\left[\frac{1}{48}\sum_{a=0}^\infty \frac{\mathrm{wal}_{2^a}(x)}{2^{3a}} - \frac{1}{42}\right] - 1.
+    r"""Digitally shift invariant kernel in base $b=2$ with smoothness
+    $\boldsymbol{\alpha}$, product weights $\boldsymbol{\gamma}$, and scale
+    $S$:
+
+    $$\begin{aligned} K(\boldsymbol{x},\boldsymbol{z}) &= S \prod_{j=1}^d
+    \left(1+ \gamma_j \tilde{K}_{\alpha_j}(x_j \oplus z_j)\right),
+    \qquad\mathrm{where} \\ \tilde{K}_1(x) &= 6 \left(\frac{1}{6} - 2^{\lfloor
+    \log_2(x) \rfloor -1}\right), \\ \tilde{K}_2(x) &= \sum_{k \in \mathbb{N}}
+    \frac{\mathrm{wal}_k(x)}{2^{\mu_2(k)}} = -\beta(x) x +
+    \frac{5}{2}\left[1-t_1(x)\right]-1, \\ \tilde{K}_3(x) &= \sum_{k \in
+    \mathbb{N}} \frac{\mathrm{wal}_k(x)}{2^{\mu_3(k)}} =
+    \beta(x)x^2-5\left[1-t_1(x)\right]x+\frac{43}{18}\left[1-t_2(x)\right]-1,
+    \\ \tilde{K}_4(x) &= \sum_{k \in \mathbb{N}}
+    \frac{\mathrm{wal}_k(x)}{2^{\mu_4(k)}} = -
+    \frac{2}{3}\beta(x)x^3+5\left[1-t_1(x)\right]x^2 -
+    \frac{43}{9}\left[1-t_2(x)\right]x
+    +\frac{701}{294}\left[1-t_3(x)\right]+\beta(x)\left[\frac{1}{48}\sum_{a=0}^\infty
+    \frac{\mathrm{wal}_{2^a}(x)}{2^{3a}} - \frac{1}{42}\right] - 1.
     \end{aligned}$$
 
-    where 
-    
-    - $x \oplus z$ is XOR between bits, 
-    - $\mathrm{wal}_k$ is the $k^\text{th}$ Walsh function, 
-    - $\beta(x) = - \lfloor \log_2(x) \rfloor$ and $t_\nu(x) = 2^{-\nu \beta(x)}$ where $\beta(0)=t_\nu(0) = 0$, and 
-    - and $\mu_\alpha$ is the Dick weight function which sums the first $\alpha$ largest indices of $1$ bits in the binary expansion of $k$ 
-    e.g. $k=13=1101_2$ has 1-bit indexes $(4,3,1)$ so 
-    
-    $$\mu_1(k) = 4, \mu_2(k) = 4+3, \mu_3(k) = 4+3+1 = \mu_4(k) = \mu_5(k) = \dots.$$
+    where
+
+    - $x \oplus z$ is XOR between bits,
+    - $\mathrm{wal}_k$ is the $k^\text{th}$ Walsh function,
+    - $\beta(x) = - \lfloor \log_2(x) \rfloor$ and $t_\nu(x) = 2^{-\nu \beta(x)}$ where $\beta(0)=t_\nu(0) = 0$, and
+    - and $\mu_\alpha$ is the Dick weight function which sums the first $\alpha$ largest indices of $1$ bits in the binary expansion of $k$
+    e.g. $k=13=1101_2$ has 1-bit indexes $(4,3,1)$ so
+
+    $$\mu_1(k) = 4, \mu_2(k) = 4+3, \mu_3(k) = 4+3+1 = \mu_4(k) = \mu_5(k) =
+    \dots.$$
 
     Examples:
         >>> from qmcpy import DigitalNetB2, fwht
@@ -661,7 +789,7 @@ class KernelDigShiftInvar(AbstractSIDSIKernel):
         >>> x.dtype
         dtype('uint64')
         >>> kernel = KernelDigShiftInvar(
-        ...     d = d, 
+        ...     d = d,
         ...     t = dnb2.t,
         ...     alpha = list(range(1,d+1)),
         ...     scale = 10,
@@ -692,10 +820,10 @@ class KernelDigShiftInvar(AbstractSIDSIKernel):
         True
         >>> np.allclose(fwht(fwht(y)/lam),np.linalg.solve(kmat,y))
         True
-        >>> import torch 
+        >>> import torch
         >>> xtorch = bin_from_numpy_to_torch(x)
         >>> kernel_torch = KernelDigShiftInvar(
-        ...     d = d, 
+        ...     d = d,
         ...     t = dnb2.t,
         ...     alpha = list(range(1,d+1)),
         ...     scale = 10,
@@ -719,16 +847,16 @@ class KernelDigShiftInvar(AbstractSIDSIKernel):
         >>> kernel_torch.single_integral_01d(xtorch)
         tensor([10., 10., 10., 10., 10., 10., 10., 10.], grad_fn=<AddBackward0>)
 
-        Batch Params 
-        
+        Batch Params
+
         >>> rng = np.random.Generator(np.random.PCG64(7))
         >>> kernel = KernelDigShiftInvar(
-        ...     d = 2, 
+        ...     d = 2,
         ...     t = 10,
         ...     shape_scale = [4,3,1],
         ...     shape_lengthscales = [3,2])
         >>> x = rng.uniform(low=0,high=1,size=(6,5,2))
-        >>> kernel(x,x).shape 
+        >>> kernel(x,x).shape
         (4, 3, 6, 5)
         >>> kernel(x[:,:,None,:],x[:,None,:,:]).shape
         (4, 3, 6, 5, 5)
@@ -740,71 +868,90 @@ class KernelDigShiftInvar(AbstractSIDSIKernel):
         np.float64(4.440892098500626e-16)
 
     **References:**
-        
-    1.  Dick, Josef.  
-        "Walsh spaces containing smooth functions and quasi-Monte Carlo rules of arbitrary high order."  
+
+    1.  Dick, Josef.
+        "Walsh spaces containing smooth functions and quasi-Monte Carlo rules of arbitrary high order."
         SIAM Journal on Numerical Analysis 46.3 (2008): 1519-1553.
 
-    2.  Dick, Josef.  
-        "The decay of the Walsh coefficients of smooth functions."  
-        Bulletin of the Australian Mathematical Society 80.3 (2009): 430-453.  
+    2.  Dick, Josef.
+        "The decay of the Walsh coefficients of smooth functions."
+        Bulletin of the Australian Mathematical Society 80.3 (2009): 430-453.
 
-    3.  Jagadeeswaran, Rathinavel, and Fred J. Hickernell.  
-        "Fast automatic Bayesian cubature using Sobol' sampling."  
+    3.  Jagadeeswaran, Rathinavel, and Fred J. Hickernell.
+        "Fast automatic Bayesian cubature using Sobol' sampling."
         Advances in Modeling and Simulation: Festschrift for Pierre L'Ecuyer. Cham: Springer International Publishing, 2022. 301-318.
 
-    4.  Rathinavel, Jagadeeswaran.  
-        Fast automatic Bayesian cubature using matching kernels and designs.  
+    4.  Rathinavel, Jagadeeswaran.
+        Fast automatic Bayesian cubature using matching kernels and designs.
         Illinois Institute of Technology, 2019.
-    
-    5.  Sorokin, Aleksei.  
-        "A Unified Implementation of Quasi-Monte Carlo Generators, Randomization Routines, and Fast Kernel Methods."  
+
+    5.  Sorokin, Aleksei.
+        "A Unified Implementation of Quasi-Monte Carlo Generators, Randomization Routines, and Fast Kernel Methods."
         arXiv preprint arXiv:2502.14256 (2025).
     """
 
     def __init__(
         self,
-        d,
-        t=None,
-        scale=1.0,
-        lengthscales=None,
-        alpha=2,
-        shape_scale=None,
-        shape_lengthscales=None,
-        tfs_scale=None,
-        tfs_lengthscales=None,
-        torchify=False,
-        requires_grad_scale=None,
-        requires_grad_lengthscales=None,
-        device="cpu",
-        compile_call=False,
-        compile_call_kwargs=None,
-        weights=None,
-        shape_weights=None,
-        tfs_weights=None,
-        requires_grad_weights=None,
-    ):
-        r"""
+        d: int,
+        t: Union[None, int] = None,
+        scale: Union[float, np.ndarray, torch.Tensor] = 1.0,
+        lengthscales: Union[None, np.ndarray, torch.Tensor] = None,
+        alpha: Union[float, np.ndarray, torch.Tensor] = 2,
+        shape_scale: Union[None, list] = None,
+        shape_lengthscales: Union[None, list] = None,
+        tfs_scale: Union[None, Tuple[Callable, Callable]] = None,
+        tfs_lengthscales: Union[None, Tuple[Callable, Callable]] = None,
+        torchify: bool = False,
+        requires_grad_scale: Union[None, bool] = None,
+        requires_grad_lengthscales: Union[None, bool] = None,
+        device: Union[str, torch.device] = "cpu",
+        compile_call: bool = False,
+        compile_call_kwargs: Union[None, dict] = None,
+        weights: Union[None, np.ndarray, torch.Tensor] = None,
+        shape_weights: Union[None, list] = None,
+        tfs_weights: Union[None, Tuple[Callable, Callable]] = None,
+        requires_grad_weights: Union[None, bool] = None,
+    ) -> None:
+        r"""Initialize a KernelDigShiftInvar kernel.
+
         Args:
             d (int): Dimension.
-            t (int): number of bits in binary represtnations. Typically `dnb2.t` where `isinstance(dnb2,DigitalNetB2)`.
-            scale (Union[np.ndarray, torch.Tensor]): Scaling factor $S$.
-            lengthscales (Union[np.ndarray, torch.Tensor]): Product weights $(\gamma_1,\dots,\gamma_d)$.
-            alpha (Union[np.ndarray, torch.Tensor]): Smoothness parameters $(\alpha_1,\dots,\alpha_d)$ where $\alpha_j \geq 1$ for $j=1,\dots,d$.
-            shape_scale (list): Shape of `scale` when `np.isscalar(scale)`.
-            shape_lengthscales (list): Shape of `lengthscales` when `np.isscalar(lengthscales)`
-            tfs_scale (Tuple[callable,callable]): The first argument transforms to the raw value to be optimized; the second applies the inverse transform.
-            tfs_lengthscales (Tuple[callable,callable]): The first argument transforms to the raw value to be optimized; the second applies the inverse transform.
-            torchify (bool): If `True`, use the `torch` backend. Set to `True` if computing gradients with respect to inputs and/or hyperparameters.
-            requires_grad_scale (bool): If `True` and `torchify`, set `requires_grad=True` for `scale`.
-            requires_grad_lengthscales (bool): If `True` and `torchify`, set `requires_grad=True` for `lengthscales`.
-            device (torch.device): If `torchify`, put things onto this device.
-            compile_call (bool): If `True`, `torch.compile` the `parsed___call__` method.
-            compile_call_kwargs (dict): When `compile_call` is `True`, pass these keyword arguments to `torch.compile`.
-            weights (Union[np.ndarray, torch.Tensor]): Alias for `lengthscales`.
-            shape_weights (list): Alias for `shape_lengthscales`.
-            tfs_weights (Tuple[callable,callable]): Alias for `tfs_lengthscales`.
-            requires_grad_weights (bool): Alias for `requires_grad_lengthscales`.
+            t (Union[None, int]): number of bits in binary representations. Typically
+                `dnb2.t` where `isinstance(dnb2,DigitalNetB2)`.
+            scale (Union[float, np.ndarray, torch.Tensor]): Scaling factor $S$.
+            lengthscales (Union[None, np.ndarray, torch.Tensor]): Product weights
+                $(\gamma_1,\dots,\gamma_d)$.
+            alpha (Union[float, np.ndarray, torch.Tensor]): Smoothness parameters
+                $(\alpha_1,\dots,\alpha_d)$ where $\alpha_j \geq 1$ for
+                $j=1,\dots,d$.
+            shape_scale (Union[None, list]): Shape of `scale` when `np.isscalar(scale)`.
+            shape_lengthscales (Union[None, list]): Shape of `lengthscales` when
+                `np.isscalar(lengthscales)`
+            tfs_scale (Union[None, Tuple[Callable, Callable]]): The first argument transforms
+                to the raw value to be optimized; the second applies the
+                inverse transform.
+            tfs_lengthscales (Union[None, Tuple[Callable, Callable]]): The first argument
+                transforms to the raw value to be optimized; the second applies
+                the inverse transform.
+            torchify (bool): If `True`, use the `torch` backend. Set to `True`
+                if computing gradients with respect to inputs and/or
+                hyperparameters.
+            requires_grad_scale (Union[None, bool]): If `True` and `torchify`, set
+                `requires_grad=True` for `scale`.
+            requires_grad_lengthscales (Union[None, bool]): If `True` and `torchify`, set
+                `requires_grad=True` for `lengthscales`.
+            device (Union[str, torch.device]): If `torchify`, put things onto this device.
+            compile_call (bool): If `True`, `torch.compile` the
+                `parsed___call__` method.
+            compile_call_kwargs (Union[None, dict]): When `compile_call` is `True`, pass
+                these keyword arguments to `torch.compile`.
+            weights (Union[None, np.ndarray, torch.Tensor]): Alias for
+                `lengthscales`.
+            shape_weights (Union[None, list]): Alias for `shape_lengthscales`.
+            tfs_weights (Union[None, Tuple[Callable, Callable]]): Alias for
+                `tfs_lengthscales`.
+            requires_grad_weights (Union[None, bool]): Alias for
+                `requires_grad_lengthscales`.
         """
         if shape_scale is None:
             shape_scale = [1]
@@ -834,41 +981,62 @@ class KernelDigShiftInvar(AbstractSIDSIKernel):
             tfs_weights=tfs_weights,
             requires_grad_weights=requires_grad_weights,
         )
-        assert self.alpha.shape == (self.d,)
+        if not (self.alpha.shape == (self.d,)):
+            raise AssertionError
         self.set_t(t)
-        assert all(1 <= int(alphaj) <= 4 for alphaj in self.alpha)
+        if not (all(1 <= int(alphaj) <= 4 for alphaj in self.alpha)):
+            raise AssertionError
 
     @property
     def t(self):
+        """int: Number of bits used in the binary representation of inputs
+        (see `set_t`). Must be set via `set_t` before use.
+        """
         if self._t is None:
             raise ParameterError("please use set_t to set the t value")
         return self._t
 
-    def set_t(self, t):
+    def set_t(self, t: Union[None, int]):
+        """Set the number of bits `t` used to binarize inputs via `to_bin`.
+
+        Args:
+            t (Union[None, int]): Number of bits, `0 <= t <= 63` when
+                `torchify` (`torch.int64` limit) or `0 <= t <= 64` otherwise
+                (`np.uint64` limit). `None` clears the value, requiring a
+                later call to `set_t` before the kernel can be evaluated.
+        """
         if t is None:
             self._t = t
         else:
-            assert t % 1 == 0
+            if not (t % 1 == 0):
+                raise AssertionError
             if self.torchify:
-                assert 0 <= t <= 63  # torch only supports torch.int64
+                if not (0 <= t <= 63):  # torch only supports torch.int64
+                    raise AssertionError
             else:
-                assert 0 <= t <= 64  # numpy supports np.uint64
+                if not (0 <= t <= 64):  # numpy supports np.uint64
+                    raise AssertionError
             self._t = t
 
     def get_per_dim_components(self, x0, x1, beta0, beta1):
+        """Per-dimension weighted-Walsh-function components; see the class
+        docstring for the kernel formula. Inputs are first binarized to `t` bits.
+        """
         t = self.t
         x0 = to_bin(x0, t)
         x1 = to_bin(x1, t)
         p = len(beta0)
         betasum = beta0 + beta1
         order = self.alpha - betasum
-        assert (1 <= order).all() and (order <= 4).all(), (
-            "order must all be between 2 and 4, but got order = %s. Try increasing alpha"
-            % str(order)
-        )
-        assert not (
+        if not ((1 <= order).all() and (order <= 4).all()):
+            raise AssertionError(
+                "order must all be between 2 and 4, but got order = %s. Try increasing alpha"
+                % str(order)
+            )
+        if not (not (
             (order == 1) * (self.alpha > 1)
-        ).any(), "taking the derivative of the order 2 digitally shift invariant kernel is not supported"
+        ).any()):
+            raise AssertionError("taking the derivative of the order 2 digitally shift invariant kernel is not supported")
         ind = 1.0 * (betasum > 0)
         delta = x0 ^ x1
         kparts = [None] * p
@@ -899,24 +1067,28 @@ class KernelDigShiftInvar(AbstractSIDSIKernel):
 
 
 class KernelDigShiftInvarAdaptiveAlpha(AbstractSIDSIKernel):
-    r""" 
-    Digitally shift invariant kernel in base $b=2$ with 
-    smoothness $\boldsymbol{\alpha} \geq \boldsymbol{0}$, product weights $\boldsymbol{\gamma}$, and scale $S$: 
-    
-    $$\begin{aligned}
-        K(\boldsymbol{x},\boldsymbol{z}) &= S \prod_{j=1}^d \left(1+ \gamma_j \tilde{K}_{\alpha_j}(x_j \oplus z_j)\right), \qquad\mathrm{where} \\
-        \tilde{K}_\alpha(x) &= \sum_{k \in \mathbb{N}} \frac{\mathrm{wal}_k(x)}{2^{{\alpha+1} (\mu_1(k)-1)}} = \frac{2^{\alpha+1}}{2^{\alpha+1}-2} - \left(\frac{2^{\alpha+1}}{2^{\alpha+1}-2}+1\right) 2^{\alpha(\lfloor \log_2(x) \rfloor+1)}, \\
-    \end{aligned}$$
+    r"""Digitally shift invariant kernel in base $b=2$ with smoothness
+    $\boldsymbol{\alpha} \geq \boldsymbol{0}$, product weights
+    $\boldsymbol{\gamma}$, and scale $S$:
 
-    where 
-    
-    - $x \oplus z$ is XOR between bits, 
-    - $\mathrm{wal}_k$ is the $k^\text{th}$ Walsh function, 
-    - $\beta(x) = - \lfloor \log_2(x) \rfloor$ and $t_\nu(x) = 2^{-\nu \beta(x)}$ where $\beta(0)=t_\nu(0) = 0$, and 
-    - and $\mu_\alpha$ is the Dick weight function which sums the first $\alpha$ largest indices of $1$ bits in the binary expansion of $k$ 
-    e.g. $k=13=1101_2$ has 1-bit indexes $(4,3,1)$ so 
-    
-    $$\mu_1(k) = 4, \mu_2(k) = 4+3, \mu_3(k) = 4+3+1 = \mu_4(k) = \mu_5(k) = \dots.$$
+    $$\begin{aligned} K(\boldsymbol{x},\boldsymbol{z}) &= S \prod_{j=1}^d
+    \left(1+ \gamma_j \tilde{K}_{\alpha_j}(x_j \oplus z_j)\right),
+    \qquad\mathrm{where} \\ \tilde{K}_\alpha(x) &= \sum_{k \in \mathbb{N}}
+    \frac{\mathrm{wal}_k(x)}{2^{{\alpha+1} (\mu_1(k)-1)}} =
+    \frac{2^{\alpha+1}}{2^{\alpha+1}-2} -
+    \left(\frac{2^{\alpha+1}}{2^{\alpha+1}-2}+1\right) 2^{\alpha(\lfloor
+    \log_2(x) \rfloor+1)}, \\ \end{aligned}$$
+
+    where
+
+    - $x \oplus z$ is XOR between bits,
+    - $\mathrm{wal}_k$ is the $k^\text{th}$ Walsh function,
+    - $\beta(x) = - \lfloor \log_2(x) \rfloor$ and $t_\nu(x) = 2^{-\nu \beta(x)}$ where $\beta(0)=t_\nu(0) = 0$, and
+    - and $\mu_\alpha$ is the Dick weight function which sums the first $\alpha$ largest indices of $1$ bits in the binary expansion of $k$
+    e.g. $k=13=1101_2$ has 1-bit indexes $(4,3,1)$ so
+
+    $$\mu_1(k) = 4, \mu_2(k) = 4+3, \mu_3(k) = 4+3+1 = \mu_4(k) = \mu_5(k) =
+    \dots.$$
 
     Examples:
         >>> from qmcpy import DigitalNetB2, fwht
@@ -929,7 +1101,7 @@ class KernelDigShiftInvarAdaptiveAlpha(AbstractSIDSIKernel):
         >>> x.dtype
         dtype('uint64')
         >>> kernel = KernelDigShiftInvarAdaptiveAlpha(
-        ...     d = d, 
+        ...     d = d,
         ...     t = dnb2.t,
         ...     alpha = list(range(1,d+1)),
         ...     scale = 10,
@@ -960,10 +1132,10 @@ class KernelDigShiftInvarAdaptiveAlpha(AbstractSIDSIKernel):
         True
         >>> np.allclose(fwht(fwht(y)/lam),np.linalg.solve(kmat,y))
         True
-        >>> import torch 
+        >>> import torch
         >>> xtorch = bin_from_numpy_to_torch(x)
         >>> kernel_torch = KernelDigShiftInvarAdaptiveAlpha(
-        ...     d = d, 
+        ...     d = d,
         ...     t = dnb2.t,
         ...     alpha = list(range(1,d+1)),
         ...     scale = 10,
@@ -987,16 +1159,16 @@ class KernelDigShiftInvarAdaptiveAlpha(AbstractSIDSIKernel):
         >>> kernel_torch.single_integral_01d(xtorch)
         tensor([10., 10., 10., 10., 10., 10., 10., 10.], grad_fn=<AddBackward0>)
 
-        Batch Params 
-        
+        Batch Params
+
         >>> rng = np.random.Generator(np.random.PCG64(7))
         >>> kernel = KernelDigShiftInvarAdaptiveAlpha(
-        ...     d = 2, 
+        ...     d = 2,
         ...     t = 10,
         ...     shape_scale = [4,3,1],
         ...     shape_lengthscales = [3,2])
         >>> x = rng.uniform(low=0,high=1,size=(6,5,2))
-        >>> kernel(x,x).shape 
+        >>> kernel(x,x).shape
         (4, 3, 6, 5)
         >>> kernel(x[:,:,None,:],x[:,None,:,:]).shape
         (4, 3, 6, 5, 5)
@@ -1008,61 +1180,83 @@ class KernelDigShiftInvarAdaptiveAlpha(AbstractSIDSIKernel):
         np.float64(4.440892098500626e-16)
 
     **References:**
-        
-    3.  Dick, Josef, and Friedrich Pillichshammer.  
-        "Multivariate integration in weighted Hilbert spaces based on Walsh functions and weighted Sobolev spaces."  
+
+    3.  Dick, Josef, and Friedrich Pillichshammer.
+        "Multivariate integration in weighted Hilbert spaces based on Walsh functions and weighted Sobolev spaces."
         Journal of Complexity 21.2 (2005): 149-195.
     """
 
     def __init__(
         self,
-        d,
-        t=None,
-        scale=1.0,
-        lengthscales=None,
-        alpha=1,
-        shape_scale=None,
-        shape_lengthscales=None,
-        shape_alpha=None,
-        tfs_scale=None,
-        tfs_lengthscales=None,
-        tfs_alpha=None,
-        torchify=False,
-        requires_grad_scale=None,
-        requires_grad_lengthscales=None,
-        requires_grad_alpha=None,
-        device="cpu",
-        compile_call=False,
-        compile_call_kwargs=None,
-        weights=None,
-        shape_weights=None,
-        tfs_weights=None,
-        requires_grad_weights=None,
-    ):
-        r"""
+        d: int,
+        t: Union[None, int] = None,
+        scale: Union[float, np.ndarray, torch.Tensor] = 1.0,
+        lengthscales: Union[None, np.ndarray, torch.Tensor] = None,
+        alpha: Union[float, np.ndarray, torch.Tensor] = 1,
+        shape_scale: Union[None, list] = None,
+        shape_lengthscales: Union[None, list] = None,
+        shape_alpha: Union[None, list] = None,
+        tfs_scale: Union[None, Tuple[Callable, Callable]] = None,
+        tfs_lengthscales: Union[None, Tuple[Callable, Callable]] = None,
+        tfs_alpha: Union[None, Tuple[Callable, Callable]] = None,
+        torchify: bool = False,
+        requires_grad_scale: Union[None, bool] = None,
+        requires_grad_lengthscales: Union[None, bool] = None,
+        requires_grad_alpha: Union[None, bool] = None,
+        device: Union[str, torch.device] = "cpu",
+        compile_call: bool = False,
+        compile_call_kwargs: Union[None, dict] = None,
+        weights: Union[None, np.ndarray, torch.Tensor] = None,
+        shape_weights: Union[None, list] = None,
+        tfs_weights: Union[None, Tuple[Callable, Callable]] = None,
+        requires_grad_weights: Union[None, bool] = None,
+    ) -> None:
+        r"""Initialize a KernelDigShiftInvarAdaptiveAlpha kernel.
+
         Args:
             d (int): Dimension.
-            t (int): number of bits in binary represtnations. Typically `dnb2.t` where `isinstance(dnb2,DigitalNetB2)`.
-            scale (Union[np.ndarray, torch.Tensor]): Scaling factor $S$.
-            lengthscales (Union[np.ndarray, torch.Tensor]): Product weights $(\gamma_1,\dots,\gamma_d)$.
-            alpha (Union[np.ndarray, torch.Tensor]): Smoothness parameters $(\alpha_1,\dots,\alpha_d)$ where $\alpha_j \geq 1$ for $j=1,\dots,d$.
-            shape_alpha (list): Shape of `alpha` when `np.isscalar(alpha)`
-            shape_scale (list): Shape of `scale` when `np.isscalar(scale)`.
-            shape_lengthscales (list): Shape of `lengthscales` when `np.isscalar(lengthscales)`
-            tfs_scale (Tuple[callable,callable]): The first argument transforms to the raw value to be optimized; the second applies the inverse transform.
-            tfs_lengthscales (Tuple[callable,callable]): The first argument transforms to the raw value to be optimized; the second applies the inverse transform.
-            tfs_alpha (Tuple[callable,callable]): The first argument transforms to the raw value to be optimized; the second applies the inverse transform.
-            torchify (bool): If `True`, use the `torch` backend. Set to `True` if computing gradients with respect to inputs and/or hyperparameters.
-            requires_grad_scale (bool): If `True` and `torchify`, set `requires_grad=True` for `scale`.
-            requires_grad_lengthscales (bool): If `True` and `torchify`, set `requires_grad=True` for `lengthscales`.
-            requires_grad_alpha (bool): If `True` and `torchify`, set `requires_grad=True` for `alpha`.
-            device (torch.device): If `torchify`, put things onto this device.
-            compile_call (bool): If `True`, `torch.compile` the `parsed___call__` method.
-            compile_call_kwargs (dict): When `compile_call` is `True`, pass these keyword arguments to `torch.compile`.
-            weights (Union[np.ndarray, torch.Tensor]): Alias for `lengthscales`.
-            shape_weights (list): Alias for `shape_lengthscales`.
-            tfs_weights (Tuple[callable,callable]): Alias for `tfs_lengthscales`.
-            requires_grad_weights (bool): Alias for `requires_grad_lengthscales`.
+            t (Union[None, int]): number of bits in binary representations. Typically
+                `dnb2.t` where `isinstance(dnb2,DigitalNetB2)`.
+            scale (Union[float, np.ndarray, torch.Tensor]): Scaling factor $S$.
+            lengthscales (Union[None, np.ndarray, torch.Tensor]): Product weights
+                $(\gamma_1,\dots,\gamma_d)$.
+            alpha (Union[float, np.ndarray, torch.Tensor]): Smoothness parameters
+                $(\alpha_1,\dots,\alpha_d)$ where $\alpha_j \geq 1$ for
+                $j=1,\dots,d$.
+            shape_scale (Union[None, list]): Shape of `scale` when `np.isscalar(scale)`.
+            shape_lengthscales (Union[None, list]): Shape of `lengthscales` when
+                `np.isscalar(lengthscales)`
+            shape_alpha (Union[None, list]): Shape of `alpha` when `np.isscalar(alpha)`
+            tfs_scale (Union[None, Tuple[Callable, Callable]]): The first argument transforms
+                to the raw value to be optimized; the second applies the
+                inverse transform.
+            tfs_lengthscales (Union[None, Tuple[Callable, Callable]]): The first argument
+                transforms to the raw value to be optimized; the second applies
+                the inverse transform.
+            tfs_alpha (Union[None, Tuple[Callable, Callable]]): The first argument transforms
+                to the raw value to be optimized; the second applies the
+                inverse transform.
+            torchify (bool): If `True`, use the `torch` backend. Set to `True`
+                if computing gradients with respect to inputs and/or
+                hyperparameters.
+            requires_grad_scale (Union[None, bool]): If `True` and `torchify`, set
+                `requires_grad=True` for `scale`.
+            requires_grad_lengthscales (Union[None, bool]): If `True` and `torchify`, set
+                `requires_grad=True` for `lengthscales`.
+            requires_grad_alpha (Union[None, bool]): If `True` and `torchify`, set
+                `requires_grad=True` for `alpha`.
+            device (Union[str, torch.device]): If `torchify`, put things onto this device.
+            compile_call (bool): If `True`, `torch.compile` the
+                `parsed___call__` method.
+            compile_call_kwargs (Union[None, dict]): When `compile_call` is `True`, pass
+                these keyword arguments to `torch.compile`.
+            weights (Union[None, np.ndarray, torch.Tensor]): Alias for
+                `lengthscales`.
+            shape_weights (Union[None, list]): Alias for `shape_lengthscales`.
+            tfs_weights (Union[None, Tuple[Callable, Callable]]): Alias for
+                `tfs_lengthscales`.
+            requires_grad_weights (Union[None, bool]): Alias for
+                `requires_grad_lengthscales`.
         """
         if shape_scale is None:
             shape_scale = [1]
@@ -1097,28 +1291,48 @@ class KernelDigShiftInvarAdaptiveAlpha(AbstractSIDSIKernel):
 
     @property
     def t(self):
+        """int: Number of bits used in the binary representation of inputs
+        (see `set_t`). Must be set via `set_t` before use.
+        """
         if self._t is None:
             raise ParameterError("please use set_t to set the t value")
         return self._t
 
-    def set_t(self, t):
+    def set_t(self, t: Union[None, int]):
+        """Set the number of bits `t` used to binarize inputs via `to_bin`.
+
+        Args:
+            t (Union[None, int]): Number of bits, `0 <= t <= 63` when
+                `torchify` (`torch.int64` limit) or `0 <= t <= 64` otherwise
+                (`np.uint64` limit). `None` clears the value, requiring a
+                later call to `set_t` before the kernel can be evaluated.
+        """
         if t is None:
             self._t = t
         else:
-            assert t % 1 == 0
+            if not (t % 1 == 0):
+                raise AssertionError
             if self.torchify:
-                assert 0 <= t <= 63  # torch only supports torch.int64
+                if not (0 <= t <= 63):  # torch only supports torch.int64
+                    raise AssertionError
             else:
-                assert 0 <= t <= 64  # numpy supports np.uint64
+                if not (0 <= t <= 64):  # numpy supports np.uint64
+                    raise AssertionError
             self._t = t
 
     def get_per_dim_components(self, x0, x1, beta0, beta1):
+        """Per-dimension components with a per-XOR-bit-length adaptive
+        smoothness; see the class docstring for the kernel formula. Inputs
+        are first binarized to `t` bits. Does not support derivatives
+        (`beta0`/`beta1` must be zero).
+        """
         t = self.t
         x0 = to_bin(x0, t)
         x1 = to_bin(x1, t)
-        assert (beta0 == 0).all() and (
+        if not ((beta0 == 0).all() and (
             beta1 == 0
-        ).all(), "KernelDigShiftInvarAdaptiveAlpha does not support taking derivatives"
+        ).all()):
+            raise AssertionError("KernelDigShiftInvarAdaptiveAlpha does not support taking derivatives")
         p = len(beta0)
         delta = x0 ^ x1
         flog2delta = self.npt.zeros(delta.shape, **self.nptkwargs)  # should be -inf
@@ -1130,6 +1344,10 @@ class KernelDigShiftInvarAdaptiveAlpha(AbstractSIDSIKernel):
     def combine_per_dim_components_raw_m1(
         self, flog2deltas, beta0, beta1, c, batch_params, stable
     ):
+        """Combine per-XOR-bit-length components using a smoothness `alpha`
+        that adapts to each bit length, then delegate to the base class's
+        combination logic.
+        """
         alpha = batch_params["alpha"]
         p2alphap1 = 2 ** (alpha + 1)
         nu = p2alphap1 / (p2alphap1 - 2)
@@ -1143,15 +1361,17 @@ class KernelDigShiftInvarAdaptiveAlpha(AbstractSIDSIKernel):
 
 
 class KernelDigShiftInvarCombined(AbstractSIDSIKernel):
-    r"""
-    Digitally shift invariant kernel in base $b=2$ with
-    combination weights $\boldsymbol{\alpha}_1,\dots,\boldsymbol{\alpha}_d \in \mathbb{R}_{>0}^4$, smoothness $\boldsymbol{\alpha}$, product weights $\boldsymbol{\gamma}$, and scale $S$:
+    r"""Digitally shift invariant kernel in base $b=2$ with combination
+    weights $\boldsymbol{\alpha}_1,\dots,\boldsymbol{\alpha}_d \in
+    \mathbb{R}_{>0}^4$, smoothness $\boldsymbol{\alpha}$, product weights
+    $\boldsymbol{\gamma}$, and scale $S$:
 
-    $$\begin{aligned}
-        K(\boldsymbol{x},\boldsymbol{z}) &= S \prod_{j=1}^d \left(1+ \gamma_j \left(\sum_{p=1}^4 \alpha_{jp} \tilde{K}_p(x_j \oplus z_j)\right)\right)
-    \end{aligned}$$
+    $$\begin{aligned} K(\boldsymbol{x},\boldsymbol{z}) &= S \prod_{j=1}^d
+    \left(1+ \gamma_j \left(\sum_{p=1}^4 \alpha_{jp} \tilde{K}_p(x_j \oplus
+    z_j)\right)\right) \end{aligned}$$
 
-    where, $\oplus$ is defined in the docs for `KernelDigShiftInvar` and so are $\tilde{K}_p$ for $p \in \{1,2,3,4\}$
+    where, $\oplus$ is defined in the docs for `KernelDigShiftInvar` and so are
+    $\tilde{K}_p$ for $p \in \{1,2,3,4\}$
 
     Examples:
         >>> from qmcpy import DigitalNetB2, fwht
@@ -1243,52 +1463,75 @@ class KernelDigShiftInvarCombined(AbstractSIDSIKernel):
 
     def __init__(
         self,
-        d,
-        t=None,
-        scale=1.0,
-        lengthscales=None,
-        alpha=1.0,
-        shape_scale=None,
-        shape_lengthscales=None,
-        shape_alpha=None,
-        tfs_scale=None,
-        tfs_lengthscales=None,
-        tfs_alpha=None,
-        torchify=False,
-        requires_grad_scale=None,
-        requires_grad_lengthscales=None,
-        requires_grad_alpha=None,
-        device="cpu",
-        compile_call=False,
-        compile_call_kwargs=None,
-        weights=None,
-        shape_weights=None,
-        tfs_weights=None,
-        requires_grad_weights=None,
-    ):
-        r"""
+        d: int,
+        t: Union[None, int] = None,
+        scale: Union[float, np.ndarray, torch.Tensor] = 1.0,
+        lengthscales: Union[None, np.ndarray, torch.Tensor] = None,
+        alpha: Union[float, np.ndarray, torch.Tensor] = 1.0,
+        shape_scale: Union[None, list] = None,
+        shape_lengthscales: Union[None, list] = None,
+        shape_alpha: Union[None, list] = None,
+        tfs_scale: Union[None, Tuple[Callable, Callable]] = None,
+        tfs_lengthscales: Union[None, Tuple[Callable, Callable]] = None,
+        tfs_alpha: Union[None, Tuple[Callable, Callable]] = None,
+        torchify: bool = False,
+        requires_grad_scale: Union[None, bool] = None,
+        requires_grad_lengthscales: Union[None, bool] = None,
+        requires_grad_alpha: Union[None, bool] = None,
+        device: Union[str, torch.device] = "cpu",
+        compile_call: bool = False,
+        compile_call_kwargs: Union[None, dict] = None,
+        weights: Union[None, np.ndarray, torch.Tensor] = None,
+        shape_weights: Union[None, list] = None,
+        tfs_weights: Union[None, Tuple[Callable, Callable]] = None,
+        requires_grad_weights: Union[None, bool] = None,
+    ) -> None:
+        r"""Initialize a KernelDigShiftInvarCombined kernel.
+
         Args:
             d (int): Dimension.
-            t (int): number of bits in binary represtnations. Typically `dnb2.t` where `isinstance(dnb2,DigitalNetB2)`.
-            scale (Union[np.ndarray, torch.Tensor]): Scaling factor $S$.
-            lengthscales (Union[np.ndarray, torch.Tensor]): Product weights $(\gamma_1,\dots,\gamma_d)$.
-            alpha (Union[np.ndarray, torch.Tensor]): Weights $\boldsymbol{\alpha}_1,\dots,\boldsymbol{\alpha}_d \in \mathbb{R}_{>0}^4$.
-            shape_scale (list): Shape of `scale` when `np.isscalar(scale)`.
-            shape_lengthscales (list): Shape of `lengthscales` when `np.isscalar(lengthscales)`
-            shape_alpha (list): Shape of `alpha` when `np.isscalar(alpha)`
-            tfs_scale (Tuple[callable,callable]): The first argument transforms to the raw value to be optimized; the second applies the inverse transform.
-            tfs_lengthscales (Tuple[callable,callable]): The first argument transforms to the raw value to be optimized; the second applies the inverse transform.
-            torchify (bool): If `True`, use the `torch` backend. Set to `True` if computing gradients with respect to inputs and/or hyperparameters.
-            requires_grad_scale (bool): If `True` and `torchify`, set `requires_grad=True` for `scale`.
-            requires_grad_lengthscales (bool): If `True` and `torchify`, set `requires_grad=True` for `lengthscales`.
-            requires_grad_alpha (bool): If `True` and `torchify`, set `requires_grad=True` for `alpha`.
-            device (torch.device): If `torchify`, put things onto this device.
-            compile_call (bool): If `True`, `torch.compile` the `parsed___call__` method.
-            compile_call_kwargs (dict): When `compile_call` is `True`, pass these keyword arguments to `torch.compile`.
-            weights (Union[np.ndarray, torch.Tensor]): Alias for `lengthscales`.
-            shape_weights (list): Alias for `shape_lengthscales`.
-            tfs_weights (Tuple[callable,callable]): Alias for `tfs_lengthscales`.
-            requires_grad_weights (bool): Alias for `requires_grad_lengthscales`.
+            t (Union[None, int]): number of bits in binary representations. Typically
+                `dnb2.t` where `isinstance(dnb2,DigitalNetB2)`.
+            scale (Union[float, np.ndarray, torch.Tensor]): Scaling factor $S$.
+            lengthscales (Union[None, np.ndarray, torch.Tensor]): Product weights
+                $(\gamma_1,\dots,\gamma_d)$.
+            alpha (Union[float, np.ndarray, torch.Tensor]): Weights
+                $\boldsymbol{\alpha}_1,\dots,\boldsymbol{\alpha}_d \in
+                \mathbb{R}_{>0}^4$.
+            shape_scale (Union[None, list]): Shape of `scale` when `np.isscalar(scale)`.
+            shape_lengthscales (Union[None, list]): Shape of `lengthscales` when
+                `np.isscalar(lengthscales)`
+            shape_alpha (Union[None, list]): Shape of `alpha` when `np.isscalar(alpha)`
+            tfs_scale (Union[None, Tuple[Callable, Callable]]): The first argument transforms
+                to the raw value to be optimized; the second applies the
+                inverse transform.
+            tfs_lengthscales (Union[None, Tuple[Callable, Callable]]): The first argument
+                transforms to the raw value to be optimized; the second applies
+                the inverse transform.
+            tfs_alpha (Union[None, Tuple[Callable, Callable]]): The first argument transforms
+                to the raw value to be optimized; the second applies the
+                inverse transform.
+            torchify (bool): If `True`, use the `torch` backend. Set to `True`
+                if computing gradients with respect to inputs and/or
+                hyperparameters.
+            requires_grad_scale (Union[None, bool]): If `True` and `torchify`, set
+                `requires_grad=True` for `scale`.
+            requires_grad_lengthscales (Union[None, bool]): If `True` and `torchify`, set
+                `requires_grad=True` for `lengthscales`.
+            requires_grad_alpha (Union[None, bool]): If `True` and `torchify`, set
+                `requires_grad=True` for `alpha`.
+            device (Union[str, torch.device]): If `torchify`, put things onto this device.
+            compile_call (bool): If `True`, `torch.compile` the
+                `parsed___call__` method.
+            compile_call_kwargs (Union[None, dict]): When `compile_call` is `True`, pass
+                these keyword arguments to `torch.compile`.
+            weights (Union[None, np.ndarray, torch.Tensor]): Alias for
+                `lengthscales`.
+            shape_weights (Union[None, list]): Alias for `shape_lengthscales`.
+            tfs_weights (Union[None, Tuple[Callable, Callable]]): Alias for
+                `tfs_lengthscales`.
+            requires_grad_weights (Union[None, bool]): Alias for
+                `requires_grad_lengthscales`.
         """
         if shape_scale is None:
             shape_scale = [1]
@@ -1319,33 +1562,55 @@ class KernelDigShiftInvarCombined(AbstractSIDSIKernel):
             requires_grad_weights=requires_grad_weights,
         )
         self.set_t(t)
-        assert self.alpha.shape[-2:] == (4, d)
+        if not (self.alpha.shape[-2:] == (4, d)):
+            raise AssertionError
 
     @property
     def t(self):
+        """int: Number of bits used in the binary representation of inputs
+        (see `set_t`). Must be set via `set_t` before use.
+        """
         if self._t is None:
             raise ParameterError("please use set_t to set the t value")
         return self._t
 
-    def set_t(self, t):
+    def set_t(self, t: Union[None, int]):
+        """Set the number of bits `t` used to binarize inputs via `to_bin`.
+
+        Args:
+            t (Union[None, int]): Number of bits, `0 <= t <= 63` when
+                `torchify` (`torch.int64` limit) or `0 <= t <= 64` otherwise
+                (`np.uint64` limit). `None` clears the value, requiring a
+                later call to `set_t` before the kernel can be evaluated.
+        """
         if t is None:
             self._t = t
         else:
-            assert t % 1 == 0
+            if not (t % 1 == 0):
+                raise AssertionError
             if self.torchify:
-                assert 0 <= t <= 63  # torch only supports torch.int64
+                if not (0 <= t <= 63):  # torch only supports torch.int64
+                    raise AssertionError
             else:
-                assert 0 <= t <= 64  # numpy supports np.uint64
+                if not (0 <= t <= 64):  # numpy supports np.uint64
+                    raise AssertionError
             self._t = t
 
     def get_per_dim_components(self, x0, x1, beta0, beta1):
+        """Per-dimension weighted-Walsh-function components for orders 1-4,
+        later combined by `combine_per_dim_components_raw_m1` weighted by
+        `alpha`; see the class docstring for the kernel formula. Inputs are
+        first binarized to `t` bits. Does not support derivatives
+        (`beta0`/`beta1` must be zero).
+        """
         t = self.t
         x0 = to_bin(x0, t)
         x1 = to_bin(x1, t)
         p = len(beta0)
-        assert (beta0 == 0).all() and (
+        if not ((beta0 == 0).all() and (
             beta1 == 0
-        ).all(), "KernelDSICombined does not support derivatives"
+        ).all()):
+            raise AssertionError("KernelDSICombined does not support derivatives")
         delta = x0 ^ x1
         kparts = [None] * 4
         flog2deltaj = -self.npt.inf * self.npt.ones(delta.shape, **self.nptkwargs)
@@ -1362,6 +1627,9 @@ class KernelDigShiftInvarCombined(AbstractSIDSIKernel):
     def combine_per_dim_components_raw_m1(
         self, kparts, beta0, beta1, c, batch_params, stable
     ):
+        """Weight the order-1-4 components by `alpha` and sum, then delegate
+        to the base class's combination logic.
+        """
         kparts = (self.alpha[..., None, :, None, :] * kparts).sum(-3)
         return super().combine_per_dim_components_raw_m1(
             kparts, beta0, beta1, c, batch_params, stable

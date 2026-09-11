@@ -1,3 +1,8 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
 import numpy as np
 from .abstract_integrand import AbstractIntegrand
 from ..discrete_distribution import DigitalNetB2
@@ -6,10 +11,11 @@ from ..util import ParameterError
 
 
 class Ishigami(AbstractIntegrand):
-    r"""
-    Ishigami function in $d=3$ dimensions from [1] and [https://www.sfu.ca/~ssurjano/ishigami.html](https://www.sfu.ca/~ssurjano/ishigami.html).
+    r"""Ishigami function in $d=3$ dimensions from [1] and
+    [https://www.sfu.ca/~ssurjano/ishigami.html](https://www.sfu.ca/~ssurjano/ishigami.html).
 
-    $$g(\boldsymbol{t}) = (1+bt_2^4)\sin(t_0)+a\sin^2(t_1), \qquad \boldsymbol{T} = (T_0,T_1,T_2) \sim \mathcal{U}(-\pi,\pi)^3.$$
+    $$g(\boldsymbol{t}) = (1+bt_2^4)\sin(t_0)+a\sin^2(t_1), \qquad
+    \boldsymbol{T} = (T_0,T_1,T_2) \sim \mathcal{U}(-\pi,\pi)^3.$$
 
     Examples:
         >>> integrand = Ishigami(DigitalNetB2(3,seed=7))
@@ -52,10 +58,12 @@ class Ishigami(AbstractIntegrand):
         Proceedings, First International Symposium on (pp. 398-403). IEEE.
     """
 
-    def __init__(self, sampler, a=7, b=0.1):
-        r"""
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], a: float = 7, b: float = 0.1) -> None:
+        r"""Initialize an Ishigami integrand.
+
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.
@@ -72,7 +80,15 @@ class Ishigami(AbstractIntegrand):
             dimension_indv=(), dimension_comb=(), parallel=False
         )
 
-    def g(self, t):
+    def g(self, t: np.ndarray) -> np.ndarray:
+        r"""Evaluate the Ishigami function.
+
+        Args:
+            t (np.ndarray): Three-dimensional points.
+
+        Returns:
+            np.ndarray: $(1 + b t_3^4)\sin(t_1) + a \sin^2(t_2)$.
+        """
         y = (1 + self.b * t[..., 2] ** 4) * np.sin(t[..., 0]) + self.a * np.sin(
             t[..., 1]
         ) ** 2
@@ -84,7 +100,8 @@ class Ishigami(AbstractIntegrand):
     @staticmethod
     def _exact_sensitivity_indices(indices, a, b):
         a, b = np.atleast_1d(a), np.atleast_1d(b)
-        assert a.shape == b.shape and a.ndim == 1 and b.ndim == 1
+        if not (a.shape == b.shape and a.ndim == 1 and b.ndim == 1):
+            raise AssertionError
         mu = a / 2
         m2 = 1 / 2 + 3 / 8 * a**2 + np.pi**4 / 5 * b + np.pi**8 / 18 * b**2
         tau_closed = {
@@ -123,7 +140,8 @@ class Ishigami(AbstractIntegrand):
         x = np.atleast_2d(x)
         n = len(x)
         a, b = np.atleast_1d(a), np.atleast_1d(b)
-        assert x.ndim == 2 and x.shape == (n, 3) and a.shape == (1,) and b.shape == (1,)
+        if not (x.ndim == 2 and x.shape == (n, 3) and a.shape == (1,) and b.shape == (1,)):
+            raise AssertionError
         x0, x1, x2 = x[:, 0], x[:, 1], x[:, 2]
         fus = {
             repr([]): a / 2,
