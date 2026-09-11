@@ -134,7 +134,7 @@ class AbstractKernel(object):
         """
         if not (isinstance(x0, self.nptarraytype)):
             raise AssertionError
-        if not (isinstance(x0, self.nptarraytype)):
+        if not (isinstance(x1, self.nptarraytype)):
             raise AssertionError
         if not (
             x0.shape[-1] == self.d
