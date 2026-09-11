@@ -1,3 +1,7 @@
+from pathlib import Path
+import textwrap
+import sys
+import subprocess
 """Unit tests for the GBM demo's sampling and statistics utilities.
 
 Covers `demos/GBM/gbm_code/{quantlib_util,data_util}.py`. Classes and methods
@@ -225,3 +229,48 @@ class TestReplicationMeanIndependence:
         assert means.std() > 0, "replication means are constant -- seed has no effect"
         rho, _ = spearmanr(means[:-1], means[1:])
         assert abs(rho) < self.RHO_THRESHOLD
+
+
+class TestQuantlibReproducibleAboveJaeckelTable:
+    """The Sobol path must be reproducible across processes at any n_steps.
+
+    The Jaeckel direction-integer table covers 32 dimensions. Above that
+    QuantLib randomizes the unit initialization from `Burley2020SobolRsg`'s
+    underlying seed; passing 0 there means "take one from the global seed
+    generator", which differs per process. The demo runs at `n_steps=252`, so
+    without a fixed nonzero underlying seed, its published Sobol statistics do
+    not reproduce. These tests must spawn subprocesses -- within a single
+    interpreter the draws agree and the defect is invisible.
+    """
+
+    _SCRIPT = textwrap.dedent(
+        """
+        import sys
+        sys.path.insert(0, sys.argv[1])
+        from quantlib_util import generate_quantlib_paths
+        paths, _ = generate_quantlib_paths(
+            initial_value=100.0, mu=0.05, sigma=0.2, maturity=1.0,
+            n_steps=int(sys.argv[2]), n_paths=16, sampler_type="Sobol", seed=7)
+        print("%.12f" % paths[:, -1].sum())
+        """
+    )
+
+    def _run(self, n_steps):
+        gbm_code = str(Path(__file__).resolve().parents[1] / "demos" / "GBM" / "gbm_code")
+        out = subprocess.run(
+            [sys.executable, "-c", self._SCRIPT, gbm_code, str(n_steps)],
+            capture_output=True, text=True, check=True)
+        return out.stdout.strip()
+
+    @pytest.mark.parametrize("n_steps", [4, 32, 33, 64])
+    def test_reproducible_across_processes(self, n_steps):
+        """Same call in separate interpreters must give the same paths."""
+        results = {self._run(n_steps) for _ in range(4)}
+        assert len(results) == 1, (
+            f"n_steps={n_steps} produced {len(results)} different results across "
+            f"processes: {sorted(results)}. The underlying Sobol seed must be "
+            f"fixed and nonzero; see QUANTLIB_SOBOL_SEED in quantlib_util.py.")
+
+    def test_underlying_seed_is_fixed_and_nonzero(self):
+        """Guards the constant the test above depends on."""
+        assert qlu.QUANTLIB_SOBOL_SEED != 0

@@ -1,6 +1,12 @@
 import QuantLib as ql
 import numpy as np
 
+QUANTLIB_SOBOL_SEED = 7
+assert QUANTLIB_SOBOL_SEED != 0, (
+    "QUANTLIB_SOBOL_SEED must be fixed and nonzero -- 0 defers to QuantLib's "
+    "process-global seed generator above the 32-dim Jaeckel table, making the "
+    "Sobol path non-reproducible across runs")
+
 
 def generate_quantlib_paths(
     initial_value: float,
@@ -76,11 +82,16 @@ def generate_quantlib_paths(
         # Jaeckel direction integers, so changing its `seed` does not create an
         # independent replication. Burley2020SobolRsg applies a seeded Owen-style
         # scramble; keep the underlying Sobol seed fixed and vary the scramble.
-        uniform_rsg = ql.Burley2020SobolRsg(dimension, 0, ql.SobolRsg.Jaeckel, seed)
+        # Jaeckel tabulates direction integers for 32 dimensions only. Above
+        # that, QuantLib randomizes the unit initialization from the underlying
+        # seed, and 0 means "take one from the global seed generator", which
+        # varies per process -- so n_steps > 32 would not be reproducible.
+        # Pin the underlying seed and vary only the Burley scramble.
+        uniform_rsg = ql.Burley2020SobolRsg(
+            dimension, QUANTLIB_SOBOL_SEED, ql.SobolRsg.Jaeckel, seed)
         gaussian_rsg = ql.InvCumulativeBurley2020SobolGaussianRsg(uniform_rsg)
         normals = np.asarray(
-            [gaussian_rsg.nextSequence().value() for _ in range(n_paths)]
-        )
+            [gaussian_rsg.nextSequence().value() for _ in range(n_paths)])
 
         # QuantLib's GeometricBrownianMotionProcess uses Euler evolution:
         # S_{j+1} = S_j * (1 + mu*dt + sigma*sqrt(dt)*Z_j). Vectorizing this
@@ -95,5 +106,4 @@ def generate_quantlib_paths(
         return paths, gbm
     else:
         raise ValueError(
-            f"Unsupported sampler type: {sampler_type}.  Use 'IIDStdUniform' or 'Sobol'"
-        )
+            f"Unsupported sampler type: {sampler_type}.  Use 'IIDStdUniform' or 'Sobol'")
