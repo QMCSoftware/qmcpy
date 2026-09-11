@@ -34,7 +34,7 @@ class CubMLMCCont(AbstractCubMLMC):
             cost_per_sample [2. 4. 8.]
             alpha           1.868
             beta            1.969
-            gamma           1.000
+            gamma           ...
             time_integrate  ...
         CubMLMCCont (AbstractStoppingCriterion)
             rmse_tol        0.006
