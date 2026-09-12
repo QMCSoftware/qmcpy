@@ -536,10 +536,12 @@ class TestConstructionAblation:
         )
         assert list(df.columns) == [
             "Sampler", "Construction", "Mean Absolute Error", "Std Dev Error",
+            "Runtime (s)",
         ]
         assert len(df) == 4
         assert set(df["Construction"]) == {"PCA", "Cholesky"}
         assert np.isfinite(df["Mean Absolute Error"]).all()
+        assert (df["Runtime (s)"] > 0).all()
 
     def test_constructions_differ_for_low_discrepancy(self):
         """Checks `decomp_type` actually reaches the sampler.
@@ -555,10 +557,17 @@ class TestConstructionAblation:
         assert len(set(errors)) == len(errors)
 
     def test_same_seed_reproduces(self):
-        """Checks the ablation is deterministic, so runs are comparable."""
+        """Checks the ablation is deterministic, so runs are comparable.
+
+        Excludes 'Runtime (s)', a wall-clock measurement that is never
+        bit-reproducible between calls.
+        """
         first = du.run_construction_ablation(["Sobol"], ["PCA"], **self.PARAMS)
         second = du.run_construction_ablation(["Sobol"], ["PCA"], **self.PARAMS)
-        pd.testing.assert_frame_equal(first, second)
+        drop_cols = ["Runtime (s)"]
+        pd.testing.assert_frame_equal(
+            first.drop(columns=drop_cols), second.drop(columns=drop_cols)
+        )
 
     def test_constructions_agree_on_the_law(self):
         """Checks all constructions describe the same process.

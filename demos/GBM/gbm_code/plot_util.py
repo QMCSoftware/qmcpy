@@ -209,7 +209,10 @@ def plot_performance_comparison(
 
 
 def plot_construction_ablation(
-    ax: Axes, ablation_df: pd.DataFrame, metric: str = "Mean Absolute Error"
+    ax: Axes,
+    ablation_df: pd.DataFrame,
+    metric: str = "Mean Absolute Error",
+    legend: bool = True,
 ) -> None:
     """
     Plot the path-construction ablation as grouped bars.
@@ -227,7 +230,12 @@ def plot_construction_ablation(
     Args:
         ax: Matplotlib axis object
         ablation_df: Output of data_util.run_construction_ablation()
-        metric: Column to plot, 'Mean Absolute Error' or 'Std Dev Error'
+        metric: Column to plot, 'Mean Absolute Error', 'Std Dev Error', or
+            'Runtime (s)'. The error metrics use a log scale; runtime does
+            not, since it does not span orders of magnitude here.
+        legend: Whether to draw the construction legend on this axis. The
+            three subplots share one legend, so callers should only set this
+            for one of them.
     """
     constructions = ["PCA", "Cholesky", "BrownianBridge"]
     labels = {"PCA": "PCA", "Cholesky": "Cholesky", "BrownianBridge": "Brownian bridge"}
@@ -252,9 +260,11 @@ def plot_construction_ablation(
             alpha=0.8,
         )
 
-    ax.set_yscale("log")
+    is_runtime = metric == "Runtime (s)"
+    if not is_runtime:
+        ax.set_yscale("log")
     ax.set_xlabel("Sampler")
-    ax.set_ylabel(f"{metric} (log scale)")
+    ax.set_ylabel(metric if is_runtime else f"{metric} (log scale)")
     ax.set_title(
         f"{metric} by Path Construction\n(same point set within each group)",
         fontsize=14,
@@ -262,7 +272,8 @@ def plot_construction_ablation(
     )
     ax.set_xticks(x)
     ax.set_xticklabels(samplers, rotation=45, ha="right")
-    ax.legend()
+    if legend:
+        ax.legend()
     ax.grid(True, alpha=0.3)
 
 

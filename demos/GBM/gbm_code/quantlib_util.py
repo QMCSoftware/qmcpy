@@ -181,6 +181,17 @@ def generate_quantlib_paths(
         ValueError: If sampler_type is not 'IIDStdUniform', 'Sobol', or
             'Halton', or if scheme is not 'exact' or 'euler'
 
+    Notes:
+        'IIDStdUniform' evolves paths inside QuantLib's own
+        `GaussianPathGenerator` (one native call per path). 'Sobol' and
+        'Halton' only draw normals from QuantLib; evolution runs through
+        `_evolve_vectorized()`, our NumPy port of the same recursion, to
+        avoid millions of Python-to-QuantLib calls. So a measured runtime for
+        those two branches is (QuantLib low-discrepancy generation) + (NumPy
+        evolution), not pure QuantLib -- comparing it to the IID branch's
+        timing, or taking its ratio against QMCPy's runtime, is therefore a
+        comparison against that hybrid rather than against QuantLib alone.
+
     References:
         Peter Jaeckel. Monte Carlo Methods in Finance. Wiley, 2002.
             Source of the `ql.SobolRsg.Jaeckel` direction integers used by
