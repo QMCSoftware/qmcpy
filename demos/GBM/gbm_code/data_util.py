@@ -238,9 +238,7 @@ def create_timing_dataframe(
     Create comprehensive timing comparison table from benchmark results.
 
     The speedup of a QMCPy row is computed against the QuantLib run that uses
-    the *same* sampler, so the ratio is like-for-like. Samplers that QuantLib
-    is not benchmarked with here (e.g. Lattice, Halton) have no counterpart and
-    report "-" rather than a ratio against an unrelated QuantLib run.
+    the *same* sampler family. The comparison is not fully like-for-like: the two libraries may use different randomizations, path constructions, and implementation strategies. Samplers that QuantLib is not benchmarked with here (e.g. Lattice) have no counterpart and report "-" rather than a ratio against an unrelated QuantLib run.
 
     Args:
         quantlib_results: Dictionary mapping sampler names to timing results

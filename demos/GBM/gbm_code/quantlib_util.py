@@ -97,11 +97,7 @@ def _low_discrepancy_normals(
         )
         gaussian_rsg = ql.InvCumulativeBurley2020SobolGaussianRsg(uniform_rsg)
     elif sampler_type == "Halton":
-        # randomStart=True draws a seeded random starting index per dimension,
-        # which is what makes distinct seeds independent randomizations. Note
-        # this is a random start, not a scramble, so it is a weaker
-        # randomization than QMCPy's scrambled Halton.
-        uniform_rsg = ql.HaltonRsg(dimension, seed, True, False)
+        uniform_rsg = ql.HaltonRsg(dimension, seed, False, True)
         gaussian_rsg = ql.InvCumulativeHaltonGaussianRsg(uniform_rsg)
     else:
         raise ValueError(
