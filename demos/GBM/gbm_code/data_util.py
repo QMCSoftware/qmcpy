@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
@@ -319,12 +321,16 @@ def run_construction_ablation(
 
     Returns:
         DataFrame with one row per (sampler, construction) and columns
-        'Sampler', 'Construction', 'Mean Absolute Error', 'Std Dev Error'
+        'Sampler', 'Construction', 'Mean Absolute Error', 'Std Dev Error',
+        'Runtime (s)'. Runtime is a single wall-clock measurement of path
+        generation, not a `%timeit`-style average, so treat it as indicative
+        rather than a precise benchmark.
     """
     gbm_params = cf.get_gbm_parameters()
     rows = []
     for sampler_type in sampler_types:
         for decomp_type in decomp_types:
+            start = time.perf_counter()
             paths, _ = qpu.generate_qmcpy_paths(
                 initial_value=gbm_params["initial_value"],
                 mu=gbm_params["mu"],
@@ -337,6 +343,7 @@ def run_construction_ablation(
                 seed=seed,
                 decomp_type=decomp_type,
             )
+            runtime = time.perf_counter() - start
             terminal = paths[..., -1]
             summary = _replication_summary(
                 "QMCPy",
@@ -352,6 +359,7 @@ def run_construction_ablation(
                     "Construction": decomp_type,
                     "Mean Absolute Error": summary["Mean Absolute Error"],
                     "Std Dev Error": summary["Std Dev Error"],
+                    "Runtime (s)": runtime,
                 }
             )
     return pd.DataFrame(rows)
