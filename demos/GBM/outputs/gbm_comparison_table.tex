@@ -1,17 +1,18 @@
 \begin{table}[tbp]
-\caption{GBM Final Value Statistics and Performance Comparison}
+\caption{GBM Terminal Statistics ($R=8$, $n=16,384$) and Runtime}
 \label{tab2}
 \begin{tabular}{ll@{\hspace{0.4em}}r@{\hspace{0.4em}}r@{\hspace{0.4em}}r@{\hspace{0.4em}}r@{\hspace{0.4em}}r@{\hspace{0.4em}}r@{\hspace{0.4em}}r}
 \toprule
-Method & Sampler & Mean & Std Dev & Mean Absolute & Std Dev  & Mean Time (s)  & Std Dev (s) & Speedup \\
- &  &  &   &  Error &  Error &   & & (same sampler) \\
+Method & Sampler & Mean (SE) & SD (SE) & MAE (SE) & SD Error (SE) & Mean Time (s) & Time SD (s) & Speedup \\
+ & & & & & & & & (same sampler) \\
 \midrule
-QuantLib & IIDStdUniform & 105.11303192 & 21.36718877 & 0.18351598 & 0.15899591 & 0.63380418 & 0.00161494 & - \\
-QMCPy & IIDStdUniform & 105.10038021 & 21.30566056 & 0.11309393 & 0.08490085 & 0.06230253 & 0.00088295 & 10.17300847 \\
-QuantLib & Sobol & 105.14277619 & 21.33131514 & 0.01873630 & 0.10979683 & 0.17632570 & 0.00019854 & - \\
-QMCPy & Sobol & 105.12698793 & 21.24087984 & 0.00060724 & 0.00566480 & 0.05969414 & 0.00087956 & 2.95381933 \\
-QMCPy & Lattice & 105.12707776 & 21.23535755 & 0.00528692 & 0.01626092 & 0.05913754 & 0.00010269 & - \\
-QMCPy & Halton & 105.12751671 & 21.24077321 & 0.00092510 & 0.00998311 & 1.71934573 & 0.00829316 & - \\
+QuantLib & IIDStdUniform & 105.088 (0.063) & 21.219 (0.057) & 0.141 (0.036) & 0.129 (0.031) & 1.51477563 & 0.00328385 & - \\
+QMCPy & IIDStdUniform & 105.013 (0.060) & 21.210 (0.034) & 0.152 (0.046) & 0.085 (0.016) & 0.05820994 & 0.00004541 & 26.02262939 \\
+QuantLib & Sobol & 105.1284 (0.0046) & 21.234 (0.029) & 0.0097 (0.0028) & 0.066 (0.015) & 0.17187480 & 0.00070835 & - \\
+QMCPy & Sobol & 105.12682 (0.00019) & 21.2364 (0.0010) & 0.000547 (0.000082) & 0.00269 (0.00039) & 0.05477001 & 0.00064853 & 3.13811864 \\
+QuantLib & Halton & 105.070 (0.057) & 21.15 (0.34) & 0.110 (0.044) & 0.66 (0.24) & 0.16666276 & 0.00136957 & - \\
+QMCPy & Halton & 105.12733 (0.00043) & 21.2389 (0.0017) & 0.00084 (0.00030) & 0.00407 (0.00081) & 2.57847524 & 0.71127752 & 0.06463617 \\
+QMCPy & Lattice & 105.1238 (0.0018) & 21.2235 (0.0067) & 0.00526 (0.00095) & 0.0190 (0.0046) & 0.05643869 & 0.00084509 & - \\
 \bottomrule
 \end{tabular}
 \end{table}
