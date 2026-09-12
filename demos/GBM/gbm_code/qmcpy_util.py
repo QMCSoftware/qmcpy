@@ -46,6 +46,7 @@ def generate_qmcpy_paths(
     replications: int = 1,
     seed: int = 42,
     decomp_type: str = "PCA",
+    monitoring_times=None,
 ):
     """
     Generate Geometric Brownian Motion paths using QMCPy with multiple replications.
@@ -64,6 +65,10 @@ def generate_qmcpy_paths(
             'BrownianBridge'. All three describe the same process and give the
             same distribution of S_T; they differ in which low-discrepancy
             coordinate drives which feature of the path.
+        monitoring_times: Optional custom sampling times, only meaningful with
+            decomp_type='BrownianBridge' (PCA/Cholesky always use an evenly
+            spaced grid). Pass this to make BrownianBridge share PCA/Cholesky's
+            grid instead of its own default van der Corput times.
 
     Returns:
         tuple: (paths, gbm) where paths has shape (n_paths, n_steps) if replications is None,
@@ -78,6 +83,7 @@ def generate_qmcpy_paths(
         drift=mu,
         diffusion=diffusion,
         decomp_type=decomp_type,
+        monitoring_times=monitoring_times,
     )
     paths = gbm.gen_samples(n_paths)
     return paths, gbm

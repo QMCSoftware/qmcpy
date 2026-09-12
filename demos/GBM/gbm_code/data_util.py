@@ -327,6 +327,13 @@ def run_construction_ablation(
         rather than a precise benchmark.
     """
     gbm_params = cf.get_gbm_parameters()
+    maturity = gbm_params["maturity"]
+    # BrownianBridge defaults to its own (van der Corput) monitoring times,
+    # which only coincide with PCA/Cholesky's even grid when n_steps is a
+    # power of 2. Pass the even grid explicitly so every construction shares
+    # the exact same time_vec, matching this function's "time grid held
+    # fixed" docstring claim.
+    uniform_grid = np.linspace(maturity / n_steps, maturity, n_steps)
     rows = []
     for sampler_type in sampler_types:
         for decomp_type in decomp_types:
@@ -335,13 +342,14 @@ def run_construction_ablation(
                 initial_value=gbm_params["initial_value"],
                 mu=gbm_params["mu"],
                 diffusion=gbm_params["sigma"] ** 2,
-                maturity=gbm_params["maturity"],
+                maturity=maturity,
                 n_steps=n_steps,
                 n_paths=n_paths,
                 sampler_type=sampler_type,
                 replications=replications,
                 seed=seed,
                 decomp_type=decomp_type,
+                monitoring_times=uniform_grid if decomp_type == "BrownianBridge" else None,
             )
             runtime = time.perf_counter() - start
             terminal = paths[..., -1]

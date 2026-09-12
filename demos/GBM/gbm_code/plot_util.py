@@ -413,6 +413,12 @@ def create_parameter_sweep_plots(df: pd.DataFrame, replications: int) -> None:
     # Filter out theoretical data
     plot_data = df[df["Method"] != "Theoretical"].copy()
 
+    # The fixed axis size for each row depends on cf.is_debug (e.g. Colab
+    # uses smaller values), so read it from the data instead of hard-coding
+    # the full-run number.
+    fixed_paths = plot_data.loc[plot_data["Series"] == "Time Steps", "n_paths"].iloc[0]
+    fixed_steps = plot_data.loc[plot_data["Series"] == "Paths", "n_steps"].iloc[0]
+
     # Create figure with 2x3 subplots
     _, ((ax1, ax2, ax3), (ax4, ax5, ax6)) = plt.subplots(2, 3, figsize=(21, 12))
     # Panel 1: MAE vs n_steps (upper left)
@@ -422,7 +428,7 @@ def create_parameter_sweep_plots(df: pd.DataFrame, replications: int) -> None:
         "Time Steps",
         "n_steps",
         "Mean Absolute Error",
-        f"MAE vs Time Steps\n(n_paths = 4,096, R = {replications})",
+        f"MAE vs Time Steps\n(n_paths = {fixed_paths:,}, R = {replications})",
         "Number of Time Steps",
         "MAE",
         log_scale=True,
@@ -435,7 +441,7 @@ def create_parameter_sweep_plots(df: pd.DataFrame, replications: int) -> None:
         "Time Steps",
         "n_steps",
         "Std Dev Error",
-        f"SD Error vs Time Steps\n(n_paths = 4,096, R = {replications})",
+        f"SD Error vs Time Steps\n(n_paths = {fixed_paths:,}, R = {replications})",
         "Number of Time Steps",
         "SD Error",
         log_scale=True,
@@ -448,7 +454,7 @@ def create_parameter_sweep_plots(df: pd.DataFrame, replications: int) -> None:
         "Time Steps",
         "n_steps",
         "Runtime (s)",
-        "Runtime vs Time Steps\n(n_paths = 4,096)",
+        f"Runtime vs Time Steps\n(n_paths = {fixed_paths:,})",
         "Number of Time Steps",
         "Runtime (seconds)",
         log_scale=True,
@@ -462,7 +468,7 @@ def create_parameter_sweep_plots(df: pd.DataFrame, replications: int) -> None:
         "Paths",
         "n_paths",
         "Mean Absolute Error",
-        f"MAE vs Paths\n(n_steps = 252, R = {replications})",
+        f"MAE vs Paths\n(n_steps = {fixed_steps}, R = {replications})",
         "Number of Paths",
         "MAE",
         log_scale=True,
@@ -475,7 +481,7 @@ def create_parameter_sweep_plots(df: pd.DataFrame, replications: int) -> None:
         "Paths",
         "n_paths",
         "Std Dev Error",
-        f"SD Error vs Paths\n(n_steps = 252, R = {replications})",
+        f"SD Error vs Paths\n(n_steps = {fixed_steps}, R = {replications})",
         "Number of Paths",
         "SD Error",
         log_scale=True,
@@ -488,7 +494,7 @@ def create_parameter_sweep_plots(df: pd.DataFrame, replications: int) -> None:
         "Paths",
         "n_paths",
         "Runtime (s)",
-        "Runtime vs Paths\n(n_steps = 252)",
+        f"Runtime vs Paths\n(n_steps = {fixed_steps})",
         "Number of Paths",
         "Runtime (seconds)",
         log_scale=True,
