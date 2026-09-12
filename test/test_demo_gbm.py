@@ -24,13 +24,13 @@ import json
 from itertools import combinations
 from pathlib import Path
 
-import matplotlib
-matplotlib.use("Agg")  # headless-safe; must precede plot_util's `import matplotlib.pyplot`
-
 import numpy as np
 import pandas as pd
 import pytest
 from scipy.stats import spearmanr
+
+matplotlib = pytest.importorskip("matplotlib")
+matplotlib.use("Agg")  # headless-safe; must precede plot_util's `import matplotlib.pyplot`
 
 cf = pytest.importorskip("demos.GBM.gbm_code.config")
 qlu = pytest.importorskip("demos.GBM.gbm_code.quantlib_util")
