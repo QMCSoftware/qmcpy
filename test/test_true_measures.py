@@ -4,6 +4,7 @@ from qmcpy import (
     DigitalNetB2,
     Gaussian,
     GeometricBrownianMotion,
+    Halton,
     IIDStdUniform,
     JohnsonsSU,
     Kumaraswamy,
@@ -1265,6 +1266,23 @@ class TestGeometricBrownianMotion(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures with fixed seeds for reproducibility."""
         self.seed = 7
+
+    def test_shape_and_terminal_value_across_samplers(self):
+        """Path shape and terminal (last time-step) values are well-defined,
+        finite, and positive across LD and IID samplers."""
+        n_steps, n_paths = 4, 8
+        for sampler_cls in (DigitalNetB2, Lattice, Halton, IIDStdUniform):
+            with self.subTest(sampler=sampler_cls.__name__):
+                gbm = GeometricBrownianMotion(
+                    sampler_cls(n_steps, seed=self.seed),
+                    t_final=1, initial_value=100, drift=0.05, diffusion=0.04,
+                )
+                samples = gbm.gen_samples(n_paths)
+                self.assertEqual(samples.shape, (n_paths, n_steps))
+                self.assertTrue(np.isfinite(samples).all())
+                terminal = samples[..., -1]
+                self.assertEqual(terminal.shape, (n_paths,))
+                self.assertTrue(np.isfinite(terminal).all() and (terminal > 0).all())
 
     def test_gbm_basic_output_reproducibility(self):
         """Test that basic GBM sample generation produces expected values with fixed seed."""

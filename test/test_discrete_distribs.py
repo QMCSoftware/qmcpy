@@ -16,6 +16,8 @@ import numpy as np
 import numpy.testing as npt
 import tempfile
 import warnings
+from itertools import combinations
+from scipy.stats import spearmanr
 
 class TestDiscreteDistribution(unittest.TestCase):
 
@@ -242,6 +244,17 @@ class TestLattice(unittest.TestCase):
             ).all()
         )
 
+    def test_replications_pairwise_distinct(self):
+        # replications=R must give R independent copies, not duplicates.
+        x = Lattice(dimension=4, seed=7, replications=5)(8, warn=False)
+        for a, b in combinations(x, 2):
+            self.assertFalse(np.array_equal(a, b))
+
+    def test_different_seed_changes_output(self):
+        x7 = Lattice(dimension=4, seed=7)(8, warn=False)
+        x8 = Lattice(dimension=4, seed=8)(8, warn=False)
+        self.assertFalse(np.array_equal(x7, x8))
+
 
 class TestDigitalNetB2(unittest.TestCase):
     """Unit tests for DigitalNetB2 DiscreteDistribution.
@@ -277,6 +290,31 @@ class TestDigitalNetB2(unittest.TestCase):
         # Determinism for the same seed/params
         x2 = DigitalNetB2(dimension=3, seed=7, replications=2)(4, warn=False)
         npt.assert_array_equal(x, x2)
+
+    def test_replications_pairwise_distinct(self):
+        # replications=R must give R independent copies, not duplicates.
+        x = DigitalNetB2(dimension=4, seed=7, replications=5)(8, warn=False)
+        for a, b in combinations(x, 2):
+            self.assertFalse(np.array_equal(a, b))
+
+    def test_different_seed_changes_output(self):
+        x7 = DigitalNetB2(dimension=4, seed=7)(8, warn=False)
+        x8 = DigitalNetB2(dimension=4, seed=8)(8, warn=False)
+        self.assertFalse(np.array_equal(x7, x8))
+
+    def test_replication_means_uncorrelated(self):
+        # Stronger than "not identical": per-replication means should show no
+        # rank correlation across the replication index. n=8 (not larger) --
+        # at bigger n, digital-net stratification concentrates the means so
+        # tightly around 0.5 that this statistic loses power.
+        m = 40
+        x = DigitalNetB2(dimension=4, seed=7, replications=m)(8, warn=False)
+        means = x[:, :, 0].mean(axis=1)
+        self.assertGreater(means.std(), 0)
+        rho, _ = spearmanr(means[:-1], means[1:])
+        # SE of rho under independence is ~1/sqrt(m-2) =~ 0.16 here, so this
+        # threshold is a >2 sigma margin without being fragile.
+        self.assertLess(abs(rho), 0.5)
 
     def test_ordering_gray_vs_radical_inverse_canonical_small_case(self):
         # These are tiny, canonical “ordering sanity checks” (stable and intentional).
