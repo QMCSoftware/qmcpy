@@ -24,6 +24,9 @@ import json
 from itertools import combinations
 from pathlib import Path
 
+import matplotlib
+matplotlib.use("Agg")  # headless-safe; must precede plot_util's `import matplotlib.pyplot`
+
 import numpy as np
 import pandas as pd
 import pytest
