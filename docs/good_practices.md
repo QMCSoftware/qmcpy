@@ -51,7 +51,7 @@ New functionality should fit the existing QMCPy class hierarchy instead of intro
 - Typical extension points include `DiscreteDistribution`, `TrueMeasure`, `Integrand`, `StoppingCriterion`, and `AccumulateData`.
 - If a change does not fit the current hierarchy, raise that design question in an issue or draft PR before committing to a new abstraction.
 
-The [components overview](components.md) and the blog post on [object classes in QMCPy](blogs/visualizing-the-internals-of-object-classes-in-qmcpy/index.md) provide useful background on the current architecture.
+The [components overview](components.md) and the QMCSoftware blog post on [object classes in QMCPy](https://qmcsoftware.org/blogs/visualizing-the-internals-of-object-classes-in-qmcpy/) provide useful background on the current architecture.
 
 ## Validate Links, Metadata, and CI Scope
 
@@ -60,6 +60,7 @@ Several reviews focused on avoidable cleanup that is easy to catch before reques
 ### Links, Names, and Metadata
 
 - Verify external URLs, raw data links, and referenced file paths before opening a PR.
+- When a PR deletes or moves an already-published page, keep its URL alive with a `redirect_maps` entry under the `redirects` plugin in `mkdocs.yml`. Deleting a page deletes its links too, so only `make check_removed_urls` (deployed `sitemap.xml` vs current `docs/` sources) catches this, not `make check_links`.
 - Keep public names exact across code, docs, nav labels, notebooks, PR titles, and data files, especially for package names, publication years, and schema keys.
 - Use concrete metadata values when possible. For example, prefer specific supported languages over vague labels such as "Multiple".
 

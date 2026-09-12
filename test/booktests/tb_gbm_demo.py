@@ -17,7 +17,7 @@ class NotebookTests(BaseNotebookTest):
         ]
         self.fix_symlinks(notebook_dir, symlinks_to_fix)
         replacements = {
-            "cf.is_debug = False": "cf.is_debug = True",
+            "cf.is_debug = IN_COLAB": "cf.is_debug = True",
             "n_samples = 2**12": "n_samples = 4",
             "sampler = qp.Lattice(2**7, seed=42)": "sampler = qp.Lattice(4, seed=42)",
             "qp.IIDStdUniform(2**8, seed=42)": "qp.IIDStdUniform(4, seed=42)",

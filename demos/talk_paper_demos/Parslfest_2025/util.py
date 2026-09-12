@@ -64,7 +64,7 @@ def run_make_command(cmd, output_file, is_debug=False, tests=None, env=None):
     Returns:
         bool: True if command succeeded
     """
-    is_linux = sys.platform.startswith("Linux")
+    is_linux = sys.platform.startswith("linux")
 
     if tests is None and is_debug:
         tests = "tb_quickstart tb_qmcpy_intro tb_lattice_random_generator"

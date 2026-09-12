@@ -50,7 +50,7 @@ class MPMC_net(nn.Module):
         super(MPMC_net, self).__init__()
         self.enc = nn.Linear(dim,nhid)
         self.convs = nn.ModuleList()
-        for i in range(nlayers):
+        for _ in range(nlayers):
             self.convs.append(MPNN_layer(nhid,nhid))
         self.dec = nn.Linear(nhid,dim)
         self.nlayers = nlayers

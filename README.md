@@ -3,7 +3,7 @@
 [![](https://img.shields.io/badge/qmcpy.org-15bfa9)](https://qmcpy.org/)
 [![Docs](https://github.com/QMCSoftware/QMCSoftware/actions/workflows/docs.yml/badge.svg?branch=master)](https://qmcsoftware.github.io/QMCSoftware/)
 [![DOI](https://joss.theoj.org/papers/10.21105/joss.09705/status.svg)](https://doi.org/10.21105/joss.09705)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3964489.svg)](https://doi.org/10.5281/zenodo.3964489)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.3964489-007ec6.svg)](https://doi.org/10.5281/zenodo.3964489)
 [![](https://img.shields.io/badge/PyPI-fc7303)](https://pypi.org/project/qmcpy/)
 [![GitHub stars](https://img.shields.io/github/stars/QMCSoftware/QMCSoftware?style=social)](https://github.com/QMCSoftware/QMCSoftware)
 [![Tests](https://github.com/QMCSoftware/QMCSoftware/actions/workflows/alltests.yml/badge.svg)](https://github.com/QMCSoftware/QMCSoftware/actions/workflows/alltests.yml)
@@ -27,6 +27,8 @@ The [QMCPy documentation](https://QMCSoftware.github.io/QMCSoftware/) contains a
 ```bash
 pip install qmcpy
 ```
+
+Requires Python >= 3.9. Contributing code, running tests, or building the documentation requires Python >= 3.10 — see the [Minimum Python Version by Role](https://qmcsoftware.github.io/QMCSoftware/CONTRIBUTING/#minimum-python-version-by-role) table in the contributing guidelines for the full breakdown.
 
 To install from source, please see the [contributing guidelines](https://qmcsoftware.github.io/QMCSoftware/CONTRIBUTING/).
 

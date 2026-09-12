@@ -23,7 +23,10 @@ nav:
       - Quickstart: demos/quickstart.ipynb
       - Pricing Options: demos/pricing_options.ipynb
       - Lebesgue Integration: demos/lebesgue_integration.ipynb
-    - Resume Feature: demos/demo_resume_data/resume_examples.ipynb
+    - Resume and Iteration Logging:
+      - Resume Feature Quickstart: demos/demo_resume_data/resume_examples.ipynb
+      - Accuracy and Resume: demos/demo_resume_data/accuracy_and_resume.ipynb
+      - Iteration Log and Tolerance: demos/demo_resume_data/Iteration_Log_Tolerance_Demo.ipynb
     - Publication Notebooks:
       - 2026 Random LD Seq., QMC, and Fast Kernel Methods: demos/talk_paper_demos/Sorokin_random_LD_seq_QMC_fast_kernel_methods_2026/Sorokin_random_LD_seq_QMC_fast_kernel_methods_2026.ipynb
       - 2026 JOSS Paper: demos/talk_paper_demos/JOSS2026/joss2026.ipynb
@@ -42,7 +45,7 @@ nav:
       - 2023 Purdue Talk: demos/talk_paper_demos/Purdue_Talk_2023_March/Purdue_Talk_Figures.ipynb
       - 2023 PyData Chicago Talk: demos/talk_paper_demos/pydata_chi_2023.ipynb
       - 2020 MCQMC Software Tutorial: demos/talk_paper_demos/MCQMC_Tutorial_2020/MCQMC_2020_QMC_Software_Tutorial.ipynb
-    - Blog Posts:
+    - Technical Examples:
       - 2023 Random Lattice Generating Vectors: demos/lattice_random_generator.ipynb
       - 2022 Bayesian Cubature Stopping Criterion: demos/gaussian_diagnostics/gaussian_diagnostics_demo.ipynb
       - 2020 Why Add Q to MC?: demos/talk_paper_demos/why_add_q_to_mc_blog/why_add_q_to_mc_blog.ipynb
@@ -76,29 +79,6 @@ nav:
         - ProductMeasure: demos/product_measure.ipynb
         - Acceptance-Rejection Sampling: demos/acceptance_rejection.ipynb
         - Copula TrueMeasure Examples: demos/copula_examples.ipynb
-  - Blogs:
-    - Iteration Log: demos/demo_resume_data/Iteration_Log_Tolerance_Demo.ipynb
-    - Resume Feature: demos/demo_resume_data/accuracy_and_resume.ipynb
-  # - Papers:
-  #   - JOSS: paper/paper.md
-    - SciPyWrapper: blogs/scipywrapper/index.md
-    - Visualizing the Generated Samples Helps: blogs/visualizing-the-generated-samples-helps/index.md
-    - "CubMCCLTVec: Vectorizing the CubMCCLT Algorithm": blogs/cubmccltvec-vectorizing-the-cubmcclt-algorithm/index.md
-    - Accelerating QMCPy Notebook Tests with Parsl: blogs/accelerating-qmcpy-notebook-tests-with-parsl/index.md
-    - GBM with QMCPy: blogs/gbm-qmcpy/index.md
-    - Linear Matrix Scrambling and Digital Shift for Halton: blogs/linear-matrix-scrambling-and-digital-shift-for-halton/index.md
-    - QMC Efficiency for Asian Option Pricing: blogs/analysis-of-qmc-efficiency-for-asian-option-pricing/index.md
-    - Random Lattice Generators are Not Bad: blogs/random-lattice-generators-are-not-bad/index.md
-    - Accelerating Rare-event Reliability Simulations for CERN's Large Hadron Collider using QMCPy: blogs/accelerating-rare-event-reliability-simulations-for-cerns-large-hadron-collider-using-qmcpy/index.md
-    - Bayesian Stopping Criteria: blogs/bayesian-stopping-criteria/index.md
-    - Digital Sequences, the Niederreiter Construction: blogs/digital-sequences-the-niederreiter-construction/index.md
-    - Speeding up QMCPy with Distributable C Code: blogs/speeding-up-qmcpy-with-distributable-c-code/index.md
-    - Visualizing the Internals of Object Classes in QMCPy: blogs/visualizing-the-internals-of-object-classes-in-qmcpy/index.md
-    - Safe Handling of QMC Points: blogs/safe-handling-of-qmc-points/index.md
-    - qEI with QMCPy: blogs/qei-with-qmcpy/index.md
-    - What Makes a Sequence Low Discrepancy?: blogs/what-makes-a-sequence-low-discrepancy/index.md
-    - A QMCPy Quick Start: blogs/a-qmcpy-quick-start/index.md
-    - Why Add Q to MC?: blogs/why-add-q-to-mc/index.md
   - For Developers:
     - Release Manual: RELEASE.md
     - Contribution Good Practices: good_practices.md
@@ -169,8 +149,10 @@ plugins:
       shadow: true
       manual: false
   - autorefs  # explicitly listed so print-site stays last (mkdocstrings auto-injects this)
-  - print-site:  # Enables PDF generation (saves docs to print_page/). See https://tinyurl.com/52ba83ax
-      add_to_navigation: true
+  # I have commented out the following as it requires storing over 100mb of data, which GitHub throws an error for:
+  #         remote: error: File print_page/index.html is 103.75 MB; this exceeds GitHub's file size limit of 100.00 MB
+  # - print-site:  # Enables PDF generation (saves docs to print_page/). See https://tinyurl.com/52ba83ax
+  #     add_to_navigation: true
 
 theme:
   palette:

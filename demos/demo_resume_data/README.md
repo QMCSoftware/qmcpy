@@ -8,7 +8,9 @@ This folder contains notebooks and helper scripts for demonstrating QMCPy's resu
 
 - `accuracy_and_resume.ipynb`:   Long-form walkthrough of the feature.
 
-- `resume_examples.ipynb`:   Compact how-to for the feature.
+- `resume_examples.ipynb`: Compact, recipe-style walkthrough of the resume workflow.
+
+- `Iteration_Log_Tolerance_Demo.ipynb`: Focused demonstration of tolerance changes and the iteration log.
 
 - `check_resume.py`: Runs a cross-method comparison of:
   - a loose run followed by resume with a tighter tolerance
@@ -23,6 +25,19 @@ This folder contains notebooks and helper scripts for demonstrating QMCPy's resu
 - `resume_util.py`: Shared helpers for the resume demo scripts, including case execution, log formatting, and text-report generation.
 
 - `output/`: Generated reports and checkpoint files created when you run the notebooks or `check_resume.py`. These artifacts are intentionally not tracked in git.
+
+## Reproducing the Website Articles
+
+The website articles on the [resume feature](https://qmcsoftware.org/blogs/resume-feature/) and [iteration logs](https://qmcsoftware.org/blogs/iteration-log/) summarize the material, while the three notebooks above are the executable sources. To check an update, execute all cells in the relevant notebook using the QMCPy development environment, then run its focused booktest from the repository root:
+
+```bash
+cd test/booktests
+python -m pytest tb_accuracy_and_resume.py \
+  tb_resume_examples.py \
+  tb_Iteration_Log_Tolerance_Demo.py -v
+```
+
+Keep the notebook, any local helper files, and its `tb_*.py` booktest together when the corresponding website article changes. The article should link back to the notebook in this directory so readers can rerun the complete example.
   
 ## Generated Reports
 
