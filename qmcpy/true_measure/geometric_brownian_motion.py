@@ -54,9 +54,10 @@ class GeometricBrownianMotion(BrownianMotion):
         drift=0,
         diffusion=1,
         decomp_type="PCA",
-        monitoring_times=None,
         lazy_load=True,
         lazy_decomp=True,
+        *,
+        monitoring_times=None,
     ):
         r"""
         Args:
@@ -66,12 +67,13 @@ class GeometricBrownianMotion(BrownianMotion):
             drift (float): Drift coefficient $\gamma$.
             diffusion (float): Positive diffusion coefficient $\sigma^2$, where $\sigma$ is volatility.
             decomp_type (str): Method of decomposition, either "PCA", "Cholesky", or "BrownianBridge".
-            monitoring_times (Union[np.ndarray, list]): Optional custom sampling times for
-                `decomp_type='BrownianBridge'`; see `BrownianMotion`. With `decomp_type`
-                `'PCA'` or `'Cholesky'`, the times are always `linspace(t_final/d, t_final, d)`,
-                so passing this is only meaningful for `'BrownianBridge'`.
             lazy_load (bool): If True, defer GBM-specific computations until needed.
             lazy_decomp (bool): If True, defer expensive matrix decomposition until needed.
+            monitoring_times (Union[np.ndarray, list]): Keyword-only. Optional custom
+                sampling times for `decomp_type='BrownianBridge'`; see `BrownianMotion`.
+                With `decomp_type` `'PCA'` or `'Cholesky'`, the times are always
+                `linspace(t_final/d, t_final, d)`, so passing this is only meaningful
+                for `'BrownianBridge'`.
         """
         super().__init__(
             sampler,

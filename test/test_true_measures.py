@@ -1487,6 +1487,26 @@ class TestGeometricBrownianMotion(unittest.TestCase):
         )
         self.assertIsNotNone(gbm_eager._log_mvn_scipy_cache)
 
+    def test_legacy_positional_call_unaffected_by_monitoring_times(self):
+        """A pre-existing positional call (..., decomp_type, lazy_load,
+        lazy_decomp) must land on the same parameters as its keyword
+        equivalent -- monitoring_times was added keyword-only specifically
+        so inserting it does not shift any positional argument.
+        """
+        positional = GeometricBrownianMotion(
+            DigitalNetB2(4, seed=self.seed), 1, 100, 0.05, 0.04, "PCA", False, False,
+        )
+        keyword = GeometricBrownianMotion(
+            DigitalNetB2(4, seed=self.seed),
+            t_final=1, initial_value=100, drift=0.05, diffusion=0.04,
+            decomp_type="PCA", lazy_load=False, lazy_decomp=False,
+        )
+        self.assertFalse(positional.lazy_load)
+        self.assertFalse(positional.lazy_decomp)
+        self.assertEqual(positional.lazy_load, keyword.lazy_load)
+        self.assertEqual(positional.lazy_decomp, keyword.lazy_decomp)
+        np.testing.assert_array_equal(positional.time_vec, keyword.time_vec)
+
 
 class TestAcceptanceRejection(unittest.TestCase):
     """Unit tests for AcceptanceRejection and AcceptanceRejectionReal."""
