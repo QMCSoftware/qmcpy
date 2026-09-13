@@ -66,7 +66,7 @@ class AbstractCubBayesLDG(AbstractStoppingCriterion):
         assert (
             self.integrand.discrete_distrib.randomize != "FALSE"
         ), "Require discrete distribution is randomized"
-        self.alphas_indv, identity_dependency = self._compute_indv_alphas(
+        self.alphas_indv, _ = self._compute_indv_alphas(
             np.full(self.integrand.d_comb, self.alpha)
         )
         self.set_tolerance(abs_tol, rel_tol)

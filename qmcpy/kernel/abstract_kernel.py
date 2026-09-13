@@ -185,7 +185,8 @@ class AbstractKernel(object):
                         )
                         for j in range(self.d)
                     ]
-                    [x0gj.requires_grad_(True) for x0gj in x0gs]
+                    for x0gj in x0gs:
+                        x0gj.requires_grad_(True)
                     x0g = self.npt.stack(x0gs, dim=-1)
                 else:
                     x0g = x0
@@ -202,7 +203,8 @@ class AbstractKernel(object):
                         )
                         for j in range(self.d)
                     ]
-                    [x1gj.requires_grad_(True) for x1gj in x1gs]
+                    for x1gj in x1gs:
+                        x1gj.requires_grad_(True)
                     x1g = self.npt.stack(x1gs, dim=-1)
                 else:
                     x1g = x1

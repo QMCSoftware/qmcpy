@@ -2,8 +2,15 @@ import unittest
 from unittest.mock import patch
 
 import numpy as np
+import pytest
 
 from qmcpy import CubBayesNetG, DigitalNetB2, Keister
+
+# `pf_gp_ci` imports torch and gpytorch at module level, so skip rather than fail
+# collection where those optional stacks are absent (as test_dd_mpmc.py does).
+pytest.importorskip("torch")
+pytest.importorskip("gpytorch")
+
 from qmcpy.stopping_criterion.pf_gp_ci import PFGPCIData
 
 

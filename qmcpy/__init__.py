@@ -59,7 +59,8 @@ except ImportError as error:
     def _raise_missing_mpmc_dependency(component):
         raise ModuleNotFoundError(
             f"{component} requires optional MPMC dependencies; missing module "
-            f"'{_missing_module}'. Install torch, pyg_lib, and torch-geometric.",
+            f"'{_missing_module}'. Install the 'qmcpy[mpmc]' extra, then run "
+            f"'qmcpy-install-mpmc'.",
             name=_missing_module,
         )
 
