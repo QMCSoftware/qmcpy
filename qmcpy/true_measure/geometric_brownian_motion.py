@@ -4,7 +4,6 @@ from ..util import ParameterError
 from typing import Union, Tuple
 from numpy import (
     exp,
-    zeros,
     minimum,
     array,
     sqrt,
@@ -149,31 +148,9 @@ class GeometricBrownianMotion(BrownianMotion):
         S0_sq = self.initial_value**2
         mu = self.drift
         t = array(self.time_vec)
-        n = len(t)
-
-        # Use most efficient method based on problem size
-        if n <= 200:  # For small-medium matrices, broadcasting is fastest
-            t_sum = t[:, None] + t[None, :]  # Shape: (n, n)
-            t_min = minimum.outer(t, t)  # Shape: (n, n)
-            cov_matrix = S0_sq * exp(mu * t_sum) * (exp(self.diffusion * t_min) - 1)
-        else:  # For larger matrices, use memory-efficient computation
-            cov_matrix = zeros((n, n))
-            exp_mu_t = exp(mu * t)  # Pre-compute exp(mu * t_i)
-            exp_diff_t = exp(self.diffusion * t)  # Pre-compute exp(diffusion * t_i)
-            for i in range(n):  # Optimized symmetric matrix computation
-                cov_matrix[i, i] = S0_sq * exp_mu_t[i] ** 2 * (exp_diff_t[i] - 1)
-                for j in range(i + 1, n):
-                    t_min_ij = min(t[i], t[j])
-                    cov_ij = (
-                        S0_sq
-                        * exp_mu_t[i]
-                        * exp_mu_t[j]
-                        * (exp(self.diffusion * t_min_ij) - 1)
-                    )
-                    cov_matrix[i, j] = cov_ij
-                    cov_matrix[j, i] = cov_ij  # Symmetric
-
-        return cov_matrix
+        t_sum = t[:, None] + t[None, :]  # Shape: (n, n)
+        t_min = minimum.outer(t, t)  # Shape: (n, n)
+        return S0_sq * exp(mu * t_sum) * (exp(self.diffusion * t_min) - 1)
 
     def _transform(self, x):
         bm_samples = super()._transform(x)
