@@ -15,7 +15,7 @@ S_T = paths[:, -1]  # Final values only
 theo_mean = S0 * np.exp(mu * T)
 theo_var = S0**2 * np.exp(2 * mu * T) * (np.exp(diffusion * T) - 1)
 qp_emp_mean = np.mean(S_T)
-qp_emp_var = np.var(S_T, ddof=1)
+qp_emp_var = np.var(S_T, ddof=0)
 print(f"Mean: {qp_emp_mean:.3f} (theoretical: {theo_mean:.3f})")
 print(f"Variance: {qp_emp_var:.3f} (theoretical: {theo_var:.3f})")
 qp_gbm

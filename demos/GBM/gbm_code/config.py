@@ -4,6 +4,20 @@ is_debug = False
 QMCPY_SEED = 42
 QUANTLIB_SEED = 7
 
+# Seed for QuantLib's Sobol' direction integers, held fixed so that only the
+# Owen-style scramble varies between replications. It must be non-zero: the
+# Jaeckel table only covers the first 32 dimensions, and above that a seed of 0
+# makes QuantLib draw the remaining direction integers from a clock-seeded
+# generator, which would make the demo's 252-dimensional paths differ on every
+# run. Reported upstream as
+# https://github.com/lballabio/QuantLib/issues/2732; drop this pin if it is
+# resolved. See also demos/GBM/gbm_code/quantlib_util.py.
+SOBOL_DIRECTION_SEED = 1
+
+# Halton's work scales with its base-b digit count. Thirty-two digits exceed
+# this demo's resolution needs while retaining the default 'LMS DP' scramble.
+HALTON_DIGITS = 32
+
 
 def get_experiment_configurations() -> dict:
     """
@@ -44,8 +58,8 @@ def get_sampler_configurations() -> dict:
               'quantlib_samplers' (QuantLib-supported samplers)
     """
     return {
-        "all_samplers": ["IIDStdUniform", "Sobol", "Lattice", "Halton"],
-        "quantlib_samplers": ["IIDStdUniform", "Sobol"],
+        "all_samplers": ["IIDStdUniform", "Sobol", "Halton", "Lattice"],
+        "quantlib_samplers": ["IIDStdUniform", "Sobol", "Halton"],
     }
 
 

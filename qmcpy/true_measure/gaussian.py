@@ -3,7 +3,8 @@ from ..util import DimensionError, ParameterError
 from ..discrete_distribution import DigitalNetB2
 import numpy as np
 from numpy.linalg import cholesky, slogdet
-from scipy.stats import norm, multivariate_normal
+from scipy.special import ndtri
+from scipy.stats import multivariate_normal
 from scipy.linalg import eigh
 from typing import Union
 
@@ -118,7 +119,7 @@ class Gaussian(AbstractTrueMeasure):
                 1 - 2 * (evecs[0] < 0)
             )  # force first entries of eigenvectors to be positive
             order = np.argsort(-evals)
-            self._a_cache = np.dot(evecs[:, order], np.diag(np.sqrt(evals[order])))
+            self._a_cache = evecs[:, order] * np.sqrt(evals[order])
         elif self.decomp_type == "CHOLESKY":
             self._a_cache = cholesky(self.sigma)
         elif self.decomp_type == "BROWNIANBRIDGE":
@@ -158,7 +159,9 @@ class Gaussian(AbstractTrueMeasure):
         self._mvn_scipy_cache = value
 
     def _transform(self, x):
-        return self.mu + np.einsum("...ij,kj->...ik", norm.ppf(x), self.a)
+        transformed = ndtri(x) @ self.a.T
+        transformed += self.mu
+        return transformed
 
     def _weight(self, t):
         return self.mvn_scipy.pdf(t)

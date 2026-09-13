@@ -4,6 +4,7 @@ from qmcpy import (
     DigitalNetB2,
     Gaussian,
     GeometricBrownianMotion,
+    Halton,
     IIDStdUniform,
     JohnsonsSU,
     Kumaraswamy,
@@ -1266,6 +1267,23 @@ class TestGeometricBrownianMotion(unittest.TestCase):
         """Set up test fixtures with fixed seeds for reproducibility."""
         self.seed = 7
 
+    def test_shape_and_terminal_value_across_samplers(self):
+        """Path shape and terminal (last time-step) values are well-defined,
+        finite, and positive across LD and IID samplers."""
+        n_steps, n_paths = 4, 8
+        for sampler_cls in (DigitalNetB2, Lattice, Halton, IIDStdUniform):
+            with self.subTest(sampler=sampler_cls.__name__):
+                gbm = GeometricBrownianMotion(
+                    sampler_cls(n_steps, seed=self.seed),
+                    t_final=1, initial_value=100, drift=0.05, diffusion=0.04,
+                )
+                samples = gbm.gen_samples(n_paths)
+                self.assertEqual(samples.shape, (n_paths, n_steps))
+                self.assertTrue(np.isfinite(samples).all())
+                terminal = samples[..., -1]
+                self.assertEqual(terminal.shape, (n_paths,))
+                self.assertTrue(np.isfinite(terminal).all() and (terminal > 0).all())
+
     def test_gbm_basic_output_reproducibility(self):
         """Test that basic GBM sample generation produces expected values with fixed seed."""
         gbm = GeometricBrownianMotion(
@@ -1468,6 +1486,26 @@ class TestGeometricBrownianMotion(unittest.TestCase):
             lazy_load=False,
         )
         self.assertIsNotNone(gbm_eager._log_mvn_scipy_cache)
+
+    def test_legacy_positional_call_unaffected_by_monitoring_times(self):
+        """A pre-existing positional call (..., decomp_type, lazy_load,
+        lazy_decomp) must land on the same parameters as its keyword
+        equivalent -- monitoring_times was added keyword-only specifically
+        so inserting it does not shift any positional argument.
+        """
+        positional = GeometricBrownianMotion(
+            DigitalNetB2(4, seed=self.seed), 1, 100, 0.05, 0.04, "PCA", False, False,
+        )
+        keyword = GeometricBrownianMotion(
+            DigitalNetB2(4, seed=self.seed),
+            t_final=1, initial_value=100, drift=0.05, diffusion=0.04,
+            decomp_type="PCA", lazy_load=False, lazy_decomp=False,
+        )
+        self.assertFalse(positional.lazy_load)
+        self.assertFalse(positional.lazy_decomp)
+        self.assertEqual(positional.lazy_load, keyword.lazy_load)
+        self.assertEqual(positional.lazy_decomp, keyword.lazy_decomp)
+        np.testing.assert_array_equal(positional.time_vec, keyword.time_vec)
 
 
 class TestAcceptanceRejection(unittest.TestCase):

@@ -56,6 +56,8 @@ class GeometricBrownianMotion(BrownianMotion):
         decomp_type="PCA",
         lazy_load=True,
         lazy_decomp=True,
+        *,
+        monitoring_times=None,
     ):
         r"""
         Args:
@@ -67,6 +69,11 @@ class GeometricBrownianMotion(BrownianMotion):
             decomp_type (str): Method of decomposition, either "PCA", "Cholesky", or "BrownianBridge".
             lazy_load (bool): If True, defer GBM-specific computations until needed.
             lazy_decomp (bool): If True, defer expensive matrix decomposition until needed.
+            monitoring_times (Union[np.ndarray, list]): Keyword-only. Optional custom
+                sampling times for `decomp_type='BrownianBridge'`; see `BrownianMotion`.
+                With `decomp_type` `'PCA'` or `'Cholesky'`, the times are always
+                `linspace(t_final/d, t_final, d)`, so passing this is only meaningful
+                for `'BrownianBridge'`.
         """
         super().__init__(
             sampler,
@@ -74,6 +81,7 @@ class GeometricBrownianMotion(BrownianMotion):
             drift=0,
             diffusion=diffusion,
             decomp_type=decomp_type,
+            monitoring_times=monitoring_times,
             lazy_decomp=lazy_decomp,
         )
         self.parameters = [
@@ -184,6 +192,9 @@ class GeometricBrownianMotion(BrownianMotion):
         return samples
 
     def _spawn(self, sampler, dimension):
+        monitoring_times = None
+        if self.decomp_type == "BROWNIANBRIDGE" and dimension == self.d:
+            monitoring_times = self.monitoring_times
         return GeometricBrownianMotion(
             sampler,
             t_final=self.t,
@@ -191,6 +202,7 @@ class GeometricBrownianMotion(BrownianMotion):
             drift=self.drift,
             diffusion=self.diffusion,
             decomp_type=self.decomp_type,
+            monitoring_times=monitoring_times,
             lazy_load=getattr(self, "lazy_load", True),  # Default to optimized mode
             lazy_decomp=getattr(self, "lazy_decomp", True),
         )
