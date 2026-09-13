@@ -341,6 +341,16 @@ class BrownianMotion(Gaussian):
             dr = depth[right[j]] if right[j] >= 0 else -1
             depth[j] = max(dl, dr) + 1
         self._bridge_levels = [np.where(depth == lvl)[0] for lvl in range(depth.max() + 1)]
+        # Batching a level only pays for the moveaxis/reshape/fancy-indexing overhead it costs
+        # once that level has enough members -- below _BRIDGE_LEVEL_BATCH_MIN it's cheaper to
+        # update those few indices with the original scalar per-j loop. This also self-heals the
+        # degenerate case (e.g. an already-increasing monitoring_times with
+        # bridge_vdc_gray_ordering=False, which collapses the bisection tree into a linear
+        # chain of all-singleton levels): if no level ever reaches the threshold, every level
+        # falls back to the scalar loop, which is then identical in cost to the pre-batching code.
+        self._bridge_max_level_size = max(len(level) for level in self._bridge_levels)
+
+    _BRIDGE_LEVEL_BATCH_MIN = 8
 
     def _bridge_transform(self, z):
         """Build Brownian Motion paths (Owen Algorithm 6.2), vectorized by bisection depth level"""
@@ -349,6 +359,17 @@ class BrownianMotion(Gaussian):
         a = self._bridge_a
         b = self._bridge_b
         w = self._bridge_w
+        if self._bridge_max_level_size < self._BRIDGE_LEVEL_BATCH_MIN:
+            # No level is big enough for batching to pay for itself: skip the moveaxis/reshape
+            # setup entirely and fall back to the plain scalar per-dimension update.
+            paths = np.empty(z.shape[:-1] + (self.d,))
+            for j in range(self.d):
+                paths[..., j] = w[j] * z[..., j]
+                if left[j] >= 0:
+                    paths[..., j] += a[j] * paths[..., left[j]]
+                if right[j] >= 0:
+                    paths[..., j] += b[j] * paths[..., right[j]]
+            return paths[..., self._increasing_order]
         # Move the dimension axis to the front so each level's fancy-indexed gather/scatter
         # touches contiguous rows instead of a strided last axis: NumPy advanced indexing on a
         # strided axis is expensive enough to erase the win from batching by level otherwise.
@@ -356,6 +377,14 @@ class BrownianMotion(Gaussian):
         paths = np.empty(z_t.shape)
         pad = (1,) * (z_t.ndim - 1)
         for js in self._bridge_levels:
+            if len(js) < self._BRIDGE_LEVEL_BATCH_MIN:
+                for j in js:
+                    paths[j] = w[j] * z_t[j]
+                    if left[j] >= 0:
+                        paths[j] += a[j] * paths[left[j]]
+                    if right[j] >= 0:
+                        paths[j] += b[j] * paths[right[j]]
+                continue
             paths[js] = w[js].reshape((-1,) + pad) * z_t[js]
             has_left = left[js] >= 0
             if has_left.any():

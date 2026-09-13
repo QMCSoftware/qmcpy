@@ -1136,6 +1136,71 @@ class TestBrownianMotion(unittest.TestCase):
             err_msg="4 evenly spaced custom times should match van der Corput ordering"
         )
 
+    def test_brownian_bridge_chronological_grid_is_sequential(self):
+        """An increasing monitoring_times grid with bridge_vdc_gray_ordering=False gives every
+        point exactly one (left) anchor, collapsing Owen's bisection tree into a linear chain
+        (each depth level holds a single index). _bridge_transform must fall back to the
+        original scalar per-dimension loop for this case (see _bridge_max_level_size /
+        _BRIDGE_LEVEL_BATCH_MIN in brownian_motion.py) rather than pay vectorization overhead
+        for zero batching benefit -- this pins the *result*, independent of that internal
+        implementation choice, against the closed-form sequential Brownian increment
+        construction the chain degenerates to: W(s_j) = W(s_{j-1}) + sqrt(s_j - s_{j-1}) * Z_j.
+        """
+        d, n = 16, 4
+        t = np.linspace(1 / d, 1.0, d)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            bm = BrownianMotion(
+                DigitalNetB2(d, seed=self.seed),
+                decomp_type="BrownianBridge", monitoring_times=t, bridge_vdc_gray_ordering=False
+            )
+        self.assertEqual([len(level) for level in bm._bridge_levels], [1] * d)
+        self.assertEqual(bm._bridge_max_level_size, 1)
+
+        u = DigitalNetB2(d, seed=self.seed).gen_samples(n)
+        automated = bm._transform(u)
+
+        z = scipy.stats.norm.ppf(u)
+        increments = np.diff(np.r_[0.0, bm.time_vec])
+        expected = np.cumsum(np.sqrt(increments) * z, axis=-1)
+
+        np.testing.assert_array_almost_equal(
+            expected, automated, decimal=10,
+            err_msg="chronological BrownianBridge grid should match sequential increment construction"
+        )
+
+    def test_brownian_bridge_large_d_matches_reference_loop(self):
+        """At d=64 (default van der Corput ordering) _bridge_transform's level-batched path
+        mixes vectorized levels (size >= _BRIDGE_LEVEL_BATCH_MIN) with per-level scalar
+        fallback for the smaller early-depth levels. Check both branches together against a
+        direct, unoptimized transcription of Owen's Algorithm 6.2."""
+        d, n = 64, 4
+        bm = BrownianMotion(DigitalNetB2(d, seed=self.seed), decomp_type="BrownianBridge")
+        level_sizes = [len(level) for level in bm._bridge_levels]
+        self.assertGreaterEqual(bm._bridge_max_level_size, 8)  # exercises the vectorized branch
+        self.assertTrue(any(size < 8 for size in level_sizes))  # ...and the per-level fallback
+
+        u = DigitalNetB2(d, seed=self.seed).gen_samples(n)
+        automated = bm._transform(u)
+
+        z = scipy.stats.norm.ppf(u)
+        left, right = bm._bridge_left, bm._bridge_right
+        a, b, w = bm._bridge_a, bm._bridge_b, bm._bridge_w
+        paths = np.empty(z.shape[:-1] + (d,))
+        for j in range(d):
+            paths[..., j] = w[j] * z[..., j]
+            if left[j] >= 0:
+                paths[..., j] += a[j] * paths[..., left[j]]
+            if right[j] >= 0:
+                paths[..., j] += b[j] * paths[..., right[j]]
+        expected = paths[..., bm._increasing_order]
+
+        np.testing.assert_array_almost_equal(
+            expected, automated, decimal=10,
+            err_msg="level-batched BrownianBridge transform should match the unoptimized reference loop"
+        )
+
     def test_brownian_bridge_output_order(self):
         """Test that custom ordered output matches given input and contains same values as increasing output"""
         times = [0.6, 1.0, 0.3, 0.8]
