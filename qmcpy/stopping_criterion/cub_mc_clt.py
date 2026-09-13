@@ -8,7 +8,7 @@ from ..discrete_distribution.abstract_discrete_distribution import (
 from ..integrand import FinancialOption, Linear0, AbstractIntegrand
 from ..util import MaxSamplesWarning, ParameterError
 import numpy as np
-from scipy.stats import norm
+from scipy.special import ndtri
 from time import time
 import warnings
 
@@ -189,7 +189,7 @@ class CubMCCLT(AbstractStoppingCriterion):
                 (self.ncv,) + self.integrand.d_indv
             ), "Control variate means should have shape (len(control variates),d_indv)."
             self.parameters += ["cv", "cv_mu"]
-        self.z_star = -norm.ppf(self.alpha / 2.0)
+        self.z_star = -ndtri(self.alpha / 2.0)
 
     def _get_main_stage_samples(self, data):
         y = np.array(data.yfull[self.n_init :], copy=False)

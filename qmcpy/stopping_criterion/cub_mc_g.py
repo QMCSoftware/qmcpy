@@ -9,7 +9,7 @@ from ..integrand import FinancialOption, Linear0, AbstractIntegrand
 from ..util import MaxSamplesWarning, ParameterError
 import numpy as np
 from scipy.optimize import root_scalar
-from scipy.stats import norm
+from scipy.special import ndtr, ndtri
 from time import time
 import warnings
 
@@ -461,7 +461,7 @@ class CubMCG(AbstractStoppingCriterion):
         return data.solution, data
 
     def _nchebe(self, toloversig, alpha, kurtmax, n_budget, sigma_0_up):
-        _b = -norm.ppf(np.finfo(float).eps)
+        _b = -ndtri(np.finfo(float).eps)
         ncheb = np.ceil(
             1 / (alpha * toloversig**2)
         )  # sample size by Chebyshev's Inequality
@@ -471,7 +471,7 @@ class CubMCG(AbstractStoppingCriterion):
         M3upper = kurtmax ** (3.0 / 4)
         # the upper bound on the third moment by Jensen's inequality
         BEfun2 = lambda logsqrtn: (
-            norm.cdf(-np.exp(logsqrtn) * toloversig)
+            ndtr(-np.exp(logsqrtn) * toloversig)
             + np.exp(-logsqrtn)
             * np.minimum(
                 A1 * (M3upper + A2),
@@ -480,7 +480,7 @@ class CubMCG(AbstractStoppingCriterion):
             - alpha / 2.0
         )
         # Berry-Esseen function, whose solution is the sample size needed
-        logsqrtnCLT = np.log(norm.ppf(1 - alpha / 2) / toloversig)
+        logsqrtnCLT = np.log(ndtri(1 - alpha / 2) / toloversig)
         # sample size by CLT
         rsdata = root_scalar(BEfun2, x0=logsqrtnCLT, method="toms748", bracket=(-_b, _b))
         nbe = np.ceil(np.exp(2 * rsdata.root))
@@ -490,7 +490,7 @@ class CubMCG(AbstractStoppingCriterion):
         )  # take the min of two sample sizes
         logsqrtn = np.log(np.sqrt(ncb))
         BEfun3 = lambda toloversig: (
-            norm.cdf(-np.exp(logsqrtn) * toloversig)
+            ndtr(-np.exp(logsqrtn) * toloversig)
             + np.exp(-logsqrtn)
             * np.minimum(
                 A1 * (M3upper + A2),
@@ -503,7 +503,7 @@ class CubMCG(AbstractStoppingCriterion):
         return ncb, err
 
     def _ncbinv(self, n1, alpha1, kurtmax):
-        _b = -norm.ppf(np.finfo(float).eps)
+        _b = -ndtri(np.finfo(float).eps)
         NCheb_inv = 1 / np.sqrt(n1 * alpha1)
         # use Chebyshev inequality
         A = 18.1139
@@ -512,7 +512,7 @@ class CubMCG(AbstractStoppingCriterion):
         M3upper = kurtmax ** (3.0 / 4)
         # using Jensen's inequality to bound the third moment
         BEfun = lambda logsqrtb: (
-            norm.cdf(n1 * logsqrtb)
+            ndtr(n1 * logsqrtb)
             + np.minimum(
                 A1 * (M3upper + A2), A * M3upper / (1 + (np.sqrt(n1) * logsqrtb) ** 3)
             )
@@ -520,7 +520,7 @@ class CubMCG(AbstractStoppingCriterion):
             - alpha1 / 2
         )
         # Berry-Esseen inequality
-        logsqrtb_clt = np.log(np.sqrt(norm.ppf(1 - alpha1 / 2) / np.sqrt(n1)))
+        logsqrtb_clt = np.log(np.sqrt(ndtri(1 - alpha1 / 2) / np.sqrt(n1)))
         # use CLT to get tolerance
         rsdata = root_scalar(BEfun, x0=logsqrtb_clt, method="toms748", bracket=(-_b, _b))
         NBE_inv = np.exp(2 * rsdata.root)

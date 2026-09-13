@@ -17,7 +17,7 @@ from numpy import (
     multiply,
     ndarray,
 )
-from scipy.stats import multivariate_normal, norm
+from scipy.stats import multivariate_normal
 
 
 class GeometricBrownianMotion(BrownianMotion):

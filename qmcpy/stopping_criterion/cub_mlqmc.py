@@ -8,7 +8,7 @@ from ..discrete_distribution.abstract_discrete_distribution import (
 from ..integrand import FinancialOption
 from ..util import MaxSamplesWarning, MaxLevelsWarning, ParameterError
 import numpy as np
-from scipy.stats import norm
+from scipy.special import ndtri
 from time import time
 import warnings
 
@@ -104,7 +104,7 @@ class CubMLQMC(AbstractCubMLQMC):
         if rmse_tol:
             self.rmse_tol = float(rmse_tol)
         else:  # use absolute tolerance
-            self.rmse_tol = float(abs_tol) / norm.ppf(1 - alpha / 2)
+            self.rmse_tol = float(abs_tol) / ndtri(1 - alpha / 2)
         self.alpha = alpha
         assert 0 < self.alpha < 1
         self.n_init = n_init
