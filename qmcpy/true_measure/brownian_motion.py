@@ -331,19 +331,38 @@ class BrownianMotion(Gaussian):
         self._bridge_b = b
         self._bridge_w = w
         self._increasing_order = np.argsort(s)  # increasing time
+        # Group indices by bisection depth: left[j] and right[j] are always < j, so a single
+        # forward pass yields a valid topological depth. Nodes at the same depth are mutually
+        # independent (each depends only on strictly shallower nodes), so `_bridge_transform`
+        # can update a whole depth level with one vectorized op instead of a per-j Python loop.
+        depth = np.empty(d, dtype=int)
+        for j in range(d):
+            dl = depth[left[j]] if left[j] >= 0 else -1
+            dr = depth[right[j]] if right[j] >= 0 else -1
+            depth[j] = max(dl, dr) + 1
+        self._bridge_levels = [np.where(depth == lvl)[0] for lvl in range(depth.max() + 1)]
 
     def _bridge_transform(self, z):
-        """Build Brownian Motion paths (Owen Algorithm 6.2)"""
+        """Build Brownian Motion paths (Owen Algorithm 6.2), vectorized by bisection depth level"""
         left = self._bridge_left
         right = self._bridge_right
         a = self._bridge_a
         b = self._bridge_b
         w = self._bridge_w
-        paths = np.empty(z.shape[:-1] + (self.d,))
-        for j in range(self.d):
-            paths[..., j] = w[j] * z[..., j]
-            if left[j] >= 0:
-                paths[..., j] += a[j] * paths[..., left[j]]
-            if right[j] >= 0:
-                paths[..., j] += b[j] * paths[..., right[j]]
-        return paths[..., self._increasing_order]
+        # Move the dimension axis to the front so each level's fancy-indexed gather/scatter
+        # touches contiguous rows instead of a strided last axis: NumPy advanced indexing on a
+        # strided axis is expensive enough to erase the win from batching by level otherwise.
+        z_t = np.moveaxis(z, -1, 0)
+        paths = np.empty(z_t.shape)
+        pad = (1,) * (z_t.ndim - 1)
+        for js in self._bridge_levels:
+            paths[js] = w[js].reshape((-1,) + pad) * z_t[js]
+            has_left = left[js] >= 0
+            if has_left.any():
+                jl = js[has_left]
+                paths[jl] += a[jl].reshape((-1,) + pad) * paths[left[jl]]
+            has_right = right[js] >= 0
+            if has_right.any():
+                jr = js[has_right]
+                paths[jr] += b[jr].reshape((-1,) + pad) * paths[right[jr]]
+        return np.moveaxis(paths[self._increasing_order], 0, -1)
