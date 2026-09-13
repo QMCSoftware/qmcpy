@@ -352,11 +352,18 @@ class BrownianMotion(Gaussian):
         self._bridge_b = b
         self._bridge_w = w
         self._increasing_order = np.argsort(s)  # increasing time
-        # Group indices by bisection depth: left[j] and right[j] are always < j, so a single
-        # forward pass yields a valid topological depth. Nodes at the same depth are mutually
-        # independent (each depends only on strictly shallower nodes), so `_bridge_transform`
-        # can update a whole depth level with one vectorized op instead of a per-j Python loop.
-        depth = np.empty(d, dtype=int)
+        # Group indices by bisection depth: left[j] and right[j] are always < j (enforced by the
+        # anchor search above, which only ever looks at k < j), so a single forward pass yields a
+        # valid topological depth. Nodes at the same depth are mutually independent (each depends
+        # only on strictly shallower nodes), so `_bridge_transform` can update a whole depth level
+        # with one vectorized op instead of a per-j Python loop. Check the invariant explicitly:
+        # if it were ever broken, `depth = np.full(..., -1)` turns a silent uninitialized-memory
+        # read into an immediate, loud failure instead of silently wrong Brownian paths.
+        if not ((left < np.arange(d)).all() and (right < np.arange(d)).all()):
+            raise AssertionError(
+                "_setup_bridge invariant violated: left[j] and right[j] must always be < j"
+            )
+        depth = np.full(d, -1, dtype=int)
         for j in range(d):
             dl = depth[left[j]] if left[j] >= 0 else -1
             dr = depth[right[j]] if right[j] >= 0 else -1

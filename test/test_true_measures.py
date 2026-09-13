@@ -1458,6 +1458,40 @@ class TestGeometricBrownianMotion(unittest.TestCase):
             err_msg="GBM covariance computation changed unexpectedly",
         )
 
+    def test_gbm_covariance_computation_above_former_loop_threshold(self):
+        """test_gbm_covariance_computation only exercises d=4, the branch that was already
+        vectorized on develop. _compute_gbm_covariance used to switch to a nested Python loop
+        for n>200; this pins the (now sole, for every n) broadcasted implementation at n=252, a
+        trading year and the default throughout demos/GBM/gbm_demo.ipynb, via symmetry plus a
+        closed-form spot check at a few (i, j) pairs."""
+        n = 252
+        gbm = GeometricBrownianMotion(
+            DigitalNetB2(n, seed=self.seed),
+            t_final=1,
+            initial_value=100,
+            drift=0.05,
+            diffusion=0.04,
+        )
+        cov = gbm.covariance_gbm
+        self.assertEqual(cov.shape, (n, n))
+        np.testing.assert_array_almost_equal(
+            cov, cov.T, err_msg="GBM covariance must be symmetric"
+        )
+
+        t = gbm.time_vec
+        S0_sq = gbm.initial_value**2
+        for i, j in [(0, 0), (0, n - 1), (n // 2, n - 1), (n - 1, n - 1)]:
+            t_min = min(t[i], t[j])
+            expected = S0_sq * np.exp(gbm.drift * (t[i] + t[j])) * (
+                np.exp(gbm.diffusion * t_min) - 1
+            )
+            self.assertAlmostEqual(
+                cov[i, j],
+                expected,
+                places=6,
+                msg=f"GBM covariance[{i},{j}] does not match the closed form",
+            )
+
     def test_gbm_weight_specific_values(self):
         """Test that PDF weight computation produces expected values for specific inputs."""
         gbm = GeometricBrownianMotion(
