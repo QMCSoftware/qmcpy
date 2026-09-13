@@ -1171,18 +1171,57 @@ class TestBrownianMotion(unittest.TestCase):
         )
 
     def test_brownian_bridge_large_d_matches_reference_loop(self):
-        """At d=64 (default van der Corput ordering) _bridge_transform's level-batched path
-        mixes vectorized levels (size >= _BRIDGE_LEVEL_BATCH_MIN) with per-level scalar
-        fallback for the smaller early-depth levels. Check both branches together against a
-        direct, unoptimized transcription of Owen's Algorithm 6.2."""
-        d, n = 64, 4
-        bm = BrownianMotion(DigitalNetB2(d, seed=self.seed), decomp_type="BrownianBridge")
+        """At d=16 (default van der Corput ordering, levels [1,1,2,4,8]) _bridge_max_level_size
+        lands exactly on the _BRIDGE_LEVEL_BATCH_MIN boundary; at d=64 it's comfortably past it.
+        Either way, _bridge_transform's level-batched path mixes vectorized levels (size >=
+        _BRIDGE_LEVEL_BATCH_MIN) with per-level scalar fallback for the smaller early-depth
+        levels. Check both branches together, at both d, against a direct, unoptimized
+        transcription of Owen's Algorithm 6.2."""
+        n = 4
+        for d, expected_max_level_size in [(16, 8), (64, 32)]:
+            bm = BrownianMotion(DigitalNetB2(d, seed=self.seed), decomp_type="BrownianBridge")
+            level_sizes = [len(level) for level in bm._bridge_levels]
+            self.assertEqual(bm._bridge_max_level_size, expected_max_level_size)
+            self.assertGreaterEqual(bm._bridge_max_level_size, 8)  # exercises the vectorized branch
+            self.assertTrue(any(size < 8 for size in level_sizes))  # ...and the per-level fallback
+
+            u = DigitalNetB2(d, seed=self.seed).gen_samples(n)
+            automated = bm._transform(u)
+
+            z = scipy.stats.norm.ppf(u)
+            left, right = bm._bridge_left, bm._bridge_right
+            a, b, w = bm._bridge_a, bm._bridge_b, bm._bridge_w
+            paths = np.empty(z.shape[:-1] + (d,))
+            for j in range(d):
+                paths[..., j] = w[j] * z[..., j]
+                if left[j] >= 0:
+                    paths[..., j] += a[j] * paths[..., left[j]]
+                if right[j] >= 0:
+                    paths[..., j] += b[j] * paths[..., right[j]]
+            expected = paths[..., bm._increasing_order]
+
+            np.testing.assert_array_almost_equal(
+                expected, automated, decimal=10,
+                err_msg=f"level-batched BrownianBridge transform (d={d}) should match the unoptimized reference loop"
+            )
+
+    def test_brownian_bridge_large_d_with_replications_matches_reference_loop(self):
+        """test_brownian_bridge_large_d_matches_reference_loop only ever uses n=4, no
+        replications; test_brownian_bridge_manual_replications_d3/d4 only ever use d=3/4, well
+        under _BRIDGE_LEVEL_BATCH_MIN. Neither combination exercises the level-batched path
+        (Cases 2/3 of _bridge_transform) on a 3-D (replications, n, d) array -- the extra batch
+        axis both _bridge_scalar_step's idx_of and the vectorized reshape/broadcast need to
+        handle correctly. This pins that combination directly."""
+        d, n, reps = 64, 4, 3
+        bm = BrownianMotion(DigitalNetB2(d, seed=self.seed, replications=reps), decomp_type="BrownianBridge")
         level_sizes = [len(level) for level in bm._bridge_levels]
         self.assertGreaterEqual(bm._bridge_max_level_size, 8)  # exercises the vectorized branch
         self.assertTrue(any(size < 8 for size in level_sizes))  # ...and the per-level fallback
 
-        u = DigitalNetB2(d, seed=self.seed).gen_samples(n)
+        u = DigitalNetB2(d, seed=self.seed, replications=reps).gen_samples(n)
+        self.assertEqual(u.shape, (reps, n, d))
         automated = bm._transform(u)
+        self.assertEqual(automated.shape, (reps, n, d))
 
         z = scipy.stats.norm.ppf(u)
         left, right = bm._bridge_left, bm._bridge_right
@@ -1198,7 +1237,8 @@ class TestBrownianMotion(unittest.TestCase):
 
         np.testing.assert_array_almost_equal(
             expected, automated, decimal=10,
-            err_msg="level-batched BrownianBridge transform should match the unoptimized reference loop"
+            err_msg="level-batched BrownianBridge transform with replications should match "
+                    "the unoptimized reference loop"
         )
 
     def test_brownian_bridge_output_order(self):

@@ -6,6 +6,27 @@ import numpy as np
 from scipy.special import ndtri
 
 
+def _bridge_idx_last_axis(j):
+    return (..., j)
+
+
+def _bridge_idx_first_axis(j):
+    return j
+
+
+def _bridge_scalar_step(paths, src, idx_of, j, left, right, a, b, w):
+    # Owen's per-dimension update rule, shared by both scalar-fallback branches of
+    # BrownianMotion._bridge_transform (`idx_of` accounts for the only difference between
+    # them: which axis holds j). A plain module-level function, not a closure defined inside
+    # _bridge_transform, so it isn't re-created on every call.
+    ij = idx_of(j)
+    paths[ij] = w[j] * src[ij]
+    if left[j] >= 0:
+        paths[ij] += a[j] * paths[idx_of(left[j])]
+    if right[j] >= 0:
+        paths[ij] += b[j] * paths[idx_of(right[j])]
+
+
 class BrownianMotion(Gaussian):
     r"""
     Brownian Motion as described in [https://en.wikipedia.org/wiki/Brownian_motion](https://en.wikipedia.org/wiki/Brownian_motion).
@@ -359,16 +380,13 @@ class BrownianMotion(Gaussian):
         a = self._bridge_a
         b = self._bridge_b
         w = self._bridge_w
+
         if self._bridge_max_level_size < self._BRIDGE_LEVEL_BATCH_MIN:
             # No level is big enough for batching to pay for itself: skip the moveaxis/reshape
             # setup entirely and fall back to the plain scalar per-dimension update.
             paths = np.empty(z.shape[:-1] + (self.d,))
             for j in range(self.d):
-                paths[..., j] = w[j] * z[..., j]
-                if left[j] >= 0:
-                    paths[..., j] += a[j] * paths[..., left[j]]
-                if right[j] >= 0:
-                    paths[..., j] += b[j] * paths[..., right[j]]
+                _bridge_scalar_step(paths, z, _bridge_idx_last_axis, j, left, right, a, b, w)
             return paths[..., self._increasing_order]
         # Move the dimension axis to the front so each level's fancy-indexed gather/scatter
         # touches contiguous rows instead of a strided last axis: NumPy advanced indexing on a
@@ -378,13 +396,12 @@ class BrownianMotion(Gaussian):
         pad = (1,) * (z_t.ndim - 1)
         for js in self._bridge_levels:
             if len(js) < self._BRIDGE_LEVEL_BATCH_MIN:
+                # Same update rule as the scalar fallback above, applied index-by-index to this
+                # one small level (too small for the vectorized form below to pay for itself).
                 for j in js:
-                    paths[j] = w[j] * z_t[j]
-                    if left[j] >= 0:
-                        paths[j] += a[j] * paths[left[j]]
-                    if right[j] >= 0:
-                        paths[j] += b[j] * paths[right[j]]
+                    _bridge_scalar_step(paths, z_t, _bridge_idx_first_axis, j, left, right, a, b, w)
                 continue
+            # Vectorized form of the same update rule, batched across this whole level.
             paths[js] = w[js].reshape((-1,) + pad) * z_t[js]
             has_left = left[js] >= 0
             if has_left.any():
