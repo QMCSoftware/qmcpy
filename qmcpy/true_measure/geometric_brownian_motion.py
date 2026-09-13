@@ -6,14 +6,7 @@ from numpy import (
     exp,
     minimum,
     array,
-    sqrt,
     log,
-    pi,
-    linalg,
-    eye,
-    cumsum,
-    add,
-    multiply,
     ndarray,
 )
 from scipy.stats import multivariate_normal
