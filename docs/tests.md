@@ -153,6 +153,7 @@ Runs notebook tests with **Parsl distributed parallelization** for compute-heavy
 - **Dependencies**: Parsl must be installed and configured
 - **Use when**: Running large notebook suites with distributed compute resources
 
+
 ---
 
 ### Helper / Internal Targets
@@ -242,7 +243,6 @@ Displays the current coverage report (must run other targets first to accumulate
 Deletes `.coverage` and `coverage.json` files to reset coverage tracking.
 - **Use before**: Running a fresh coverage report without accumulated data
 
- 
 ---
 
 ## Currently Active Targets: Justification
