@@ -54,8 +54,8 @@ def generate_qmcpy_paths(
         seed: Random seed for reproducibility
 
     Returns:
-        tuple: (paths, gbm) where paths has shape (n_paths, n_steps) if replications=1,
-               or (replications, n_paths, n_steps) if replications>1,
+        tuple: (paths, gbm) where paths has shape (n_paths, n_steps) if replications is None,
+               or (replications, n_paths, n_steps) if replications>=1,
                and gbm is the GeometricBrownianMotion object
     """
     sampler = create_qmcpy_sampler(sampler_type, n_steps, replications, seed)

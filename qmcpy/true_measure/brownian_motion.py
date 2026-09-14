@@ -3,7 +3,28 @@ from ..discrete_distribution import DigitalNetB2
 from ..util import ParameterError, ParameterWarning
 import warnings
 import numpy as np
-from scipy.stats import norm
+from scipy.special import ndtri
+
+
+def _bridge_idx_last_axis(j):
+    return (..., j)
+
+
+def _bridge_idx_first_axis(j):
+    return j
+
+
+def _bridge_scalar_step(paths, src, idx_of, j, left, right, a, b, w):
+    # Owen's per-dimension update rule, shared by both scalar-fallback branches of
+    # BrownianMotion._bridge_transform (`idx_of` accounts for the only difference between
+    # them: which axis holds j). A plain module-level function, not a closure defined inside
+    # _bridge_transform, so it isn't re-created on every call.
+    ij = idx_of(j)
+    paths[ij] = w[j] * src[ij]
+    if left[j] >= 0:
+        paths[ij] += a[j] * paths[idx_of(left[j])]
+    if right[j] >= 0:
+        paths[ij] += b[j] * paths[idx_of(right[j])]
 
 
 class BrownianMotion(Gaussian):
@@ -252,7 +273,7 @@ class BrownianMotion(Gaussian):
 
     def _transform(self, x):
         if self.decomp_type == "BROWNIANBRIDGE":
-            z = norm.ppf(x)
+            z = ndtri(x)
             w = self._bridge_transform(z)
             paths = self.drift_time_vec_plus_init + np.sqrt(self.diffusion) * w
             return paths[..., self._output_order]
@@ -331,19 +352,70 @@ class BrownianMotion(Gaussian):
         self._bridge_b = b
         self._bridge_w = w
         self._increasing_order = np.argsort(s)  # increasing time
+        # Group indices by bisection depth: left[j] and right[j] are always < j (enforced by the
+        # anchor search above, which only ever looks at k < j), so a single forward pass yields a
+        # valid topological depth. Nodes at the same depth are mutually independent (each depends
+        # only on strictly shallower nodes), so `_bridge_transform` can update a whole depth level
+        # with one vectorized op instead of a per-j Python loop. Check the invariant explicitly:
+        # if it were ever broken, `depth = np.full(..., -1)` turns a silent uninitialized-memory
+        # read into an immediate, loud failure instead of silently wrong Brownian paths.
+        if not ((left < np.arange(d)).all() and (right < np.arange(d)).all()):
+            raise AssertionError(
+                "_setup_bridge invariant violated: left[j] and right[j] must always be < j"
+            )
+        depth = np.full(d, -1, dtype=int)
+        for j in range(d):
+            dl = depth[left[j]] if left[j] >= 0 else -1
+            dr = depth[right[j]] if right[j] >= 0 else -1
+            depth[j] = max(dl, dr) + 1
+        self._bridge_levels = [np.where(depth == lvl)[0] for lvl in range(depth.max() + 1)]
+        # Batching a level only pays for the moveaxis/reshape/fancy-indexing overhead it costs
+        # once that level has enough members -- below _BRIDGE_LEVEL_BATCH_MIN it's cheaper to
+        # update those few indices with the original scalar per-j loop. This also self-heals the
+        # degenerate case (e.g. an already-increasing monitoring_times with
+        # bridge_vdc_gray_ordering=False, which collapses the bisection tree into a linear
+        # chain of all-singleton levels): if no level ever reaches the threshold, every level
+        # falls back to the scalar loop, which is then identical in cost to the pre-batching code.
+        self._bridge_max_level_size = max(len(level) for level in self._bridge_levels)
+
+    _BRIDGE_LEVEL_BATCH_MIN = 8
 
     def _bridge_transform(self, z):
-        """Build Brownian Motion paths (Owen Algorithm 6.2)"""
+        """Build Brownian Motion paths (Owen Algorithm 6.2), vectorized by bisection depth level"""
         left = self._bridge_left
         right = self._bridge_right
         a = self._bridge_a
         b = self._bridge_b
         w = self._bridge_w
-        paths = np.empty(z.shape[:-1] + (self.d,))
-        for j in range(self.d):
-            paths[..., j] = w[j] * z[..., j]
-            if left[j] >= 0:
-                paths[..., j] += a[j] * paths[..., left[j]]
-            if right[j] >= 0:
-                paths[..., j] += b[j] * paths[..., right[j]]
-        return paths[..., self._increasing_order]
+
+        if self._bridge_max_level_size < self._BRIDGE_LEVEL_BATCH_MIN:
+            # No level is big enough for batching to pay for itself: skip the moveaxis/reshape
+            # setup entirely and fall back to the plain scalar per-dimension update.
+            paths = np.empty(z.shape[:-1] + (self.d,))
+            for j in range(self.d):
+                _bridge_scalar_step(paths, z, _bridge_idx_last_axis, j, left, right, a, b, w)
+            return paths[..., self._increasing_order]
+        # Move the dimension axis to the front so each level's fancy-indexed gather/scatter
+        # touches contiguous rows instead of a strided last axis: NumPy advanced indexing on a
+        # strided axis is expensive enough to erase the win from batching by level otherwise.
+        z_t = np.moveaxis(z, -1, 0)
+        paths = np.empty(z_t.shape)
+        pad = (1,) * (z_t.ndim - 1)
+        for js in self._bridge_levels:
+            if len(js) < self._BRIDGE_LEVEL_BATCH_MIN:
+                # Same update rule as the scalar fallback above, applied index-by-index to this
+                # one small level (too small for the vectorized form below to pay for itself).
+                for j in js:
+                    _bridge_scalar_step(paths, z_t, _bridge_idx_first_axis, j, left, right, a, b, w)
+                continue
+            # Vectorized form of the same update rule, batched across this whole level.
+            paths[js] = w[js].reshape((-1,) + pad) * z_t[js]
+            has_left = left[js] >= 0
+            if has_left.any():
+                jl = js[has_left]
+                paths[jl] += a[jl].reshape((-1,) + pad) * paths[left[jl]]
+            has_right = right[js] >= 0
+            if has_right.any():
+                jr = js[has_right]
+                paths[jr] += b[jr].reshape((-1,) + pad) * paths[right[jr]]
+        return np.moveaxis(paths[self._increasing_order], 0, -1)

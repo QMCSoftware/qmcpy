@@ -32,6 +32,7 @@ TEST_RUNTIMES_FALLBACK = {
     "tb_lattice_random_generator": 18.54,
     "tb_linear_scrambled_halton": 17.88,
     "tb_MCQMC_2020_QMC_Software_Tutorial": 16.94,
+    "tb_performance_optimizations_demo": 16.90,
     "tb_vectorized_qmc": 16.89,
     "tb_plot_proj_function": 14.29,
     "tb_joss2025": 12.93,

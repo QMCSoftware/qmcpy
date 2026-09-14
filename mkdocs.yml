@@ -70,6 +70,7 @@ nav:
       - GBM Examples: demos/GBM/gbm_examples.ipynb
       - Brownian Bridge: demos/brownian_bridge.ipynb
       - Control Variates: demos/control_variates.ipynb
+      - Performance Optimizations: demos/performance_optimizations_demo.ipynb
       - Sensitivity Analysis for the Iris Dataset: demos/iris.ipynb
       - Ray Tracing: demos/ray_tracing.ipynb
       - Importance Sampling with True Measures:

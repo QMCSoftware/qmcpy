@@ -3,7 +3,7 @@ from ..discrete_distribution import DigitalNetB2
 from ..true_measure import GeometricBrownianMotion
 from ..util import ParameterError
 import numpy as np
-from scipy.stats import norm
+from scipy.special import ndtr
 
 
 class FinancialOption(AbstractIntegrand):
@@ -574,7 +574,7 @@ class FinancialOption(AbstractIntegrand):
                     np.log(self.start_price / self.strike_price)
                     + (self.interest_rate - self.volatility**2 / 2) * self.t_final
                 )
-                fp = self.start_price * norm.cdf(term1 / denom) - decay * norm.cdf(
+                fp = self.start_price * ndtr(term1 / denom) - decay * ndtr(
                     term2 / denom
                 )
             elif self.call_put == "PUT":
@@ -586,7 +586,7 @@ class FinancialOption(AbstractIntegrand):
                     np.log(self.strike_price / self.start_price)
                     - (self.interest_rate + self.volatility**2 / 2) * self.t_final
                 )
-                fp = decay * norm.cdf(term1 / denom) - self.start_price * norm.cdf(
+                fp = decay * ndtr(term1 / denom) - self.start_price * ndtr(
                     term2 / denom
                 )
         elif self.option == "ASIAN":
@@ -634,9 +634,9 @@ class FinancialOption(AbstractIntegrand):
             f1 = self.start_price * np.exp((b - self.interest_rate) * self.t_final)
             f2 = self.strike_price * np.exp(-self.interest_rate * self.t_final)
             if self.call_put == "CALL":
-                val = f1 * norm.cdf(d1) - f2 * norm.cdf(d2)
+                val = f1 * ndtr(d1) - f2 * ndtr(d2)
             elif self.call_put == "PUT":
-                val = f2 * norm.cdf(-d2) - f1 * norm.cdf(-d1)
+                val = f2 * ndtr(-d2) - f1 * ndtr(-d1)
         else:
             raise NotImplementedError(
                 "get_exact_value_inf_dim not implemented for option = %s" % self.option
@@ -671,7 +671,7 @@ def _eurogbmprice(S0, r, T, sigma, K):
     priceratio = K * np.exp(-r * T) / S0
     xbig = np.log(priceratio) / (sigma * np.sqrt(T)) + sigma * np.sqrt(T) / 2
     xsmall = np.log(priceratio) / (sigma * np.sqrt(T)) - sigma * np.sqrt(T) / 2
-    putprice = S0 * (priceratio * norm.cdf(xbig) - norm.cdf(xsmall))
+    putprice = S0 * (priceratio * ndtr(xbig) - ndtr(xsmall))
     callprice = putprice + S0 * (1 - priceratio)
     return callprice, putprice
 

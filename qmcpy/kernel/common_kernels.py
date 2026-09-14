@@ -3,7 +3,6 @@ from ..discrete_distribution import DigitalNetB2
 from ..util.transforms import tf_exp_eps, tf_exp_eps_inv, tf_identity
 from ..util import ParameterError
 import numpy as np
-import scipy.stats
 import scipy.special
 
 
@@ -14,15 +13,14 @@ class AbstractKernelGaussianSE(AbstractKernelScaleLengthscales):
     def parsed_single_integral_01d(self, x, batch_params):
         s = batch_params["scale"][..., 0]
         l = batch_params["lengthscales"]
-        norm_class = (
-            self.npt.distributions.Normal if self.torchify else scipy.stats.norm
-        )
-        norm = norm_class(x, l)
         lb = self.nptarray([0], **self.nptkwargs)
         ub = self.nptarray([1], **self.nptkwargs)
-        kint = s * self.npt.prod(
-            np.sqrt(2 * np.pi) * l * (norm.cdf(ub) - norm.cdf(lb)), -1
-        )
+        if self.torchify:
+            norm = self.npt.distributions.Normal(x, l)
+            cdf_diff = norm.cdf(ub) - norm.cdf(lb)
+        else:
+            cdf_diff = scipy.special.ndtr((ub - x) / l) - scipy.special.ndtr((lb - x) / l)
+        kint = s * self.npt.prod(np.sqrt(2 * np.pi) * l * cdf_diff, -1)
         return kint
 
     def double_integral_01d(self):

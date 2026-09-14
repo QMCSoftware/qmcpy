@@ -7,8 +7,7 @@ from time import time
 import warnings
 from scipy.optimize import fminbound as fminbnd
 from scipy.optimize import fmin
-from scipy.stats import norm as gaussnorm
-from scipy.stats import t as tnorm
+from scipy.special import ndtri, stdtrit
 
 
 class AbstractCubBayesLDG(AbstractStoppingCriterion):
@@ -86,9 +85,9 @@ class AbstractCubBayesLDG(AbstractStoppingCriterion):
         self.omega = omega
         self.ptransform = ptransform  # periodization transform
         if self.errbd_type == "FULL":
-            self.uncert = -tnorm.ppf(alpha / 2, self.n_init - 1)
+            self.uncert = -stdtrit(self.n_init - 1, alpha / 2)
         else:
-            self.uncert = -gaussnorm.ppf(alpha / 2)
+            self.uncert = -ndtri(alpha / 2)
 
     def _stopping_criterion(self, xpts, ftilde, m):
         ftilde = ftilde.squeeze()

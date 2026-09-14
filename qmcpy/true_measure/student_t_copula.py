@@ -10,6 +10,7 @@ from ..discrete_distribution import DigitalNetB2
 
 import numpy as np
 import scipy.stats as stats
+from scipy.special import stdtr, stdtrit
 
 
 class StudentTCopula(AbstractCopula):
@@ -137,7 +138,7 @@ class StudentTCopula(AbstractCopula):
         uu = u.reshape(-1, self.d)
         z = np.empty_like(uu, dtype=float)
 
-        z[:, 0] = stats.t.ppf(uu[:, 0], df=self.df)
+        z[:, 0] = stdtrit(self.df, uu[:, 0])
 
         for i in range(1, self.d):
             A = slice(0, i)
@@ -160,18 +161,13 @@ class StudentTCopula(AbstractCopula):
             shape_cond = (self.df + d_A) / (self.df + i) * schur
             shape_cond = np.maximum(shape_cond, np.finfo(float).tiny)
 
-            z[:, i] = stats.t.ppf(
-                uu[:, i],
-                df=df_cond,
-                loc=loc_cond,
-                scale=np.sqrt(shape_cond),
-            )
+            z[:, i] = loc_cond + np.sqrt(shape_cond) * stdtrit(df_cond, uu[:, i])
 
         return z.reshape(*orig_shape, self.d)
 
     def _transform_to_uniform(self, x):
         z = self._dependent_t_samples(x)
-        return _clip_unit_interval(stats.t.cdf(z, df=self.df))
+        return _clip_unit_interval(stdtr(self.df, z))
 
 
     def _weight(self, x):
@@ -185,7 +181,7 @@ class StudentTCopula(AbstractCopula):
         except ParameterError:
             return self._unit_weight_with_warning(x)
 
-        z = stats.t.ppf(u, df=self.df)
+        z = stdtrit(self.df, u)
         z_flat = z.reshape(-1, self.d)
 
         log_joint = self._mvt_scipy.logpdf(z_flat).reshape(z.shape[:-1])

@@ -2,7 +2,7 @@ from .abstract_true_measure import AbstractTrueMeasure
 from ..util import DimensionError, ParameterError
 from ..discrete_distribution import DigitalNetB2
 import numpy as np
-from scipy.stats import norm
+from scipy.special import ndtri
 
 
 class JohnsonsSU(AbstractTrueMeasure):
@@ -92,7 +92,7 @@ class JohnsonsSU(AbstractTrueMeasure):
         )
 
     def _transform(self, x):
-        return self._lam * np.sinh((norm.ppf(x) - self._gamma) / self._delta) + self._xi
+        return self._lam * np.sinh((ndtri(x) - self._gamma) / self._delta) + self._xi
 
     def _weight(self, x):
         term1 = (x - self._xi) / self._lam
