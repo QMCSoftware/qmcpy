@@ -146,6 +146,10 @@ class AbstractTrueMeasure(object):
                     % (type(self).__name__, sampler.mimics)
                 )
         elif isinstance(sampler, AbstractTrueMeasure):
+            if getattr(sampler, "_is_importance_sampling", False):
+                raise ParameterError(
+                    "ImportanceSampling cannot be used as a sampler for another TrueMeasure."
+                )
             self.transform = sampler  # this is a composed transform, \Psi_j for j>0
             self.parameters += ["transform"]
             self.d = (
@@ -228,7 +232,7 @@ class AbstractTrueMeasure(object):
         r"""Transformation from the standard uniform to the true measure distribution."""
         raise MethodImplementationError(
             self,
-            "_transform. Try setting sampler to be in a PDF AbstractTrueMeasure to importance sample by.",
+            "_transform. Use ImportanceSampling(target=..., proposal=...) for importance sampling.",
         )
 
     def _weight(self, x):

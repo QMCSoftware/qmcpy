@@ -21,6 +21,7 @@ from .zero_inflated_exp_uniform import ZeroInflatedExpUniform
 from .triangular import Triangular
 from .acceptance_rejection import AcceptanceRejection, AcceptanceRejectionReal
 from .product_measure import ProductMeasure
+from .importance_sampling import ImportanceSampling
 
 TrueMeasure = AbstractTrueMeasure
 _TrueMeasure = AbstractTrueMeasure

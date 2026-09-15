@@ -10,40 +10,42 @@ class Lebesgue(AbstractTrueMeasure):
     r"""
     Lebesgue measure as described in [https://en.wikipedia.org/wiki/Lebesgue_measure](https://en.wikipedia.org/wiki/Lebesgue_measure).
 
+    ``Lebesgue`` supplies the constant target weight one. Its sampler is a true
+    measure that defines the integration region and proposal geometry; it is
+    not treated as an ordinary deterministic transport. Use the resulting
+    target with explicit ``ImportanceSampling``.
+
     Examples:
-        >>> Lebesgue(Gaussian(DigitalNetB2(2,seed=7)))
-        Lebesgue (AbstractTrueMeasure)
-            transform       Gaussian (AbstractTrueMeasure)
-                                mean            [0. 0.]
-                                variance        [1. 1.]
-                                standard_deviation [1. 1.]
-                                covariance      [[1. 0.]
-                                                 [0. 1.]]
-                                decomp_type     PCA
-        >>> Lebesgue(Uniform(DigitalNetB2(2,seed=7)))  # doctest: +NORMALIZE_WHITESPACE
-        Lebesgue (AbstractTrueMeasure)
-            transform       Uniform (AbstractTrueMeasure)
-                                lower_bound     0
-                                upper_bound     1
-                                mean            [0.5 0.5]
-                                variance        [0.083 0.083]
-                                standard_deviation [0.289 0.289]
-                                covariance      <DIAgonal sparse matrix of dtype 'float64'
-                                                 with 2 stored elements (1 diagonals) and shape (2, 2)>
-                                                  Coords Values
-                                                  (0, 0) 0.08333333333333333
-                                                  (1, 1) 0.08333333333333333
+        >>> from qmcpy import DigitalNetB2, ImportanceSampling, Lebesgue, Uniform
+        >>> proposal = Uniform(
+        ...     DigitalNetB2(1,seed=7),
+        ...     lower_bound=1,
+        ...     upper_bound=3,
+        ... )
+        >>> target = Lebesgue(proposal)
+        >>> importance_sampling = ImportanceSampling(
+        ...     target=target,
+        ...     proposal=proposal,
+        ... )
+        >>> samples, weights = importance_sampling.gen_samples(
+        ...     4,
+        ...     return_weights=True,
+        ... )
+        >>> samples.shape, weights.shape
+        ((4, 1), (4,))
+        >>> bool(np.all(weights == 2))
+        True
     """
 
     def __init__(self, sampler):
         r"""
         Args:
-            sampler (AbstractTrueMeasure): A true measure by which to compose a transform.
+            sampler (AbstractTrueMeasure): Measure defining the integration region and proposal geometry for the constant target weight one.
         """
         self.parameters = []
         if not isinstance(sampler, AbstractTrueMeasure):
             raise ParameterError(
-                "Lebesgue sampler must be an AbstractTrueMeasure by which to transform samples."
+                "Lebesgue sampler must be an AbstractTrueMeasure defining its integration region."
             )
         self.domain = (
             sampler.range
