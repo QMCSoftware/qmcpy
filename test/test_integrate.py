@@ -79,7 +79,7 @@ class IntegrationExampleTest(unittest.TestCase):
         integrand = CustomFun(true_measure, myfunc)
         solution, data = CubQMCLatticeG(integrand, abs_tol=abs_tol).integrate()
         true_value = np.sqrt(np.pi)
-        self.assertTrue(abs(solution - true_value) < abs_tol)
+        self.assertLess(abs(solution - true_value), abs_tol)
 
     def test_lebesgue_inf_measure_2d(self):
         abs_tol = 0.1
