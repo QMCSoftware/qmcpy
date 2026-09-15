@@ -21,6 +21,7 @@
   "demos/lattice_random_generator.ipynb",
   "demos/lebesgue_integration.ipynb",
   "demos/linear-scrambled-halton.ipynb",
+  "demos/mixed_distributions.ipynb",
   "demos/nei_demo.ipynb",
   "demos/plot_proj_function.ipynb",
   "demos/pricing_options.ipynb",
