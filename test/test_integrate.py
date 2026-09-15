@@ -97,7 +97,7 @@ class IntegrationExampleTest(unittest.TestCase):
         integrand = CustomFun(true_measure, myfunc)
         solution, data = CubQMCCLT(integrand, abs_tol=abs_tol).integrate()
         true_value = np.pi
-        self.assertTrue(abs(solution - true_value) < abs_tol)
+        self.assertLess(abs(solution - true_value), abs_tol)
 
     def test_uniform_measure(self):
         """Mathematica: Integrate[(x^3 y^3)/6, {x, 1, 3}, {y, 3, 6}]"""
