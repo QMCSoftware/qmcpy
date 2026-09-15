@@ -30,6 +30,16 @@ class DummySampler(AbstractLDDiscreteDistribution):
     """
 
     def __init__(self, dimension=1, replications=None, seed=None, warn=True):
+        r"""
+        Args:
+            dimension (Union[int, list, tuple, np.ndarray]): Dimension of the placeholder sampler. A list, tuple, or array specifies unique coordinate indices. Defaults to `1`.
+            replications (Union[None, int]): Replication metadata preserved when spawning placeholders. `None` records no explicit replication axis. Defaults to `None`.
+            seed (Union[None, int, np.random.SeedSequence]): Seed used to initialize the sampler state and spawn child samplers. Defaults to `None`.
+            warn (bool): Compatibility argument matching other discrete-distribution constructors. It is ignored because `DummySampler` cannot generate samples. Defaults to `True`.
+
+        Raises:
+            ParameterError: If an array-like `dimension` is not one-dimensional with unique entries, if it exceeds the dimension limit, or if `replications` is negative.
+        """
         # Keep the same constructor as other discrete distributions.
         del warn
 

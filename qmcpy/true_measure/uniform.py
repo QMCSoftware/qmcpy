@@ -100,7 +100,8 @@ class Uniform(AbstractTrueMeasure):
         return x * self.delta + self.a
 
     def _weight(self, x):
-        return np.tile(self.inv_delta_prod, x.shape[:-1])
+        in_support = np.all((self.a <= x) & (x <= self.b), axis=-1)
+        return np.where(in_support, self.inv_delta_prod, 0.0)
 
     def _spawn(self, sampler, dimension):
         if dimension == self.d:  # don't do anything if the dimension doesn't change

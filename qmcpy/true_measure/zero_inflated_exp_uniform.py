@@ -187,6 +187,17 @@ class ZeroInflatedExpUniform(SciPyWrapper):
     """
 
     def __init__(self, sampler, p_zero=0.4, lam=1.5, y_split=None):
+        r"""
+        Args:
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): One-dimensional sampler for the current construction. The deprecated `y_split` construction also accepts a two-dimensional sampler.
+            p_zero (float): Probability mass at zero, strictly between `0` and `1`. Defaults to `0.4`.
+            lam (float): Rate of the exponential component. Must be positive. Defaults to `1.5`.
+            y_split (Union[None, float]): Deprecated split point for the legacy two-dimensional construction. With a two-dimensional sampler, it must lie strictly between `0` and `1`. With a one-dimensional sampler, it is accepted for backward compatibility, emits a `DeprecationWarning`, and is otherwise ignored. Defaults to `None`.
+
+        Raises:
+            DimensionError: If the sampler dimension is incompatible with the selected construction.
+            ParameterError: If `p_zero`, `lam`, or a two-dimensional `y_split` is outside its valid range.
+        """
         if y_split is not None:
             warnings.warn(
                 "`y_split` is deprecated. The 2D zero-inflated "

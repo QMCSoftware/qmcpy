@@ -1,5 +1,6 @@
 from ..util import MethodImplementationError, _univ_repr, ParameterError
 from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from ..true_measure.importance_sampling import ImportanceSampling
 from ..discrete_distribution.abstract_discrete_distribution import (
     AbstractDiscreteDistribution,
 )
@@ -70,13 +71,6 @@ class AbstractIntegrand(object):
             self.max_level = np.inf
         if not hasattr(self, "discrete_distrib"):
             self.discrete_distrib = self.true_measure.discrete_distrib
-        if (
-            self.true_measure.transform != self.true_measure
-            and not (self.true_measure.range == self.true_measure.transform.range).all()
-        ):
-            raise ParameterError(
-                "The range of the composed transform is not compatible with this true measure"
-            )
         self.EPS = np.finfo(float).eps
 
     def __call__(self, n=None, n_min=None, n_max=None, warn=True):
@@ -223,26 +217,22 @@ class AbstractIntegrand(object):
         assert xp.shape == x.shape
         # function evaluation with chain rule
         i = (None,) * d_indv_ndim + (...,)
-        if self.true_measure == self.true_measure.transform:
-            # jacobian*weight/pdf will cancel so f(x) = g(\Psi(x))
-            xtf = self.true_measure._jacobian_transform_r(
-                xp, return_weights=False
-            )  # get transformed samples, equivalent to self.true_measure._transform_r(x)
+        if isinstance(self.true_measure, ImportanceSampling):
+            xtf, importance_weights = (
+                self.true_measure._importance_sampling_transform_r(xp)
+            )
             assert xtf.shape == xp.shape
-            y = self._g(xtf, *args, **kwargs)
-        else:  # using importance sampling --> need to compute pdf, jacobian(s), and weight explicitly
-            pdf = self.discrete_distrib.pdf(xp)  # pdf of samples
-            assert pdf.shape == batch_shape
-            xtf, jacobians = self.true_measure.transform._jacobian_transform_r(
-                xp, return_weights=True
-            )  # compute recursive transform+jacobian
-            assert xtf.shape == xp.shape
-            assert jacobians.shape == batch_shape
-            weight = self.true_measure._weight(xtf)  # weight based on the true measure
-            assert weight.shape == batch_shape
+            assert importance_weights.shape == batch_shape
             gvals = self._g(xtf, *args, **kwargs)
             assert gvals.shape == (self.d_indv + batch_shape)
-            y = gvals * weight[i] / pdf[i] * jacobians[i]
+            y = gvals * importance_weights[i]
+        else:
+            xtf = self.true_measure._jacobian_transform_r(
+                xp,
+                return_weights=False,
+            )
+            assert xtf.shape == xp.shape
+            y = self._g(xtf, *args, **kwargs)
         assert y.shape == (self.d_indv + batch_shape)
         # account for periodization weight
         y = y * wp[i]

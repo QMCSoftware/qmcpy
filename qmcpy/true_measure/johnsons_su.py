@@ -1,4 +1,4 @@
-from .abstract_true_measure import AbstractTrueMeasure
+from .abstract_true_measure import AbstractTrueMeasure, _clip_unit_interval
 from ..util import DimensionError, ParameterError
 from ..discrete_distribution import DigitalNetB2
 import numpy as np
@@ -92,6 +92,7 @@ class JohnsonsSU(AbstractTrueMeasure):
         )
 
     def _transform(self, x):
+        x = _clip_unit_interval(x)
         return self._lam * np.sinh((norm.ppf(x) - self._gamma) / self._delta) + self._xi
 
     def _weight(self, x):
