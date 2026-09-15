@@ -48,11 +48,13 @@ def test_two_component_gaussian_mixture_shape():
 def test_component_selection_at_cumulative_boundaries_preserves_order():
     components = [gaussian_component(1, -2.0), gaussian_component(1, 3.0)]
     mixture = Mixture(DigitalNetB2(2, seed=7), components, [0.3, 0.7])
+    just_below_boundary = np.nextafter(0.3, 0.0)
     just_above_boundary = np.nextafter(0.3, 1.0)
     u = np.array(
         [
             [0.0, 0.5],
             [0.9, 0.5],
+            [just_below_boundary, 0.5],
             [0.3, 0.5],
             [just_above_boundary, 0.5],
             [0.1, 0.5],
@@ -63,7 +65,7 @@ def test_component_selection_at_cumulative_boundaries_preserves_order():
     samples = mixture._transform(u)
 
     np.testing.assert_allclose(
-        samples[:, 0], [-2.0, 3.0, -2.0, 3.0, -2.0, 3.0]
+        samples[:, 0], [-2.0, 3.0, -2.0, 3.0, 3.0, -2.0, 3.0]
     )
 
 
@@ -94,7 +96,7 @@ def test_multiple_components():
 
     samples = mixture._transform(u)
 
-    np.testing.assert_allclose(samples[:, 0], [-4.0, 0.0, 0.0, 5.0])
+    np.testing.assert_allclose(samples[:, 0], [0.0, 0.0, 5.0, 5.0])
 
 
 def test_heterogeneous_components_dispatch_transform_coordinates():
@@ -276,6 +278,96 @@ def test_weight_is_weighted_sum_of_component_weights():
     np.testing.assert_allclose(mixture._weight(x), expected)
 
 
+def test_weight_is_zero_outside_non_overlapping_component_supports():
+    components = [
+        Uniform(DigitalNetB2(1, seed=17), lower_bound=0.0, upper_bound=1.0),
+        Uniform(DigitalNetB2(1, seed=19), lower_bound=2.0, upper_bound=3.0),
+    ]
+    mixture = Mixture(DigitalNetB2(2, seed=7), components, [0.5, 0.5])
+
+    np.testing.assert_allclose(
+        mixture._weight(np.array([[0.5], [2.5], [1.5]])),
+        [0.5, 0.5, 0.0],
+    )
+
+
+def test_weight_sums_densities_on_overlapping_component_supports():
+    components = [
+        Uniform(DigitalNetB2(1, seed=17), lower_bound=0.0, upper_bound=2.0),
+        Uniform(DigitalNetB2(1, seed=19), lower_bound=1.0, upper_bound=3.0),
+    ]
+    mixture = Mixture(DigitalNetB2(2, seed=7), components, [0.25, 0.75])
+
+    np.testing.assert_allclose(
+        mixture._weight(np.array([[0.5], [1.5], [2.5], [3.5]])),
+        [0.125, 0.5, 0.375, 0.0],
+    )
+
+
+def test_univariate_mixture_moments():
+    components = [
+        Uniform(DigitalNetB2(1, seed=17), lower_bound=0.0, upper_bound=1.0),
+        Uniform(DigitalNetB2(1, seed=19), lower_bound=2.0, upper_bound=3.0),
+    ]
+    mixture = Mixture(DigitalNetB2(2, seed=7), components, [0.3, 0.7])
+    expected_variance = 68.0 / 15.0 - 1.9**2
+
+    assert mixture.mean == pytest.approx(1.9)
+    assert mixture.variance == pytest.approx(expected_variance)
+    assert mixture.standard_deviation == pytest.approx(np.sqrt(expected_variance))
+    np.testing.assert_allclose(mixture.covariance, [[expected_variance]])
+    assert all(
+        statistic in mixture.parameters
+        for statistic in ("mean", "variance", "standard_deviation", "covariance")
+    )
+
+
+def test_multivariate_mixture_moments_are_read_only():
+    components = [
+        Gaussian(
+            DigitalNetB2(2, seed=17),
+            mean=[0.0, 1.0],
+            covariance=[[1.0, 0.2], [0.2, 2.0]],
+        ),
+        Gaussian(
+            DigitalNetB2(2, seed=19),
+            mean=[2.0, -1.0],
+            covariance=[[0.5, -0.1], [-0.1, 1.5]],
+        ),
+    ]
+    mixture = Mixture(DigitalNetB2(3, seed=7), components, [0.25, 0.75])
+
+    np.testing.assert_allclose(mixture.mean, [1.5, -0.5])
+    np.testing.assert_allclose(
+        mixture.covariance, [[1.375, -0.775], [-0.775, 2.375]]
+    )
+    np.testing.assert_allclose(mixture.variance, [1.375, 2.375])
+    np.testing.assert_allclose(
+        mixture.standard_deviation, np.sqrt([1.375, 2.375])
+    )
+    for statistic in (
+        mixture.mean,
+        mixture.variance,
+        mixture.standard_deviation,
+        mixture.covariance,
+    ):
+        assert not statistic.flags.writeable
+        with pytest.raises(ValueError, match="read-only"):
+            statistic.flat[0] = 0.0
+
+
+def test_missing_component_moments_raise_informative_error():
+    components = [
+        gaussian_component(1, 0.0),
+        TransformOnlyMeasure(DigitalNetB2(1, seed=23)),
+    ]
+    mixture = Mixture(DigitalNetB2(2, seed=7), components, [0.5, 0.5])
+
+    assert "mean" not in mixture.parameters
+    with pytest.raises(AttributeError, match="component 1.*does not provide mean"):
+        _ = mixture.mean
+
+
 def test_public_sampling_with_return_weights():
     components = [gaussian_component(1, -1.0), gaussian_component(1, 2.0)]
     mixture = Mixture(DigitalNetB2(2, seed=7), components, [0.3, 0.7])
@@ -373,4 +465,4 @@ def test_replicated_sampler_shape_and_selection():
 
     assert samples.shape == (3, 8, 1)
     assert manual_samples.shape == (2, 2, 1)
-    np.testing.assert_allclose(manual_samples[..., 0], [[-2.0, 3.0], [-2.0, 3.0]])
+    np.testing.assert_allclose(manual_samples[..., 0], [[-2.0, 3.0], [3.0, 3.0]])

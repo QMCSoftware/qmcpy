@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import sparse
 
 from .abstract_true_measure import AbstractTrueMeasure
 from ..discrete_distribution.abstract_discrete_distribution import (
@@ -12,13 +13,20 @@ class Mixture(AbstractTrueMeasure):
 
     A sample ``u`` has one more coordinate than the mixture output. The first
     coordinate selects a component according to ``probabilities``; the
-    remaining coordinates are transformed by that component.
+    remaining coordinates are transformed by that component. Cumulative
+    intervals are left-closed and right-open, except that the final interval
+    also includes ``u[0] == 1``.
 
     The samplers attached to the component true measures are not sampled.
     Components provide their full recursive transform and weight behavior.
     For an importance-sampling composition, the caller remains responsible for
     ensuring that the component's induced sampling distribution is appropriate
     for the intended mixture.
+
+    When the necessary component statistics are available, mixture moments are
+    exposed through ``mean``, ``variance``, ``standard_deviation``, and
+    ``covariance``. Component ``range`` values are used to enforce zero mixture
+    weight outside bounded component supports.
 
     Examples:
         >>> from qmcpy import DigitalNetB2, Gaussian, Mixture
@@ -90,6 +98,18 @@ class Mixture(AbstractTrueMeasure):
         self.range = self._mixture_range()
         super(Mixture, self).__init__()
 
+        self._mean_cache = None
+        self._variance_cache = None
+        self._standard_deviation_cache = None
+        self._covariance_cache = None
+        if all(hasattr(component, "mean") for component in self.components):
+            self.parameters.append("mean")
+        if all(
+            hasattr(component, "mean") and hasattr(component, "covariance")
+            for component in self.components
+        ):
+            self.parameters.extend(["variance", "standard_deviation", "covariance"])
+
     @staticmethod
     def _expanded_range(component):
         bounds = np.asarray(component.range)
@@ -110,6 +130,90 @@ class Mixture(AbstractTrueMeasure):
             [ranges[..., 0].min(axis=0), ranges[..., 1].max(axis=0)]
         )
 
+    def _component_vector(self, component, component_index, statistic):
+        try:
+            value = getattr(component, statistic)
+        except AttributeError as error:
+            raise AttributeError(
+                f"Mixture component {component_index} "
+                f"({type(component).__name__}) does not provide {statistic}."
+            ) from error
+        value = np.atleast_1d(np.asarray(value, dtype=float))
+        if value.shape != (self.d,):
+            raise DimensionError(
+                f"Mixture component {component_index} "
+                f"({type(component).__name__}) {statistic} must have shape "
+                f"({self.d},), got {value.shape}."
+            )
+        return value
+
+    @property
+    def mean(self):
+        if self._mean_cache is None:
+            component_means = np.stack(
+                [
+                    self._component_vector(component, index, "mean")
+                    for index, component in enumerate(self.components)
+                ]
+            )
+            mean = np.sum(self.probabilities[:, None] * component_means, axis=0)
+            mean = self._read_only_array(mean)
+            self._mean_cache = self._scalar_if_univariate(mean)
+        return self._mean_cache
+
+    @property
+    def covariance(self):
+        if self._covariance_cache is None:
+            mixture_mean = np.atleast_1d(np.asarray(self.mean))
+            covariance = np.zeros((self.d, self.d), dtype=float)
+            for index, (probability, component) in enumerate(
+                zip(self.probabilities, self.components)
+            ):
+                component_mean = self._component_vector(component, index, "mean")
+                try:
+                    component_covariance = component.covariance
+                except AttributeError as error:
+                    raise AttributeError(
+                        f"Mixture component {index} "
+                        f"({type(component).__name__}) does not provide covariance."
+                    ) from error
+                if sparse.issparse(component_covariance):
+                    component_covariance = component_covariance.toarray()
+                component_covariance = np.atleast_2d(
+                    np.asarray(component_covariance, dtype=float)
+                )
+                expected_shape = (self.d, self.d)
+                if component_covariance.shape != expected_shape:
+                    raise DimensionError(
+                        f"Mixture component {index} "
+                        f"({type(component).__name__}) covariance must have shape "
+                        f"{expected_shape}, got {component_covariance.shape}."
+                    )
+                difference = component_mean - mixture_mean
+                covariance += probability * (
+                    component_covariance + np.outer(difference, difference)
+                )
+            self._covariance_cache = self._read_only_array(covariance)
+        return self._covariance_cache
+
+    @property
+    def variance(self):
+        if self._variance_cache is None:
+            variance = self._read_only_array(np.diag(self.covariance))
+            self._variance_cache = self._scalar_if_univariate(variance)
+        return self._variance_cache
+
+    @property
+    def standard_deviation(self):
+        if self._standard_deviation_cache is None:
+            standard_deviation = self._read_only_array(
+                np.sqrt(np.atleast_1d(self.variance))
+            )
+            self._standard_deviation_cache = self._scalar_if_univariate(
+                standard_deviation
+            )
+        return self._standard_deviation_cache
+
     def _transform(self, x):
         x = np.asarray(x, dtype=float)
         sampler_dimension = self.d + 1
@@ -122,7 +226,7 @@ class Mixture(AbstractTrueMeasure):
         leading_shape = x.shape[:-1]
         flat_x = x.reshape(-1, sampler_dimension)
         selections = np.searchsorted(
-            self._cumulative_probabilities, flat_x[:, 0], side="left"
+            self._cumulative_probabilities, flat_x[:, 0], side="right"
         )
         selections = np.minimum(selections, len(self.components) - 1)
         transformed = np.empty((len(flat_x), self.d), dtype=float)
@@ -144,10 +248,20 @@ class Mixture(AbstractTrueMeasure):
                 f"Mixture expected last axis {self.d}, got {received}."
             )
 
-        weight = np.zeros(x.shape[:-1], dtype=float)
+        flat_x = x.reshape(-1, self.d)
+        weight = np.zeros(len(flat_x), dtype=float)
         for probability, component in zip(self.probabilities, self.components):
-            weight += probability * component._weight(x)
-        return weight
+            component_range = self._expanded_range(component)
+            in_support = np.all(
+                (flat_x >= component_range[:, 0])
+                & (flat_x <= component_range[:, 1]),
+                axis=-1,
+            )
+            if np.any(in_support):
+                weight[in_support] += probability * component._weight(
+                    flat_x[in_support]
+                )
+        return weight.reshape(x.shape[:-1])
 
     def spawn(self, s=1, dimensions=None):
         """Spawn mixtures with new outer samplers and the same components.
