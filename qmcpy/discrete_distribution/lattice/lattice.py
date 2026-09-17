@@ -113,30 +113,17 @@ class Lattice(AbstractLDDiscreteDistribution):
                 [0.35605352, 0.38025643, 0.38630282],
                 [0.85605352, 0.88025643, 0.88630282]]])
 
-    **References**
+    **References:**
 
-    1.  Sou-Cheng T. Choi, Yuhan Ding, Fred J. Hickernell, Lan Jiang, Lluis Antoni Jimenez Rugama, Da Li, Jagadeeswaran Rathinavel, Xin Tong, Kan Zhang, Yizhi Zhang, and Xuan Zhou.
-        GAIL: Guaranteed Automatic Integration Library (Version 2.3), MATLAB Software, 2019.
-        [http://gailgithub.github.io/GAIL_Dev/](http://gailgithub.github.io/GAIL_Dev/).
+    [1] S.-C. T. Choi, Y. Ding, F. J. Hickernell, L. Jiang, Ll. A. Jimenez Rugama, D. Li, J. Rathinavel, X. Tong, K. Zhang, Y. Zhang, and X. Zhou, "GAIL: Guaranteed Automatic Integration Library," MATLAB software, Version 2.3, 2019. [Online]. Available: [http://gailgithub.github.io/GAIL_Dev/](http://gailgithub.github.io/GAIL_Dev/)
 
-    2.  F.Y. Kuo, D. Nuyens.
-        Application of quasi-Monte Carlo methods to elliptic PDEs with random diffusion coefficients \- a survey of analysis and implementation.
-        Foundations of Computational Mathematics, 16(6):1631-1696, 2016.
-        [https://link.springer.com/article/10.1007/s10208-016-9329-5](https://link.springer.com/article/10.1007/s10208-016-9329-5).
+    [2] F. Y. Kuo and D. Nuyens, "Application of quasi-Monte Carlo methods to elliptic PDEs with random diffusion coefficients: a survey of analysis and implementation," *Foundations of Computational Mathematics*, vol. 16, no. 6, pp. 1631-1696, 2016. [Online]. Available: [https://link.springer.com/article/10.1007/s10208-016-9329-5](https://link.springer.com/article/10.1007/s10208-016-9329-5)
 
-    3.  D. Nuyens.
-        The Magic Point Shop of QMC point generators and generating vectors.
-        MATLAB and Python software, 2018.
-        [https://people.cs.kuleuven.be/~dirk.nuyens/](https://people.cs.kuleuven.be/~dirk.nuyens/).
+    [3] D. Nuyens, "The Magic Point Shop of QMC point generators and generating vectors," MATLAB and Python software, 2018. [Online]. Available: [https://people.cs.kuleuven.be/~dirk.nuyens/](https://people.cs.kuleuven.be/~dirk.nuyens/)
 
-    4.  R. Cools, F.Y. Kuo, D. Nuyens.
-        Constructing embedded lattice rules for multivariate integration.
-        SIAM J. Sci. Comput., 28(6), 2162-2188.
+    [4] R. Cools, F. Y. Kuo, and D. Nuyens, "Constructing embedded lattice rules for multivariate integration," *SIAM Journal on Scientific Computing*, vol. 28, no. 6, pp. 2162-2188, 2006.
 
-    5.  P. L'Ecuyer, D. Munger.
-        LatticeBuilder: A General Software Tool for Constructing Rank-1 Lattice Rules.
-        ACM Transactions on Mathematical Software. 42. (2015).
-        [10.1145/2754929](https://dl.acm.org/doi/10.1145/2754929).
+    [5] P. L'Ecuyer and D. Munger, "LatticeBuilder: A general software tool for constructing rank-1 lattice rules," *ACM Transactions on Mathematical Software*, vol. 42, 2015. [Online]. Available: [https://dl.acm.org/doi/10.1145/2754929](https://dl.acm.org/doi/10.1145/2754929)
     """
 
     def __init__(

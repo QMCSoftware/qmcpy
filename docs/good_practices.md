@@ -59,6 +59,16 @@ These helpers synchronize explicit type information; they do not infer a scienti
 
 There is intentionally no full third-party docstring reformatter in the Makefile. `format-docstring` was evaluated and rejected: on this codebase it strips `Returns:`/`Yields:` types and rewrites `**References:**` to `**References: **`. If wrapping/whitespace normalization is ever wanted, prefer a tool that leaves section structure and type hints untouched (for example `docformatter` or `pydocstringformatter`), and still review the diff.
 
+### Citing sources: IEEE style
+
+Any `References:` section (in a docstring, a `.md` file, or a demo notebook) should use **IEEE style**: numbered brackets in the order each source is first cited, not Chicago/APA-style `(Author, Year)` parenthetical citations.
+
+- **Inline**: `[1]`, `[2]`, ... in the order they are first cited — not alphabetical, not by year.
+- **Bibliography entry**: `[N] A. Author, B. Author, "Title," *Journal*, vol. X, no. Y, pp. Z–Z, Year.` (adapt the template for a book, report, or URL as needed, but keep the leading `[N]` marker and the year.)
+- Number entries sequentially starting at `[1]`; do not reuse `1.` for every entry or renumber a list that starts mid-sequence.
+
+`make check_ref_style` scans `qmcpy/**/*.py` docstrings, `*.md` files, and `demos/**/*.ipynb` notebooks for `References` sections and flags: a docstring header written as `References`/`**References**` instead of the canonical `References:`; an entry numbered some other way (`$[N]$`, `N.`, an unnumbered bullet, an HTML anchor); numbering that is not exactly `1, 2, 3, ...` in order; and an entry with no year at all. It is informational by default; `STRICT=--strict make check_ref_style` fails the build. `make fix_ref_style` applies only the two fixes that are unambiguous and purely mechanical — the docstring header's missing colon, and stripping a `$[N]$` LaTeX wrapper down to `[N]` — everything else it reports is left for a human, since rewriting free-text author/title/venue text automatically risks silently mangling content or breaking a cross-reference elsewhere in the same document. `paper/paper.md` and `*.bib` files are out of scope: that paper is built by Pandoc from BibTeX keys under its own citation-style template, a different (and already-correct) mechanism.
+
 ## Extend the Existing Object Model
 
 New functionality should fit the existing QMCPy class hierarchy instead of introducing parallel designs without discussion.

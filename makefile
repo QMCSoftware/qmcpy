@@ -116,6 +116,40 @@ check_baseline:
 check_baseline_update:
 	@$(PYTHON) scripts/check_baseline.py --update
 
+REFERENCES_STYLE_PATH ?=
+REFERENCES_STYLE_ARGS ?=
+# Check that "References" / bibliography sections in qmcpy/ docstrings,
+# *.md files, and demos/**/*.ipynb notebooks use this project's house
+# citation style: IEEE numbered brackets ([1], [2], ...), in citation
+# order. See scripts/check_ref_style.py's module docstring for
+# exact scope (generated docs/ copies and paper/ are excluded) and for
+# what each finding category means.
+# Informational by default; pass --strict (STRICT=--strict make
+# check_ref_style) to make it fail the build.
+check_ref_style:
+	@$(PYTHON) scripts/check_ref_style.py $(REFERENCES_STYLE_PATH) $(REFERENCES_STYLE_ARGS) $(STRICT)
+
+# Applies only the unambiguous, purely mechanical fixes that
+# check_ref_style flags (a docstring's `**References**` header
+# missing its colon, and `$[N]$` -> `[N]`); everything else it finds is
+# reported but left for a human -- see the script's docstring for why
+# auto-rewriting free-text citations is not attempted.
+fix_ref_style:
+	$(PYTHON) scripts/check_ref_style.py $(REFERENCES_STYLE_PATH) --fix $(REFERENCES_STYLE_ARGS)
+
+REFERENCES_STYLE_DIFF_BASE ?= develop
+
+# Same check as check_ref_style, but only on qmcpy/*.py, *.md, and
+# demos/**/*.ipynb files that changed relative to REFERENCES_STYLE_DIFF_BASE
+# (committed on the branch, modified in the working tree, or untracked).
+check_ref_style_changed:
+	@$(PYTHON) scripts/check_ref_style.py --diff "$(REFERENCES_STYLE_DIFF_BASE)" $(REFERENCES_STYLE_ARGS) $(STRICT)
+
+# Same fixes as fix_ref_style, but scoped to files changed relative to
+# REFERENCES_STYLE_DIFF_BASE -- the quick one to run before opening a PR.
+fix_ref_style_changed:
+	$(PYTHON) scripts/check_ref_style.py --diff "$(REFERENCES_STYLE_DIFF_BASE)" --fix $(REFERENCES_STYLE_ARGS)
+
 add_docstring_arg_types:
 	$(PYTHON) scripts/add_docstring_arg_types.py $(DOCSTRING_TYPE_ARGS) $(DOCSTRING_TYPE_PATH)
 
@@ -651,6 +685,9 @@ format:
 	@echo "> add_docstring_arg_types_changed"
 	@$(MAKE) add_docstring_arg_types_changed
 	@echo
+	@echo "> fix_ref_style"
+	@$(MAKE) fix_ref_style
+	@echo
 	@echo "$(RULE2)"
 	@echo "make format: done -- a 'clean' line for every step means nothing changed"
 	@echo "$(RULE2)"
@@ -676,6 +713,9 @@ check:
 	@echo
 	@echo "> check_docstring_changed"
 	@$(MAKE) check_docstring_changed
+	@echo
+	@echo "> check_ref_style"
+	@$(MAKE) check_ref_style
 	@echo
 	@echo "> check_baseline"
 	@$(MAKE) check_baseline

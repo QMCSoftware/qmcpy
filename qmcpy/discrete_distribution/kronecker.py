@@ -211,7 +211,7 @@ class Kronecker(AbstractLDDiscreteDistribution):
                [0.37841423, 0.36358566],
                [0.56762135, 0.04537849]])
 
-    **References**
+    **References:**
 
     1.  Richtmyer, R. D. (1951). "The evaluation of definite integrals and a quasi-Monte Carlo method."
 
