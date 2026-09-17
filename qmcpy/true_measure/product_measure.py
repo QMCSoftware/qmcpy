@@ -17,11 +17,11 @@ class ProductMeasure(AbstractTrueMeasure):
     measures. Each marginal may be one-dimensional or multidimensional. If the
     marginal true measures have dimensions
 
-    d_1, d_2, ..., d_k,
+    $$d_1, d_2, \ldots, d_k,$$
 
     then the product measure has total dimension
 
-    d = d_1 + d_2 + ... + d_k.
+    $$d = d_1 + d_2 + \cdots + d_k.$$
 
     A single d-dimensional outer sampler is used. Its unit-cube samples are
     split into coordinate blocks, one block for each marginal true measure.
@@ -30,7 +30,8 @@ class ProductMeasure(AbstractTrueMeasure):
 
     For example, if the marginals are
 
-    marginal 1: 2D Gaussian marginal 2: 1D zero-inflated exponential
+        marginal 1: 2D Gaussian
+        marginal 2: 1D zero-inflated exponential
 
     then ``ProductMeasure`` uses a 3D sampler and returns samples with three
     coordinates. The first two coordinates come from the Gaussian marginal, and
@@ -100,7 +101,7 @@ class ProductMeasure(AbstractTrueMeasure):
     """
 
     def __init__(self, sampler: AbstractDiscreteDistribution, marginals: Union[list, tuple]) -> None:
-        """Initialize a product measure from one sampler and several
+        r"""Initialize a product measure from one sampler and several
         marginals.
 
         Args:
@@ -114,10 +115,10 @@ class ProductMeasure(AbstractTrueMeasure):
         Notes:
             Why one sampler? The product measure should be driven by one
             total-dimensional QMC point set. We do not generate separate QMC
-            samples from each marginal. Instead, one sample u in [0,1]^d is
-            split into blocks:
+            samples from each marginal. Instead, one sample $u \in [0,1]^d$
+            is split into blocks:
 
-                u = (u_marginal_1, u_marginal_2, ..., u_marginal_k).
+            $$u = (u_{\text{marginal},1}, u_{\text{marginal},2}, \ldots, u_{\text{marginal},k}).$$
 
             This preserves the intended total-dimensional QMC construction.
         """
@@ -383,7 +384,7 @@ class ProductMeasure(AbstractTrueMeasure):
     def _transform(self, x):
         """Transform unit-cube samples into product-measure samples.
 
-        Steps -----
+        Steps:
         1. Split the full unit-cube sample into marginal blocks.
         2. Send each block to the matching marginal true measure.
         3. Concatenate the transformed marginal outputs.

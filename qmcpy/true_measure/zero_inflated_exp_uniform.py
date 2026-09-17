@@ -35,7 +35,8 @@ class _ZeroInflatedExponential:
 
         SciPyWrapper supplies one coordinate at a time. For example:
 
-        sampler output: (n, 1) ppf input:      (n,)
+        sampler output: (n, 1)
+        ppf input:      (n,)
         """
         u = np.asarray(u, dtype=float)
 

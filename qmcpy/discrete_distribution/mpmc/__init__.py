@@ -3,21 +3,22 @@
 This module implements MPMC using PyTorch and PyTorch Geometric for generating
 low-discrepancy point sets through neural message passing.
 
-Installation Requirements -------------------------- MPMC requires PyTorch and
-PyTorch Geometric. Install with:
+Installation Requirements
+--------------------------
+MPMC requires PyTorch and PyTorch Geometric. Install with:
 
-python -m pip install "qmcpy[mpmc]" qmcpy-install-mpmc
+    python -m pip install "qmcpy[mpmc]"
+    qmcpy-install-mpmc
 
-For GPU support (NVIDIA CUDA), see https://pytorch.org/get-started/locally/ For
-torch-geometric wheels, see
+For GPU support (NVIDIA CUDA), see https://pytorch.org/get-started/locally/
+For torch-geometric wheels, see
 https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html
 
 If these dependencies are not installed, attempting to use MPMC will raise an
 ImportError with installation instructions. You can check availability by
 running:
 
-python -c "import torch; import pyg_lib; import torch_geometric; print('MPMC
-dependencies ready')"
+    python -c "import torch; import pyg_lib; import torch_geometric; print('MPMC dependencies ready')"
 """
 
 try:

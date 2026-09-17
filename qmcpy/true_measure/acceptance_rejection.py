@@ -17,13 +17,13 @@ def _next_pow2(n):
 
 
 class AcceptanceRejection(AbstractTrueMeasure):
-    """Deterministic Acceptance-Rejection (DAR) sampler on the unit cube.
+    r"""Deterministic Acceptance-Rejection (DAR) sampler on the unit cube.
 
-    Implements Algorithm 2 from Zhu & Dick (2014). A (t,m,s)-net in dimension s
-    = d+1 is used as the driver, where the first d coordinates form the
+    Implements Algorithm 2 from Zhu & Dick (2014). A (t,m,s)-net in dimension
+    $s = d+1$ is used as the driver, where the first d coordinates form the
     candidate point and the last coordinate is the acceptance threshold. This
-    gives a star discrepancy bound of O(N^{-1/s}) on the accepted samples,
-    compared to O(N^{-1/2}) for standard random acceptance-rejection.
+    gives a star discrepancy bound of $O(N^{-1/s})$ on the accepted samples,
+    compared to $O(N^{-1/2})$ for standard random acceptance-rejection.
 
     The sampler dimension must be d+1 where d is the target dimension. The
     number of driver points is always a power of 2 (required for the
@@ -66,20 +66,20 @@ class AcceptanceRejection(AbstractTrueMeasure):
     """
 
     def __init__(self, sampler: AbstractDiscreteDistribution, target_density: Callable, upper_bound: float, density_integral: float, max_retries: int = 4) -> None:
-        """Initialize an AcceptanceRejection true measure.
+        r"""Initialize an AcceptanceRejection true measure.
 
         Args:
             sampler (AbstractDiscreteDistribution): A QMCPy discrete
                 distribution of dimension s = target_dim + 1. Must mimic
                 StdUniform. The last coordinate is used as the acceptance
                 threshold.
-            target_density (Callable): Unnormalised target density psi(x)
-                where x has shape (N, d). Must return shape (N,) and be
-                non-negative on [0,1]^d.
-            upper_bound (float): L = sup_{x in [0,1]^d} psi(x). Every
-                evaluation of psi must be <= L.
-            density_integral (float): C = integral_{[0,1]^d} psi(x) dx. The
-                acceptance rate is C/L.
+            target_density (Callable): Unnormalised target density
+                $\psi(x)$ where x has shape (N, d). Must return shape (N,)
+                and be non-negative on $[0,1]^d$.
+            upper_bound (float): $L = \sup_{x \in [0,1]^d} \psi(x)$. Every
+                evaluation of $\psi$ must be $\le L$.
+            density_integral (float): $C = \int_{[0,1]^d} \psi(x) \, dx$.
+                The acceptance rate is $C/L$.
             max_retries (int): Number of times gen_samples will double the
                 driver size if not enough points are accepted. Default 4.
         """
@@ -214,23 +214,24 @@ class AcceptanceRejection(AbstractTrueMeasure):
 
 
 class AcceptanceRejectionReal(AbstractTrueMeasure):
-    """Deterministic Acceptance-Rejection (DAR) sampler on real space R^d.
+    r"""Deterministic Acceptance-Rejection (DAR) sampler on real space $\mathbb{R}^d$.
 
     Implements Algorithm 3 from Zhu & Dick (2014). Extends Algorithm 2 to
-    densities on R^d by mapping the unit-cube driver through marginal quantile
-    functions (inverse Rosenblatt transform, Lemma 4) before applying the
-    acceptance test.
+    densities on $\mathbb{R}^d$ by mapping the unit-cube driver through
+    marginal quantile functions (inverse Rosenblatt transform, Lemma 4)
+    before applying the acceptance test.
 
-    The driver point (u_1, ..., u_d, u_{d+1}) is transformed as:
+    The driver point $(u_1, \ldots, u_d, u_{d+1})$ is transformed as:
 
-    z_j = F_j^{-1}(u_j)   for j = 1, ..., d u   = u_{d+1}          threshold
-    coordinate (unchanged)
+    $$z_j = F_j^{-1}(u_j) \quad \text{for } j = 1, \ldots, d,$$
 
-    Acceptance condition:  psi(z) >= L * H(z) * u
+    $$u = u_{d+1} \quad \text{(threshold coordinate, unchanged)}.$$
 
-    where H is the auxiliary bound function satisfying psi(z) <= L * H(z) for
-    all z in R^d. This gives the same discrepancy bound O(N^{-1/s}) as
-    Algorithm 2.
+    Acceptance condition: $\psi(z) \ge L \, H(z) \, u$
+
+    where $H$ is the auxiliary bound function satisfying $\psi(z) \le L \, H(z)$
+    for all $z \in \mathbb{R}^d$. This gives the same discrepancy bound
+    $O(N^{-1/s})$ as Algorithm 2.
 
     Notes:
         inv_cdfs applies each quantile function independently per dimension.
@@ -280,24 +281,24 @@ class AcceptanceRejectionReal(AbstractTrueMeasure):
 
     def __init__(self, sampler: AbstractDiscreteDistribution, target_density: Callable, inv_cdfs: List[Callable], H_func: Callable,
                  upper_bound: float, density_integral: float, max_retries: int = 4) -> None:
-        """Initialize an AcceptanceRejectionReal true measure.
+        r"""Initialize an AcceptanceRejectionReal true measure.
 
         Args:
             sampler (AbstractDiscreteDistribution): A QMCPy discrete
                 distribution of dimension s = target_dim + 1. Must mimic
                 StdUniform.
-            target_density (Callable): Unnormalised target density psi(z)
-                where z has shape (N, d). Must return shape (N,). Must
-                satisfy psi(z) <= L * H(z) for all z.
+            target_density (Callable): Unnormalised target density
+                $\psi(z)$ where z has shape (N, d). Must return shape (N,).
+                Must satisfy $\psi(z) \le L \, H(z)$ for all z.
             inv_cdfs (List[Callable]): List of d quantile functions
-                [F_1^{-1}, ..., F_d^{-1}], one per dimension. Each maps a
-                1-D array of uniforms in [0,1] to R.
-            H_func (Callable): Auxiliary bound function H(z) where z has
+                $[F_1^{-1}, \ldots, F_d^{-1}]$, one per dimension. Each maps
+                a 1-D array of uniforms in $[0,1]$ to $\mathbb{R}$.
+            H_func (Callable): Auxiliary bound function $H(z)$ where z has
                 shape (N, d). Must return shape (N,) and satisfy
-                psi(z) <= L * H(z) for all z in R^d.
-            upper_bound (float): L satisfying psi(z) <= L * H(z) for all z.
-            density_integral (float): C = integral_{R^d} psi(z) dz. The
-                acceptance rate is C/L.
+                $\psi(z) \le L \, H(z)$ for all $z \in \mathbb{R}^d$.
+            upper_bound (float): L satisfying $\psi(z) \le L \, H(z)$ for all z.
+            density_integral (float): $C = \int_{\mathbb{R}^d} \psi(z) \, dz$.
+                The acceptance rate is $C/L$.
             max_retries (int): Number of times gen_samples will double the
                 driver size if not enough points are accepted. Default 4.
         """
@@ -331,7 +332,7 @@ class AcceptanceRejectionReal(AbstractTrueMeasure):
         super(AcceptanceRejectionReal, self).__init__()
 
     def gen_samples(self, n: Union[None, int] = None, n_min: Union[None, int] = None, n_max: Union[None, int] = None, return_weights: bool = False, warn: bool = True) -> np.ndarray:
-        """Generate accepted samples from the target density on R^d.
+        r"""Generate accepted samples from the target density on $\mathbb{R}^d$.
 
         Unlike other TrueMeasures, this method cannot be decomposed into a
         fixed 1-to-1 _transform because acceptance-rejection produces a

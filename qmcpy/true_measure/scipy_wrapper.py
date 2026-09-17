@@ -61,11 +61,11 @@ def _custom_univariate_sanity_issues(dist, n_grid=64):
 
 
 class _MVNAdapter:
-    """Small adapter that turns a SciPy multivariate normal like object into
+    r"""Small adapter that turns a SciPy multivariate normal like object into
     something with a simple ``transform(u)`` interface.
 
     Idea:
-      1. Start from u in (0,1)^d.
+      1. Start from $u \in (0,1)^d$.
       2. Map to standard normals z via ``norm.ppf``.
       3. Apply Cholesky to inject the correlation structure.
     """
@@ -97,7 +97,7 @@ class _MVNAdapter:
         self._chol = np.linalg.cholesky(cov)
 
     def transform(self, u):
-        """Take u in (0,1)^d and turn it into correlated normal samples.
+        r"""Take $u \in (0,1)^d$ and turn it into correlated normal samples.
         """
         u = np.asarray(u, dtype=float)
         if u.shape[-1] != self.dim:
@@ -177,11 +177,11 @@ class SciPyWrapper(AbstractTrueMeasure):
     """
 
     def __init__(self, sampler: AbstractDiscreteDistribution, scipy_distribs: Union[scipy.stats._distn_infrastructure.rv_continuous_frozen, list, object]) -> None:
-        """Wrap one or more SciPy distributions as a QMCPy true measure.
+        r"""Wrap one or more SciPy distributions as a QMCPy true measure.
 
         Args:
             sampler (AbstractDiscreteDistribution): Low discrepancy or iid
-                sampler in dimension d, living on [0,1)^d.
+                sampler in dimension d, living on $[0,1)^d$.
             scipy_distribs (Union[scipy.stats._distn_infrastructure.rv_continuous_frozen, list, object]): One
                 of the following:
 

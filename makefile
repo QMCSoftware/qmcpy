@@ -155,6 +155,29 @@ REFERENCES_STYLE_DIFF_BASE ?= develop
 check_ref_style_changed:
 	@$(PYTHON) scripts/check_ref_style.py --diff "$(REFERENCES_STYLE_DIFF_BASE)" $(REFERENCES_STYLE_ARGS) $(STRICT)
 
+LATEX_MATH_PATH ?=
+LATEX_MATH_ARGS ?=
+LATEX_MATH_DIFF_BASE ?= develop
+
+# Flags a LaTeX math command (\boldsymbol, \int, \alpha, ...) that appears
+# outside a $...$ / $$...$$ / \begin{...}...\end{...} math-mode span in
+# qmcpy/ docstrings, *.md files, and demos/**/*.ipynb notebooks -- such a
+# command renders as literal garbled text in built HTML/notebooks, not math.
+# There is no fix_ target: deciding exactly what span to wrap in $...$ is a
+# judgment call, not a mechanical rewrite -- see
+# scripts/check_latex_math.py's module docstring for why this check is
+# deliberately narrow (a bare LaTeX command only, not "does this prose look
+# like it should be math"). Informational by default; pass --strict
+# (STRICT=--strict make check_latex_math) to make it fail the build.
+check_latex_math:
+	@$(PYTHON) scripts/check_latex_math.py $(LATEX_MATH_PATH) $(LATEX_MATH_ARGS) $(STRICT)
+
+# Same check as check_latex_math, but only on files that changed relative to
+# LATEX_MATH_DIFF_BASE (committed on the branch, modified in the working
+# tree, or untracked).
+check_latex_math_changed:
+	@$(PYTHON) scripts/check_latex_math.py --diff "$(LATEX_MATH_DIFF_BASE)" $(LATEX_MATH_ARGS) $(STRICT)
+
 # Same fixes as fix_ref_style, but scoped to files changed relative to
 # REFERENCES_STYLE_DIFF_BASE -- the quick one to run before opening a PR.
 fix_ref_style_changed:
@@ -764,6 +787,9 @@ check:
 	@echo
 	@echo "> check_ref_style"
 	@$(MAKE) check_ref_style
+	@echo
+	@echo "> check_latex_math"
+	@$(MAKE) check_latex_math
 	@echo
 	@echo "> check_docstring_indent"
 	@$(MAKE) check_docstring_indent

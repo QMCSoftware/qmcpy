@@ -533,6 +533,14 @@ class KernelMultiTask(AbstractKernel):
         return self._parsed__call__(task0, task1, kmat_x)
 
     def single_integral_01d(self, task0: Union[int, np.ndarray, torch.Tensor], task1: Union[int, np.ndarray, torch.Tensor], x: Union[np.ndarray, torch.Tensor]) -> Union[np.ndarray, torch.Tensor]:
+        # Deliberately widens AbstractKernel.single_integral_01d(self, x): a
+        # multi-task kernel value is only defined for a specific task pair,
+        # so task0/task1 cannot have a meaningful default. Do NOT give them
+        # one -- _parsed__call__ uses task0/task1 as fancy-index values into
+        # self.taskmat, where None means "insert a new axis" (numpy/torch's
+        # np.newaxis convention), not "no task selected". A None default
+        # would silently produce a wrong-shaped result instead of the
+        # TypeError callers get today for omitting a required task index.
         r"""Evaluate the integral of the kernel over the unit cube
 
         $$\tilde{K}((i_0,\boldsymbol{x}),i_1) = \int_{[0,1]^d}
@@ -554,6 +562,9 @@ class KernelMultiTask(AbstractKernel):
         return self._parsed__call__(task0, task1, kint_x)
 
     def double_integral_01d(self, task0: Union[int, np.ndarray, torch.Tensor], task1: Union[int, np.ndarray, torch.Tensor]) -> Union[np.ndarray, torch.Tensor]:
+        # Deliberately widens AbstractKernel.double_integral_01d(self) -- see
+        # single_integral_01d above for why task0/task1 cannot default to
+        # None.
         r"""Evaluate the integral of the kernel over the unit cube
 
         $$\tilde{K}(i_0,i_1) = \int_{[0,1]^d} \int_{[0,1]^d}
