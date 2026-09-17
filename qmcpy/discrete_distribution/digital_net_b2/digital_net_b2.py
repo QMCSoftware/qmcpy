@@ -176,7 +176,7 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
 
     **References:**
 
-    [1] M. Hofert and C. Lemieux, "qrng: (Randomized) Quasi-Random Number Generators," R package version 0.0-7, 2019. [Online]. Available: [https://CRAN.R-project.org/package=qrng](https://CRAN.R-project.org/package=qrng)
+    [1] M. Hofert and C. Lemieux, "QRNG: (Randomized) Quasi-Random Number Generators," R package version 0.0-7, 2019. [Online]. Available: [https://CRAN.R-project.org/package=qrng](https://CRAN.R-project.org/package=qrng)
 
     [2] H. Faure and C. Lemieux, "Implementation of irreducible Sobol' sequences in prime power bases," *Mathematics and Computers in Simulation*, vol. 161, pp. 13-22, 2019.
 

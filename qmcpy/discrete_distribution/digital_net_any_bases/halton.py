@@ -151,7 +151,7 @@ class Halton(DigitalNetAnyBases):
 
     **References:**
 
-    [1] M. Hofert and C. Lemieux, "qrng: (Randomized) Quasi-Random Number Generators," R package version 0.0-7, 2019. [Online]. Available: [https://CRAN.R-project.org/package=qrng](https://CRAN.R-project.org/package=qrng)
+    [1] M. Hofert and C. Lemieux, "QRNG: (Randomized) Quasi-Random Number Generators," R package version 0.0-7, 2019. [Online]. Available: [https://CRAN.R-project.org/package=qrng](https://CRAN.R-project.org/package=qrng)
 
     [2] A. B. Owen, "A randomized Halton algorithm in R," arXiv preprint arXiv:1706.02808, 2017.
 

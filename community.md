@@ -100,7 +100,7 @@ For a list of contributors to [QMCPY.org](https://qmcpy.org), please refer to [h
 
 [11] F. J. Hickernell and Ll. A. Jimenez Rugama, "Reliable adaptive cubature using digital sequences," in *Monte Carlo and Quasi-Monte Carlo Methods: MCQMC, Leuven, Belgium, April 2014*, R. Cools and D. Nuyens, Eds., Springer Proceedings in Mathematics and Statistics, vol. 163. Berlin: Springer-Verlag, 2016, pp. 367-383, arXiv:1410.8615.
 
-[12] M. Hofert and C. Lemieux, "qrng: (Randomized) Quasi-Random Number Generators," R package version 0.0-7, 2019. [Online]. Available: [https://CRAN.R-project.org/package=qrng](https://CRAN.R-project.org/package=qrng)
+[12] M. Hofert and C. Lemieux, "QRNG: (Randomized) Quasi-Random Number Generators," R package version 0.0-7, 2019. [Online]. Available: [https://CRAN.R-project.org/package=qrng](https://CRAN.R-project.org/package=qrng)
 
 [13] H. Faure and C. Lemieux, "Implementation of irreducible Sobol' sequences in prime power bases," *Mathematics and Computers in Simulation*, vol. 161, pp. 13-22, 2019.
 
