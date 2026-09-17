@@ -38,6 +38,13 @@ require a references/bibliography block's body to be indented deeper than
 the header to render correctly, so a ``References:`` body written at the
 same indent as its own header is fine and is never flagged.
 
+A chunk that itself looks like a standalone "Some Label:" header followed by
+its own more-deeply-indented lines is also left alone, no matter how shallow
+its own indent is. griffe recognises *any* such "label + indented body" line
+pair as its own section/admonition, splitting it out of whatever section it
+follows -- forcing it deeper to satisfy the enclosing section's indent rule
+would instead make griffe fold its text into that section's own content.
+
 What is checked (informational by default; ``--strict`` fails the build):
 
 * ``section-not-indented`` -- a chunk within a (non-``References``) Google
@@ -88,6 +95,29 @@ _HEADER = re.compile(
     r"^(\s*)\*{0,2}(" + "|".join(sorted(GOOGLE_SECTIONS, key=len, reverse=True))
     + r"):\*{0,2}\s*$"
 )
+
+# A bare "Some Label:" line (optionally with inline text after the colon) is
+# recognised by griffe's Google parser as a section/admonition header in its
+# own right, wherever it appears -- not just the canonical GOOGLE_SECTIONS
+# names. A chunk that opens with such a line, with its remaining lines
+# indented deeper than that opening line, is already a self-contained
+# "label + body" unit: griffe splits it out on its own rather than folding it
+# into whatever section precedes it, PROVIDED it sits at or above that
+# section's own indentation (that is exactly what tells griffe the preceding
+# section has ended). Pushing such a chunk deeper -- to satisfy the "body
+# must be indented past its header" rule for the section it happens to
+# follow -- does the opposite of what's needed: it makes griffe fold the
+# label's text into that section's own content instead of keeping it
+# separate. So this pattern must be recognised and left untouched.
+_ADMONITION_LABEL = re.compile(r"^[\w][\s\w-]*:(\s+\S.*)?$")
+
+
+def _is_self_contained_admonition(lines, chunk_start, chunk_end, indents):
+    if chunk_end - chunk_start < 2:
+        return False
+    if not _ADMONITION_LABEL.match(lines[chunk_start].strip()):
+        return False
+    return min(indents[1:]) > indents[0]
 
 
 def _iter_chunks(lines, start, end):
@@ -143,7 +173,9 @@ def _find_flagged_chunks(lines):
                     len(lines[k]) - len(lines[k].lstrip())
                     for k in range(chunk_start, chunk_end)
                 ]
-                if min(indents) <= header_indent:
+                if min(indents) <= header_indent and not _is_self_contained_admonition(
+                    lines, chunk_start, chunk_end, indents
+                ):
                     yield i + 1, header_indent, chunk_start, chunk_end
         i = j
 
