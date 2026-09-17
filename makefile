@@ -81,7 +81,14 @@ check_asserts_changed: check_assert_codemod_dependency
 
 DOCSTRING_PATH ?= qmcpy
 DOCSTRING_BASE ?= origin/develop
-PYDOCLINT ?= pydoclint
+# pydoclint is a `docs` extra, not `test` -- `pip install -e ".[test]"` alone
+# won't provide it. Prefer PATH (fast, common case); fall back to the same
+# bin/ directory as $(PYTHON) resolved to, which still finds it even when
+# the qmcpy conda env isn't the active shell environment (mirrors how
+# $(PYTHON) itself is resolved, above). check_pydoclint_dependency gives a
+# clear message instead of a bare "command not found" if it's genuinely
+# not installed anywhere.
+PYDOCLINT ?= $(shell command -v pydoclint 2>/dev/null || echo "$(dir $(PYTHON))pydoclint")
 PYDOCLINT_ARGS ?= -q
 DOCSTRING_TYPE_PATH ?= qmcpy
 DOCSTRING_TYPE_DIFF_BASE ?= develop
@@ -102,7 +109,13 @@ DOCSTRING_SYNC_ARGS ?=
 #     Google form.
 # Informational by default; pass --strict (STRICT=--strict make check_docstring)
 # to make both parts fail the build.
-check_docstring:
+check_pydoclint_dependency:
+	@command -v "$(PYDOCLINT)" >/dev/null 2>&1 || { \
+		echo 'Missing pydoclint (it is a `docs` extra, not `test`). Install with: $(PYTHON) -m pip install "pydoclint>=0.5.0"'; \
+		exit 127; \
+	}
+
+check_docstring: check_pydoclint_dependency
 	@$(PYTHON) scripts/check_docstring.py $(DOCSTRING_PATH) --diff $(DOCSTRING_BASE) $(CHECK_DOCSTRING_ARGS) $(STRICT)
 	@out="$$($(PYDOCLINT) $(PYDOCLINT_ARGS) $(DOCSTRING_PATH) 2>&1)"; rc=$$?; \
 	[ -z "$$out" ] || printf '\n%s\n' "$$out"; \
@@ -120,7 +133,7 @@ check_docstring:
 # does.
 BASELINE_DIFF_BASE ?= develop
 
-check_baseline:
+check_baseline: check_pydoclint_dependency
 	@$(PYTHON) scripts/check_baseline.py --diff "$(BASELINE_DIFF_BASE)"
 
 check_baseline_update:
@@ -239,7 +252,7 @@ check_public_api_types_changed: check_libcst_dependency
 
 # Same checks as check_docstring, but only on qmcpy/*.py files that changed
 # relative to DOCSTRING_BASE (committed, staged/unstaged, and untracked).
-check_docstring_changed:
+check_docstring_changed: check_pydoclint_dependency
 	@set -e; \
 	changed_files="$$( \
 		{ \

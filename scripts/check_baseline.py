@@ -131,7 +131,14 @@ def _violations_by_file(spec, cmd):
 
 
 def _changed_python_files(ref):
-    """Return repo-relative `qmcpy/*.py` paths that changed relative to `ref`."""
+    """Return repo-relative `qmcpy/*.py` paths that changed relative to `ref`.
+
+    Raises RuntimeError (not the raw OSError/CalledProcessError) if `ref`
+    isn't resolvable -- e.g. CI's default shallow checkout only has the
+    PR's own commit, not the base branch -- so callers can catch one
+    exception type, matching check_ref_style.py/check_docstring.py's
+    identical `_changed_files` helpers.
+    """
     commands = (
         ["git", "diff", "--name-only", "--diff-filter=ACMR", f"{ref}...HEAD"],
         ["git", "diff", "--name-only", "--diff-filter=ACMR", "HEAD"],
@@ -139,7 +146,12 @@ def _changed_python_files(ref):
     )
     names = set()
     for cmd in commands:
-        out = subprocess.run(cmd, capture_output=True, text=True, check=True, cwd=REPO_ROOT).stdout
+        try:
+            out = subprocess.run(
+                cmd, capture_output=True, text=True, check=True, cwd=REPO_ROOT,
+            ).stdout
+        except (OSError, subprocess.CalledProcessError) as exc:
+            raise RuntimeError(f"`{' '.join(cmd)}` failed: {exc}") from exc
         names.update(n for n in out.splitlines() if n.startswith("qmcpy/") and n.endswith(".py"))
     return sorted(names)
 
@@ -262,15 +274,27 @@ def main(argv):
 
     diff_regressed = []
     if diff_ref is not None:
-        diff_regressed, diff_details = diff_regressions(diff_ref)
-        n_pairs = len(diff_details)
-        print(f"\nchecked {n_pairs} check/file combination(s) in the qmcpy/*.py files you "
-              f"changed (vs {diff_ref}) for a violation that wasn't already there:")
-        for (name, f), (_base, _head, new) in diff_details.items():
-            for violation in sorted(new):
-                print(f"  - NEW in {f} ({name}): {violation}")
-        if not diff_regressed:
-            print("  - none found")
+        try:
+            diff_regressed, diff_details = diff_regressions(diff_ref)
+        except RuntimeError as exc:
+            # E.g. `ref` isn't a resolvable git ref -- CI's default shallow
+            # checkout (actions/checkout@v4 with no fetch-depth) only has
+            # the PR's own commit, not the base branch, so `git diff
+            # develop...HEAD` fails here unless the workflow explicitly
+            # fetches it. Degrade gracefully (skip this half of the check)
+            # instead of crashing the whole script, matching
+            # check_ref_style.py/check_docstring.py/check_latex_math.py's
+            # identical `--diff` fallback.
+            print(f"\n--diff {diff_ref}: skipped ({exc})", file=sys.stderr)
+        else:
+            n_pairs = len(diff_details)
+            print(f"\nchecked {n_pairs} check/file combination(s) in the qmcpy/*.py files you "
+                  f"changed (vs {diff_ref}) for a violation that wasn't already there:")
+            for (name, f), (_base, _head, new) in diff_details.items():
+                for violation in sorted(new):
+                    print(f"  - NEW in {f} ({name}): {violation}")
+            if not diff_regressed:
+                print("  - none found")
 
     # One final verdict, not a separate "clean"/"ERROR" per section -- a
     # whole-repo count regression and a diff-scoped new violation both feed
