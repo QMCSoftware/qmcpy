@@ -1,6 +1,9 @@
 from .abstract_true_measure import AbstractTrueMeasure
 from ..util import DimensionError, ParameterError
 from ..discrete_distribution import DigitalNetB2
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
 import numpy as np
 from numpy.linalg import cholesky, slogdet
 from scipy.stats import norm, multivariate_normal
@@ -9,10 +12,10 @@ from typing import Union
 
 
 class Gaussian(AbstractTrueMeasure):
-    """
-    Gaussian (Normal) distribution as described in [https://en.wikipedia.org/wiki/Multivariate_normal_distribution](https://en.wikipedia.org/wiki/Multivariate_normal_distribution).
+    """Gaussian (Normal) distribution as described in
+    [https://en.wikipedia.org/wiki/Multivariate_normal_distribution](https://en.wikipedia.org/wiki/Multivariate_normal_distribution).
 
-    Note:
+    Notes:
         - `Normal` is an alias for `Gaussian`
 
     Examples:
@@ -48,16 +51,20 @@ class Gaussian(AbstractTrueMeasure):
                 [ 1.1844196 ,  0.44964332,  1.27760936]]])
     """
 
-    def __init__(self, sampler, mean=0.0, covariance=1.0, decomp_type="PCA"):
-        """
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], mean: Union[float, np.ndarray] = 0.0, covariance: Union[float, np.ndarray] = 1.0, decomp_type: str = "PCA") -> None:
+        """Initialize a Gaussian true measure.
+
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.
             mean (Union[float, np.ndarray]): Mean vector.
-            covariance (Union[float, np.ndarray]): Covariance matrix. A float or vector will be expanded into a diagonal matrix.
-            decomp_type (str): Method for decomposition for covariance matrix. Options include
+            covariance (Union[float, np.ndarray]): Covariance matrix. A float
+                or vector will be expanded into a diagonal matrix.
+            decomp_type (str): Method for decomposition for covariance matrix.
+                Options include
 
                 - `'PCA'` for principal component analysis, or
                 - `'Cholesky'` for cholesky decomposition.
@@ -69,7 +76,8 @@ class Gaussian(AbstractTrueMeasure):
         self._parse_gaussian_params(mean, covariance, decomp_type)
         self.range = np.array([[-np.inf, np.inf]])
         super(Gaussian, self).__init__()
-        assert self.mu.shape == (self.d,) and self.a.shape == (self.d, self.d)
+        if not (self.mu.shape == (self.d,) and self.a.shape == (self.d, self.d)):
+            raise AssertionError
 
     def _parse_gaussian_params(self, mean, covariance, decomp_type, lazy_decomp=False):
         self.decomp_type = decomp_type.upper()
@@ -108,7 +116,9 @@ class Gaussian(AbstractTrueMeasure):
             self._setup_scipy_mvn()
 
     def _compute_decomposition(self):
-        """Compute matrix decomposition (PCA or Cholesky). Raises ParameterError for BrownianBridge."""
+        """Compute matrix decomposition (PCA or Cholesky). Raises
+        ParameterError for BrownianBridge.
+        """
         if self._a_cache is not None:
             return self._a_cache
 

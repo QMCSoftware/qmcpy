@@ -1,3 +1,4 @@
+from typing import Union
 from .abstract_stopping_criterion import AbstractStoppingCriterion
 from ..util.data import Data
 from ..util import ParameterError
@@ -6,10 +7,19 @@ from scipy.stats import norm
 
 
 class AbstractCubMLMC(AbstractStoppingCriterion):
+    """Abstract base class for multilevel Monte Carlo stopping criteria.
+
+    Shared machinery for `CubMLMC` and `CubMLMCCont`: level statistics
+    (`_refresh_level_statistics`), level growth (`_add_level`), and resume
+    checkpoint construction/validation/replay used across MLMC stopping
+    criteria.
+    """
 
     @staticmethod
     def _append_level_diff_samples(data, level, dp):
-        """Append raw level-difference samples when checkpoint caching is enabled."""
+        """Append raw level-difference samples when checkpoint caching is
+        enabled.
+        """
         if not hasattr(data, "level_diffs"):
             return
         while len(data.level_diffs) <= level:
@@ -63,8 +73,21 @@ class AbstractCubMLMC(AbstractStoppingCriterion):
         )
         return ns.astype(int)
 
-    def set_tolerance(self, abs_tol=None, rel_tol=None, rmse_tol=None):
-        assert rel_tol is None, "rel_tol not supported by this stopping criterion."
+    def set_tolerance(self, abs_tol: Union[None, float] = None, rel_tol: Union[None, float] = None, rmse_tol: Union[None, float] = None) -> None:
+        """Update the stopping criterion's target tolerance.
+
+        Args:
+            abs_tol (Union[None, float]): Absolute error tolerance, converted to an RMSE
+                tolerance via `self.alpha`. Ignored if `rmse_tol` is supplied.
+            rel_tol (Union[None, float]): Unsupported; must be `None`.
+            rmse_tol (Union[None, float]): Root mean squared error tolerance. Takes
+                precedence over `abs_tol` if both are supplied.
+
+        Raises:
+            AssertionError: If `rel_tol` is supplied.
+        """
+        if not (rel_tol is None):
+            raise AssertionError("rel_tol not supported by this stopping criterion.")
         if rmse_tol != None:
             self.rmse_tol = float(rmse_tol)
         elif abs_tol != None:
@@ -155,11 +178,14 @@ class AbstractCubMLMC(AbstractStoppingCriterion):
         return data
 
     @staticmethod
-    def _validate_level_diffs(data):
+    def _validate_level_diffs(data: Data):
         """Validate the ``level_diffs`` replay cache on a resume checkpoint.
 
         Args:
             data (Data): Resume checkpoint to validate.
+
+        Returns:
+            None
 
         Raises:
             ParameterError: If ``level_diffs`` is present but structurally
@@ -178,11 +204,13 @@ class AbstractCubMLMC(AbstractStoppingCriterion):
                     % (level, level)
                 )
 
-    def _update_replay_data(self, data):
-        """Replay cached level-difference samples, falling back to fresh draws.
+    def _update_replay_data(self, data: Data):
+        """Replay cached level-difference samples, falling back to fresh
+        draws.
 
         Used during exact-resume replay to reconstruct the integration state by
-        consuming previously stored per-level samples before generating new ones.
+        consuming previously stored per-level samples before generating new
+        ones.
 
         Args:
             data (Data): Integration state carrying ``cached_level_diffs`` and

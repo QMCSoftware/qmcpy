@@ -1,3 +1,4 @@
+from typing import Union
 from .abstract_stopping_criterion import AbstractStoppingCriterion
 from ..util.data import Data
 
@@ -14,8 +15,8 @@ import warnings
 
 
 class CubMCCLT(AbstractStoppingCriterion):
-    r"""
-    IID Monte Carlo stopping criterion based on the Central Limit Theorem in a two step method.
+    r"""IID Monte Carlo stopping criterion based on the Central Limit Theorem
+    in a two step method.
 
     Examples:
         >>> ao = FinancialOption(IIDStdUniform(52,seed=7))
@@ -127,27 +128,30 @@ class CubMCCLT(AbstractStoppingCriterion):
 
     def __init__(
         self,
-        integrand,
-        abs_tol=1e-2,
-        rel_tol=0.0,
-        n_init=1024,
-        n_limit=2**30,
-        inflate=1.2,
-        alpha=0.01,
-        control_variates=None,
-        control_variate_means=None,
-    ):
-        r"""
+        integrand: AbstractIntegrand,
+        abs_tol: Union[float, np.ndarray] = 1e-2,
+        rel_tol: Union[float, np.ndarray] = 0.0,
+        n_init: int = 1024,
+        n_limit: int = 2**30,
+        inflate: float = 1.2,
+        alpha: Union[float, np.ndarray] = 0.01,
+        control_variates: Union[None, list] = None,
+        control_variate_means: Union[None, np.ndarray] = None,
+    ) -> None:
+        r"""Initialize a CubMCCLT stopping criterion.
+
         Args:
             integrand (AbstractIntegrand): The integrand.
-            abs_tol (np.ndarray): Absolute error tolerance.
-            rel_tol (np.ndarray): Relative error tolerance.
+            abs_tol (Union[float, np.ndarray]): Absolute error tolerance.
+            rel_tol (Union[float, np.ndarray]): Relative error tolerance.
             n_init (int): Initial number of samples.
             n_limit (int): Maximum number of samples.
-            inflate (float): Inflation factor $\geq 1$ to multiply by the variance estimate to make it more conservative.
-            alpha (np.ndarray): Uncertainty level in $(0,1)$.
-            control_variates (list): Integrands to use as control variates, each with the same underlying discrete distribution instance.
-            control_variate_means (np.ndarray): Means of each control variate.
+            inflate (float): Inflation factor $\geq 1$ to multiply by the
+                variance estimate to make it more conservative.
+            alpha (Union[float, np.ndarray]): Uncertainty level in $(0,1)$.
+            control_variates (Union[None, list]): Integrands to use as control variates,
+                each with the same underlying discrete distribution instance.
+            control_variate_means (Union[None, np.ndarray]): Means of each control variate.
         """
         if control_variates is None:
             control_variates = []
@@ -166,13 +170,16 @@ class CubMCCLT(AbstractStoppingCriterion):
         self.rel_tol = rel_tol
         self.n_init = n_init
         self.n_limit = n_limit
-        assert self.n_limit > (
+        if not (self.n_limit > (
             2 * self.n_init
-        ), "require n_limit is at least twic as much as n_init"
+        )):
+            raise AssertionError("require n_limit is at least twic as much as n_init")
         self.alpha = alpha
         self.inflate = inflate
-        assert self.inflate >= 1
-        assert 0 < self.alpha < 1
+        if not (self.inflate >= 1):
+            raise AssertionError
+        if not (0 < self.alpha < 1):
+            raise AssertionError
         # QMCPy Objs
         self.integrand = integrand
         self.true_measure = self.integrand.true_measure
@@ -181,13 +188,15 @@ class CubMCCLT(AbstractStoppingCriterion):
             allowed_distribs=[AbstractIIDDiscreteDistribution],
             allow_vectorized_integrals=True,
         )
-        assert self.integrand.d_indv == ()
+        if not (self.integrand.d_indv == ()):
+            raise AssertionError
         # control variates
         self._init_control_variates(control_variates, control_variate_means)
         if self.ncv > 0:
-            assert self.cv_mu.shape == (
+            if not (self.cv_mu.shape == (
                 (self.ncv,) + self.integrand.d_indv
-            ), "Control variate means should have shape (len(control variates),d_indv)."
+            )):
+                raise AssertionError("Control variate means should have shape (len(control variates),d_indv).")
             self.parameters += ["cv", "cv_mu"]
         self.z_star = -norm.ppf(self.alpha / 2.0)
 
@@ -198,7 +207,24 @@ class CubMCCLT(AbstractStoppingCriterion):
         ycv = np.array(data.ycvfull[:, self.n_init :], copy=False)
         return y - ((ycv - self.cv_mu[:, None]) * self.beta[:, None]).sum(0)
 
-    def integrate(self, resume=None):
+    def integrate(self, resume: Union[None, Data] = None) -> tuple:
+        """Determine the samples needed to satisfy the target tolerance.
+
+        Draws an initial `self.n_init` samples to estimate the standard
+        deviation, then uses the CLT-based normal quantile (`self.z_star`,
+        inflated by `self.inflate`) to size and draw a second, final batch,
+        producing a symmetric confidence-interval bound on the integral.
+
+        Args:
+            resume (Union[None, Data]): Unsupported; must be `None`, as `CubMCCLT` cannot
+                resume a prior checkpoint.
+
+        Returns:
+            tuple: Approximation to the integral and the corresponding data object.
+
+        Raises:
+            ParameterError: If `resume` is not `None`.
+        """
         t_start = time()
         trace = self._make_trace_logger()
         if resume is not None:
@@ -273,8 +299,19 @@ class CubMCCLT(AbstractStoppingCriterion):
         trace.finalize()
         return data.solution, data
 
-    def set_tolerance(self, abs_tol=None, rel_tol=None, rmse_tol=None):
-        assert rmse_tol is None, "rmse_tol not supported by this stopping criterion."
+    def set_tolerance(self, abs_tol: Union[None, float] = None, rel_tol: Union[None, float] = None, rmse_tol: Union[None, float] = None) -> None:
+        """Update the stopping criterion's target tolerance.
+
+        Args:
+            abs_tol (Union[None, float]): Absolute error tolerance.
+            rel_tol (Union[None, float]): Relative error tolerance.
+            rmse_tol (Union[None, float]): Unsupported; must be `None`.
+
+        Raises:
+            AssertionError: If `rmse_tol` is supplied.
+        """
+        if not (rmse_tol is None):
+            raise AssertionError("rmse_tol not supported by this stopping criterion.")
         if abs_tol is not None:
             self.abs_tol = abs_tol
         if rel_tol is not None:
