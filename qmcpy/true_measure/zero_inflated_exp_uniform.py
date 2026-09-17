@@ -115,74 +115,74 @@ class ZeroInflatedExpUniform(SciPyWrapper):
     with the deprecated two-dimensional construction.
 
     Examples:
-    Without replications:
+        Without replications:
 
-    >>> from qmcpy import DigitalNetB2, ZeroInflatedExpUniform
-    >>> tm = ZeroInflatedExpUniform(
-    ...     DigitalNetB2(1, seed=7), p_zero=0.4, lam=1.5
-    ... )
-    >>> x = tm(8)
-    >>> x
-    array([[0.        ],
-           [0.76621559],
-           [0.        ],
-           [0.18405583],
-           [0.08112272],
-           [1.19997153],
-           [0.        ],
-           [0.33259467]])
-    >>> x.shape
-    (8, 1)
-    >>> bool((x >= 0).all())
-    True
-    >>> tm
-    ZeroInflatedExpUniform (AbstractTrueMeasure)
-        p_zero          0.400
-        lam             1.500
-        mean            0.400
-        variance        0.373
-        standard_deviation 0.611
+        >>> from qmcpy import DigitalNetB2, ZeroInflatedExpUniform
+        >>> tm = ZeroInflatedExpUniform(
+        ...     DigitalNetB2(1, seed=7), p_zero=0.4, lam=1.5
+        ... )
+        >>> x = tm(8)
+        >>> x
+        array([[0.        ],
+               [0.76621559],
+               [0.        ],
+               [0.18405583],
+               [0.08112272],
+               [1.19997153],
+               [0.        ],
+               [0.33259467]])
+        >>> x.shape
+        (8, 1)
+        >>> bool((x >= 0).all())
+        True
+        >>> tm
+        ZeroInflatedExpUniform (AbstractTrueMeasure)
+            p_zero          0.400
+            lam             1.500
+            mean            0.400
+            variance        0.373
+            standard_deviation 0.611
 
-    Covariance is omitted because the measure is one dimensional (a 1x1
-    covariance would simply repeat the variance):
+        Covariance is omitted because the measure is one dimensional (a 1x1
+        covariance would simply repeat the variance):
 
-    >>> tm.mean
-    0.39999999999999997
-    >>> tm.variance
-    0.3733333333333333
-    >>> tm.standard_deviation
-    0.6110100926607787
+        >>> tm.mean
+        0.39999999999999997
+        >>> tm.variance
+        0.3733333333333333
+        >>> tm.standard_deviation
+        0.6110100926607787
 
-    With independent replications:
+        With independent replications:
 
-    >>> tm = ZeroInflatedExpUniform(
-    ...     DigitalNetB2(1, seed=7, replications=2),
-    ...     p_zero=0.4,
-    ...     lam=1.5,
-    ... )
-    >>> x = tm(8)
-    >>> x
-    array([[[0.51197024],
-            [0.        ],
-            [2.54258665],
-            [0.03368876],
-            [0.2192598 ],
-            [0.        ],
-            [0.85384192],
-            [0.        ]],
-    <BLANKLINE>
-           [[1.3024994 ],
-            [0.03378461],
-            [0.20489897],
-            [0.        ],
-            [0.58638285],
-            [0.        ],
-            [0.35227285],
-            [0.        ]]])
-    >>> x.shape
-    (2, 8, 1)
-    >>> bool((x >= 0).all())
-    True
+        >>> tm = ZeroInflatedExpUniform(
+        ...     DigitalNetB2(1, seed=7, replications=2),
+        ...     p_zero=0.4,
+        ...     lam=1.5,
+        ... )
+        >>> x = tm(8)
+        >>> x
+        array([[[0.51197024],
+                [0.        ],
+                [2.54258665],
+                [0.03368876],
+                [0.2192598 ],
+                [0.        ],
+                [0.85384192],
+                [0.        ]],
+        <BLANKLINE>
+               [[1.3024994 ],
+                [0.03378461],
+                [0.20489897],
+                [0.        ],
+                [0.58638285],
+                [0.        ],
+                [0.35227285],
+                [0.        ]]])
+        >>> x.shape
+        (2, 8, 1)
+        >>> bool((x >= 0).all())
+        True
     """
 
     def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], p_zero: float = 0.4, lam: float = 1.5, y_split: Union[None, float] = None) -> None:

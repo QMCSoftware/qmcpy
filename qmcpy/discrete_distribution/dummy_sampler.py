@@ -18,16 +18,16 @@ class DummySampler(AbstractLDDiscreteDistribution):
     a construction placeholder and cannot generate meaningful QMC points.
 
     Examples:
-    >>> from qmcpy import DummySampler
-    >>> sampler = DummySampler(2)
-    >>> sampler.d
-    2
-    >>> sampler.replications
-    1
-    >>> sampler(4)
-    Traceback (most recent call last):
-        ...
-    qmcpy.util.exceptions_warnings.ParameterError: DummySampler is only a construction placeholder for ProductMeasure child true measures and cannot generate samples.
+        >>> from qmcpy import DummySampler
+        >>> sampler = DummySampler(2)
+        >>> sampler.d
+        2
+        >>> sampler.replications
+        1
+        >>> sampler(4)
+        Traceback (most recent call last):
+            ...
+        qmcpy.util.exceptions_warnings.ParameterError: DummySampler is only a construction placeholder for ProductMeasure child true measures and cannot generate samples.
     """
 
     def __init__(self, dimension: int = 1, replications: Union[None, int] = None, seed: Union[None, int, np.random.SeedSequence] = None, warn: bool = True) -> None:

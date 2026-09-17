@@ -55,12 +55,12 @@ class UniformTriangle(SciPyWrapper):
     """Uniform distribution on the triangle {(x, y): 0 <= y <= x <= 1}.
 
     Examples:
-    >>> tm = UniformTriangle(sampler=DigitalNetB2(2, seed=7))
-    >>> x = tm(4)
-    >>> x.shape
-    (4, 2)
-    >>> bool(np.all(x[:, 1] <= x[:, 0]))
-    True
+        >>> tm = UniformTriangle(sampler=DigitalNetB2(2, seed=7))
+        >>> x = tm(4)
+        >>> x.shape
+        (4, 2)
+        >>> bool(np.all(x[:, 1] <= x[:, 0]))
+        True
     """
 
     def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure]) -> None:

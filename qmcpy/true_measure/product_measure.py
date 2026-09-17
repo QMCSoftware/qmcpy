@@ -46,57 +46,57 @@ class ProductMeasure(AbstractTrueMeasure):
     from this class.
 
     Notes:
-    For independent marginal blocks, means, variances, and standard deviations
-    are concatenated in marginal order, while covariance is block diagonal.
+        For independent marginal blocks, means, variances, and standard deviations
+        are concatenated in marginal order, while covariance is block diagonal.
 
-    Exact product weights are supported for direct marginal true measures. For
-    recursively composed marginal measures, sampling is supported through
-    QMCPy's recursive transform helper, but exact final-space product weights
-    are not currently implemented here.
+        Exact product weights are supported for direct marginal true measures. For
+        recursively composed marginal measures, sampling is supported through
+        QMCPy's recursive transform helper, but exact final-space product weights
+        are not currently implemented here.
 
     Examples:
-    Combine two one-dimensional uniform true measures:
+        Combine two one-dimensional uniform true measures:
 
-    >>> from qmcpy import DigitalNetB2, DummySampler, ProductMeasure, Uniform
-    >>> marginals = [
-    ...     Uniform(DummySampler(1), lower_bound=0, upper_bound=2),
-    ...     Uniform(DummySampler(1), lower_bound=10, upper_bound=12),
-    ... ]
-    >>> pm = ProductMeasure(sampler=DigitalNetB2(2, seed=9), marginals=marginals)
-    >>> x = pm(4)
-    >>> x.shape
-    (4, 2)
-    >>> bool(((0 <= x[:, 0]) & (x[:, 0] <= 2)).all())
-    True
+        >>> from qmcpy import DigitalNetB2, DummySampler, ProductMeasure, Uniform
+        >>> marginals = [
+        ...     Uniform(DummySampler(1), lower_bound=0, upper_bound=2),
+        ...     Uniform(DummySampler(1), lower_bound=10, upper_bound=12),
+        ... ]
+        >>> pm = ProductMeasure(sampler=DigitalNetB2(2, seed=9), marginals=marginals)
+        >>> x = pm(4)
+        >>> x.shape
+        (4, 2)
+        >>> bool(((0 <= x[:, 0]) & (x[:, 0] <= 2)).all())
+        True
 
-    The outer sampler controls replications:
+        The outer sampler controls replications:
 
-    >>> pm = ProductMeasure(
-    ...     sampler=DigitalNetB2(2, seed=9, replications=3),
-    ...     marginals=marginals,
-    ... )
-    >>> pm(4).shape
-    (3, 4, 2)
+        >>> pm = ProductMeasure(
+        ...     sampler=DigitalNetB2(2, seed=9, replications=3),
+        ...     marginals=marginals,
+        ... )
+        >>> pm(4).shape
+        (3, 4, 2)
 
-    The ``DummySampler`` marginal samplers are only construction placeholders
-    required by the current ``AbstractTrueMeasure`` interface.
-    ``ProductMeasure`` samples from its own outer sampler.
+        The ``DummySampler`` marginal samplers are only construction placeholders
+        required by the current ``AbstractTrueMeasure`` interface.
+        ``ProductMeasure`` samples from its own outer sampler.
 
-    Marginals may have different dimensions:
+        Marginals may have different dimensions:
 
-    >>> import numpy as np
-    >>> from qmcpy import Gaussian
-    >>> marginals = [
-    ...     Gaussian(
-    ...         DummySampler(2),
-    ...         mean=[0, 0],
-    ...         covariance=np.eye(2),
-    ...     ),
-    ...     Uniform(DummySampler(1), lower_bound=10, upper_bound=12),
-    ... ]
-    >>> pm = ProductMeasure(sampler=DigitalNetB2(3, seed=12), marginals=marginals)
-    >>> pm(4).shape
-    (4, 3)
+        >>> import numpy as np
+        >>> from qmcpy import Gaussian
+        >>> marginals = [
+        ...     Gaussian(
+        ...         DummySampler(2),
+        ...         mean=[0, 0],
+        ...         covariance=np.eye(2),
+        ...     ),
+        ...     Uniform(DummySampler(1), lower_bound=10, upper_bound=12),
+        ... ]
+        >>> pm = ProductMeasure(sampler=DigitalNetB2(3, seed=12), marginals=marginals)
+        >>> pm(4).shape
+        (4, 3)
     """
 
     def __init__(self, sampler: AbstractDiscreteDistribution, marginals: Union[list, tuple]) -> None:

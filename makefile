@@ -150,6 +150,39 @@ check_ref_style_changed:
 fix_ref_style_changed:
 	$(PYTHON) scripts/check_ref_style.py --diff "$(REFERENCES_STYLE_DIFF_BASE)" --fix $(REFERENCES_STYLE_ARGS)
 
+DOCSTRING_INDENT_PATH ?=
+DOCSTRING_INDENT_ARGS ?=
+DOCSTRING_INDENT_DIFF_BASE ?= develop
+
+# Check that every Google-style docstring section (Args:, Returns:,
+# Examples:, References:, ...) has its body indented deeper than its own
+# header line. A body at the SAME indent as the header is not recognised as
+# belonging to the section by mkdocstrings' Google docstring parser, which is
+# why e.g. an Examples: section's >>> lines can fail to render as a doctest
+# block in the built HTML even though they look fine in an IDE. See
+# scripts/check_docstring_indent.py's module docstring for details.
+# Informational by default; pass --strict (STRICT=--strict make
+# check_docstring_indent) to make it fail the build.
+check_docstring_indent:
+	@$(PYTHON) scripts/check_docstring_indent.py $(DOCSTRING_INDENT_PATH) $(DOCSTRING_INDENT_ARGS) $(STRICT)
+
+# Same check, but only on qmcpy/*.py files that changed relative to
+# DOCSTRING_INDENT_DIFF_BASE (committed on the branch, modified in the
+# working tree, or untracked).
+check_docstring_indent_changed:
+	@$(PYTHON) scripts/check_docstring_indent.py --diff "$(DOCSTRING_INDENT_DIFF_BASE)" $(DOCSTRING_INDENT_ARGS) $(STRICT)
+
+# Shifts a flagged section's body right by a constant number of spaces so its
+# least-indented line sits one level deeper than the header -- this never
+# changes indentation relative to other lines already in the block (a nested
+# doctest continuation or wrapped array repr keeps its own relative offset),
+# and the docstring's closing quote is never touched.
+fix_docstring_indent:
+	$(PYTHON) scripts/check_docstring_indent.py $(DOCSTRING_INDENT_PATH) --fix $(DOCSTRING_INDENT_ARGS)
+
+fix_docstring_indent_changed:
+	$(PYTHON) scripts/check_docstring_indent.py --diff "$(DOCSTRING_INDENT_DIFF_BASE)" --fix $(DOCSTRING_INDENT_ARGS)
+
 add_docstring_arg_types:
 	$(PYTHON) scripts/add_docstring_arg_types.py $(DOCSTRING_TYPE_ARGS) $(DOCSTRING_TYPE_PATH)
 
@@ -688,6 +721,9 @@ format:
 	@echo "> fix_ref_style"
 	@$(MAKE) fix_ref_style
 	@echo
+	@echo "> fix_docstring_indent"
+	@$(MAKE) fix_docstring_indent
+	@echo
 	@echo "$(RULE2)"
 	@echo "make format: done -- a 'clean' line for every step means nothing changed"
 	@echo "$(RULE2)"
@@ -716,6 +752,9 @@ check:
 	@echo
 	@echo "> check_ref_style"
 	@$(MAKE) check_ref_style
+	@echo
+	@echo "> check_docstring_indent"
+	@$(MAKE) check_docstring_indent
 	@echo
 	@echo "> check_baseline"
 	@$(MAKE) check_baseline

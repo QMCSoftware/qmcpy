@@ -27,9 +27,9 @@ class DigitalNetAnyBases(AbstractLDDiscreteDistribution):
             i.e., do *not* pass in interlaced `generating_matrices` and set
             `alpha>1`, this will apply additional interlacing.
 
-    A few examples below showcase how to pass in custom bases and generating
-    matrices. Many other examples can be found in the Halton and Faure
-    implementations
+        A few examples below showcase how to pass in custom bases and generating
+        matrices. Many other examples can be found in the Halton and Faure
+        implementations
 
     Examples:
         >>> bases = 3
