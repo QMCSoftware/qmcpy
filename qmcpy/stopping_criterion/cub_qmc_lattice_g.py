@@ -162,17 +162,9 @@ class CubQMCLatticeG(AbstractCubQMCLDG):
 
     **References:**
 
-    1.  Lluis Antoni Jimenez Rugama and Fred J. Hickernell.
-        "Adaptive multidimensional integration based on rank-1 lattices,"
-        Monte Carlo and Quasi-Monte Carlo Methods: MCQMC, Leuven, Belgium,
-        April 2014 (R. Cools and D. Nuyens, eds.), Springer Proceedings in Mathematics.
-        and Statistics, vol. 163, Springer-Verlag, Berlin, 2016, arXiv:1411.1966, pp. 407-422.
+    [1] Ll. A. Jimenez Rugama and F. J. Hickernell, "Adaptive multidimensional integration based on rank-1 lattices," in *Monte Carlo and Quasi-Monte Carlo Methods: MCQMC, Leuven, Belgium, April 2014*, R. Cools and D. Nuyens, Eds. Springer Proceedings in Mathematics and Statistics, vol. 163. Berlin: Springer-Verlag, 2016, pp. 407-422. arXiv:1411.1966.
 
-    2.  Sou-Cheng T. Choi, Yuhan Ding, Fred J. Hickernell, Lan Jiang, Lluis Antoni Jimenez Rugama,
-        Da Li, Jagadeeswaran Rathinavel, Xin Tong, Kan Zhang, Yizhi Zhang, and Xuan Zhou,
-        GAIL: Guaranteed Automatic Integration Library (Version 2.3) [MATLAB Software], 2019.
-        [http://gailgithub.github.io/GAIL_Dev/](http://gailgithub.github.io/GAIL_Dev/).
-        [https://github.com/GailGithub/GAIL_Dev/blob/master/Algorithms/IntegrationExpectation/cubLattice_g.m](https://github.com/GailGithub/GAIL_Dev/blob/master/Algorithms/IntegrationExpectation/cubLattice_g.m).
+    [2] S.-C. T. Choi, Y. Ding, F. J. Hickernell, L. Jiang, Ll. A. Jimenez Rugama, D. Li, J. Rathinavel, X. Tong, K. Zhang, Y. Zhang, and X. Zhou, "GAIL: Guaranteed Automatic Integration Library," MATLAB software, Version 2.3, 2019. [Online]. Available: [http://gailgithub.github.io/GAIL_Dev/](http://gailgithub.github.io/GAIL_Dev/) and [https://github.com/GailGithub/GAIL_Dev/blob/master/Algorithms/IntegrationExpectation/cubLattice_g.m](https://github.com/GailGithub/GAIL_Dev/blob/master/Algorithms/IntegrationExpectation/cubLattice_g.m)
     """
 
     def __init__(

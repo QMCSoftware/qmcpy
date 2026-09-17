@@ -205,16 +205,9 @@ class CubQMCNetG(AbstractCubQMCLDG):
 
     **References:**
 
-    1.  Hickernell, Fred J., and Lluís Antoni Jiménez Rugama.
-        "Reliable adaptive cubature using digital sequences."
-        Monte Carlo and Quasi-Monte Carlo Methods: MCQMC, Leuven, Belgium, April 2014.
-        Springer International Publishing, 2016.
+    [1] F. J. Hickernell and Ll. A. Jiménez Rugama, "Reliable adaptive cubature using digital sequences," in *Monte Carlo and Quasi-Monte Carlo Methods: MCQMC, Leuven, Belgium, April 2014*. Springer International Publishing, 2016.
 
-    2.  Sou-Cheng T. Choi, Yuhan Ding, Fred J. Hickernell, Lan Jiang, Lluis Antoni Jimenez Rugama,
-        Da Li, Jagadeeswaran Rathinavel, Xin Tong, Kan Zhang, Yizhi Zhang, and Xuan Zhou,
-        GAIL: Guaranteed Automatic Integration Library (Version 2.3) [MATLAB Software], 2019.
-        [http://gailgithub.github.io/GAIL_Dev/](http://gailgithub.github.io/GAIL_Dev/).
-        [https://github.com/GailGithub/GAIL_Dev/blob/master/Algorithms/IntegrationExpectation/cubSobol_g.m](https://github.com/GailGithub/GAIL_Dev/blob/master/Algorithms/IntegrationExpectation/cubSobol_g.m).
+    [2] S.-C. T. Choi, Y. Ding, F. J. Hickernell, L. Jiang, Ll. A. Jimenez Rugama, D. Li, J. Rathinavel, X. Tong, K. Zhang, Y. Zhang, and X. Zhou, "GAIL: Guaranteed Automatic Integration Library," MATLAB software, Version 2.3, 2019. [Online]. Available: [http://gailgithub.github.io/GAIL_Dev/](http://gailgithub.github.io/GAIL_Dev/) and [https://github.com/GailGithub/GAIL_Dev/blob/master/Algorithms/IntegrationExpectation/cubSobol_g.m](https://github.com/GailGithub/GAIL_Dev/blob/master/Algorithms/IntegrationExpectation/cubSobol_g.m)
     """
 
     def __init__(

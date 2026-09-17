@@ -135,10 +135,7 @@ class BrownianMotion(Gaussian):
 
         **References:**
 
-        1.  Art B. Owen.
-            Monte Carlo theory, methods and examples.
-            Section 6.4, Detailed Simulation of Brownian Motion, 2013
-            [https://artowen.su.domains/mc/](https://artowen.su.domains/mc/)
+        [1] A. B. Owen, "Monte Carlo theory, methods and examples," Sec. 6.4, Detailed Simulation of Brownian Motion, 2013. [Online]. Available: [https://artowen.su.domains/mc/](https://artowen.su.domains/mc/)
     """
 
     def __init__(

@@ -99,16 +99,9 @@ class SensitivityIndices(AbstractIntegrand):
 
     **References:**
 
-    1.  Aleksei G. Sorokin and Jagadeeswaran Rathinavel.
-        On Bounding and Approximating Functions of Multiple Expectations Using Quasi-Monte Carlo.
-        International Conference on Monte Carlo and Quasi-Monte Carlo Methods in Scientific Computing.
-        Cham: Springer International Publishing, 2022.
-        [https://link.springer.com/chapter/10.1007/978-3-031-59762-6_29](https://link.springer.com/chapter/10.1007/978-3-031-59762-6_29).
+    [1] A. G. Sorokin and J. Rathinavel, "On Bounding and Approximating Functions of Multiple Expectations Using Quasi-Monte Carlo," in *International Conference on Monte Carlo and Quasi-Monte Carlo Methods in Scientific Computing*. Cham: Springer International Publishing, 2022. [Online]. Available: [https://link.springer.com/chapter/10.1007/978-3-031-59762-6_29](https://link.springer.com/chapter/10.1007/978-3-031-59762-6_29)
 
-    2.  Art B. Owen.
-        Monte Carlo theory, methods and examples.
-        Appendix A. Equations (A.16) and (A.18). 2013.
-        [https://artowen.su.domains/mc/A-anova.pdf](https://artowen.su.domains/mc/A-anova.pdf).
+    [2] A. B. Owen, *Monte Carlo Theory, Methods and Examples*, 2013, Appendix A, Eqs. (A.16) and (A.18). [Online]. Available: [https://artowen.su.domains/mc/A-anova.pdf](https://artowen.su.domains/mc/A-anova.pdf)
     """
 
     def __init__(self, integrand: AbstractIntegrand, indices: Union[str, np.ndarray] = "singletons") -> None:

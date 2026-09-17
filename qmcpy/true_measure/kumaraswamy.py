@@ -126,18 +126,13 @@ class Kumaraswamy(AbstractTrueMeasure):
 
         **References:**
 
-        1.  Kumaraswamy distribution. Wikipedia.
-            [https://en.wikipedia.org/wiki/Kumaraswamy_distribution](https://en.wikipedia.org/wiki/Kumaraswamy_distribution).
+        [1] "Kumaraswamy distribution," Wikipedia. [Online]. Available: [https://en.wikipedia.org/wiki/Kumaraswamy_distribution](https://en.wikipedia.org/wiki/Kumaraswamy_distribution). [Accessed: Sep. 17, 2026].
 
-        2.  SciPy Reference. scipy.special.betaln.
-            [https://docs.scipy.org/doc/scipy/reference/generated/scipy.special.betaln.html](https://docs.scipy.org/doc/scipy/reference/generated/scipy.special.betaln.html).
+        [2] "scipy.special.betaln," SciPy Reference. [Online]. Available: [https://docs.scipy.org/doc/scipy/reference/generated/scipy.special.betaln.html](https://docs.scipy.org/doc/scipy/reference/generated/scipy.special.betaln.html). [Accessed: Sep. 17, 2026].
 
-        3.  G. H. Hardy, J. E. Littlewood, and G. Polya.
-            Inequalities, 2nd edition, Cambridge University Press, Cambridge, 1952
-            (Holder's inequality; implies log-convexity of the moment sequence).
+        [3] G. H. Hardy, J. E. Littlewood, and G. Polya, Inequalities, 2nd ed. Cambridge, U.K.: Cambridge University Press, 1952. (Holder's inequality; implies log-convexity of the moment sequence.)
 
-        4.  NumPy Reference. numpy.expm1.
-            [https://numpy.org/doc/stable/reference/generated/numpy.expm1.html](https://numpy.org/doc/stable/reference/generated/numpy.expm1.html).
+        [4] "numpy.expm1," NumPy Reference. [Online]. Available: [https://numpy.org/doc/stable/reference/generated/numpy.expm1.html](https://numpy.org/doc/stable/reference/generated/numpy.expm1.html). [Accessed: Sep. 17, 2026].
 
         Returns:
             tuple: Length ``d`` arrays ``(mean, variance)``.

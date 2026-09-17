@@ -134,18 +134,11 @@ class KorobovLattice(AbstractLDDiscreteDistribution):
 
     **References:**
 
-    1.  N. M. Korobov.
-        The approximate computation of multiple integrals.
-        Dokl. Akad. Nauk SSSR, 124:1207-1210. 1959.
+    [1] N. M. Korobov, "The approximate computation of multiple integrals," *Dokl. Akad. Nauk SSSR*, vol. 124, pp. 1207-1210, 1959.
 
-    2.  I. H. Sloan and S. Joe.
-        Lattice Methods for Multiple Integration.
-        Oxford University Press. 1994.
+    [2] I. H. Sloan and S. Joe, *Lattice Methods for Multiple Integration*. Oxford University Press, 1994.
 
-    3.  J. Dick, F. Y. Kuo, and I. H. Sloan.
-        High-dimensional integration: the quasi-Monte Carlo way.
-        Acta Numerica, 22:133-288. 2013.
-        [https://doi.org/10.1017/S0962492913000044](https://doi.org/10.1017/S0962492913000044).
+    [3] J. Dick, F. Y. Kuo, and I. H. Sloan, "High-dimensional integration: the quasi-Monte Carlo way," *Acta Numerica*, vol. 22, pp. 133-288, 2013. [Online]. Available: [https://doi.org/10.1017/S0962492913000044](https://doi.org/10.1017/S0962492913000044)
     """
     def __init__(
             self,

@@ -219,9 +219,7 @@ class PFGPCI(AbstractStoppingCriterion):
 
     **References:**
 
-    1.  Sorokin, Aleksei G., and Vishwas Rao.
-        "Credible Intervals for Probability of Failure with Gaussian Processes."
-        arXiv preprint arXiv:2311.07733 (2023).
+    [1] A. G. Sorokin and V. Rao, "Credible Intervals for Probability of Failure with Gaussian Processes," arXiv preprint arXiv:2311.07733, 2023.
     """
 
     def __init__(

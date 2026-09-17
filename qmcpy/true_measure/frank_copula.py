@@ -92,19 +92,11 @@ class FrankCopula(AbstractCopula):
 
     **References:**
 
-    1.  Roger B. Nelsen. *An Introduction to Copulas*. Second Edition,
-        Springer Series in Statistics, Springer, 2006.
-        [doi:10.1007/0-387-28678-0](https://doi.org/10.1007/0-387-28678-0).
+    [1] R. B. Nelsen, *An Introduction to Copulas*, 2nd ed., Springer Series in Statistics. Springer, 2006. [Online]. Available: [https://doi.org/10.1007/0-387-28678-0](https://doi.org/10.1007/0-387-28678-0)
 
-    2.  Mathieu Cambou, Marius Hofert, and Christiane Lemieux.
-        "Quasi-random numbers for copula models."
-        [arXiv:1508.03483](https://arxiv.org/abs/1508.03483).
+    [2] M. Cambou, M. Hofert, and C. Lemieux, "Quasi-random numbers for copula models," arXiv preprint arXiv:1508.03483, 2015.
 
-    3.  Marius Hofert, Martin Maechler, and Alexander J. McNeil.
-        "Likelihood inference for Archimedean copulas in high dimensions
-        under known margins." Journal of Multivariate Analysis 110,
-        133-150, 2012.
-        [doi:10.1016/j.jmva.2012.02.019](https://doi.org/10.1016/j.jmva.2012.02.019).
+    [3] M. Hofert, M. Maechler, and A. J. McNeil, "Likelihood inference for Archimedean copulas in high dimensions under known margins," *Journal of Multivariate Analysis*, vol. 110, pp. 133-150, 2012. [Online]. Available: [https://doi.org/10.1016/j.jmva.2012.02.019](https://doi.org/10.1016/j.jmva.2012.02.019)
     """
 
     def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], marginals: list, theta: float) -> None:

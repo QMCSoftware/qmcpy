@@ -176,42 +176,21 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
 
     **References:**
 
-    1.  Marius Hofert and Christiane Lemieux.
-        qrng: (Randomized) Quasi-Random Number Generators (2019).
-        R package version 0.0-7.
-        [https://CRAN.R-project.org/package=qrng](https://CRAN.R-project.org/package=qrng).
+    [1] M. Hofert and C. Lemieux, "qrng: (Randomized) Quasi-Random Number Generators," R package version 0.0-7, 2019. [Online]. Available: [https://CRAN.R-project.org/package=qrng](https://CRAN.R-project.org/package=qrng)
 
-    2.  Faure, Henri, and Christiane Lemieux.
-        Implementation of Irreducible Sobol' Sequences in Prime Power Bases.
-        Mathematics and Computers in Simulation 161 (2019): 13-22. Crossref. Web.
+    [2] H. Faure and C. Lemieux, "Implementation of irreducible Sobol' sequences in prime power bases," *Mathematics and Computers in Simulation*, vol. 161, pp. 13-22, 2019.
 
-    3.  F.Y. Kuo, D. Nuyens.
-        Application of quasi-Monte Carlo methods to elliptic PDEs with random diffusion coefficients \- a survey of analysis and implementation.
-        Foundations of Computational Mathematics, 16(6):1631-1696, 2016.
-        [https://link.springer.com/article/10.1007/s10208-016-9329-5](https://link.springer.com/article/10.1007/s10208-016-9329-5).
+    [3] F. Y. Kuo and D. Nuyens, "Application of quasi-Monte Carlo methods to elliptic PDEs with random diffusion coefficients - a survey of analysis and implementation," *Foundations of Computational Mathematics*, vol. 16, no. 6, pp. 1631-1696, 2016. [Online]. Available: [https://link.springer.com/article/10.1007/s10208-016-9329-5](https://link.springer.com/article/10.1007/s10208-016-9329-5)
 
-    4.  D. Nuyens.
-        The Magic Point Shop of QMC point generators and generating vectors.
-        MATLAB and Python software, 2018.
-        [https://people.cs.kuleuven.be/~dirk.nuyens/](https://people.cs.kuleuven.be/~dirk.nuyens/).
+    [4] D. Nuyens, "The Magic Point Shop of QMC point generators and generating vectors," MATLAB and Python software, 2018. [Online]. Available: [https://people.cs.kuleuven.be/~dirk.nuyens/](https://people.cs.kuleuven.be/~dirk.nuyens/)
 
-    5.  R. Cools, F.Y. Kuo, D. Nuyens.
-        Constructing embedded lattice rules for multivariate integration.
-        SIAM J. Sci. Comput., 28(6), 2162-2188.
+    [5] R. Cools, F. Y. Kuo, and D. Nuyens, "Constructing embedded lattice rules for multivariate integration," *SIAM Journal on Scientific Computing*, vol. 28, no. 6, pp. 2162-2188, 2006.
 
-    6.  I.M. Sobol', V.I. Turchaninov, Yu.L. Levitan, B.V. Shukhman.
-        Quasi-Random Sequence Generators.
-        Keldysh Institute of Applied Mathematics.
-        Russian Academy of Sciences, Moscow (1992).
+    [6] I. M. Sobol', V. I. Turchaninov, Yu. L. Levitan, and B. V. Shukhman, "Quasi-random sequence generators," Keldysh Institute of Applied Mathematics, Russian Academy of Sciences, Moscow, 1992.
 
-    7.  Sobol, Ilya & Asotsky, Danil & Kreinin, Alexander & Kucherenko, Sergei. (2011).
-        Construction and Comparison of High-Dimensional Sobol' Generators. Wilmott. 2011.
-        [10.1002/wilm.10056](https://onlinelibrary.wiley.com/doi/abs/10.1002/wilm.10056).
+    [7] I. Sobol, D. Asotsky, A. Kreinin, and S. Kucherenko, "Construction and comparison of high-dimensional Sobol' generators," *Wilmott*, 2011. [Online]. Available: [https://onlinelibrary.wiley.com/doi/abs/10.1002/wilm.10056](https://onlinelibrary.wiley.com/doi/abs/10.1002/wilm.10056)
 
-    8.  Paul Bratley and Bennett L. Fox.
-        Algorithm 659: Implementing Sobol's quasirandom sequence generator.
-        ACM Trans. Math. Softw. 14, 1 (March 1988), 88-100. 1988.
-        [https://doi.org/10.1145/42288.214372](https://doi.org/10.1145/42288.214372).
+    [8] P. Bratley and B. L. Fox, "Algorithm 659: Implementing Sobol's quasirandom sequence generator," *ACM Transactions on Mathematical Software*, vol. 14, no. 1, pp. 88-100, 1988. [Online]. Available: [https://doi.org/10.1145/42288.214372](https://doi.org/10.1145/42288.214372)
     """
 
     def __init__(

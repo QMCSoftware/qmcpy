@@ -56,14 +56,9 @@ class Hammersley(DigitalNetAnyBases):
 
     **References:**
 
-    1.  J. Dick, F. Y. Kuo, and I. H. Sloan.
-        High-dimensional integration: the quasi-Monte Carlo way.
-        Acta Numerica, 22:133-288. 2013.
-        [https://doi.org/10.1017/S0962492913000044](https://doi.org/10.1017/S0962492913000044).
+    [1] J. Dick, F. Y. Kuo, and I. H. Sloan, "High-dimensional integration: the quasi-Monte Carlo way," *Acta Numerica*, vol. 22, pp. 133-288, 2013. [Online]. Available: [https://doi.org/10.1017/S0962492913000044](https://doi.org/10.1017/S0962492913000044)
 
-    2.  J. M. Hammersley.
-        Monte Carlo methods for solving multivariate problems.
-        Annals of the New York Academy of Sciences, 86(3):844-874. 1960.
+    [2] J. M. Hammersley, "Monte Carlo methods for solving multivariate problems," *Annals of the New York Academy of Sciences*, vol. 86, no. 3, pp. 844-874, 1960.
     """
 
     def __init__(self,

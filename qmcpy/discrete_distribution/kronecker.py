@@ -213,9 +213,9 @@ class Kronecker(AbstractLDDiscreteDistribution):
 
     **References:**
 
-    1.  Richtmyer, R. D. (1951). "The evaluation of definite integrals and a quasi-Monte Carlo method."
+    [1] R. D. Richtmyer, "The evaluation of definite integrals and a quasi-Monte Carlo method," 1951.
 
-    2.  Niederreiter, H. (1992). *Random Number Generation and Quasi-Monte Carlo Methods*.
+    [2] H. Niederreiter, *Random Number Generation and Quasi-Monte Carlo Methods*, 1992.
     """
 
     def __init__(self,

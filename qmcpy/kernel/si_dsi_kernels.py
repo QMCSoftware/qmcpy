@@ -375,9 +375,7 @@ class KernelShiftInvar(AbstractSIDSIKernel):
 
     **References:**
 
-    1.  Kaarnioja, Vesa, Frances Y. Kuo, and Ian H. Sloan.
-        "Lattice-based kernel approximation and serendipitous weights for parametric PDEs in very high dimensions."
-        International Conference on Monte Carlo and Quasi-Monte Carlo Methods in Scientific Computing. Cham: Springer International Publishing, 2022.
+    [1] V. Kaarnioja, F. Y. Kuo, and I. H. Sloan, "Lattice-based kernel approximation and serendipitous weights for parametric PDEs in very high dimensions," in *International Conference on Monte Carlo and Quasi-Monte Carlo Methods in Scientific Computing*. Cham: Springer International Publishing, 2022.
     """
 
     def __init__(
@@ -599,9 +597,7 @@ class KernelShiftInvarCombined(AbstractSIDSIKernel):
 
     **References:**
 
-    1.  Kaarnioja, Vesa, Frances Y. Kuo, and Ian H. Sloan.
-        "Lattice-based kernel approximation and serendipitous weights for parametric PDEs in very high dimensions."
-        International Conference on Monte Carlo and Quasi-Monte Carlo Methods in Scientific Computing. Cham: Springer International Publishing, 2022.
+    [1] V. Kaarnioja, F. Y. Kuo, and I. H. Sloan, "Lattice-based kernel approximation and serendipitous weights for parametric PDEs in very high dimensions," in *International Conference on Monte Carlo and Quasi-Monte Carlo Methods in Scientific Computing*. Cham: Springer International Publishing, 2022.
     """
 
     def __init__(
@@ -869,25 +865,15 @@ class KernelDigShiftInvar(AbstractSIDSIKernel):
 
     **References:**
 
-    1.  Dick, Josef.
-        "Walsh spaces containing smooth functions and quasi-Monte Carlo rules of arbitrary high order."
-        SIAM Journal on Numerical Analysis 46.3 (2008): 1519-1553.
+    [1] J. Dick, "Walsh spaces containing smooth functions and quasi-Monte Carlo rules of arbitrary high order," *SIAM Journal on Numerical Analysis*, vol. 46, no. 3, pp. 1519-1553, 2008.
 
-    2.  Dick, Josef.
-        "The decay of the Walsh coefficients of smooth functions."
-        Bulletin of the Australian Mathematical Society 80.3 (2009): 430-453.
+    [2] J. Dick, "The decay of the Walsh coefficients of smooth functions," *Bulletin of the Australian Mathematical Society*, vol. 80, no. 3, pp. 430-453, 2009.
 
-    3.  Jagadeeswaran, Rathinavel, and Fred J. Hickernell.
-        "Fast automatic Bayesian cubature using Sobol' sampling."
-        Advances in Modeling and Simulation: Festschrift for Pierre L'Ecuyer. Cham: Springer International Publishing, 2022. 301-318.
+    [3] R. Jagadeeswaran and F. J. Hickernell, "Fast automatic Bayesian cubature using Sobol' sampling," in *Advances in Modeling and Simulation: Festschrift for Pierre L'Ecuyer*. Cham: Springer International Publishing, 2022, pp. 301-318.
 
-    4.  Rathinavel, Jagadeeswaran.
-        Fast automatic Bayesian cubature using matching kernels and designs.
-        Illinois Institute of Technology, 2019.
+    [4] J. Rathinavel, "Fast automatic Bayesian cubature using matching kernels and designs," Ph.D. dissertation, Illinois Institute of Technology, 2019.
 
-    5.  Sorokin, Aleksei.
-        "A Unified Implementation of Quasi-Monte Carlo Generators, Randomization Routines, and Fast Kernel Methods."
-        arXiv preprint arXiv:2502.14256 (2025).
+    [5] A. Sorokin, "A unified implementation of quasi-Monte Carlo generators, randomization routines, and fast kernel methods," arXiv preprint arXiv:2502.14256, 2025.
     """
 
     def __init__(
@@ -1181,9 +1167,7 @@ class KernelDigShiftInvarAdaptiveAlpha(AbstractSIDSIKernel):
 
     **References:**
 
-    3.  Dick, Josef, and Friedrich Pillichshammer.
-        "Multivariate integration in weighted Hilbert spaces based on Walsh functions and weighted Sobolev spaces."
-        Journal of Complexity 21.2 (2005): 149-195.
+    [1] J. Dick and F. Pillichshammer, "Multivariate integration in weighted Hilbert spaces based on Walsh functions and weighted Sobolev spaces," *Journal of Complexity*, vol. 21, no. 2, pp. 149-195, 2005.
     """
 
     def __init__(

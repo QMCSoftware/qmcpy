@@ -235,10 +235,7 @@ class FinancialOption(AbstractIntegrand):
 
     **References:**
 
-    1.  M.B. Giles.
-        Improved multilevel Monte Carlo convergence using the Milstein scheme.
-        343-358, in Monte Carlo and Quasi-Monte Carlo Methods 2006, Springer, 2008.
-        [http://people.maths.ox.ac.uk/~gilesm/files/mcqmc06.pdf](http://people.maths.ox.ac.uk/~gilesm/files/mcqmc06.pdf).
+    [1] M. B. Giles, "Improved multilevel Monte Carlo convergence using the Milstein scheme," in *Monte Carlo and Quasi-Monte Carlo Methods 2006*. Springer, 2008, pp. 343-358. [Online]. Available: [http://people.maths.ox.ac.uk/~gilesm/files/mcqmc06.pdf](http://people.maths.ox.ac.uk/~gilesm/files/mcqmc06.pdf)
     """
 
     def __init__(

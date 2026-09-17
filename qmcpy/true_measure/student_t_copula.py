@@ -72,17 +72,11 @@ class StudentTCopula(AbstractCopula):
 
     **References:**
 
-    1.  Roger B. Nelsen. *An Introduction to Copulas*. Second Edition,
-        Springer Series in Statistics, Springer, 2006.
-        [doi:10.1007/0-387-28678-0](https://doi.org/10.1007/0-387-28678-0).
+    [1] R. B. Nelsen, *An Introduction to Copulas*, 2nd ed., Springer Series in Statistics. Springer, 2006. [Online]. Available: [https://doi.org/10.1007/0-387-28678-0](https://doi.org/10.1007/0-387-28678-0)
 
-    2.  Mathieu Cambou, Marius Hofert, and Christiane Lemieux.
-        "Quasi-random numbers for copula models."
-        [arXiv:1508.03483](https://arxiv.org/abs/1508.03483).
+    [2] M. Cambou, M. Hofert, and C. Lemieux, "Quasi-random numbers for copula models," arXiv preprint arXiv:1508.03483, 2015.
 
-    3.  M. Rosenblatt. "Remarks on a Multivariate Transformation."
-        The Annals of Mathematical Statistics 23(3), 470-472, 1952.
-        [doi:10.1214/aoms/1177729394](https://doi.org/10.1214/aoms/1177729394).
+    [3] M. Rosenblatt, "Remarks on a multivariate transformation," *The Annals of Mathematical Statistics*, vol. 23, no. 3, pp. 470-472, 1952. [Online]. Available: [https://doi.org/10.1214/aoms/1177729394](https://doi.org/10.1214/aoms/1177729394)
     """
 
     _missing_weight_warning_message = (

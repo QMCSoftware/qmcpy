@@ -62,11 +62,7 @@ class BoxIntegral(AbstractIntegrand):
 
     **References:**
 
-    1.  D.H. Bailey, J.M. Borwein, R.E. Crandall, Box integrals.
-        Journal of Computational and Applied Mathematics, Volume 206, Issue 1, 2007, Pages 196-208, ISSN 0377-0427.
-        [https://doi.org/10.1016/j.cam.2006.06.010](https://doi.org/10.1016/j.cam.2006.06.010).
-        [https://www.sciencedirect.com/science/article/pii/S0377042706004250](https://www.sciencedirect.com/science/article/pii/S0377042706004250).
-        [https://www.davidhbailey.com/dhbpapers/boxintegrals.pdf](https://www.davidhbailey.com/dhbpapers/boxintegrals.pdf)
+    [1] D. H. Bailey, J. M. Borwein, and R. E. Crandall, "Box integrals," *Journal of Computational and Applied Mathematics*, vol. 206, no. 1, pp. 196-208, 2007. [Online]. Available: [https://doi.org/10.1016/j.cam.2006.06.010](https://doi.org/10.1016/j.cam.2006.06.010), [https://www.sciencedirect.com/science/article/pii/S0377042706004250](https://www.sciencedirect.com/science/article/pii/S0377042706004250), [https://www.davidhbailey.com/dhbpapers/boxintegrals.pdf](https://www.davidhbailey.com/dhbpapers/boxintegrals.pdf)
     """
 
     def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], s: Union[float, np.ndarray] = 1) -> None:

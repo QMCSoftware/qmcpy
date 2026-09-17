@@ -59,9 +59,9 @@ class MaternGP(Gaussian):
 
     **References:**
 
-    1.  [`sklearn.gaussian_process.kernels.Matern`](https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.kernels.Matern.html).
+    [1] "`sklearn.gaussian_process.kernels.Matern`," scikit-learn documentation. [Online]. Available: [https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.kernels.Matern.html](https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.kernels.Matern.html). [Accessed: Sep. 17, 2026].
 
-    2.  [https://en.wikipedia.org/wiki/Mat%C3%A9rn_covariance_function](https://en.wikipedia.org/wiki/Mat%C3%A9rn_covariance_function).
+    [2] "Matérn covariance function," Wikipedia. [Online]. Available: [https://en.wikipedia.org/wiki/Mat%C3%A9rn_covariance_function](https://en.wikipedia.org/wiki/Mat%C3%A9rn_covariance_function). [Accessed: Sep. 17, 2026].
     """
 
     def __init__(

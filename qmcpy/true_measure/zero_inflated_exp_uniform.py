@@ -294,14 +294,11 @@ class ZeroInflatedExpUniform(SciPyWrapper):
 
         **References:**
 
-        1.  Exponential distribution. Wikipedia.
-            [https://en.wikipedia.org/wiki/Exponential_distribution](https://en.wikipedia.org/wiki/Exponential_distribution).
+        [1] "Exponential distribution," Wikipedia. [Online]. Available: [https://en.wikipedia.org/wiki/Exponential_distribution](https://en.wikipedia.org/wiki/Exponential_distribution). [Accessed: Sep. 17, 2026].
 
-        2.  Mixture distribution. Wikipedia.
-            [https://en.wikipedia.org/wiki/Mixture_distribution](https://en.wikipedia.org/wiki/Mixture_distribution).
+        [2] "Mixture distribution," Wikipedia. [Online]. Available: [https://en.wikipedia.org/wiki/Mixture_distribution](https://en.wikipedia.org/wiki/Mixture_distribution). [Accessed: Sep. 17, 2026].
 
-        3.  Law of total variance. Wikipedia.
-            [https://en.wikipedia.org/wiki/Law_of_total_variance](https://en.wikipedia.org/wiki/Law_of_total_variance).
+        [3] "Law of total variance," Wikipedia. [Online]. Available: [https://en.wikipedia.org/wiki/Law_of_total_variance](https://en.wikipedia.org/wiki/Law_of_total_variance). [Accessed: Sep. 17, 2026].
 
         Returns:
             tuple: Length ``1`` arrays ``(mean, variance)``.

@@ -162,20 +162,11 @@ class CubQMCBayesLatticeG(AbstractCubBayesLDG):
 
     **References:**
 
-    1.  Jagadeeswaran, Rathinavel, and Fred J. Hickernell.
-        "Fast automatic Bayesian cubature using lattice sampling."
-        Statistics and Computing 29.6 (2019): 1215-1229.
+    [1] R. Jagadeeswaran and F. J. Hickernell, "Fast automatic Bayesian cubature using lattice sampling," *Statistics and Computing*, vol. 29, no. 6, pp. 1215-1229, 2019.
 
-    2.  Jagadeeswaran Rathinavel and Fred J. Hickernell,
-        Fast automatic Bayesian cubature using lattice sampling.
-        Stat Comput 29, 1215-1229 (2019).
-        Available from Springer [https://doi.org/10.1007/s11222-019-09895-9](https://doi.org/10.1007/s11222-019-09895-9).
+    [2] R. Jagadeeswaran and F. J. Hickernell, "Fast automatic Bayesian cubature using lattice sampling," *Statistics and Computing*, vol. 29, pp. 1215-1229, 2019. [Online]. Available: [https://doi.org/10.1007/s11222-019-09895-9](https://doi.org/10.1007/s11222-019-09895-9)
 
-    3.  Sou-Cheng T. Choi, Yuhan Ding, Fred J. Hickernell, Lan Jiang, Lluis Antoni Jimenez Rugama,
-        Da Li, Jagadeeswaran Rathinavel, Xin Tong, Kan Zhang, Yizhi Zhang, and Xuan Zhou,
-        GAIL: Guaranteed Automatic Integration Library (Version 2.3) [MATLAB Software], 2019.
-        [http://gailgithub.github.io/GAIL_Dev/](http://gailgithub.github.io/GAIL_Dev/).
-        [https://github.com/GailGithub/GAIL_Dev/blob/master/Algorithms/IntegrationExpectation/cubBayesLattice_g.m](https://github.com/GailGithub/GAIL_Dev/blob/master/Algorithms/IntegrationExpectation/cubBayesLattice_g.m).
+    [3] S.-C. T. Choi, Y. Ding, F. J. Hickernell, L. Jiang, Ll. A. Jimenez Rugama, D. Li, J. Rathinavel, X. Tong, K. Zhang, Y. Zhang, and X. Zhou, "GAIL: Guaranteed Automatic Integration Library," MATLAB software, Version 2.3, 2019. [Online]. Available: [http://gailgithub.github.io/GAIL_Dev/](http://gailgithub.github.io/GAIL_Dev/) and [https://github.com/GailGithub/GAIL_Dev/blob/master/Algorithms/IntegrationExpectation/cubBayesLattice_g.m](https://github.com/GailGithub/GAIL_Dev/blob/master/Algorithms/IntegrationExpectation/cubBayesLattice_g.m)
     """
 
     def __init__(

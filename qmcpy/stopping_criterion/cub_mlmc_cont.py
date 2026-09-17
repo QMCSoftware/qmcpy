@@ -68,7 +68,7 @@ class CubMLMCCont(AbstractCubMLMC):
 
     **References:**
 
-    1. [https://github.com/PieterjanRobbe/MultilevelEstimators.jl](https://github.com/PieterjanRobbe/MultilevelEstimators.jl).
+    [1] P. Robbe, "MultilevelEstimators.jl," Julia software, 2016. [Online]. Available: [https://github.com/PieterjanRobbe/MultilevelEstimators.jl](https://github.com/PieterjanRobbe/MultilevelEstimators.jl)
     """
 
     _RESUME_REQUIRED_FIELDS = (

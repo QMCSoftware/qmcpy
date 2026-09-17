@@ -131,13 +131,9 @@ def weighted_walsh_funcs(alpha: int, xb: Union[np.ndarray, torch.Tensor], t: int
 
     **References:**
 
-        1.  Dick, Josef.
-            "Walsh spaces containing smooth functions and quasi–Monte Carlo rules of arbitrary high order."
-            SIAM Journal on Numerical Analysis 46.3 (2008): 1519-1553.
+    [1] J. Dick, "Walsh spaces containing smooth functions and quasi-Monte Carlo rules of arbitrary high order," *SIAM Journal on Numerical Analysis*, vol. 46, no. 3, pp. 1519-1553, 2008.
 
-        2.  Dick, Josef.
-            "The decay of the Walsh coefficients of smooth functions."
-            Bulletin of the Australian Mathematical Society 80.3 (2009): 430-453.
+    [2] J. Dick, "The decay of the Walsh coefficients of smooth functions," *Bulletin of the Australian Mathematical Society*, vol. 80, no. 3, pp. 430-453, 2009.
     """
     if not (isinstance(alpha, int)):
         raise AssertionError

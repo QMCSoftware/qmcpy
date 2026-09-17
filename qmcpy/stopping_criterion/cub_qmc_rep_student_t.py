@@ -193,13 +193,9 @@ class CubQMCRepStudentT(AbstractStoppingCriterion):
 
     **References:**
 
-    1.  Art B. Owen. "Practical Quasi-Monte Carlo Integration." 2023.
-        [https://artowen.su.domains/mc/](https://artowen.su.domains/mc/).
+    [1] A. B. Owen, "Practical Quasi-Monte Carlo Integration," 2023. [Online]. Available: [https://artowen.su.domains/mc/](https://artowen.su.domains/mc/)
 
-    2.  Pierre l’Ecuyer et al.
-        "Confidence intervals for randomized quasi-Monte Carlo estimators."
-        2023 Winter Simulation Conference (WSC). IEEE, 2023.
-        [https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=10408613](https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=10408613).
+    [2] P. L'Ecuyer et al., "Confidence intervals for randomized quasi-Monte Carlo estimators," in *2023 Winter Simulation Conference (WSC)*. IEEE, 2023. [Online]. Available: [https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=10408613](https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=10408613)
     """
 
     _RESUME_REQUIRED_FIELDS = ("xfull", "yfull", "n", "n_rep", "_ysums", "n_max")

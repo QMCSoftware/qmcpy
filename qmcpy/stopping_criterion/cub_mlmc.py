@@ -65,11 +65,9 @@ class CubMLMC(AbstractCubMLMC):
 
     **References:**
 
-    1.  M.B. Giles. 'Multi-level Monte Carlo path simulation'.
-        Operations Research, 56(3):607-617, 2008.
-        [http://people.maths.ox.ac.uk/~gilesm/files/OPRE_2008.pdf](http://people.maths.ox.ac.uk/~gilesm/files/OPRE_2008.pdf).
+    [1] M. B. Giles, "Multi-level Monte Carlo path simulation," *Operations Research*, vol. 56, no. 3, pp. 607-617, 2008. [Online]. Available: [http://people.maths.ox.ac.uk/~gilesm/files/OPRE_2008.pdf](http://people.maths.ox.ac.uk/~gilesm/files/OPRE_2008.pdf)
 
-    2. [http://people.maths.ox.ac.uk/~gilesm/mlmc/#MATLAB](http://people.maths.ox.ac.uk/~gilesm/mlmc/#MATLAB).
+    [2] M. B. Giles, "Multi-level Monte Carlo (MLMC) MATLAB software." [Online]. Available: [http://people.maths.ox.ac.uk/~gilesm/mlmc/#MATLAB](http://people.maths.ox.ac.uk/~gilesm/mlmc/#MATLAB). [Accessed: Sep. 17, 2026].
     """
 
     _RESUME_REQUIRED_FIELDS = (

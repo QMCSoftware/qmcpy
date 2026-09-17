@@ -69,30 +69,15 @@ class LatinHypercube(AbstractDiscreteDistribution):
 
     **References:**
 
-    1.  M. D. McKay, R. J. Beckman, and W. J. Conover.
-        A Comparison of Three Methods for Selecting Values of Input Variables in the Analysis of Output from a Computer Code.
-        Technometrics, 21(2):239-245, 1979.
-        [https://doi.org/10.1080/00401706.1979.10489755](https://doi.org/10.1080/00401706.1979.10489755).
+    [1] M. D. McKay, R. J. Beckman, and W. J. Conover, "A comparison of three methods for selecting values of input variables in the analysis of output from a computer code," *Technometrics*, vol. 21, no. 2, pp. 239-245, 1979. [Online]. Available: [https://doi.org/10.1080/00401706.1979.10489755](https://doi.org/10.1080/00401706.1979.10489755)
 
-    2.  M. Stein.
-        Large Sample Properties of Simulations Using Latin Hypercube Sampling.
-        Technometrics, 29(2):143-151, 1987.
-        [https://doi.org/10.1080/00401706.1987.10488205](https://doi.org/10.1080/00401706.1987.10488205).
+    [2] M. Stein, "Large sample properties of simulations using Latin hypercube sampling," *Technometrics*, vol. 29, no. 2, pp. 143-151, 1987. [Online]. Available: [https://doi.org/10.1080/00401706.1987.10488205](https://doi.org/10.1080/00401706.1987.10488205)
 
-    3.  A. B. Owen.
-        Controlling Correlations in Latin Hypercube Samples.
-        Journal of the American Statistical Association, 89(428):1517-1522, 1994.
-        [https://doi.org/10.1080/01621459.1994.10476891](https://doi.org/10.1080/01621459.1994.10476891).
+    [3] A. B. Owen, "Controlling correlations in Latin hypercube samples," *Journal of the American Statistical Association*, vol. 89, no. 428, pp. 1517-1522, 1994. [Online]. Available: [https://doi.org/10.1080/01621459.1994.10476891](https://doi.org/10.1080/01621459.1994.10476891)
 
-    4.  W.-L. Loh.
-        On Latin Hypercube Sampling.
-        The Annals of Statistics, 24(5):2058-2080, 1996.
-        [https://doi.org/10.1214/aos/1069362310](https://doi.org/10.1214/aos/1069362310).
+    [4] W.-L. Loh, "On Latin hypercube sampling," *The Annals of Statistics*, vol. 24, no. 5, pp. 2058-2080, 1996. [Online]. Available: [https://doi.org/10.1214/aos/1069362310](https://doi.org/10.1214/aos/1069362310)
 
-    5.  B. Tang.
-        Orthogonal Array-Based Latin Hypercubes.
-        Journal of the American Statistical Association, 88(424):1392-1397, 1993.
-        [https://doi.org/10.1080/01621459.1993.10476423](https://doi.org/10.1080/01621459.1993.10476423).
+    [5] B. Tang, "Orthogonal array-based Latin hypercubes," *Journal of the American Statistical Association*, vol. 88, no. 424, pp. 1392-1397, 1993. [Online]. Available: [https://doi.org/10.1080/01621459.1993.10476423](https://doi.org/10.1080/01621459.1993.10476423)
     """
 
     def __init__(

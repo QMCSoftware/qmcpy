@@ -151,18 +151,11 @@ class Halton(DigitalNetAnyBases):
 
     **References:**
 
-    1.  Marius Hofert and Christiane Lemieux.
-        qrng: (Randomized) Quasi-Random Number Generators.
-        R package version 0.0-7. (2019).
-        [https://CRAN.R-project.org/package=qrng](https://CRAN.R-project.org/package=qrng).
+    [1] M. Hofert and C. Lemieux, "qrng: (Randomized) Quasi-Random Number Generators," R package version 0.0-7, 2019. [Online]. Available: [https://CRAN.R-project.org/package=qrng](https://CRAN.R-project.org/package=qrng)
 
-    2.  A. B. Owen.
-        A randomized Halton algorithm in R.
-        [arXiv:1706.02808](https://arxiv.org/abs/1706.02808) [stat.CO]. 2017.
+    [2] A. B. Owen, "A randomized Halton algorithm in R," arXiv preprint arXiv:1706.02808, 2017.
 
-    3.  A. B. Owen and Z. Pan.
-        Gain coefficients for scrambled Halton points.
-        [arXiv:2308.08035](https://arxiv.org/abs/2308.08035) [stat.CO]. 2023.
+    [3] A. B. Owen and Z. Pan, "Gain coefficients for scrambled Halton points," arXiv preprint arXiv:2308.08035, 2023.
     """
 
     DEFAULT_GENERATING_MATRICES = "HALTON"

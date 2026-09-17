@@ -154,6 +154,10 @@ def _find_sections_in_lines(lines, is_docstring):
             stripped = body_line.strip()
             if is_docstring and _NEXT_DOCSTRING_SECTION.match(stripped):
                 break
+            if is_docstring and stripped in ('"""', "'''"):
+                # End of the docstring itself -- stop before folding the
+                # closing triple-quote into the last entry's text.
+                break
             if not is_docstring and stripped.startswith("#"):
                 break
             if not stripped:

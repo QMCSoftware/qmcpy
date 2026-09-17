@@ -52,10 +52,7 @@ class Ishigami(AbstractIntegrand):
 
     **References:**
 
-    1.  Ishigami, T., & Homma, T.
-        An importance quantification technique in uncertainty analysis for computer models.
-        In Uncertainty Modeling and Analysis, 1990.
-        Proceedings, First International Symposium on (pp. 398-403). IEEE.
+    [1] T. Ishigami and T. Homma, "An importance quantification technique in uncertainty analysis for computer models," in *Uncertainty Modeling and Analysis, 1990. Proceedings, First International Symposium on*. IEEE, 1990, pp. 398-403.
     """
 
     def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], a: float = 7, b: float = 0.1) -> None:

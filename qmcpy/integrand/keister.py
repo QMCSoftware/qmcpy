@@ -44,9 +44,7 @@ class Keister(AbstractIntegrand):
 
     **References:**
 
-    1.  B. D. Keister.
-        Multidimensional Quadrature Algorithms.
-        Computers in Physics, 10, pp. 119-122, 1996.
+    [1] B. D. Keister, "Multidimensional Quadrature Algorithms," *Computers in Physics*, vol. 10, pp. 119-122, 1996.
     """
 
     def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure]) -> None:

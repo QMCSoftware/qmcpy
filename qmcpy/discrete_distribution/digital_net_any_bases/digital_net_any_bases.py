@@ -146,13 +146,9 @@ class DigitalNetAnyBases(AbstractLDDiscreteDistribution):
 
     **References:**
 
-    1.  Dick, Josef, and Friedrich Pillichshammer.
-        Digital nets and sequences: discrepancy theory and quasi–Monte Carlo integration.
-        Cambridge University Press, 2010.
+    [1] J. Dick and F. Pillichshammer, *Digital Nets and Sequences: Discrepancy Theory and Quasi-Monte Carlo Integration*. Cambridge University Press, 2010.
 
-    2.  Sorokin, Aleksei.
-        "QMCPy: A Python Software for Randomized Low-Discrepancy Sequences, Quasi-Monte Carlo, and Fast Kernel Methods"
-        arXiv preprint arXiv:2502.14256 (2025).
+    [2] A. Sorokin, "QMCPy: A Python software for randomized low-discrepancy sequences, quasi-Monte Carlo, and fast kernel methods," arXiv preprint arXiv:2502.14256, 2025.
     """
 
     DEFAULT_GENERATING_MATRICES = None

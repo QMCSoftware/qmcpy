@@ -71,13 +71,9 @@ class GaussianCopula(AbstractCopula):
 
     **References:**
 
-    1.  Roger B. Nelsen. *An Introduction to Copulas*. Second Edition,
-        Springer Series in Statistics, Springer, 2006.
-        [doi:10.1007/0-387-28678-0](https://doi.org/10.1007/0-387-28678-0).
+    [1] R. B. Nelsen, *An Introduction to Copulas*, 2nd ed., Springer Series in Statistics. Springer, 2006. [Online]. Available: [https://doi.org/10.1007/0-387-28678-0](https://doi.org/10.1007/0-387-28678-0)
 
-    2.  Mathieu Cambou, Marius Hofert, and Christiane Lemieux.
-        "Quasi-random numbers for copula models."
-        [arXiv:1508.03483](https://arxiv.org/abs/1508.03483).
+    [2] M. Cambou, M. Hofert, and C. Lemieux, "Quasi-random numbers for copula models," arXiv preprint arXiv:1508.03483, 2015.
     """
 
     def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], marginals: list, correlation: np.ndarray) -> None:

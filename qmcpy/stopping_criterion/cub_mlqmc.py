@@ -67,10 +67,7 @@ class CubMLQMC(AbstractCubMLQMC):
 
     **References:**
 
-    1.  M.B. Giles and B.J. Waterhouse.
-        'Multilevel quasi-Monte Carlo path simulation'.
-        pp.165-181 in Advanced Financial Modelling, in Radon Series on Computational and Applied Mathematics, de Gruyter, 2009.
-        [http://people.maths.ox.ac.uk/~gilesm/files/radon.pdf](http://people.maths.ox.ac.uk/~gilesm/files/radon.pdf).
+    [1] M. B. Giles and B. J. Waterhouse, "Multilevel quasi-Monte Carlo path simulation," in *Advanced Financial Modelling*, Radon Series on Computational and Applied Mathematics. Berlin: de Gruyter, 2009, pp. 165-181. [Online]. Available: [http://people.maths.ox.ac.uk/~gilesm/files/radon.pdf](http://people.maths.ox.ac.uk/~gilesm/files/radon.pdf)
     """
 
     _RESUME_REQUIRED_FIELDS = (

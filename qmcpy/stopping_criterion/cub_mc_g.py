@@ -240,16 +240,9 @@ class CubMCG(AbstractStoppingCriterion):
 
     **References:**
 
-    1.  Fred J. Hickernell, Lan Jiang, Yuewei Liu, and Art B. Owen,
-        "Guaranteed conservative fixed width confidence intervals via Monte Carlo sampling,"
-        Monte Carlo and Quasi-Monte Carlo Methods 2012 (J. Dick, F. Y. Kuo, G. W. Peters, and I. H. Sloan, eds.), pp. 105-128,
-        Springer-Verlag, Berlin, 2014. DOI: 10.1007/978-3-642-41095-6_5
+    [1] F. J. Hickernell, L. Jiang, Y. Liu, and A. B. Owen, "Guaranteed conservative fixed width confidence intervals via Monte Carlo sampling," in *Monte Carlo and Quasi-Monte Carlo Methods 2012*, J. Dick, F. Y. Kuo, G. W. Peters, and I. H. Sloan, Eds. Berlin: Springer-Verlag, 2014, pp. 105-128. DOI: 10.1007/978-3-642-41095-6_5
 
-    2.  Sou-Cheng T. Choi, Yuhan Ding, Fred J. Hickernell, Lan Jiang, Lluis Antoni Jimenez Rugama,
-        Da Li, Jagadeeswaran Rathinavel, Xin Tong, Kan Zhang, Yizhi Zhang, and Xuan Zhou,
-        GAIL: Guaranteed Automatic Integration Library (Version 2.3) [MATLAB Software], 2019.
-        [http://gailgithub.github.io/GAIL_Dev/](http://gailgithub.github.io/GAIL_Dev/).
-        [https://github.com/GailGithub/GAIL_Dev/blob/master/Algorithms/IntegrationExpectation/meanMC_g.m](https://github.com/GailGithub/GAIL_Dev/blob/master/Algorithms/IntegrationExpectation/meanMC_g.m).
+    [2] S.-C. T. Choi, Y. Ding, F. J. Hickernell, L. Jiang, Ll. A. Jimenez Rugama, D. Li, J. Rathinavel, X. Tong, K. Zhang, Y. Zhang, and X. Zhou, "GAIL: Guaranteed Automatic Integration Library," MATLAB software, Version 2.3, 2019. [Online]. Available: [http://gailgithub.github.io/GAIL_Dev/](http://gailgithub.github.io/GAIL_Dev/) and [https://github.com/GailGithub/GAIL_Dev/blob/master/Algorithms/IntegrationExpectation/meanMC_g.m](https://github.com/GailGithub/GAIL_Dev/blob/master/Algorithms/IntegrationExpectation/meanMC_g.m)
     """
 
     def __init__(
