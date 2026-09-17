@@ -7,6 +7,9 @@ has an explicit annotation in the signature. With ``--include-outputs``, it
 also updates existing ``Returns:`` and ``Yields:`` descriptions from return
 annotations. It does not infer types from implementation code and it does not
 invent missing descriptions or sections.
+
+WARNING: unlike check_ref_style.py/check_docstring_indent.py, this script
+WRITES FILES BY DEFAULT. Pass ``--check`` to preview changes without writing.
 """
 from __future__ import annotations
 
@@ -87,6 +90,19 @@ def doc_node(node: ast.AST) -> ast.Constant | None:
     return None
 
 
+def _is_property_setter_or_deleter(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    """True if `node` is decorated `@<name>.setter` or `@<name>.deleter`.
+
+    Such methods share their contract with the `@property` getter of the
+    same name; kept in sync with check_docstring.py's identically-named
+    helper.
+    """
+    for decorator in node.decorator_list:
+        if isinstance(decorator, ast.Attribute) and decorator.attr in ("setter", "deleter"):
+            return True
+    return False
+
+
 def iter_public_functions(tree: ast.Module):
     """Yield public module functions and methods from public classes.
 
@@ -103,6 +119,8 @@ def iter_public_functions(tree: ast.Module):
         elif isinstance(node, ast.ClassDef) and not node.name.startswith("_"):
             for sub in node.body:
                 if not isinstance(sub, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    continue
+                if _is_property_setter_or_deleter(sub):
                     continue
                 if sub.name == "__init__" or not sub.name.startswith("_"):
                     yield sub, f"{node.name}.{sub.name}"
@@ -367,11 +385,17 @@ def _update_args_section(
     updates = []
     seen = set()
     _, section_end = section
+    entry_indent = None
     for i in range(section[0] + 1, section_end + 1):
         content, ending = line_without_ending(lines[i])
         match = ARG_ENTRY.match(content)
         if match is None:
             continue
+        indent = len(match.group("indent"))
+        if entry_indent is None:
+            entry_indent = indent
+        elif indent != entry_indent:
+            continue  # deeper/shallower than the section's own entries: a continuation line, not a new entry
         display_name = match.group("name")
         argument = display_name.lstrip("*")
         if argument not in annotations:

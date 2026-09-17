@@ -70,6 +70,9 @@ check_assert_codemod_dependency: check_libcst_dependency
 convert_asserts: check_assert_codemod_dependency
 	$(PYTHON) scripts/convert_asserts.py --exception "$(ASSERT_EXCEPTION)" $(ASSERT_CONVERT_ARGS) $(ASSERT_PATH)
 
+check_asserts: check_assert_codemod_dependency
+	@$(PYTHON) scripts/convert_asserts.py --exception "$(ASSERT_EXCEPTION)" --check $(ASSERT_CONVERT_ARGS) $(ASSERT_PATH)
+
 convert_asserts_changed: check_assert_codemod_dependency
 	@$(PYTHON) scripts/convert_asserts.py --diff "$(ASSERT_DIFF_BASE)" --exception "$(ASSERT_EXCEPTION)" $(ASSERT_CONVERT_ARGS)
 
@@ -110,8 +113,15 @@ check_docstring:
 # this fails if a change increases any of their full-tree violation counts
 # above scripts/baseline_counts.json. Run with --update after intentionally
 # reducing (or, with justification, increasing) one of the counts.
+# Also runs a second, independent --diff-scoped check: a whole-repo total
+# can improve while a PR's own changed files pick up a brand-new violation
+# (or trade one pre-existing violation for a different new one, a tie the
+# whole-repo count alone can't see) -- this catches that case even when it
+# does.
+BASELINE_DIFF_BASE ?= develop
+
 check_baseline:
-	@$(PYTHON) scripts/check_baseline.py
+	@$(PYTHON) scripts/check_baseline.py --diff "$(BASELINE_DIFF_BASE)"
 
 check_baseline_update:
 	@$(PYTHON) scripts/check_baseline.py --update
@@ -187,10 +197,10 @@ add_docstring_arg_types:
 	$(PYTHON) scripts/add_docstring_arg_types.py $(DOCSTRING_TYPE_ARGS) $(DOCSTRING_TYPE_PATH)
 
 add_docstring_arg_types_changed:
-	@$(PYTHON) scripts/add_docstring_arg_types.py --diff "$(DOCSTRING_TYPE_DIFF_BASE)" $(DOCSTRING_TYPE_ARGS)
+	@$(PYTHON) scripts/add_docstring_arg_types.py --diff "$(DOCSTRING_TYPE_DIFF_BASE)" --root "$(DOCSTRING_TYPE_PATH)" $(DOCSTRING_TYPE_ARGS)
 
 check_docstring_arg_types_changed:
-	$(PYTHON) scripts/add_docstring_arg_types.py --diff "$(DOCSTRING_TYPE_DIFF_BASE)" --check $(DOCSTRING_TYPE_ARGS)
+	$(PYTHON) scripts/add_docstring_arg_types.py --diff "$(DOCSTRING_TYPE_DIFF_BASE)" --root "$(DOCSTRING_TYPE_PATH)" --check $(DOCSTRING_TYPE_ARGS)
 
 annotate_public_api_types_changed: check_libcst_dependency
 	$(PYTHON) -m scripts.annotate_public_api_types --diff "$(PUBLIC_API_TYPE_DIFF_BASE)" --root "$(PUBLIC_API_TYPE_PATH)" $(PUBLIC_API_ANNOTATE_ARGS)
@@ -724,9 +734,11 @@ format:
 	@echo "> fix_docstring_indent"
 	@$(MAKE) fix_docstring_indent
 	@echo
-	@echo "$(RULE2)"
+	@echo
+	@echo
 	@echo "make format: done -- a 'clean' line for every step means nothing changed"
 	@echo "$(RULE2)"
+	@echo
 	@# No third-party docstring reformatter here on purpose: format-docstring
 	@# (tried on this codebase) strips Returns:/Yields: types under
 	@# --include-return-and-yield-types=False and rewrites `**References:**` to
@@ -765,9 +777,11 @@ check:
 	@echo "> check_links"
 	@$(MAKE) check_links
 	@echo
-	@echo "$(RULE2)"
+	@echo
+	@echo
 	@echo "make check: every step above is clean"
 	@echo "$(RULE2)"
+	@echo
 	@# check_links_external deliberately NOT included: its own comment already
 	@# says "slow and network-flaky, run locally" -- not something `check`
 	@# should depend on. check_pep8_changed also deliberately excluded: 664

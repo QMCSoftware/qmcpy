@@ -6,6 +6,9 @@ converts ``assert condition, message`` to an explicit ``AssertionError`` so
 the validation is not removed by ``python -O``. A developer may select a
 different exception that is already in scope, but the tool deliberately does
 not guess domain-specific exception classes.
+
+WARNING: unlike check_ref_style.py/check_docstring_indent.py, this script
+WRITES FILES BY DEFAULT. Pass ``--check`` to preview changes without writing.
 """
 from __future__ import annotations
 

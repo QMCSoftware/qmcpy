@@ -6,6 +6,9 @@ classes are considered. A docstring type is applied only when it is valid
 Python annotation syntax and every referenced name is already bound by the
 module or is a built-in type. Existing annotations are never overwritten;
 conflicts are reported for review.
+
+WARNING: unlike check_ref_style.py/check_docstring_indent.py, this script
+WRITES FILES BY DEFAULT. Pass ``--check`` to preview changes without writing.
 """
 from __future__ import annotations
 

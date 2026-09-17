@@ -29,20 +29,6 @@ class AcceptanceRejection(AbstractTrueMeasure):
     number of driver points is always a power of 2 (required for the
     (t,m,s)-net property of Theorem 1).
 
-    Args:
-        sampler (AbstractDiscreteDistribution): A QMCPy discrete distribution
-            of dimension s = target_dim + 1. Must mimic StdUniform. The last
-            coordinate is used as the acceptance threshold.
-        target_density (Callable): Unnormalised target density psi(x) where x
-            has shape (N, d). Must return shape (N,) and be non-negative on
-            [0,1]^d.
-        upper_bound (float): L = sup_{x in [0,1]^d} psi(x). Every evaluation of
-            psi must be <= L.
-        density_integral (float): C = integral_{[0,1]^d} psi(x) dx. The
-            acceptance rate is C/L.
-        max_retries (int): Number of times gen_samples will double the driver
-            size if not enough points are accepted. Default 4.
-
     Examples:
         >>> import numpy as np
         >>> from qmcpy import DigitalNetB2
@@ -80,6 +66,23 @@ class AcceptanceRejection(AbstractTrueMeasure):
     """
 
     def __init__(self, sampler: AbstractDiscreteDistribution, target_density: Callable, upper_bound: float, density_integral: float, max_retries: int = 4) -> None:
+        """Initialize an AcceptanceRejection true measure.
+
+        Args:
+            sampler (AbstractDiscreteDistribution): A QMCPy discrete
+                distribution of dimension s = target_dim + 1. Must mimic
+                StdUniform. The last coordinate is used as the acceptance
+                threshold.
+            target_density (Callable): Unnormalised target density psi(x)
+                where x has shape (N, d). Must return shape (N,) and be
+                non-negative on [0,1]^d.
+            upper_bound (float): L = sup_{x in [0,1]^d} psi(x). Every
+                evaluation of psi must be <= L.
+            density_integral (float): C = integral_{[0,1]^d} psi(x) dx. The
+                acceptance rate is C/L.
+            max_retries (int): Number of times gen_samples will double the
+                driver size if not enough points are accepted. Default 4.
+        """
         self.parameters = ['target_dim', 'upper_bound', 'density_integral', 'acceptance_rate']
         self.domain = np.array([[0, 1]])
         self._parse_sampler(sampler)
@@ -234,25 +237,6 @@ class AcceptanceRejectionReal(AbstractTrueMeasure):
         This is exact when H factors as a product of independent marginals
         (e.g. a product of univariate distributions).
 
-    Args:
-        sampler (AbstractDiscreteDistribution): A QMCPy discrete distribution
-            of dimension s = target_dim + 1. Must mimic StdUniform.
-        target_density (Callable): Unnormalised target density psi(z) where z
-            has shape (N, d). Must return shape (N,). Must satisfy psi(z) <= L
-            * H(z) for all z.
-        inv_cdfs (List[Callable]): List of d quantile functions [F_1^{-1},
-            ..., F_d^{-1}], one per dimension. Each maps a 1-D array of
-            uniforms in [0,1] to R. Example: [scipy.stats.norm.ppf] for a 1-D
-            standard Gaussian.
-        H_func (Callable): Auxiliary bound function H(z) where z has shape (N,
-            d). Must return shape (N,) and satisfy psi(z) <= L * H(z) for all z
-            in R^d.
-        upper_bound (float): L satisfying psi(z) <= L * H(z) for all z.
-        density_integral (float): C = integral_{R^d} psi(z) dz. The acceptance
-            rate is C/L.
-        max_retries (int): Number of times gen_samples will double the driver
-            size if not enough points are accepted. Default 4.
-
     Examples:
         >>> import numpy as np
         >>> from scipy.stats import norm
@@ -296,6 +280,27 @@ class AcceptanceRejectionReal(AbstractTrueMeasure):
 
     def __init__(self, sampler: AbstractDiscreteDistribution, target_density: Callable, inv_cdfs: List[Callable], H_func: Callable,
                  upper_bound: float, density_integral: float, max_retries: int = 4) -> None:
+        """Initialize an AcceptanceRejectionReal true measure.
+
+        Args:
+            sampler (AbstractDiscreteDistribution): A QMCPy discrete
+                distribution of dimension s = target_dim + 1. Must mimic
+                StdUniform.
+            target_density (Callable): Unnormalised target density psi(z)
+                where z has shape (N, d). Must return shape (N,). Must
+                satisfy psi(z) <= L * H(z) for all z.
+            inv_cdfs (List[Callable]): List of d quantile functions
+                [F_1^{-1}, ..., F_d^{-1}], one per dimension. Each maps a
+                1-D array of uniforms in [0,1] to R.
+            H_func (Callable): Auxiliary bound function H(z) where z has
+                shape (N, d). Must return shape (N,) and satisfy
+                psi(z) <= L * H(z) for all z in R^d.
+            upper_bound (float): L satisfying psi(z) <= L * H(z) for all z.
+            density_integral (float): C = integral_{R^d} psi(z) dz. The
+                acceptance rate is C/L.
+            max_retries (int): Number of times gen_samples will double the
+                driver size if not enough points are accepted. Default 4.
+        """
         self.parameters = ['target_dim', 'upper_bound', 'density_integral', 'acceptance_rate']
         self.domain = np.array([[0, 1]])
         self._parse_sampler(sampler)

@@ -7,6 +7,7 @@ import argparse
 import json
 from pathlib import Path
 import re
+import subprocess
 import sys
 
 SUPPORTED_SUFFIXES = {".md", ".ipynb"}
@@ -21,6 +22,33 @@ LATEX_HINT_RE = re.compile(
     r"(?<!\\)\$\$|(?<!\\)\$(?=\S)|(?<=\S)(?<!\\)\$|\\\(|\\\)|\\\[|\\\]|\\begin\{[A-Za-z*]+\}|\\end\{[A-Za-z*]+\}|\\[A-Za-z]+",
 )
 HTML_TAG_RE = re.compile(r"^</?[A-Za-z]")
+
+
+def _drop_git_ignored(paths: list[Path]) -> list[Path]:
+    """Drop any path `git check-ignore` reports as ignored.
+
+    A directory walk via `rglob` has no notion of `.gitignore` on its own, so
+    without this a repo-root scan wanders into build/cache output
+    (`.pytest_cache/`, `site/`) and gitignored scratch files (`sc_*`) and
+    rewrites them -- wasted work on files git will never see as changed, and
+    confusing "N file(s) changed" output with nothing to show for it in
+    `git status`. Falls back to returning `paths` unfiltered if git is
+    unavailable or `paths` isn't inside a git working tree.
+    """
+    if not paths:
+        return paths
+    try:
+        result = subprocess.run(
+            ["git", "check-ignore", "--stdin"],
+            input="\n".join(str(p) for p in paths),
+            capture_output=True, text=True,
+        )
+    except OSError:
+        return paths
+    if result.returncode not in (0, 1):
+        return paths  # not a git repo, or another git error -- don't filter
+    ignored = set(result.stdout.splitlines())
+    return [p for p in paths if str(p) not in ignored]
 
 
 def iter_targets(paths: list[str]) -> tuple[list[Path], list[str]]:
@@ -46,9 +74,11 @@ def iter_targets(paths: list[str]) -> tuple[list[Path], list[str]]:
                 continue
             files.append(path)
             continue
-        for child in sorted(path.rglob("*")):
-            if child.is_file() and child.suffix.lower() in SUPPORTED_SUFFIXES:
-                files.append(child)
+        candidates = sorted(
+            child for child in path.rglob("*")
+            if child.is_file() and child.suffix.lower() in SUPPORTED_SUFFIXES
+        )
+        files.extend(_drop_git_ignored(candidates))
     return files, errors
 
 

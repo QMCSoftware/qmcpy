@@ -343,11 +343,15 @@ def fix_notebook_file(path):
 # --------------------------------------------------------------------------
 
 def _display_path(f, root):
-    """Path for printing: relative to `root` when possible, absolute otherwise."""
-    try:
-        return f.relative_to(root).as_posix()
-    except ValueError:
-        return f.as_posix()
+    """Path for printing: relative to `root` when possible, else relative to
+    the current directory (e.g. a file outside `root` entirely, such as a
+    scratch file under the OS's temp directory), else absolute."""
+    for base in (root, Path.cwd()):
+        try:
+            return f.relative_to(base).as_posix()
+        except ValueError:
+            continue
+    return f.as_posix()
 
 
 def _changed_files(ref):
