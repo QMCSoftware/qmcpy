@@ -30,8 +30,15 @@ class DummySampler(AbstractLDDiscreteDistribution):
         qmcpy.util.exceptions_warnings.ParameterError: DummySampler is only a construction placeholder for ProductMeasure child true measures and cannot generate samples.
     """
 
-    def __init__(self, dimension=1, replications=None, seed=None, warn=True):
-        r"""
+    def __init__(
+        self,
+        dimension: Union[int, list, tuple, np.ndarray] = 1,
+        replications: Union[None, int] = None,
+        seed: Union[None, int, np.random.SeedSequence] = None,
+        warn: bool = True,
+    ) -> None:
+        r"""Initialize a placeholder sampler with the given dimension.
+
         Args:
             dimension (Union[int, list, tuple, np.ndarray]): Dimension of the placeholder sampler. A list, tuple, or array specifies unique coordinate indices. Defaults to `1`.
             replications (Union[None, int]): Replication metadata preserved when spawning placeholders. `None` records no explicit replication axis. Defaults to `None`.

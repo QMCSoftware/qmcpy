@@ -250,27 +250,27 @@ class AbstractIntegrand(object):
             raise AssertionError
         # function evaluation with chain rule
         i = (None,) * d_indv_ndim + (...,)
-        if self.true_measure == self.true_measure.transform:
-            # jacobian*weight/pdf will cancel so f(x) = g(\Psi(x))
+        if isinstance(self.true_measure, ImportanceSampling):
+            xtf, importance_weights = (
+                self.true_measure._importance_sampling_transform_r(xp)
+            )
+            if not (xtf.shape == xp.shape):
+                raise AssertionError
+            if not (importance_weights.shape == batch_shape):
+                raise AssertionError
+            gvals = self._g(xtf, *args, **kwargs)
+            if not (gvals.shape == (self.d_indv + batch_shape)):
+                raise AssertionError
+            y = gvals * importance_weights[i]
+        else:
             xtf = self.true_measure._jacobian_transform_r(
                 xp, return_weights=False
             )  # get transformed samples, equivalent to self.true_measure._transform_r(x)
-            assert xtf.shape == xp.shape
+            if not (xtf.shape == xp.shape):
+                raise AssertionError
             y = self._g(xtf, *args, **kwargs)
-        else:  # using importance sampling --> need to compute pdf, jacobian(s), and weight explicitly
-            pdf = self.discrete_distrib.pdf(xp)  # pdf of samples
-            assert pdf.shape == batch_shape
-            xtf, jacobians = self.true_measure.transform._jacobian_transform_r(
-                xp, return_weights=True
-            )  # compute recursive transform+jacobian
-            assert xtf.shape == xp.shape
-            assert jacobians.shape == batch_shape
-            weight = self.true_measure._weight(xtf)  # weight based on the true measure
-            assert weight.shape == batch_shape
-            gvals = self._g(xtf, *args, **kwargs)
-            assert gvals.shape == (self.d_indv + batch_shape)
-            y = gvals * weight[i] / pdf[i] * jacobians[i]
-        assert y.shape == (self.d_indv + batch_shape)
+        if not (y.shape == (self.d_indv + batch_shape)):
+            raise AssertionError
         # account for periodization weight
         y = y * wp[i]
         if not (y.shape == (self.d_indv + batch_shape)):

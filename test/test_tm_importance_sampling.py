@@ -2,13 +2,7 @@ import unittest
 
 import numpy as np
 
-from qmcpy import (
-    DigitalNetB2,
-    Gaussian,
-    ImportanceSampling,
-    Lebesgue,
-    Uniform,
-)
+from qmcpy import DigitalNetB2, Gaussian, ImportanceSampling, Lebesgue, Uniform
 from qmcpy.util import DimensionError, ParameterError
 
 

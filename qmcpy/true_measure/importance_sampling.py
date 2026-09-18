@@ -1,3 +1,7 @@
+from typing import Union
+
+import numpy as np
+
 from .abstract_true_measure import AbstractTrueMeasure
 from ..util import DimensionError, ParameterError
 
@@ -42,8 +46,9 @@ class ImportanceSampling(AbstractTrueMeasure):
 
     _is_importance_sampling = True
 
-    def __init__(self, target, proposal):
-        r"""
+    def __init__(self, target: AbstractTrueMeasure, proposal: AbstractTrueMeasure) -> None:
+        r"""Initialize importance sampling from a target measure and a proposal measure.
+
         Args:
             target (AbstractTrueMeasure): Measure whose weight defines the target integral.
             proposal (AbstractTrueMeasure): Measure used to generate samples.
@@ -90,19 +95,24 @@ class ImportanceSampling(AbstractTrueMeasure):
             )
         batch_shape = x.shape[:-1]
         pdf = self.discrete_distrib.pdf(x)
-        assert pdf.shape == batch_shape
+        if not (pdf.shape == batch_shape):
+            raise AssertionError
         proposal_samples, proposal_jacobians = (
             self.proposal._jacobian_transform_r(
                 x,
                 return_weights=True,
             )
         )
-        assert proposal_samples.shape == x.shape
-        assert proposal_jacobians.shape == batch_shape
+        if not (proposal_samples.shape == x.shape):
+            raise AssertionError
+        if not (proposal_jacobians.shape == batch_shape):
+            raise AssertionError
         target_weights = self.target._weight(proposal_samples)
-        assert target_weights.shape == batch_shape
+        if not (target_weights.shape == batch_shape):
+            raise AssertionError
         importance_weights = target_weights * proposal_jacobians / pdf
-        assert importance_weights.shape == batch_shape
+        if not (importance_weights.shape == batch_shape):
+            raise AssertionError
         return proposal_samples, importance_weights
 
     def _jacobian_transform_r(self, x, return_weights):
@@ -112,7 +122,12 @@ class ImportanceSampling(AbstractTrueMeasure):
         )
 
     def gen_samples(
-        self, n=None, n_min=None, n_max=None, return_weights=False, warn=True
+        self,
+        n: Union[None, int] = None,
+        n_min: Union[None, int] = None,
+        n_max: Union[None, int] = None,
+        return_weights: bool = False,
+        warn: bool = True,
     ):
         r"""
         Generate proposal samples, optionally with importance weights.
@@ -129,7 +144,8 @@ class ImportanceSampling(AbstractTrueMeasure):
             importance_weights (np.ndarray): Returned only when `return_weights=True`.
         """
         x = self.discrete_distrib(n=n, n_min=n_min, n_max=n_max, warn=warn)
-        assert isinstance(return_weights, bool)
+        if not (isinstance(return_weights, bool)):
+            raise AssertionError
         if return_weights:
             return self._importance_sampling_transform_r(x)
         return self.proposal._jacobian_transform_r(
@@ -137,7 +153,17 @@ class ImportanceSampling(AbstractTrueMeasure):
             return_weights=False,
         )
 
-    def spawn(self, s=1, dimensions=None):
+    def spawn(self, s: int = 1, dimensions: Union[None, np.ndarray] = None) -> list:
+        r"""Spawn new `ImportanceSampling` instances with new seeds and dimensions.
+
+        Args:
+            s (int): Number of copies to spawn.
+            dimensions (Union[None, np.ndarray]): Length `s` array of dimensions for each
+                copy. Defaults to the current dimension.
+
+        Returns:
+            list: `ImportanceSampling` instances with new seeds and dimensions.
+        """
         proposal_spawns = self.proposal.spawn(s=s, dimensions=dimensions)
         target_spawns = self.target.spawn(s=s, dimensions=dimensions)
         return [

@@ -186,8 +186,15 @@ class ZeroInflatedExpUniform(SciPyWrapper):
         True
     """
 
-    def __init__(self, sampler, p_zero=0.4, lam=1.5, y_split=None):
-        r"""
+    def __init__(
+        self,
+        sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure],
+        p_zero: float = 0.4,
+        lam: float = 1.5,
+        y_split: Union[None, float] = None,
+    ) -> None:
+        r"""Initialize a zero-inflated exponential-uniform measure.
+
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): One-dimensional sampler for the current construction. The deprecated `y_split` construction also accepts a two-dimensional sampler.
             p_zero (float): Probability mass at zero, strictly between `0` and `1`. Defaults to `0.4`.
