@@ -1,3 +1,6 @@
+import gc
+
+import numpy as np
 import qmcpy as qp
 
 if __package__:  # Imported as demos.GBM.gbm_code.qmcpy_util (e.g. by pytest)
@@ -51,6 +54,13 @@ def generate_qmcpy_paths(
     """
     Generate Geometric Brownian Motion paths using QMCPy with multiple replications.
 
+    Halton uses consecutive batches from one sampler to limit its two temporary
+    digit buffers to ``cf.HALTON_MAX_DIGIT_BYTES`` (or one point if larger).
+    Paths and randomizations are preserved up to floating-point rounding in the
+    transform. Permutation tables and returned paths require additional memory.
+    Before constructing Halton, collect unreachable measures so repeated timing
+    calls do not retain their permutation tables. Timings include this cleanup.
+
     Args:
         initial_value: Initial value of the GBM process (S_0)
         mu: Drift parameter
@@ -65,16 +75,19 @@ def generate_qmcpy_paths(
             'BrownianBridge'. All three describe the same process and give the
             same distribution of S_T; they differ in which low-discrepancy
             coordinate drives which feature of the path.
-        monitoring_times: Optional custom sampling times, only meaningful with
-            decomp_type='BrownianBridge' (PCA/Cholesky always use an evenly
-            spaced grid). Pass this to make BrownianBridge share PCA/Cholesky's
-            grid instead of its own default van der Corput times.
+        monitoring_times: Optional custom sampling times for
+            decomp_type='BrownianBridge'. Passing this with PCA/Cholesky raises
+            ParameterError. Pass this to make BrownianBridge share their evenly
+            spaced grid instead of its own default van der Corput times.
 
     Returns:
         tuple: (paths, gbm) where paths has shape (n_paths, n_steps) if replications is None,
                or (replications, n_paths, n_steps) if replications>=1,
                and gbm is the GeometricBrownianMotion object
     """
+    if sampler_type == "Halton":
+        # GBM has a self-reference; timeit disables automatic cyclic collection.
+        gc.collect()
     sampler = create_qmcpy_sampler(sampler_type, n_steps, replications, seed)
     gbm = qp.GeometricBrownianMotion(
         sampler,
@@ -85,5 +98,18 @@ def generate_qmcpy_paths(
         decomp_type=decomp_type,
         monitoring_times=monitoring_times,
     )
+    n_paths = int(n_paths)
+    if sampler_type == "Halton":
+        bytes_per_path = 2 * sampler.replications * sampler.d * int(sampler.t) * 8
+        batch_size = max(1, cf.HALTON_MAX_DIGIT_BYTES // bytes_per_path)
+        if batch_size < n_paths <= sampler.n_limit:
+            shape = (n_paths, sampler.d)
+            if not sampler.no_replications:
+                shape = (sampler.replications,) + shape
+            paths = np.empty(shape, dtype=np.float64)
+            for start in range(0, n_paths, batch_size):
+                stop = min(start + batch_size, n_paths)
+                paths[..., start:stop, :] = gbm.gen_samples(n_min=start, n_max=stop)
+            return paths, gbm
     paths = gbm.gen_samples(n_paths)
     return paths, gbm

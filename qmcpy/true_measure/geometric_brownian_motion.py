@@ -84,9 +84,9 @@ class GeometricBrownianMotion(BrownianMotion):
                 until needed.
             monitoring_times (Union[None, ndarray, list]): Keyword-only. Optional
                 custom sampling times for `decomp_type='BrownianBridge'`;
-                see `BrownianMotion`. With `decomp_type` `'PCA'` or `'Cholesky'`,
-                the times are always `linspace(t_final/d, t_final, d)`, so passing
-                this is only meaningful for `'BrownianBridge'`.
+                see `BrownianMotion`. Passing this with `'PCA'` or `'Cholesky'`
+                raises `ParameterError`; those constructions always use
+                `linspace(t_final/d, t_final, d)`.
         """
         super().__init__(
             sampler,

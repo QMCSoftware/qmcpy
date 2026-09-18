@@ -18,6 +18,10 @@ SOBOL_DIRECTION_SEED = 1
 # this demo's resolution needs while retaining the default 'LMS DP' scramble.
 HALTON_DIGITS = 32
 
+# Bound the two temporary uint64 digit buffers during Halton path generation.
+# Permutation tables and the returned paths are additional, persistent storage.
+HALTON_MAX_DIGIT_BYTES = 64 * 2**20
+
 
 def get_experiment_configurations() -> dict:
     """

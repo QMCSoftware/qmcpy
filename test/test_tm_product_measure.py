@@ -104,7 +104,7 @@ class TestProductMeasure(unittest.TestCase):
         self.assertEqual(tm.covariance.shape, (2, 2))
 
 
-    def test_statistics_preserve_order_and_covariance_blocks(self):
+    def test_statistics_order_and_covariance_blocks(self):
         marginals = [
             Uniform(DummySampler(1), lower_bound=8.0, upper_bound=12.0),
             Gaussian(
@@ -361,7 +361,7 @@ class TestProductMeasure(unittest.TestCase):
             ProductMeasure(DigitalNetB2(2, seed=11), [marginal])
 
 
-    def test_spawn_preserves_marginal_blocks_and_replaces_outer_sampler(self):
+    def test_spawn_blocks_and_outer_sampler(self):
         marginals = [
             Uniform(DummySampler(1), lower_bound=10.0, upper_bound=12.0),
             Uniform(
@@ -401,7 +401,7 @@ class TestProductMeasure(unittest.TestCase):
         self.assertTrue(np.all((10.0 <= x[:, 1]) & (x[:, 1] <= 12.0)))
 
 
-    def test_same_outer_seed_matches_different_outer_seed_changes(self):
+    def test_outer_seed_reproducibility(self):
         marginals = [
             Uniform(DummySampler(1), lower_bound=0.0, upper_bound=2.0),
             Uniform(DummySampler(1), lower_bound=10.0, upper_bound=12.0),
@@ -486,7 +486,7 @@ class TestProductMeasure(unittest.TestCase):
         self.assertTrue(np.all((10.0 <= x[:, 2]) & (x[:, 2] <= 12.0)))
 
 
-    def test_recursive_transform_sampling_supported_but_weights_restricted(self):
+    def test_recursive_sampling_and_weight_restriction(self):
         recursive_marginal = Uniform(
             Uniform(DummySampler(1), lower_bound=0.0, upper_bound=1.0),
             lower_bound=2.0,

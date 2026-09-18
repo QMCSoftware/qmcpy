@@ -10,7 +10,7 @@ Classes:
     TestQuantlibSeedIndependence: QuantLib's seed changes the scramble; 1 -> 2 -> 5 seeds.
     TestQuantlibSchemes: exact vs Euler evolution and high-dimensional
         reproducibility; no replication.
-    TestQmcpySamplerSettings: sampler construction options; no replication.
+    TestQmcpySamplerSettings: sampler options and bounded-memory Halton paths.
     TestConstructionAblation: path-construction ablation; several replications.
     TestReplicationMeanIndependence: QuantLib replication-mean rank correlation, M=40.
 
@@ -21,16 +21,20 @@ distribution classes directly rather than through this demo's wrapper.
 Example:
     python3 -m pytest test/test_tm_demo_gbm.py
 """
+import ast
+import gc
 import json
-import unittest
+import weakref
 from itertools import combinations
 from pathlib import Path
-from unittest import mock
+from unittest import TestCase, mock
 
 import numpy as np
 import pandas as pd
 import pytest
 from scipy.stats import spearmanr
+
+from qmcpy.util import ParameterError
 
 matplotlib = pytest.importorskip("matplotlib")
 matplotlib.use("Agg")  # headless-safe; must precede plot_util's `import matplotlib.pyplot`
@@ -54,7 +58,7 @@ QUANTLIB_PARAMS = {
 }
 
 
-class TestDemoPresentation(unittest.TestCase):
+class TestDemoPresentation(TestCase):
     """Checks sampler ordering, plots, and formatted tables in the demo."""
 
     def test_comparison_sampler_order(self):
@@ -110,7 +114,7 @@ class TestDemoPresentation(unittest.TestCase):
         ]
         pu.plt.close(fig)
 
-    def test_interactive_plot_replaces_output_after_slider_release(self):
+    def test_slider_release_replaces_output(self):
         """The GBM widget redraws in one cleared output after slider release."""
         notebook_path = Path(__file__).parents[1] / "demos/GBM/gbm_demo.ipynb"
         notebook = json.loads(notebook_path.read_text())
@@ -152,7 +156,7 @@ class TestDemoPresentation(unittest.TestCase):
         assert all(annotation.arrow_patch is not None for annotation in ax.texts)
         pu.plt.close(fig)
 
-    def test_performance_annotations_distinguish_faster_and_slower(self):
+    def test_runtime_ratio_direction(self):
         """Runtime ratios describe QMCPy's direction relative to QuantLib."""
         fig, ax = pu.plt.subplots()
         pu.plot_performance_comparison(
@@ -168,7 +172,7 @@ class TestDemoPresentation(unittest.TestCase):
         ]
         pu.plt.close(fig)
 
-    def test_estimates_are_rounded_with_replication_uncertainty(self):
+    def test_estimate_rounding_with_uncertainty(self):
         """Table estimates carry an SE and do not imply unsupported precision."""
         df = pd.DataFrame({"Mean": [105.123456], "Mean SE": [0.037]})
         formatted = lu.format_results_dataframe(
@@ -192,7 +196,7 @@ def _assert_distinct(paths_by_replication):
         assert not np.array_equal(a, b), "replications produced identical paths"
 
 
-class TestCollectLibraryResultsStatistics(unittest.TestCase):
+class TestCollectLibraryResultsStatistics(TestCase):
     """Verifies Mean/Std Dev/MAE/Std Dev Error computed by collect_library_results().
 
     Mocks both libraries' path generators with known arrays so the reported
@@ -295,7 +299,7 @@ class TestCollectLibraryResultsStatistics(unittest.TestCase):
                 assert row["Mean SE"] == pytest.approx(1.5)
                 assert row["MAE SE"] == pytest.approx(0.5)
 
-    def test_process_sampler_preserves_quantlib_replications(self):
+    def test_process_keeps_quantlib_replications(self):
         """Covariance callers receive every QuantLib replication, not only the last."""
         def ql_paths(seed, **kwargs):
             terminal = np.array([seed, seed + 1.0])
@@ -332,7 +336,7 @@ class TestCollectLibraryResultsStatistics(unittest.TestCase):
             assert quantlib_paths.shape == (2, 2, 2)
             np.testing.assert_array_equal(quantlib_paths[:, 0, -1], [7.0, 8.0])
 
-    def test_covariance_uses_actual_time_grid_and_all_replications(self):
+    def test_covariance_grid_and_replications(self):
         """Requested times select matching coordinates on either path convention."""
         ql_grid = np.linspace(0.0, 2.0, 5)
         qp_grid = ql_grid[1:]
@@ -350,7 +354,7 @@ class TestCollectLibraryResultsStatistics(unittest.TestCase):
         assert ql_covariances.shape == (2, 2, 2)
 
 
-class TestQuantlibSeedIndependence(unittest.TestCase):
+class TestQuantlibSeedIndependence(TestCase):
     """QuantLib's `seed` must actually change the Sobol scramble.
 
     demos/GBM/gbm_code/data_util.py:process_sampler_data() builds replications
@@ -421,11 +425,160 @@ class TestQuantlibSeedIndependence(unittest.TestCase):
                 _assert_distinct([_quantlib_paths(7 + r, sampler_type) for r in range(5)])
 
 
-class TestQmcpySamplerSettings(unittest.TestCase):
-    """Checks the QMCPy sampler options the demo relies on for speed.
+class TestQmcpySamplerSettings(TestCase):
+    """Checks sampler options and Halton batching without changing the samples."""
 
-    No replication: each method constructs samplers and inspects them.
-    """
+    path_params = {
+        "initial_value": 100.0,
+        "mu": 0.05,
+        "diffusion": 0.04,
+        "maturity": 1.0,
+        "n_steps": 8,
+        "n_paths": 23,
+        "sampler_type": "Halton",
+        "seed": 7,
+    }
+
+    def test_notebook_comparison_sizes_match(self):
+        """The comparison keeps the original workload in both libraries."""
+        notebook_path = Path(__file__).parents[1] / "demos/GBM/gbm_demo.ipynb"
+        notebook = json.loads(notebook_path.read_text(encoding="utf-8"))
+        names = {"cf.is_debug", "params_ql", "params_qp"}
+        assignments = {}
+        for cell in notebook["cells"]:
+            source = "".join(cell["source"])
+            if cell["cell_type"] != "code" or not any(
+                f"{name} =" in source for name in names
+            ):
+                continue
+            for node in ast.parse(source).body:
+                if isinstance(node, ast.Assign) and len(node.targets) == 1:
+                    name = ast.unparse(node.targets[0])
+                    if name in names:
+                        assignments[name] = node.value
+        self.assertEqual(set(assignments), names)
+        default_debug = eval(
+            compile(ast.Expression(assignments["cf.is_debug"]), str(notebook_path), "eval"),
+            {"__builtins__": {}, "IN_COLAB": False},
+        )
+        with mock.patch.object(cf, "is_debug", default_debug):
+            params_ql, params_qp = [
+                eval(
+                    compile(ast.Expression(assignments[name]), str(notebook_path), "eval"),
+                    {"__builtins__": {}, "cf": cf},
+                )
+                for name in ("params_ql", "params_qp")
+            ]
+        for key in ("n_paths", "n_steps"):
+            self.assertEqual(params_ql[key], params_qp[key])
+        self.assertEqual(params_qp["n_paths"], 2**14)
+        self.assertEqual(params_qp["n_steps"], 252)
+        self.assertEqual(params_qp["replications"], 8)
+
+    def test_default_sweep_sizes(self):
+        """The full parameter sweep keeps its original paths and time steps."""
+        with mock.patch.object(cf, "is_debug", False):
+            configs = cf.get_experiment_configurations()
+        self.assertEqual(configs["time_steps"]["fixed_paths"], 2**12)
+        self.assertEqual(configs["time_steps"]["range"], [2**i for i in range(4, 10)])
+        self.assertEqual(configs["paths"]["fixed_steps"], 252)
+        self.assertEqual(configs["paths"]["range"], [2**i for i in range(9, 15)])
+
+    def test_halton_batches_bound_digit_buffers(self):
+        """Actual digit allocations fit the budget, including the last batch."""
+        replications, batch_size = 2, 7
+        budget = 2 * replications * batch_size * 8 * cf.HALTON_DIGITS * 8
+        empty, buffers = np.empty, []
+
+        def record_empty(shape, dtype=float, **kwargs):
+            result = empty(shape, dtype=dtype, **kwargs)
+            if result.dtype == np.uint64 and result.ndim == 4:
+                if result.shape[-2:] == (8, cf.HALTON_DIGITS):
+                    buffers.append((result.shape, result.nbytes))
+            return result
+
+        with (
+            mock.patch.object(cf, "HALTON_MAX_DIGIT_BYTES", budget),
+            mock.patch.object(np, "empty", side_effect=record_empty),
+            mock.patch.object(qpu, "create_qmcpy_sampler", wraps=qpu.create_qmcpy_sampler) as create,
+        ):
+            paths, _ = qpu.generate_qmcpy_paths(**self.path_params, replications=replications)
+        create.assert_called_once()
+        self.assertEqual(paths.shape, (replications, 23, 8))
+        self.assertEqual([shape[1] for shape, _ in buffers], [7, 7, 7, 7, 7, 7, 2, 2])
+        for first, second in zip(buffers[::2], buffers[1::2]):
+            self.assertLessEqual(first[1] + second[1], budget)
+
+    def test_halton_batches_preserve_paths(self):
+        """Batch boundaries preserve every path and the replication axes."""
+        for replications in (None, 1, 2):
+            for construction in ("PCA", "Cholesky", "BrownianBridge"):
+                with self.subTest(replications=replications, construction=construction):
+                    count = 1 if replications is None else replications
+                    budget = 2 * count * 7 * 8 * cf.HALTON_DIGITS * 8
+                    with mock.patch.object(cf, "HALTON_MAX_DIGIT_BYTES", budget):
+                        paths, gbm = qpu.generate_qmcpy_paths(
+                            **self.path_params, replications=replications,
+                            decomp_type=construction,
+                        )
+                    expected = gbm.gen_samples(self.path_params["n_paths"])
+                    np.testing.assert_allclose(paths, expected, rtol=1e-14, atol=0)
+                    self.assertEqual(paths.shape, (23, 8) if replications is None else (count, 23, 8))
+                    self.assertTrue(np.isfinite(paths).all())
+                    if count > 1:
+                        self.assertFalse(np.array_equal(paths[0], paths[1]))
+
+    def test_halton_releases_discarded_samplers(self):
+        """Repeated timing calls free abandoned samplers while GC is disabled."""
+        was_enabled = gc.isenabled()
+        gc.disable()
+        try:
+            expected, live = qpu.generate_qmcpy_paths(**self.path_params)
+            live_ref = weakref.ref(live)
+            live_perms = weakref.ref(live.discrete_distrib.perms)
+            old_paths, old = qpu.generate_qmcpy_paths(**self.path_params)
+            old_ref = weakref.ref(old)
+            old_perms = weakref.ref(old.discrete_distrib.perms)
+            del old_paths, old
+            self.assertIsNotNone(old_ref())
+            self.assertIsNotNone(old_perms())
+
+            paths, _ = qpu.generate_qmcpy_paths(**self.path_params)
+            self.assertIsNone(old_ref())
+            self.assertIsNone(old_perms())
+            self.assertIs(live_ref(), live)
+            self.assertIs(live_perms(), live.discrete_distrib.perms)
+            np.testing.assert_array_equal(paths, expected)
+            self.assertFalse(gc.isenabled())
+        finally:
+            if was_enabled:
+                gc.enable()
+            else:
+                gc.disable()
+
+    def test_halton_batches_empty_and_invalid(self):
+        """Batching keeps empty shapes and rejects counts outside the sequence."""
+        with mock.patch.object(cf, "HALTON_MAX_DIGIT_BYTES", 1):
+            for replications in (None, 1, 2):
+                with self.subTest(replications=replications):
+                    paths, _ = qpu.generate_qmcpy_paths(
+                        **{**self.path_params, "n_paths": 0}, replications=replications
+                    )
+                    self.assertEqual(paths.shape, (0, 8) if replications is None else (replications, 0, 8))
+            for n_paths in (-1, 2**32 + 1):
+                with self.subTest(n_paths=n_paths):
+                    with self.assertRaises(ParameterError):
+                        qpu.generate_qmcpy_paths(**{**self.path_params, "n_paths": n_paths})
+
+    def test_other_samplers_ignore_halton_budget(self):
+        """A tiny Halton budget leaves other samplers' paths unchanged."""
+        for sampler in ("IIDStdUniform", "Sobol", "Lattice"):
+            with self.subTest(sampler=sampler):
+                params = {**self.path_params, "sampler_type": sampler, "n_paths": 16}
+                expected, _ = qpu.generate_qmcpy_paths(**params)
+                with mock.patch.object(cf, "HALTON_MAX_DIGIT_BYTES", 1):
+                    paths, _ = qpu.generate_qmcpy_paths(**params)
+                np.testing.assert_array_equal(paths, expected)
 
     def test_halton_trims_digit_array(self):
         """Checks Halton is built with the reduced digit count from config.
@@ -452,7 +605,7 @@ class TestQmcpySamplerSettings(unittest.TestCase):
             qpu.create_qmcpy_sampler("Faure", 8)
 
 
-class TestQuantlibSchemes(unittest.TestCase):
+class TestQuantlibSchemes(TestCase):
     """Covers the 'exact' vs 'euler' evolution schemes and seeding at high dimension.
 
     No replication: every method compares single deterministic calls.
@@ -519,7 +672,7 @@ class TestQuantlibSchemes(unittest.TestCase):
             assert all(args[1] == cf.SOBOL_DIRECTION_SEED != 0 for args in calls)
 
 
-class TestConstructionAblation(unittest.TestCase):
+class TestConstructionAblation(TestCase):
     """Covers run_construction_ablation(), which varies only `decomp_type`.
 
     The ablation's whole value rests on holding the point set fixed, so these
@@ -590,7 +743,7 @@ class TestConstructionAblation(unittest.TestCase):
         assert (df["Mean Absolute Error"] < monte_carlo_margin).all()
 
 
-class TestReplicationMeanIndependence(unittest.TestCase):
+class TestReplicationMeanIndependence(TestCase):
     """QuantLib's per-replication mean statistics show no rank correlation
     across the replication/seed index -- a stronger check than "not bit-identical".
 
