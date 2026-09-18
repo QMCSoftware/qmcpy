@@ -1,20 +1,24 @@
+from typing import Union
 import warnings
 
 import numpy as np
 
 from ..util import DimensionError, ParameterError
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
 from .scipy_wrapper import SciPyWrapper
 
 
 class _ZeroInflatedExponential:
-    """
-    One-dimensional zero-inflated exponential distribution.
+    """One-dimensional zero-inflated exponential distribution.
 
     This distribution has probability mass ``p_zero`` at zero and an
     exponential distribution with rate ``lam`` on positive values.
 
-    It implements ``ppf`` so it can be passed to ``SciPyWrapper`` as a
-    custom univariate marginal.
+    It implements ``ppf`` so it can be passed to ``SciPyWrapper`` as a custom
+    univariate marginal.
     """
 
     def __init__(self, p_zero=0.4, lam=1.5):
@@ -27,13 +31,12 @@ class _ZeroInflatedExponential:
         self.lam = float(lam)
 
     def ppf(self, u):
-        """
-        Generalized inverse CDF of the zero-inflated exponential.
+        """Generalized inverse CDF of the zero-inflated exponential.
 
         SciPyWrapper supplies one coordinate at a time. For example:
 
-            sampler output: (n, 1)
-            ppf input:      (n,)
+        sampler output: (n, 1)
+        ppf input:      (n,)
         """
         u = np.asarray(u, dtype=float)
 
@@ -58,8 +61,7 @@ class _ZeroInflatedExponential:
 
 
 class _DeprecatedZeroInflatedExpUniform2D:
-    """
-    Adapter for the deprecated two-dimensional ``y_split`` construction.
+    """Adapter for the deprecated two-dimensional ``y_split`` construction.
     """
 
     dim = 2
@@ -108,85 +110,96 @@ class _DeprecatedZeroInflatedExpUniform2D:
 
 
 class ZeroInflatedExpUniform(SciPyWrapper):
-    """
-    One-dimensional zero-inflated exponential true measure.
+    """One-dimensional zero-inflated exponential true measure.
 
-    The ``y_split`` keyword is retained temporarily for backward
-    compatibility with the deprecated two-dimensional construction.
+    The ``y_split`` keyword is retained temporarily for backward compatibility
+    with the deprecated two-dimensional construction.
 
-    Examples
-    --------
-    Without replications:
+    Examples:
+        Without replications:
 
-    >>> from qmcpy import DigitalNetB2, ZeroInflatedExpUniform
-    >>> tm = ZeroInflatedExpUniform(
-    ...     DigitalNetB2(1, seed=7), p_zero=0.4, lam=1.5
-    ... )
-    >>> x = tm(8)
-    >>> x
-    array([[0.        ],
-           [0.76621559],
-           [0.        ],
-           [0.18405583],
-           [0.08112272],
-           [1.19997153],
-           [0.        ],
-           [0.33259467]])
-    >>> x.shape
-    (8, 1)
-    >>> bool((x >= 0).all())
-    True
-    >>> tm
-    ZeroInflatedExpUniform (AbstractTrueMeasure)
-        p_zero          0.400
-        lam             1.500
-        mean            0.400
-        variance        0.373
-        standard_deviation 0.611
+        >>> from qmcpy import DigitalNetB2, ZeroInflatedExpUniform
+        >>> tm = ZeroInflatedExpUniform(
+        ...     DigitalNetB2(1, seed=7), p_zero=0.4, lam=1.5
+        ... )
+        >>> x = tm(8)
+        >>> x
+        array([[0.        ],
+               [0.76621559],
+               [0.        ],
+               [0.18405583],
+               [0.08112272],
+               [1.19997153],
+               [0.        ],
+               [0.33259467]])
+        >>> x.shape
+        (8, 1)
+        >>> bool((x >= 0).all())
+        True
+        >>> tm
+        ZeroInflatedExpUniform (AbstractTrueMeasure)
+            p_zero          0.400
+            lam             1.500
+            mean            0.400
+            variance        0.373
+            standard_deviation 0.611
 
-    Covariance is omitted because the measure is one dimensional (a 1x1
-    covariance would simply repeat the variance):
+        Covariance is omitted because the measure is one dimensional (a 1x1
+        covariance would simply repeat the variance):
 
-    >>> tm.mean
-    0.39999999999999997
-    >>> tm.variance
-    0.3733333333333333
-    >>> tm.standard_deviation
-    0.6110100926607787
+        >>> tm.mean
+        0.39999999999999997
+        >>> tm.variance
+        0.3733333333333333
+        >>> tm.standard_deviation
+        0.6110100926607787
 
-    With independent replications:
+        With independent replications:
 
-    >>> tm = ZeroInflatedExpUniform(
-    ...     DigitalNetB2(1, seed=7, replications=2),
-    ...     p_zero=0.4,
-    ...     lam=1.5,
-    ... )
-    >>> x = tm(8)
-    >>> x
-    array([[[0.51197024],
-            [0.        ],
-            [2.54258665],
-            [0.03368876],
-            [0.2192598 ],
-            [0.        ],
-            [0.85384192],
-            [0.        ]],
-    <BLANKLINE>
-           [[1.3024994 ],
-            [0.03378461],
-            [0.20489897],
-            [0.        ],
-            [0.58638285],
-            [0.        ],
-            [0.35227285],
-            [0.        ]]])
-    >>> x.shape
-    (2, 8, 1)
-    >>> bool((x >= 0).all())
-    True
+        >>> tm = ZeroInflatedExpUniform(
+        ...     DigitalNetB2(1, seed=7, replications=2),
+        ...     p_zero=0.4,
+        ...     lam=1.5,
+        ... )
+        >>> x = tm(8)
+        >>> x
+        array([[[0.51197024],
+                [0.        ],
+                [2.54258665],
+                [0.03368876],
+                [0.2192598 ],
+                [0.        ],
+                [0.85384192],
+                [0.        ]],
+        <BLANKLINE>
+               [[1.3024994 ],
+                [0.03378461],
+                [0.20489897],
+                [0.        ],
+                [0.58638285],
+                [0.        ],
+                [0.35227285],
+                [0.        ]]])
+        >>> x.shape
+        (2, 8, 1)
+        >>> bool((x >= 0).all())
+        True
     """
 
-    def __init__(self, sampler, p_zero=0.4, lam=1.5, y_split=None):
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], p_zero: float = 0.4, lam: float = 1.5, y_split: Union[None, float] = None) -> None:
+        """Initialize a ZeroInflatedExpUniform true measure.
+
+        Args:
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): A
+                1-dimensional sampler generating unit-cube samples to be
+                transformed. If `y_split` is set, a 2-dimensional sampler is
+                required instead (deprecated construction).
+            p_zero (float): Probability mass at zero.
+            lam (float): Rate parameter of the exponential component.
+            y_split (Union[None, float]): Deprecated. If set, uses the legacy
+                2-dimensional zero-inflated exponential-uniform construction
+                instead of the 1-dimensional interface.
+        """
         if y_split is not None:
             warnings.warn(
                 "`y_split` is deprecated. The 2D zero-inflated "
@@ -255,8 +268,7 @@ class ZeroInflatedExpUniform(SciPyWrapper):
             ]
 
     def _compute_moments(self):
-        r"""
-        Closed-form mean and variance of the zero-inflated exponential.
+        r"""Closed-form mean and variance of the zero-inflated exponential.
 
         The distribution is a two component mixture that places probability
         mass $p = $ ``p_zero`` at $X = 0$ and, with probability $1 - p$, draws
@@ -268,15 +280,14 @@ class ZeroInflatedExpUniform(SciPyWrapper):
         component raw moments [2]. Because the point mass sits exactly at zero,
         that component adds nothing to either moment, leaving
 
-        $$\mathbb{E}[X] = (1 - p)\,\frac{1}{\lambda}, \qquad
-          \mathbb{E}[X^2] = (1 - p)\,\frac{2}{\lambda^2}.$$
+        $$\mathbb{E}[X] = (1 - p)\,\frac{1}{\lambda}, \qquad \mathbb{E}[X^2] =
+        (1 - p)\,\frac{2}{\lambda^2}.$$
 
         The variance then follows from $\operatorname{Var}[X] = \mathbb{E}[X^2]
         - \mathbb{E}[X]^2$ (equivalently, the law of total variance [3]):
 
-        $$\operatorname{Var}[X]
-          = \frac{(1 - p)(1 + p)}{\lambda^2}
-          = \frac{1 - p^2}{\lambda^2}.$$
+        $$\operatorname{Var}[X] = \frac{(1 - p)(1 + p)}{\lambda^2} = \frac{1 -
+        p^2}{\lambda^2}.$$
 
         The measure is one dimensional, so ``mean`` and ``variance`` are
         returned as length-1 arrays for consistency with the other true
@@ -284,14 +295,11 @@ class ZeroInflatedExpUniform(SciPyWrapper):
 
         **References:**
 
-        1.  Exponential distribution. Wikipedia.
-            [https://en.wikipedia.org/wiki/Exponential_distribution](https://en.wikipedia.org/wiki/Exponential_distribution).
+        [1] "Exponential distribution," Wikipedia. [Online]. Available: [https://en.wikipedia.org/wiki/Exponential_distribution](https://en.wikipedia.org/wiki/Exponential_distribution). [Accessed: Sep. 17, 2026].
 
-        2.  Mixture distribution. Wikipedia.
-            [https://en.wikipedia.org/wiki/Mixture_distribution](https://en.wikipedia.org/wiki/Mixture_distribution).
+        [2] "Mixture distribution," Wikipedia. [Online]. Available: [https://en.wikipedia.org/wiki/Mixture_distribution](https://en.wikipedia.org/wiki/Mixture_distribution). [Accessed: Sep. 17, 2026].
 
-        3.  Law of total variance. Wikipedia.
-            [https://en.wikipedia.org/wiki/Law_of_total_variance](https://en.wikipedia.org/wiki/Law_of_total_variance).
+        [3] "Law of total variance," Wikipedia. [Online]. Available: [https://en.wikipedia.org/wiki/Law_of_total_variance](https://en.wikipedia.org/wiki/Law_of_total_variance). [Accessed: Sep. 17, 2026].
 
         Returns:
             tuple: Length ``1`` arrays ``(mean, variance)``.

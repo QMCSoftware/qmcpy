@@ -1,3 +1,8 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
 from .copula import (
     AbstractCopula,
     _clip_unit_interval,
@@ -11,11 +16,9 @@ import numpy as np
 
 
 def _eulerian_coefficients(n):
-    """
-    Return Eulerian coefficients for Li_{-n}(z).
+    """Return Eulerian coefficients for Li_{-n}(z).
 
-    For nonnegative integer n,
-    Li_{-n}(z) = z * A_n(z) / (1 - z) ** (n + 1),
+    For nonnegative integer n, Li_{-n}(z) = z * A_n(z) / (1 - z) ** (n + 1),
     where A_n is the Eulerian polynomial.
     """
     if n == 0:
@@ -33,8 +36,7 @@ def _eulerian_coefficients(n):
 
 
 class FrankCopula(AbstractCopula):
-    r"""
-    Frank copula transform with user supplied univariate marginals.
+    r"""Frank copula transform with user supplied univariate marginals.
 
     This implementation supports general dimension for ``theta > 0``. Negative
     ``theta`` is supported only for the bivariate case, where the negative
@@ -43,9 +45,9 @@ class FrankCopula(AbstractCopula):
 
     The transform uses the inverse Rosenblatt construction for the Frank
     Archimedean copula. It maps independent uniforms to dependent uniforms by
-    recursively inverting conditional CDFs. The base ``AbstractCopula`` class then
-    applies each marginal quantile function. SciPy calls the quantile function
-    ``ppf``.
+    recursively inverting conditional CDFs. The base ``AbstractCopula`` class
+    then applies each marginal quantile function. SciPy calls the quantile
+    function ``ppf``.
 
     Examples:
         >>> import numpy as np
@@ -90,31 +92,24 @@ class FrankCopula(AbstractCopula):
 
     **References:**
 
-    1.  Roger B. Nelsen. *An Introduction to Copulas*. Second Edition,
-        Springer Series in Statistics, Springer, 2006.
-        [doi:10.1007/0-387-28678-0](https://doi.org/10.1007/0-387-28678-0).
+    [1] R. B. Nelsen, *An Introduction to Copulas*, 2nd ed., Springer Series in Statistics. Springer, 2006. [Online]. Available: [https://doi.org/10.1007/0-387-28678-0](https://doi.org/10.1007/0-387-28678-0)
 
-    2.  Mathieu Cambou, Marius Hofert, and Christiane Lemieux.
-        "Quasi-random numbers for copula models."
-        [arXiv:1508.03483](https://arxiv.org/abs/1508.03483).
+    [2] M. Cambou, M. Hofert, and C. Lemieux, "Quasi-random numbers for copula models," arXiv preprint arXiv:1508.03483, 2015.
 
-    3.  Marius Hofert, Martin Maechler, and Alexander J. McNeil.
-        "Likelihood inference for Archimedean copulas in high dimensions
-        under known margins." Journal of Multivariate Analysis 110,
-        133-150, 2012.
-        [doi:10.1016/j.jmva.2012.02.019](https://doi.org/10.1016/j.jmva.2012.02.019).
+    [3] M. Hofert, M. Maechler, and A. J. McNeil, "Likelihood inference for Archimedean copulas in high dimensions under known margins," *Journal of Multivariate Analysis*, vol. 110, pp. 133-150, 2012. [Online]. Available: [https://doi.org/10.1016/j.jmva.2012.02.019](https://doi.org/10.1016/j.jmva.2012.02.019)
     """
 
-    def __init__(self, sampler, marginals, theta):
-        r"""
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], marginals: list, theta: float) -> None:
+        r"""Initialize a FrankCopula true measure.
+
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
                 A sampler or transform whose range is the unit cube.
             marginals (list): Length d list of SciPy-like univariate
                 distributions implementing a quantile function, called ``ppf``
                 in SciPy.
-            theta (float): Frank dependence parameter. Must be nonzero. Negative
-                values are currently supported only for ``d=2``.
+            theta (float): Frank dependence parameter. Must be nonzero.
+                Negative values are currently supported only for ``d=2``.
         """
         self.parameters = ["marginals", "theta"]
         super(FrankCopula, self).__init__(sampler=sampler, marginals=marginals)

@@ -217,23 +217,30 @@ def main() -> int:
 
     site_dir = Path(args.site_dir)
     site_url = read_site_url()
+    pages = sum(1 for _ in site_dir.rglob("*.html"))
     problems = check_internal(site_dir, site_url=site_url)
-    print(f"Checked internal links under {site_dir}: {len(problems)} problem(s).")
-    for p in problems:
-        print(f"  {p}")
+    print(f"  - Checked internal links under {site_dir}: {len(problems)} problem(s).")
+    if problems:
+        print()
+        for p in problems:
+            print(f"    - {p}")
 
     if args.external:
         ext_broken, ext_warnings = check_external(site_dir, site_url=site_url)
         print(
-            f"\nChecked external links: {len(ext_broken)} broken link(s), "
+            f"\n  - Checked external links: {len(ext_broken)} broken link(s), "
             f"{len(ext_warnings)} warning(s)."
         )
         for p in ext_broken:
-            print(f"  {p}")
+            print(f"    - {p}")
         for p in ext_warnings:
-            print(f"  [warning] {p}")
+            print(f"    - [warning] {p}")
         problems += ext_broken
 
+    if problems:
+        print(f"ERROR: {len(problems)} problem(s)  ({len(problems)} of {pages} pages)")
+    else:
+        print(f"clean  (0 of {pages} pages)")
     return 1 if problems else 0
 
 

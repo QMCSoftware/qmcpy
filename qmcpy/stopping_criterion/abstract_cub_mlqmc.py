@@ -1,13 +1,23 @@
+from typing import Union
 from .abstract_stopping_criterion import AbstractStoppingCriterion
+from ..util.data import Data
 import numpy as np
 from scipy.stats import norm
 
 
 class AbstractCubMLQMC(AbstractStoppingCriterion):
+    """Abstract base class for multilevel Quasi-Monte Carlo stopping criteria.
+
+    Shared machinery for `CubMLQMC` and `CubMLQMCCont`: replication-based
+    level statistics (`update_data`, `_update_bias_estimate`), level growth
+    (`_add_level`), and resume checkpoint validation/replay used across MLQMC
+    stopping criteria.
+    """
 
     @staticmethod
     def _append_level_replication_sums(data, level, rep_sums, n_increment):
-        """Append replayable per-replication sums for one MLQMC level update."""
+        """Append replayable per-replication sums for one MLQMC level update.
+        """
         if (not hasattr(data, "level_rep_sums")) or (not hasattr(data, "level_n_increments")):
             return
         while len(data.level_rep_sums) <= level:
@@ -98,14 +108,40 @@ class AbstractCubMLQMC(AbstractStoppingCriterion):
             return resume_iter_count, snapshots[i:]
         return None, None
 
-    def set_tolerance(self, abs_tol=None, rel_tol=None, rmse_tol=None):
-        assert rel_tol is None, "rel_tol not supported by this stopping criterion."
+    def set_tolerance(self, abs_tol: Union[None, float] = None, rel_tol: Union[None, float] = None, rmse_tol: Union[None, float] = None) -> None:
+        """Update the stopping criterion's target tolerance.
+
+        Args:
+            abs_tol (Union[None, float]): Absolute error tolerance, converted to an RMSE
+                tolerance via `self.alpha`. Ignored if `rmse_tol` is supplied.
+            rel_tol (Union[None, float]): Unsupported; must be `None`.
+            rmse_tol (Union[None, float]): Root mean squared error tolerance. Takes
+                precedence over `abs_tol` if both are supplied.
+
+        Raises:
+            AssertionError: If `rel_tol` is supplied.
+        """
+        if not (rel_tol is None):
+            raise AssertionError("rel_tol not supported by this stopping criterion.")
         if rmse_tol != None:
             self.rmse_tol = float(rmse_tol)
         elif abs_tol != None:
             self.rmse_tol = float(abs_tol) / norm.ppf(1 - self.alpha / 2.0)
 
-    def update_data(self, data):
+    def update_data(self, data: Data):
+        """Double the sample count on every active level and refresh statistics.
+
+        For each level with `data.eval_level[l]` set, doubles its replicated
+        sample count (or draws `self.n_init` if the level is new), evaluates
+        the paired coarse/fine integrand there, and folds the new
+        per-replication sums into `data.mean_level_reps`, `data.mean_level`,
+        `data.var_level`, and `data.var_cost_ratio_level`. Then refreshes the
+        bias estimate, `data.n_total`, and `data.solution`, and clears
+        `data.eval_level`.
+
+        Args:
+            data (Data): Integration state to update in place.
+        """
         # update sample sums
         for l in range(data.levels):
             if not data.eval_level[l]:
