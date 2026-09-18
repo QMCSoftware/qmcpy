@@ -186,19 +186,24 @@ class ZeroInflatedExpUniform(SciPyWrapper):
         True
     """
 
-    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], p_zero: float = 0.4, lam: float = 1.5, y_split: Union[None, float] = None) -> None:
-        """Initialize a ZeroInflatedExpUniform true measure.
+    def __init__(
+        self,
+        sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure],
+        p_zero: float = 0.4,
+        lam: float = 1.5,
+        y_split: Union[None, float] = None,
+    ) -> None:
+        r"""Initialize a zero-inflated exponential-uniform measure.
 
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): A
-                1-dimensional sampler generating unit-cube samples to be
-                transformed. If `y_split` is set, a 2-dimensional sampler is
-                required instead (deprecated construction).
-            p_zero (float): Probability mass at zero.
-            lam (float): Rate parameter of the exponential component.
-            y_split (Union[None, float]): Deprecated. If set, uses the legacy
-                2-dimensional zero-inflated exponential-uniform construction
-                instead of the 1-dimensional interface.
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): One-dimensional sampler for the current construction. The deprecated `y_split` construction also accepts a two-dimensional sampler.
+            p_zero (float): Probability mass at zero, strictly between `0` and `1`. Defaults to `0.4`.
+            lam (float): Rate of the exponential component. Must be positive. Defaults to `1.5`.
+            y_split (Union[None, float]): Deprecated split point for the legacy two-dimensional construction. With a two-dimensional sampler, it must lie strictly between `0` and `1`. With a one-dimensional sampler, it is accepted for backward compatibility, emits a `DeprecationWarning`, and is otherwise ignored. Defaults to `None`.
+
+        Raises:
+            DimensionError: If the sampler dimension is incompatible with the selected construction.
+            ParameterError: If `p_zero`, `lam`, or a two-dimensional `y_split` is outside its valid range.
         """
         if y_split is not None:
             warnings.warn(

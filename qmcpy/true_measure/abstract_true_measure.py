@@ -7,6 +7,12 @@ import numpy as np
 from scipy import sparse
 
 
+def _clip_unit_interval(u):
+    """Clip unit-interval values away from endpoints for stable quantiles."""
+    eps = np.finfo(float).eps
+    return np.clip(u, eps, 1.0 - eps)
+
+
 class AbstractTrueMeasure(object):
     """Abstract base class for QMCPy true measures.
 
@@ -23,12 +29,12 @@ class AbstractTrueMeasure(object):
         if not hasattr(self, "domain"):
             raise ParameterError(
                 prefix
-                + "self.domain, 2xd ndarray of domain lower bounds (first col) and upper bounds (second col)"
+                + "self.domain, (d, 2) ndarray of domain lower bounds (first col) and upper bounds (second col)"
             )
         if not hasattr(self, "range"):
             raise ParameterError(
                 prefix
-                + "self.range, 2xd ndarray of range lower bounds (first col) and upper bounds (second col)"
+                + "self.range, (d, 2) ndarray of range lower bounds (first col) and upper bounds (second col)"
             )
         if not hasattr(self, "parameters"):
             self.parameters = []
@@ -39,6 +45,52 @@ class AbstractTrueMeasure(object):
         array = np.array(value, copy=True)
         array.setflags(write=False)
         return array
+
+    @staticmethod
+    def _range_in_domain(transform_range, domain):
+        """Return whether a transform range is contained within a domain."""
+        try:
+            transform_range = np.asarray(transform_range)
+            domain = np.asarray(domain)
+        except (TypeError, ValueError):
+            return False
+
+        if (
+            transform_range.ndim != 2
+            or domain.ndim != 2
+            or transform_range.shape[1] != 2
+            or domain.shape[1] != 2
+            or transform_range.shape[0] == 0
+            or domain.shape[0] == 0
+        ):
+            return False
+
+        if not (
+            np.issubdtype(transform_range.dtype, np.number)
+            and np.issubdtype(domain.dtype, np.number)
+            and np.isrealobj(transform_range)
+            and np.isrealobj(domain)
+            and transform_range.dtype != np.bool_
+            and domain.dtype != np.bool_
+        ):
+            return False
+
+        if np.isnan(transform_range).any() or np.isnan(domain).any():
+            return False
+
+        if np.any(transform_range[:, 0] > transform_range[:, 1]) or np.any(
+            domain[:, 0] > domain[:, 1]
+        ):
+            return False
+
+        try:
+            transform_range, domain = np.broadcast_arrays(transform_range, domain)
+        except ValueError:
+            return False
+
+        lower_bounds_valid = np.all(domain[:, 0] <= transform_range[:, 0])
+        upper_bounds_valid = np.all(transform_range[:, 1] <= domain[:, 1])
+        return bool(lower_bounds_valid and upper_bounds_valid)
 
     def _set_moments(self, mean, variance, standard_deviation, covariance):
         self._mean = self._read_only_array(mean)
@@ -124,17 +176,21 @@ class AbstractTrueMeasure(object):
                     % (type(self).__name__, sampler.mimics)
                 )
         elif isinstance(sampler, AbstractTrueMeasure):
+            if getattr(sampler, "_is_importance_sampling", False):
+                raise ParameterError(
+                    "ImportanceSampling cannot be used as a sampler for another TrueMeasure."
+                )
             self.transform = sampler  # this is a composed transform, \Psi_j for j>0
             self.parameters += ["transform"]
             self.d = (
                 sampler.d
             )  # take the dimension from the sub-sampler (composed transform)
             self.discrete_distrib = self.transform.discrete_distrib
-            if (self.domain != self.transform.range).any():
+            if not self._range_in_domain(self.transform.range, self.domain):
                 self.sub_compatibility_error = True
             if self.transform.sub_compatibility_error:
                 raise ParameterError(
-                    "The sub-transform domain must match the sub-sub-transform range."
+                    "The nested sub-transform range must be contained within its transform domain."
                 )
         else:
             raise ParameterError(
@@ -183,7 +239,7 @@ class AbstractTrueMeasure(object):
         jac = None
         if self.sub_compatibility_error:
             raise ParameterError(
-                "The transform domain must match the sub-transform range."
+                "The sub-transform range must be contained within the transform domain."
             )
         if self.transform == self:  # is \Psi_0
             if return_weights:
@@ -214,7 +270,7 @@ class AbstractTrueMeasure(object):
         """
         raise MethodImplementationError(
             self,
-            "_transform. Try setting sampler to be in a PDF AbstractTrueMeasure to importance sample by.",
+            "_transform. Use ImportanceSampling(target=..., proposal=...) for importance sampling.",
         )
 
     def _weight(self, x: np.ndarray) -> np.ndarray:
