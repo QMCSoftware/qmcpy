@@ -1,7 +1,11 @@
+from typing import Union
+
 import numpy as np
+from numpy.typing import ArrayLike
 from scipy import sparse
 
 from .abstract_true_measure import AbstractTrueMeasure
+from .product_measure import ProductMeasure
 from ..discrete_distribution.abstract_discrete_distribution import (
     AbstractDiscreteDistribution,
 )
@@ -18,10 +22,13 @@ class Mixture(AbstractTrueMeasure):
     also includes ``u[0] == 1``.
 
     The samplers attached to the component true measures are not sampled.
-    Components provide their full recursive transform and weight behavior.
-    For an importance-sampling composition, the caller remains responsible for
-    ensuring that the component's induced sampling distribution is appropriate
-    for the intended mixture.
+    Components must be direct, dimension-preserving true measures, including
+    products of direct marginals. Composed importance-sampling components and
+    nested mixtures are not supported.
+
+    Integrands use the component output dimension, while stopping criteria
+    retain all ``d+1`` driver coordinates. Selector boundaries can reduce QMC
+    convergence; the usual assumptions of each stopping criterion still apply.
 
     When the necessary component statistics are available, mixture moments are
     exposed through ``mean``, ``variance``, ``standard_deviation``, and
@@ -39,14 +46,21 @@ class Mixture(AbstractTrueMeasure):
         (4, 1)
     """
 
-    def __init__(self, sampler, components, probabilities):
-        """
+    def __init__(
+        self,
+        sampler: AbstractDiscreteDistribution,
+        components: Union[list, tuple],
+        probabilities: ArrayLike,
+    ) -> None:
+        """Initialize a mixture from component measures and probabilities.
+
         Args:
             sampler (AbstractDiscreteDistribution): Standard-uniform sampler
                 whose dimension is one greater than the component dimension.
-            components (list or tuple of AbstractTrueMeasure): True measures
-                with a common output dimension.
-            probabilities (array-like): Positive component probabilities that
+            components (Union[list, tuple]): True measures
+                with a common output dimension. Each must preserve dimension
+                and have no composed importance-sampling transforms.
+            probabilities (ArrayLike): Positive component probabilities that
                 sum to one.
         """
         if not isinstance(components, (list, tuple)) or len(components) == 0:
@@ -80,6 +94,20 @@ class Mixture(AbstractTrueMeasure):
             raise DimensionError(
                 "All Mixture components must have the same output dimension."
             )
+        if any(
+            component.discrete_distrib.d != component.d
+            or getattr(component, "target_dim", component.d) != component.d
+            for component in components
+        ):
+            raise DimensionError(
+                "Mixture components must preserve their sampler dimension; "
+                "nested mixtures are not supported."
+            )
+        if not all(self._is_direct_component(component) for component in components):
+            raise ParameterError(
+                "Mixture requires direct components; composed importance-sampling "
+                "transforms are not supported."
+            )
         if sampler.d != component_dimension + 1:
             raise DimensionError(
                 "Mixture sampler dimension must equal the component dimension plus "
@@ -109,6 +137,14 @@ class Mixture(AbstractTrueMeasure):
             for component in self.components
         ):
             self.parameters.extend(["variance", "standard_deviation", "covariance"])
+
+    @staticmethod
+    def _is_direct_component(component):
+        if component.transform is not component:
+            return False
+        return not isinstance(component, ProductMeasure) or all(
+            Mixture._is_direct_component(marginal) for marginal in component.marginals
+        )
 
     @staticmethod
     def _expanded_range(component):
@@ -149,6 +185,16 @@ class Mixture(AbstractTrueMeasure):
 
     @property
     def mean(self):
+        """Return the cached probability-weighted mean of the components.
+
+        Returns:
+            float or np.ndarray: Scalar when ``d == 1``; otherwise a read-only
+                array of shape ``(d,)``.
+
+        Raises:
+            AttributeError: If a component does not provide a mean.
+            DimensionError: If a component mean has an incompatible shape.
+        """
         if self._mean_cache is None:
             component_means = np.stack(
                 [
@@ -163,6 +209,20 @@ class Mixture(AbstractTrueMeasure):
 
     @property
     def covariance(self):
+        """Return the cached covariance, including variation between components.
+
+        The total covariance is the probability-weighted sum of component
+        covariances and outer products of component mean deviations from the
+        mixture mean.
+
+        Returns:
+            np.ndarray: Read-only dense matrix of shape ``(d, d)``, including
+                ``(1, 1)`` for a univariate mixture.
+
+        Raises:
+            AttributeError: If a component lacks a mean or covariance.
+            DimensionError: If a component moment has an incompatible shape.
+        """
         if self._covariance_cache is None:
             mixture_mean = np.atleast_1d(np.asarray(self.mean))
             covariance = np.zeros((self.d, self.d), dtype=float)
@@ -198,6 +258,16 @@ class Mixture(AbstractTrueMeasure):
 
     @property
     def variance(self):
+        """Return the cached marginal variances from the covariance diagonal.
+
+        Returns:
+            float or np.ndarray: Scalar when ``d == 1``; otherwise a read-only
+                array of shape ``(d,)``.
+
+        Raises:
+            AttributeError: If a component lacks a mean or covariance.
+            DimensionError: If a component moment has an incompatible shape.
+        """
         if self._variance_cache is None:
             variance = self._read_only_array(np.diag(self.covariance))
             self._variance_cache = self._scalar_if_univariate(variance)
@@ -205,6 +275,16 @@ class Mixture(AbstractTrueMeasure):
 
     @property
     def standard_deviation(self):
+        """Return the cached square roots of the marginal variances.
+
+        Returns:
+            float or np.ndarray: Scalar when ``d == 1``; otherwise a read-only
+                array of shape ``(d,)``.
+
+        Raises:
+            AttributeError: If a component lacks a mean or covariance.
+            DimensionError: If a component moment has an incompatible shape.
+        """
         if self._standard_deviation_cache is None:
             standard_deviation = self._read_only_array(
                 np.sqrt(np.atleast_1d(self.variance))

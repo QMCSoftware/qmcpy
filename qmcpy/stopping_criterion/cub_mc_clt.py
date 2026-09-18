@@ -230,7 +230,7 @@ class CubMCCLT(AbstractStoppingCriterion):
         if resume is not None:
             raise ParameterError("CubMCCLT does not support resume.")
         data = Data(parameters=["solution", "bound_low", "bound_high", "bound_diff", "n_total", "time_integrate"])
-        data.xfull = np.empty((0, self.integrand.d))
+        data.xfull = np.empty((0, self.discrete_distrib.d))
         data.yfull = np.empty(0)
         if self.ncv > 0:
             data.ycvfull = np.empty((self.ncv, 0))
