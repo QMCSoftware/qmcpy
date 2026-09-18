@@ -1,9 +1,11 @@
+from ..util.data import Data
+from typing import TYPE_CHECKING, Any, Callable, TextIO, Union
 import copy
 import sys
-from typing import TYPE_CHECKING
 
 from .diagnostics import (  # noqa: F401
     _IterationTraceLogger,
+    _IterationHistoryTable,
     _format_iteration_log,
     _get_iteration_log_frame,
     _print_iteration_log,
@@ -22,10 +24,20 @@ if TYPE_CHECKING:
 
 
 class AbstractStoppingCriterion(object):
+    """Abstract base class for QMCPy stopping criteria.
+
+    A stopping criterion drives adaptive sampling for a given `integrand`
+    until an error tolerance is met, via `integrate`. Concrete stopping
+    criteria (e.g. `CubQMCNetG`, `CubMCCLT`) implement `integrate` and
+    `set_tolerance`; this base class handles shared bookkeeping: checkpoint
+    resume/save, iteration logging, and validating the integrand/true
+    measure/discrete distribution combination.
+    """
+
     _RESUME_FORMAT_VERSION = 1  # Increment when checkpoint format changes in a non-backwards-compatible way
     _ITERATION_LOG_VIEWS = ("all", "current", "without_resume", "stage_last")
 
-    def __init__(self, allowed_distribs, allow_vectorized_integrals):
+    def __init__(self, allowed_distribs: list, allow_vectorized_integrals: bool) -> None:
         """Initialize a stopping criterion base class.
 
         Args:
@@ -68,12 +80,12 @@ class AbstractStoppingCriterion(object):
             self.parameters = []
         self.elapsed_time = float(getattr(self, "elapsed_time", 0.0))
 
-    def integrate(self, resume=None) -> tuple:
+    def integrate(self, resume: Union[None, Data] = None) -> tuple:
         """Determine the samples needed to satisfy the target tolerance.
 
         Args:
-            resume (Data, optional): Existing integration state to resume from,
-                if supported. A valid resume checkpoint must continue the same
+            resume (Union[None, Data]): Existing integration state to resume from, if
+                supported. A valid resume checkpoint must continue the same
                 numerical experiment without duplicating samples, losing
                 accumulated statistics, or weakening the requested tolerance
                 guarantee. Supported resume implementations validate and copy
@@ -81,9 +93,8 @@ class AbstractStoppingCriterion(object):
                 object is preserved. Defaults to None.
 
         Returns:
-            tuple[Union[float, np.ndarray], Data]: Approximation to the integral
-                with shape ``integrand.d_comb`` and the corresponding data
-                object.
+            tuple: Approximation to the integral with shape ``integrand.d_comb`` and
+                the corresponding data object.
         """
         raise MethodImplementationError(self, "integrate")
 
@@ -92,7 +103,7 @@ class AbstractStoppingCriterion(object):
 
         Returns:
             _IterationTraceLogger: Trace logger configured from the stopping
-                criterion's optional trace attributes.
+            criterion's optional trace attributes.
         """
         requested_trace_iterations = bool(getattr(self, "trace_iterations", False))
         trace_verbose = bool(getattr(self, "verbose", False))
@@ -123,20 +134,21 @@ class AbstractStoppingCriterion(object):
 
     def get_iteration_log(
         self,
-        history=None,
-        printed_only=True,
-        drop_empty_columns=True,
-        formatted=True,
-        view="all",
+        history: Union[None, list] = None,
+        printed_only: bool = True,
+        drop_empty_columns: bool = True,
+        formatted: bool = True,
+        view: str = "all",
     ) -> "pandas.DataFrame":
         """Return the latest iteration log as a pandas DataFrame.
 
         Args:
-            history (list[dict] | None): Iteration history to format. If ``None``,
-                uses ``self.iteration_history`` when available.
+            history (Union[None, list]): Iteration history to format. If
+                ``None``, uses ``self.iteration_history`` when available.
             printed_only (bool): If ``True``, include only rows that were
                 selected for printed output.
-            drop_empty_columns (bool): If ``True``, drop columns with no values.
+            drop_empty_columns (bool): If ``True``, drop columns with no
+                values.
             formatted (bool): If ``True``, return formatted display values when
                 available.
             view (str): Which log view to return. ``"all"`` and ``"current"``
@@ -204,17 +216,17 @@ class AbstractStoppingCriterion(object):
         positions = positions[positions >= 0]
         return log_df.loc[non_resume_indices[positions]].reset_index(drop=True)
 
-    def format_iteration_log(self, history=None, printed_only=True, include_header=True) -> str:
+    def format_iteration_log(self, history: "Union[None, _IterationHistoryTable]" = None, printed_only: bool = True, include_header: bool = True) -> str:
         """Return the iteration log as formatted text.
 
         Args:
-            history (IterationHistoryTable | None, optional): Iteration history
-                to format. If ``None``, uses ``self.iteration_history`` when
+            history (Union[None, _IterationHistoryTable]): Iteration history to
+                format. If ``None``, uses ``self.iteration_history`` when
                 available. Defaults to None.
-            printed_only (bool, optional): If ``True``, include only rows that
-                were selected for printed output. Defaults to True.
-            include_header (bool, optional): If ``True``, include the trace
-                label header before the table. Defaults to True.
+            printed_only (bool): If ``True``, include only rows that were
+                selected for printed output. Defaults to True.
+            include_header (bool): If ``True``, include the trace label header
+                before the table. Defaults to True.
 
         Returns:
             str: Formatted iteration log text.
@@ -228,18 +240,18 @@ class AbstractStoppingCriterion(object):
             include_header=include_header,
         )
 
-    def print_iteration_log(self, history=None, printed_only=True, include_header=True, file=None) -> None:
+    def print_iteration_log(self, history: "Union[None, _IterationHistoryTable]" = None, printed_only: bool = True, include_header: bool = True, file: Union[None, TextIO] = None) -> None:
         """Print the iteration log for the latest run or supplied history.
 
         Args:
-            history (IterationHistoryTable | None, optional): Iteration history
-                to print. If ``None``, uses ``self.iteration_history`` when
-                available. Defaults to None.
-            printed_only (bool, optional): If ``True``, print only rows that
-                were selected for printed output. Defaults to True.
-            include_header (bool, optional): If ``True``, include the trace
-                label header before the table. Defaults to True.
-            file (typing.TextIO | None, optional): Output stream. Defaults to
+            history (Union[None, _IterationHistoryTable]): Iteration history to print.
+                If ``None``, uses ``self.iteration_history`` when available.
+                Defaults to None.
+            printed_only (bool): If ``True``, print only rows that were
+                selected for printed output. Defaults to True.
+            include_header (bool): If ``True``, include the trace label header
+                before the table. Defaults to True.
+            file (Union[None, TextIO]): Output stream. Defaults to
                 ``sys.stdout`` when None.
 
         Returns:
@@ -255,18 +267,18 @@ class AbstractStoppingCriterion(object):
             file=file,
         )
 
-    def _prepare_resume_data(self, resume, validate_resume, restore_resume):
+    def _prepare_resume_data(self, resume: Union[None, Data], validate_resume: Callable, restore_resume: Callable):
         """Validate and restore a resume checkpoint before integration.
 
         Args:
-            resume (Data or None): Resume checkpoint passed to ``integrate``.
-            validate_resume (callable): Validator taking ``resume`` and raising
+            resume (Union[None, Data]): Resume checkpoint passed to ``integrate``.
+            validate_resume (Callable): Validator taking ``resume`` and raising
                 on incompatible state.
-            restore_resume (callable): Restorer taking ``resume`` and mutating
+            restore_resume (Callable): Restorer taking ``resume`` and mutating
                 the current stopping criterion into a compatible resumed state.
 
         Returns:
-            Data or None: A validated deep copy of the supplied checkpoint, or
+            Union[None, Data]: A validated deep copy of the supplied checkpoint, or
             None when no checkpoint was supplied.
         """
         if resume is None:
@@ -279,7 +291,9 @@ class AbstractStoppingCriterion(object):
 
     @staticmethod
     def _detach_resume_stopping_criterion_history(data):
-        """Detach copied solver-owned history caches while preserving checkpoint history."""
+        """Detach copied solver-owned history caches while preserving
+        checkpoint history.
+        """
         stopping_crit = getattr(data, "stopping_crit", None)
         if stopping_crit is None:
             return
@@ -288,20 +302,25 @@ class AbstractStoppingCriterion(object):
         if hasattr(stopping_crit, "history_df"):
             stopping_crit.history_df = None
 
-    def _restore_resume_state(self, data):
+    def _restore_resume_state(self, data: Data):
         """Optional hook for subclasses to align state before resuming.
 
         Subclasses that need to restore RNG state or rewrite checkpoint fields
-        may override this method. The default implementation contains no operation.
+        may override this method. The default implementation contains no
+        operation.
 
         Args:
             data (Data): Deep-copied resume checkpoint that will be mutated by
                 the resumed integration run.
+
+        Returns:
+            None
         """
         return None
 
-    def _capture_resume_provenance(self, resume):
-        """Capture resume bookkeeping before the live ``Data`` object is mutated.
+    def _capture_resume_provenance(self, resume: Data or None):
+        """Capture resume bookkeeping before the live ``Data`` object is
+        mutated.
 
         Args:
             resume (Data or None): Resume checkpoint passed to ``integrate``.
@@ -357,14 +376,14 @@ class AbstractStoppingCriterion(object):
             self.discrete_distrib
         )
 
-    def _finalize_integration_data(self, data, elapsed, resume_provenance=None):
+    def _finalize_integration_data(self, data: Data, elapsed: float, resume_provenance: Union[None, dict] = None):
         """Attach shared integration metadata before returning ``Data``.
 
         Args:
             data (Data): Integration state to finalize.
             elapsed (float): Wall-clock time spent in the current ``integrate``
                 call.
-            resume_provenance (dict or None, optional): Output of
+            resume_provenance (Union[None, dict]): Output of
                 :meth:`_capture_resume_provenance`. Defaults to None.
         """
         data.stopping_crit = self
@@ -388,12 +407,13 @@ class AbstractStoppingCriterion(object):
         data.history_df = getattr(self, "history_df", None)
         self._annotate_checkpoint_metadata(data)
 
-    def _resume_value_equal(self, current, saved):
-        """Deep equality check tolerant of arrays, lists, dicts, and QMCPy objects.
+    def _resume_value_equal(self, current: Any, saved: Any):
+        """Deep equality check tolerant of arrays, lists, dicts, and QMCPy
+        objects.
 
         Args:
-            current: Value from the live stopping criterion.
-            saved: Value from the resume checkpoint.
+            current (Any): Value from the live stopping criterion.
+            saved (Any): Value from the resume checkpoint.
 
         Returns:
             bool: True when the two values are considered equal.
@@ -441,8 +461,9 @@ class AbstractStoppingCriterion(object):
     def _is_sparse(value):
         return hasattr(value, "nnz") and hasattr(value, "shape")
 
-    def _require_resume_attrs(self, data, attrs):
-        """Raise ParameterError if any attribute in *attrs* is absent from *data*.
+    def _require_resume_attrs(self, data: Data, attrs: tuple[str, ...]):
+        """Raise ParameterError if any attribute in *attrs* is absent from
+        *data*.
 
         Args:
             data (Data): Resume checkpoint.
@@ -458,16 +479,17 @@ class AbstractStoppingCriterion(object):
                 % ", ".join(sorted(missing))
             )
 
-    def _validate_resume_object(self, label, current, saved, attrs):
-        """Validate that a saved sub-object is compatible with the current one.
+    def _validate_resume_object(self, label: str, current: object, saved: object, attrs: tuple[str, ...]):
+        """Validate that a saved sub-object is compatible with the current
+        one.
 
         Checks type equality and then compares each attribute listed in *attrs*
         using :meth:`_resume_value_equal`.
 
         Args:
             label (str): Human-readable name used in error messages.
-            current: Live object (integrand, true measure, etc.).
-            saved: Saved object from the resume checkpoint.
+            current (object): Live object (integrand, true measure, etc.).
+            saved (object): Saved object from the resume checkpoint.
             attrs (tuple[str, ...]): Attribute names to compare.
 
         Raises:
@@ -494,7 +516,7 @@ class AbstractStoppingCriterion(object):
                     "resume data has incompatible %s.%s." % (label, attr)
                 )
 
-    def _validate_resume_data(self, data, required_fields=()):
+    def _validate_resume_data(self, data: Data, required_fields: tuple[str, ...] =()):
         """Run standard cross-cutting resume compatibility checks.
 
         Validates stopping criterion type, integrand, true measure, discrete
@@ -503,8 +525,8 @@ class AbstractStoppingCriterion(object):
 
         Args:
             data (Data): Resume checkpoint to validate.
-            required_fields (tuple[str, ...], optional): Additional attribute
-                names that must be present on *data*. Defaults to ``()``.
+            required_fields (tuple[str, ...]): Additional attribute names that
+                must be present on *data*. Defaults to ``()``.
 
         Raises:
             ParameterError: If any compatibility check fails.
@@ -536,7 +558,7 @@ class AbstractStoppingCriterion(object):
         if int(data.n_total) > int(self.n_limit):
             raise ParameterError("resume data n_total=%d exceeds current n_limit=%d." % (int(data.n_total), int(self.n_limit)))
 
-    def _validate_resume_with_state(self, data, required_fields=(), state_fields=()):
+    def _validate_resume_with_state(self, data: Data, required_fields: tuple[str, ...] =(), state_fields: tuple[str, ...] =()):
         """Validate resume data including algorithm-specific state fields.
 
         Calls :meth:`_validate_resume_data` and additionally checks that all
@@ -544,10 +566,10 @@ class AbstractStoppingCriterion(object):
 
         Args:
             data (Data): Resume checkpoint to validate.
-            required_fields (tuple[str, ...], optional): Extra data attributes
-                required beyond the standard set. Defaults to ``()``.
-            state_fields (tuple[str, ...], optional): Algorithm-state attributes
-                that must also be present. Defaults to ``()``.
+            required_fields (tuple[str, ...]): Extra data attributes required
+                beyond the standard set. Defaults to ``()``.
+            state_fields (tuple[str, ...]): Algorithm-state attributes that
+                must also be present. Defaults to ``()``.
 
         Raises:
             ParameterError: If any compatibility check fails.
@@ -573,20 +595,20 @@ class AbstractStoppingCriterion(object):
         return n > 0 and (n & (n - 1)) == 0
 
     @staticmethod
-    def _resolve_error_fun(error_fun):
+    def _resolve_error_fun(error_fun: Union[str, Callable]):
         """Resolve an *error_fun* argument from a string keyword or callable.
 
         Args:
-            error_fun (Union[str, callable]): ``'EITHER'`` or ``'BOTH'`` or a
+            error_fun (Union[str, Callable]): ``'EITHER'`` or ``'BOTH'`` or a
                 callable with signature ``(sv, abs_tol, rel_tol) -> tol``.
 
         Returns:
-            tuple[callable, str or None]: The resolved callable and its canonical
-                string key (``'EITHER'`` or ``'BOTH'``), or ``None`` when the
-                input was already a callable.
+            tuple[callable, str or None]: The resolved callable and its canonical string key (``'EITHER'`` or
+            ``'BOTH'``), or ``None`` when the input was already a callable.
 
         Raises:
-            ParameterError: If a string argument is not ``'EITHER'`` or ``'BOTH'``.
+            ParameterError: If a string argument is not ``'EITHER'`` or
+                ``'BOTH'``.
         """
         _error_fun_key = None
         if isinstance(error_fun, str):
@@ -600,7 +622,7 @@ class AbstractStoppingCriterion(object):
         return error_fun, _error_fun_key
 
     @staticmethod
-    def _checkpoint_rmse_tol(data):
+    def _checkpoint_rmse_tol(data: Data):
         """Extract the RMSE tolerance stored in a resume checkpoint.
 
         Args:
@@ -617,18 +639,18 @@ class AbstractStoppingCriterion(object):
                 pass
         return None
 
-    def _init_control_variates(self, control_variates, control_variate_means):
+    def _init_control_variates(self, control_variates: Union[list, AbstractIntegrand], control_variate_means: np.ndarray):
         """Validate and store control variates and their means.
 
-        Sets ``self.cv``, ``self.cv_mu``, and ``self.ncv`` after validating that
-        every entry in *control_variates* is an ``AbstractIntegrand`` instance
-        that shares the same discrete distribution and ``d_indv`` as the main
-        integrand.
+        Sets ``self.cv``, ``self.cv_mu``, and ``self.ncv`` after validating
+        that every entry in *control_variates* is an ``AbstractIntegrand``
+        instance that shares the same discrete distribution and ``d_indv`` as
+        the main integrand.
 
         Args:
-            control_variates (list or AbstractIntegrand): Control variate
+            control_variates (Union[list, AbstractIntegrand]): Control variate
                 integrand(s).
-            control_variate_means (array-like): Known means of each control
+            control_variate_means (np.ndarray): Known means of each control
                 variate.
 
         Returns:
@@ -642,7 +664,8 @@ class AbstractStoppingCriterion(object):
         if isinstance(self.cv, AbstractIntegrand):
             self.cv = [self.cv]
             self.cv_mu = self.cv_mu[None, ...]
-        assert isinstance(self.cv, list), "cv must be a list of AbstractIntegrand objects"
+        if not (isinstance(self.cv, list)):
+            raise AssertionError("cv must be a list of AbstractIntegrand objects")
         for cv in self.cv:
             if (
                 (not isinstance(cv, AbstractIntegrand))
@@ -658,7 +681,7 @@ class AbstractStoppingCriterion(object):
         self.ncv = len(self.cv)
         return self.ncv
 
-    def _restore_resume_rng_state(self, data):
+    def _restore_resume_rng_state(self, data: Data):
         """Deep-copy the saved RNG state into the live discrete distribution.
 
         Ensures that samples drawn after resuming are independent of those
@@ -678,21 +701,22 @@ class AbstractStoppingCriterion(object):
             saved_distrib.rng.bit_generator.state
         )
 
-    def _compute_indv_alphas(self, alphas_comb):
-        """Distribute combined confidence levels to individual integrand dimensions.
+    def _compute_indv_alphas(self, alphas_comb: np.ndarray):
+        """Distribute combined confidence levels to individual integrand
+        dimensions.
 
         Uses the integrand dependency map to allocate the per-combined-output
         alpha budget down to each individual output dimension.
 
         Args:
-            alphas_comb (np.ndarray): Per-combined-output confidence levels with
-                shape ``integrand.d_comb``.
+            alphas_comb (np.ndarray): Per-combined-output confidence levels
+                with shape ``integrand.d_comb``.
 
         Returns:
-            tuple[np.ndarray, bool]: ``(alphas_indv, identity_dependency)``
-                where *alphas_indv* has shape ``integrand.d_indv`` and
-                *identity_dependency* is True when each combined output depends
-                on exactly its matching individual output.
+            tuple[np.ndarray, bool]: ``(alphas_indv, identity_dependency)`` where *alphas_indv* has
+            shape ``integrand.d_indv`` and *identity_dependency* is True when
+            each combined output depends on exactly its matching individual
+            output.
         """
         alphas_indv = np.tile(1, self.integrand.d_indv)
         identity_dependency = True
@@ -712,15 +736,15 @@ class AbstractStoppingCriterion(object):
             alphas_indv = np.where(alpha_k_mat == 0, alphas_indv, np.minimum(alpha_k_mat, alphas_indv))
         return alphas_indv, identity_dependency
 
-    def set_tolerance(self, abs_tol=None, rel_tol=None, rmse_tol=None):
+    def set_tolerance(self, abs_tol: Union[None, float] = None, rel_tol: Union[None, float] = None, rmse_tol: Union[None, float] = None) -> None:
         """Reset the tolerances.
 
         Args:
-            abs_tol (float): Absolute tolerance, when supported. If supplied,
+            abs_tol (Union[None, float]): Absolute tolerance, when supported. If supplied,
                 reset it; otherwise ignore it.
-            rel_tol (float): Relative tolerance, when supported. If supplied,
+            rel_tol (Union[None, float]): Relative tolerance, when supported. If supplied,
                 reset it; otherwise ignore it.
-            rmse_tol (float): RMSE tolerance, when supported. If supplied,
+            rmse_tol (Union[None, float]): RMSE tolerance, when supported. If supplied,
                 reset it; otherwise ignore it. If ``rmse_tol`` is not supplied
                 but ``abs_tol`` is, then ``rmse_tol = abs_tol / norm.ppf(1 -
                 alpha / 2)``.

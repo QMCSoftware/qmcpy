@@ -1,15 +1,22 @@
 import gzip
 import pickle
+from pathlib import Path
+from typing import Union
 
 from ..util import _univ_repr
 
 
 class Data(object):
+    """Container for the state a stopping criterion accumulates while integrating.
 
-    def __init__(self, parameters):
+    Holds the parameters reported in the integration results and supports saving
+    to and loading from disk so a run can be resumed.
+    """
+
+    def __init__(self, parameters) -> None:
         self.parameters = parameters
 
-    def save(self, path, compress=False, overwrite=False):
+    def save(self, path: Union[str, Path], compress: bool = False, overwrite: bool = False) -> str:
         """Save this Data object to disk using pickle.
 
         Warning:
@@ -18,18 +25,17 @@ class Data(object):
             come from a trusted source.
 
         Args:
-            path (str or pathlib.Path): File path to save to. If
+            path (Union[str, Path]): File path to save to. If
                 ``compress=True``, a ``.gz`` suffix is appended automatically
                 when not already present.
-            compress (bool, optional): Gzip-compress the saved file. Defaults
-                to False.
-            overwrite (bool, optional): If False (default), raise
-                ``FileExistsError`` when the file already exists. If True,
-                overwrite any existing file.
+            compress (bool): Gzip-compress the saved file. Defaults to False.
+            overwrite (bool): If False (default), raise ``FileExistsError``
+                when the file already exists. If True, overwrite any existing
+                file.
 
         Returns:
-            str: The final path the file was written to (may differ from
-            *path* when ``compress=True`` appends ``.gz``).
+            str: The final path the file was written to (may differ from *path* when
+                ``compress=True`` appends ``.gz``).
 
         Raises:
             FileExistsError: If the target path already exists and
@@ -49,7 +55,7 @@ class Data(object):
         return path
 
     @classmethod
-    def load(cls, path):
+    def load(cls, path: Union[str, Path]) -> "Data":
         """Load a Data object from disk.
 
         Warning:
@@ -58,8 +64,8 @@ class Data(object):
             trusted source.
 
         Args:
-            path (str or pathlib.Path): Path to the saved file. Files ending
-                in ``.gz`` are decompressed automatically.
+            path (Union[str, Path]): Path to the saved file. Files ending in
+                ``.gz`` are decompressed automatically.
 
         Returns:
             Data: The loaded Data object.

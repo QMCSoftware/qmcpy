@@ -15,9 +15,9 @@ Quasi-Monte Carlo (QMC) methods are used to approximate multivariate integrals. 
 
 ## Resources
 
-The [QMCPy documentation](https://QMCSoftware.github.io/QMCSoftware/) contains a detailed **package reference** documenting functions and classes including thorough doctests. A number of example notebook **demos** are also rendered into the documentation from `QMCSoftware/demos/`. We recommend the following resources to start learning more about QMCPy
+The [QMCPy documentation](https://QMCSoftware.github.io/QMCSoftware/) contains a detailed **package reference** documenting functions and classes including thorough doctests. A number of example notebook **demos** are also rendered into the documentation from `QMCSoftware/demos/`. We recommend the following resources to start learning more about QMCPy:
 
-- [mathematical description of QMCPy software and components](https://qmcsoftware.github.io/QMCSoftware/components).
+- [Mathematical description of QMCPy software and components](https://qmcsoftware.github.io/QMCSoftware/components).
 - [Aleksei Sorokin's 2023 PyData Chicago video tutorial](https://www.youtube.com/watch?v=bRcKiLA2yBQ) and [corresponding notebook](https://qmcsoftware.github.io/QMCSoftware/demos/talk_paper_demos/pydata_chi_2023/)
 - [Fred Hickernell's 2020 MCQMC video tutorial](https://www.youtube.com/watch?v=gL8M_7c-YUE) and [corresponding notebook](https://qmcsoftware.github.io/QMCSoftware/demos/talk_paper_demos/MCQMC_Tutorial_2020/MCQMC_2020_QMC_Software_Tutorial/)
 - The QMCPy [introduction notebook](https://qmcsoftware.github.io/QMCSoftware/demos/qmcpy_intro) and [quickstart notebook](https://qmcsoftware.github.io/QMCSoftware/demos/quickstart)

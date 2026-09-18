@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import TYPE_CHECKING, Union
 from .abstract_integrand import AbstractIntegrand
 from ..discrete_distribution import DigitalNetB2
 from ..true_measure import Uniform
@@ -5,10 +9,15 @@ from ..util import ParameterError
 import numpy as np
 import os
 
+if TYPE_CHECKING:
+    import umbridge
+
 
 class UMBridgeWrapper(AbstractIntegrand):
-    """
-    Wrapper around a [`UM-Bridge`](https://um-bridge-benchmarks.readthedocs.io/en/docs/index.html) model. See also the [`UM-Bridge` documentation for the QMCPy client](https://um-bridge-benchmarks.readthedocs.io/en/docs/umbridge/clients.html).
+    """Wrapper around a
+    [`UM-Bridge`](https://um-bridge-benchmarks.readthedocs.io/en/docs/index.html)
+    model. See also the [`UM-Bridge` documentation for the QMCPy
+    client](https://um-bridge-benchmarks.readthedocs.io/en/docs/umbridge/clients.html).
     Requires [Docker](https://www.docker.com/) is installed.
 
     Examples:
@@ -64,18 +73,21 @@ class UMBridgeWrapper(AbstractIntegrand):
         [['-1.59e-08', '1.49e-04', '1.49e-04'], ['8.20e-06', '-1.38e-04'], ['-8.14e-06']]
     """
 
-    def __init__(self, true_measure, model, config=None, parallel=False):
-        """
+    def __init__(self, true_measure: AbstractTrueMeasure, model: umbridge.HTTPModel, config: Union[None, dict] = None, parallel: Union[bool, int] = False) -> None:
+        """Initialize a UMBridgeWrapper integrand.
+
         Args:
             true_measure (AbstractTrueMeasure): The true measure.
             model (umbridge.HTTPModel): A `UM-Bridge` model.
-            config (dict): Configuration keyword argument to `umbridge.HTTPModel(url,name).__call__`.
-            parallel (int): Parallelization flag.
+            config (Union[None, dict]): Configuration keyword argument to
+                `umbridge.HTTPModel(url,name).__call__`.
+            parallel (Union[bool, int]): Parallelization flag.
 
                 - When `parallel = 0` or `parallel = 1` then function evaluation is done in serial fashion.
                 - `parallel > 1` specifies the number of processes used by `multiprocessing.Pool` or `multiprocessing.pool.ThreadPool`.
 
-                Setting `parallel=True` is equivalent to `parallel = os.cpu_count()`.
+                Setting `parallel=True` is equivalent to `parallel =
+                os.cpu_count()`.
         """
         if config is None:
             config = {}
@@ -114,7 +126,16 @@ class UMBridgeWrapper(AbstractIntegrand):
             threadpool=True,
         )
 
-    def g(self, t, **kwargs):
+    def g(self, t: np.ndarray, **kwargs: dict) -> np.ndarray:
+        """Evaluate the wrapped UM-Bridge model at each point.
+
+        Args:
+            t (np.ndarray): Points, model inputs along the last axis.
+            **kwargs (dict): Unused; accepted for API consistency.
+
+        Returns:
+            np.ndarray: Model outputs, flattened across the UM-Bridge output blocks.
+        """
         y = np.zeros((self.total_out_elements,) + tuple(t.shape[:-1]), dtype=float)
         idxiterator = np.ndindex(t.shape[:-1])
         for i in idxiterator:
@@ -139,15 +160,18 @@ class UMBridgeWrapper(AbstractIntegrand):
             parallel=self.parallel,
         )
 
-    def to_umbridge_out_sizes(self, x):
-        """
-        Convert a data attribute to `UM-Bridge` output sized list of lists.
+    def to_umbridge_out_sizes(self, x: np.ndarray) -> list:
+        """Convert a data attribute to `UM-Bridge` output sized list of
+        lists.
 
         Args:
-            x (np.ndarray): Array of length `sum(model.get_output_sizes(self.config))` where `model` is a `umbridge.HTTPModel`.
+            x (np.ndarray): Array of length
+                `sum(model.get_output_sizes(self.config))` where `model` is a
+                `umbridge.HTTPModel`.
 
         Returns:
-            x_list_list (list): List of lists with sub-list lengths specified by `model.get_output_sizes(self.config)`.
+            list: List of lists with sub-list lengths specified by
+                `model.get_output_sizes(self.config)`.
         """
         return [
             x[..., self.d_out_umbridge[j] : self.d_out_umbridge[j + 1]].tolist()

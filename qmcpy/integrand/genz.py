@@ -1,3 +1,8 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
 from .abstract_integrand import AbstractIntegrand
 from ..discrete_distribution import DigitalNetB2
 from ..true_measure import Uniform
@@ -6,14 +11,16 @@ import numpy as np
 
 
 class Genz(AbstractIntegrand):
-    r"""
-    Genz function following the [`DAKOTA` implementation](https://snl-dakota.github.io/docs/6.17.0/users/usingdakota/examples/additionalexamples.html?highlight=genz#genz-functions).
+    r"""Genz function following the [`DAKOTA`
+    implementation](https://snl-dakota.github.io/docs/6.17.0/users/usingdakota/examples/additionalexamples.html?highlight=genz#genz-functions).
 
-    $$g_\mathrm{oscillatory}(\boldsymbol{t}) = \cos\left(-\sum_{j=1}^d c_j t_j\right)$$
+    $$g_\mathrm{oscillatory}(\boldsymbol{t}) = \cos\left(-\sum_{j=1}^d c_j
+    t_j\right)$$
 
     or
 
-    $$g_\mathrm{corner-peak}(\boldsymbol{t}) = \left(1+\sum_{j=1}^d c_j t_j\right)^{-(d+1)}$$
+    $$g_\mathrm{corner-peak}(\boldsymbol{t}) = \left(1+\sum_{j=1}^d c_j
+    t_j\right)^{-(d+1)}$$
 
     where
 
@@ -21,7 +28,9 @@ class Genz(AbstractIntegrand):
 
     and the coefficients $\boldsymbol{c}$ are have three kinds
 
-    $$c_k^{(1)} = \frac{k-1/2}{d}, \qquad c_k^{(2)} = \frac{1}{k^2}, \qquad c_k^{(3)} = \exp\left(\frac{k \log(10^{-8})}{d}\right), \qquad k=1,\dots,d.$$
+    $$c_k^{(1)} = \frac{k-1/2}{d}, \qquad c_k^{(2)} = \frac{1}{k^2}, \qquad
+    c_k^{(3)} = \exp\left(\frac{k \log(10^{-8})}{d}\right), \qquad
+    k=1,\dots,d.$$
 
     Examples:
         >>> for kind_func in ['OSCILLATORY','CORNER PEAK']:
@@ -50,10 +59,12 @@ class Genz(AbstractIntegrand):
         0.7200
     """
 
-    def __init__(self, sampler, kind_func="OSCILLATORY", kind_coeff=1):
-        """
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], kind_func: str = "OSCILLATORY", kind_coeff: int = 1) -> None:
+        """Initialize a Genz integrand.
+
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.
@@ -92,10 +103,26 @@ class Genz(AbstractIntegrand):
         self.parameters = ["kind_func", "kind_coeff"]
         super(Genz, self).__init__(dimension_indv=(), dimension_comb=(), parallel=False)
 
-    def g_oscillatory(self, t):
+    def g_oscillatory(self, t: np.ndarray) -> np.ndarray:
+        r"""Evaluate the oscillatory Genz function.
+
+        Args:
+            t (np.ndarray): Points in the unit cube.
+
+        Returns:
+            np.ndarray: $\cos(-c \cdot t)$ at each point.
+        """
         return np.cos(-(self.c * t).sum(-1))
 
-    def g_corner_peak(self, t):
+    def g_corner_peak(self, t: np.ndarray) -> np.ndarray:
+        r"""Evaluate the corner-peak Genz function.
+
+        Args:
+            t (np.ndarray): Points in the unit cube.
+
+        Returns:
+            np.ndarray: $(1 + c \cdot t)^{-(d+1)}$ at each point.
+        """
         return (1 + (self.c * t).sum(-1)) ** (-(self.d + 1))
 
     def _spawn(self, level, sampler):
