@@ -85,6 +85,7 @@ mpmc = [
 test = [
     "pytest >= 9.0.3",
     "pytest-cov >= 6.1.1",
+    "libcst >= 1.9.0, < 2.0", # formatting-preserving source codemods
     "phmutest >= 1.0.1",
     "pytest-accept >= 0.1.10",
     "testbook >= 0.4.2",
@@ -109,6 +110,7 @@ test = [
 test_core = [
     "pytest >= 7.0",
     "pytest-cov >= 4.0",
+    "libcst >= 1.9.0, < 2.0", # required by source-codemod unit tests
     "pytest-xdist >= 3.0",
     "scikit-learn >= 1.0.0",
     "pandas >= 1.3.0",
@@ -150,6 +152,7 @@ docs = [  # brew install weasyprint
     "mkdocs-print-site-plugin >= 2.7.2",
     "mkdocs-exclude >= 1.0.2",
     "pylint >= 4.0.5",
+    "pydoclint >= 0.5.0",
 ]
 dev = [ # brew install weasyprint
     "qmcpy[docs,test,torch,gpytorch,botorch,umbridge,mpmc]",
@@ -183,6 +186,24 @@ class = [
     "plotly >= 5.0",
     "networkx >= 3.0",
 ]
+
+[tool.pydoclint]
+# `make check_docstring` reads this. QMCPy convention: constructor arguments are
+# documented in the __init__ method's own docstring, and parameter types are
+# given in both the signature and the docstring (`name (type): ...`), kept in
+# sync by scripts/annotate_public_api_types.py. Optional heavy dependencies
+# (torch, matplotlib, pandas, ...) that a module only imports lazily are
+# referenced via `from __future__ import annotations` + `if TYPE_CHECKING:`
+# so the annotation never forces an eager import.
+style = "google"
+allow-init-docstring = true
+arg-type-hints-in-signature = true
+arg-type-hints-in-docstring = true
+check-return-types = false
+check-yield-types = false
+check-class-attributes = false
+skip-checking-short-docstrings = true
+skip-checking-raises = true
 
 [tool.pylint.typecheck]
 # Members that live on compiled/C-extension objects (numpy, scipy, matplotlib)

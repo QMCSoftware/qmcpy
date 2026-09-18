@@ -37,8 +37,9 @@ class Lebesgue(AbstractTrueMeasure):
         True
     """
 
-    def __init__(self, sampler):
-        r"""
+    def __init__(self, sampler: AbstractTrueMeasure) -> None:
+        r"""Initialize a Lebesgue true measure.
+
         Args:
             sampler (AbstractTrueMeasure): Measure defining the integration region and proposal geometry for the constant target weight one.
         """

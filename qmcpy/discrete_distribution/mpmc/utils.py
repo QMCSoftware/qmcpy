@@ -1,9 +1,7 @@
 import torch
 
 def _check_inputs(x, gamma=None):
-    """
-    x: (B, N, d) in [0,1]
-    gamma: (d,) nonnegative weights (optional)
+    """x: (B, N, d) in [0,1] gamma: (d,) nonnegative weights (optional)
     """
     if x.dim() != 3:
         raise ValueError(f"x must be (batch,N,d); got {tuple(x.shape)}")
@@ -25,6 +23,14 @@ def _sqrt_safe(v):
 # L2 STAR (Warnock)
 # ----------------------------
 def L2star(x: torch.Tensor) -> torch.Tensor:
+    """Warnock $L_2$ star discrepancy of each point set in a batch.
+
+    Args:
+        x (torch.Tensor): Points of shape ``(batch, N, d)`` with entries in $[0,1]$.
+
+    Returns:
+        torch.Tensor: Discrepancy of shape ``(batch,)``, one value per point set.
+    """
     _, N, d = _check_inputs(x)
     t1 = (1.0 / 3.0) ** d
     p = torch.prod(1.0 - x**2, dim=2)
@@ -35,6 +41,15 @@ def L2star(x: torch.Tensor) -> torch.Tensor:
     return _sqrt_safe(t1 - t2 + t3)
 
 def L2star_weighted(x: torch.Tensor, gamma: torch.Tensor) -> torch.Tensor:
+    """Coordinate-weighted $L_2$ star discrepancy of each point set in a batch.
+
+    Args:
+        x (torch.Tensor): Points of shape ``(batch, N, d)`` with entries in $[0,1]$.
+        gamma (torch.Tensor): Non-negative coordinate weights of shape ``(d,)``, one per dimension.
+
+    Returns:
+        torch.Tensor: Discrepancy of shape ``(batch,)``, one value per point set.
+    """
     _, N, d = _check_inputs(x, gamma)
     g = gamma
     t1 = torch.prod(1.0 + g / 3.0)
@@ -49,6 +64,14 @@ def L2star_weighted(x: torch.Tensor, gamma: torch.Tensor) -> torch.Tensor:
 # L2 EXTREME
 # -----------------------------------------
 def L2ext(x: torch.Tensor) -> torch.Tensor:
+    """$L_2$ extreme discrepancy of each point set in a batch.
+
+    Args:
+        x (torch.Tensor): Points of shape ``(batch, N, d)`` with entries in $[0,1]$.
+
+    Returns:
+        torch.Tensor: Discrepancy of shape ``(batch,)``, one value per point set.
+    """
     _, N, d = _check_inputs(x)
     t1 = (1.0 / 12.0) ** d
     p = torch.prod(0.5 * (x - x**2), dim=2)
@@ -59,6 +82,15 @@ def L2ext(x: torch.Tensor) -> torch.Tensor:
     return _sqrt_safe(t1 - t2 + t3)
 
 def L2ext_weighted(x: torch.Tensor, gamma: torch.Tensor) -> torch.Tensor:
+    """Coordinate-weighted $L_2$ extreme discrepancy of each point set in a batch.
+
+    Args:
+        x (torch.Tensor): Points of shape ``(batch, N, d)`` with entries in $[0,1]$.
+        gamma (torch.Tensor): Non-negative coordinate weights of shape ``(d,)``, one per dimension.
+
+    Returns:
+        torch.Tensor: Discrepancy of shape ``(batch,)``, one value per point set.
+    """
     _, N, d = _check_inputs(x, gamma)
     g = gamma
     t1 = torch.prod(1.0 + g / 12.0)
@@ -73,6 +105,14 @@ def L2ext_weighted(x: torch.Tensor, gamma: torch.Tensor) -> torch.Tensor:
 # L2 PERIODIC
 # -----------------------------------------
 def L2per(x: torch.Tensor) -> torch.Tensor:
+    """$L_2$ periodic discrepancy of each point set in a batch.
+
+    Args:
+        x (torch.Tensor): Points of shape ``(batch, N, d)`` with entries in $[0,1]$.
+
+    Returns:
+        torch.Tensor: Discrepancy of shape ``(batch,)``, one value per point set.
+    """
     _, N, d = _check_inputs(x)
     t1 = (1.0 / 3.0) ** d
     xi, xj = _pairwise(x)
@@ -82,6 +122,15 @@ def L2per(x: torch.Tensor) -> torch.Tensor:
     return _sqrt_safe(-t1 + t3)
 
 def L2per_weighted(x: torch.Tensor, gamma: torch.Tensor) -> torch.Tensor:
+    """Coordinate-weighted $L_2$ periodic discrepancy of each point set in a batch.
+
+    Args:
+        x (torch.Tensor): Points of shape ``(batch, N, d)`` with entries in $[0,1]$.
+        gamma (torch.Tensor): Non-negative coordinate weights of shape ``(d,)``, one per dimension.
+
+    Returns:
+        torch.Tensor: Discrepancy of shape ``(batch,)``, one value per point set.
+    """
     _, N, d = _check_inputs(x, gamma)
     g = gamma
     t1 = torch.prod(1.0 + g / 3.0)
@@ -95,6 +144,14 @@ def L2per_weighted(x: torch.Tensor, gamma: torch.Tensor) -> torch.Tensor:
 # L2 CENTERED
 # -----------------------------------------
 def L2ctr(x: torch.Tensor) -> torch.Tensor:
+    """$L_2$ centered discrepancy of each point set in a batch.
+
+    Args:
+        x (torch.Tensor): Points of shape ``(batch, N, d)`` with entries in $[0,1]$.
+
+    Returns:
+        torch.Tensor: Discrepancy of shape ``(batch,)``, one value per point set.
+    """
     _, N, d = _check_inputs(x)
     t1 = (1.0 / 12.0) ** d
     u = torch.abs(x - 0.5)
@@ -106,6 +163,15 @@ def L2ctr(x: torch.Tensor) -> torch.Tensor:
     return _sqrt_safe(t1 - t2 + t3)
 
 def L2ctr_weighted(x: torch.Tensor, gamma: torch.Tensor) -> torch.Tensor:
+    """Coordinate-weighted $L_2$ centered discrepancy of each point set in a batch.
+
+    Args:
+        x (torch.Tensor): Points of shape ``(batch, N, d)`` with entries in $[0,1]$.
+        gamma (torch.Tensor): Non-negative coordinate weights of shape ``(d,)``, one per dimension.
+
+    Returns:
+        torch.Tensor: Discrepancy of shape ``(batch,)``, one value per point set.
+    """
     _, N, d = _check_inputs(x, gamma)
     g = gamma
     t1 = torch.prod(1.0 + g / 12.0)
@@ -121,6 +187,14 @@ def L2ctr_weighted(x: torch.Tensor, gamma: torch.Tensor) -> torch.Tensor:
 # L2 SYMMETRIC
 # -----------------------------------------
 def L2sym(x: torch.Tensor) -> torch.Tensor:
+    """$L_2$ symmetric discrepancy of each point set in a batch.
+
+    Args:
+        x (torch.Tensor): Points of shape ``(batch, N, d)`` with entries in $[0,1]$.
+
+    Returns:
+        torch.Tensor: Discrepancy of shape ``(batch,)``, one value per point set.
+    """
     _, N, d = _check_inputs(x)
     t1 = (1.0 / 12.0) ** d
     p = torch.prod(0.5 * (x - x**2), dim=2)
@@ -131,6 +205,15 @@ def L2sym(x: torch.Tensor) -> torch.Tensor:
     return _sqrt_safe(t1 - t2 + t3)
 
 def L2sym_weighted(x: torch.Tensor, gamma: torch.Tensor) -> torch.Tensor:
+    """Coordinate-weighted $L_2$ symmetric discrepancy of each point set in a batch.
+
+    Args:
+        x (torch.Tensor): Points of shape ``(batch, N, d)`` with entries in $[0,1]$.
+        gamma (torch.Tensor): Non-negative coordinate weights of shape ``(d,)``, one per dimension.
+
+    Returns:
+        torch.Tensor: Discrepancy of shape ``(batch,)``, one value per point set.
+    """
     _, N, d = _check_inputs(x, gamma)
     g = gamma
     t1 = torch.prod(1.0 + g / 12.0)
@@ -145,6 +228,14 @@ def L2sym_weighted(x: torch.Tensor, gamma: torch.Tensor) -> torch.Tensor:
 # L2 MIXTURE
 # -----------------------------------------
 def L2mix(x: torch.Tensor) -> torch.Tensor:
+    """$L_2$ mixture discrepancy of each point set in a batch.
+
+    Args:
+        x (torch.Tensor): Points of shape ``(batch, N, d)`` with entries in $[0,1]$.
+
+    Returns:
+        torch.Tensor: Discrepancy of shape ``(batch,)``, one value per point set.
+    """
     _, N, d = _check_inputs(x)
     t1 = (7.0 / 12.0) ** d
     u = x - 0.5
@@ -158,6 +249,15 @@ def L2mix(x: torch.Tensor) -> torch.Tensor:
     return _sqrt_safe(t1 - t2 + t3)
 
 def L2mix_weighted(x: torch.Tensor, gamma: torch.Tensor) -> torch.Tensor:
+    """Coordinate-weighted $L_2$ mixture discrepancy of each point set in a batch.
+
+    Args:
+        x (torch.Tensor): Points of shape ``(batch, N, d)`` with entries in $[0,1]$.
+        gamma (torch.Tensor): Non-negative coordinate weights of shape ``(d,)``, one per dimension.
+
+    Returns:
+        torch.Tensor: Discrepancy of shape ``(batch,)``, one value per point set.
+    """
     _, N, d = _check_inputs(x, gamma)
     g = gamma
     t1 = torch.prod(1.0 + (7.0 / 12.0) * g)

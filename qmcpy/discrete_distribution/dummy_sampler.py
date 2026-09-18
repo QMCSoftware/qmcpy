@@ -1,10 +1,12 @@
+from typing import Union
+import numpy as np
 from .abstract_discrete_distribution import AbstractLDDiscreteDistribution
 from ..util import ParameterError
 
 
 class DummySampler(AbstractLDDiscreteDistribution):
-    r"""
-    Placeholder discrete distribution for constructing true-measure marginals.
+    r"""Placeholder discrete distribution for constructing true-measure
+    marginals.
 
     ``DummySampler`` is useful when a true measure is needed only for its
     dimension, transform, range, and weight behavior. QMCPy's current
@@ -15,18 +17,17 @@ class DummySampler(AbstractLDDiscreteDistribution):
     Direct calls to ``DummySampler`` raise an error because the sampler is only
     a construction placeholder and cannot generate meaningful QMC points.
 
-    Examples
-    --------
-    >>> from qmcpy import DummySampler
-    >>> sampler = DummySampler(2)
-    >>> sampler.d
-    2
-    >>> sampler.replications
-    1
-    >>> sampler(4)
-    Traceback (most recent call last):
-        ...
-    qmcpy.util.exceptions_warnings.ParameterError: DummySampler is only a construction placeholder for ProductMeasure child true measures and cannot generate samples.
+    Examples:
+        >>> from qmcpy import DummySampler
+        >>> sampler = DummySampler(2)
+        >>> sampler.d
+        2
+        >>> sampler.replications
+        1
+        >>> sampler(4)
+        Traceback (most recent call last):
+            ...
+        qmcpy.util.exceptions_warnings.ParameterError: DummySampler is only a construction placeholder for ProductMeasure child true measures and cannot generate samples.
     """
 
     def __init__(self, dimension=1, replications=None, seed=None, warn=True):
