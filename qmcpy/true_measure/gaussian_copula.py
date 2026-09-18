@@ -1,3 +1,8 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
 from .copula import (
     AbstractCopula,
     _clip_unit_interval,
@@ -14,8 +19,7 @@ from scipy.special import ndtr, ndtri
 
 
 class GaussianCopula(AbstractCopula):
-    r"""
-    Gaussian copula transform with user supplied univariate marginals.
+    r"""Gaussian copula transform with user supplied univariate marginals.
 
     This TrueMeasure separates the dependence model from the marginal
     distributions:
@@ -26,9 +30,9 @@ class GaussianCopula(AbstractCopula):
     4. apply each marginal quantile function.
 
     SciPy calls the quantile function ``ppf``. The marginal objects must expose
-    this method. If they also expose
-    ``cdf`` and ``pdf`` or ``logpdf``, then ``_weight`` computes the Gaussian
-    copula joint density. Otherwise weights are treated as one with a warning.
+    this method. If they also expose ``cdf`` and ``pdf`` or ``logpdf``, then
+    ``_weight`` computes the Gaussian copula joint density. Otherwise weights
+    are treated as one with a warning.
 
     Examples:
         >>> import numpy as np
@@ -67,24 +71,22 @@ class GaussianCopula(AbstractCopula):
 
     **References:**
 
-    1.  Roger B. Nelsen. *An Introduction to Copulas*. Second Edition,
-        Springer Series in Statistics, Springer, 2006.
-        [doi:10.1007/0-387-28678-0](https://doi.org/10.1007/0-387-28678-0).
+    [1] R. B. Nelsen, *An Introduction to Copulas*, 2nd ed., Springer Series in Statistics. Springer, 2006. [Online]. Available: [https://doi.org/10.1007/0-387-28678-0](https://doi.org/10.1007/0-387-28678-0)
 
-    2.  Mathieu Cambou, Marius Hofert, and Christiane Lemieux.
-        "Quasi-random numbers for copula models."
-        [arXiv:1508.03483](https://arxiv.org/abs/1508.03483).
+    [2] M. Cambou, M. Hofert, and C. Lemieux, "Quasi-random numbers for copula models," arXiv preprint arXiv:1508.03483, 2015.
     """
 
-    def __init__(self, sampler, marginals, correlation):
-        r"""
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], marginals: list, correlation: np.ndarray) -> None:
+        r"""Initialize a GaussianCopula true measure.
+
         Args:
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
                 A sampler or transform whose range is the unit cube.
             marginals (list): Length d list of SciPy-like univariate
                 distributions implementing a quantile function, called ``ppf``
                 in SciPy.
-            correlation (np.ndarray): d x d positive definite correlation matrix.
+            correlation (np.ndarray): d x d positive definite correlation
+                matrix.
         """
         self.parameters = ["marginals", "correlation"]
         super(GaussianCopula, self).__init__(sampler=sampler, marginals=marginals)

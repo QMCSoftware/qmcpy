@@ -1,3 +1,8 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
 from .abstract_integrand import AbstractIntegrand
 from ..discrete_distribution import DigitalNetB2
 from ..true_measure import Uniform
@@ -5,10 +10,10 @@ import numpy as np
 
 
 class BoxIntegral(AbstractIntegrand):
-    r"""
-    Box integral from [1], see also
+    r"""Box integral from [1], see also
 
-    $$B_s(\boldsymbol{t}) = \left(\sum_{j=1}^d t_j^2 \right)^{s/2}, \qquad \boldsymbol{T} \sim \mathcal{U}[0,1]^d.$$
+    $$B_s(\boldsymbol{t}) = \left(\sum_{j=1}^d t_j^2 \right)^{s/2}, \qquad
+    \boldsymbol{T} \sim \mathcal{U}[0,1]^d.$$
 
     Examples:
         Scalar `s`
@@ -57,25 +62,25 @@ class BoxIntegral(AbstractIntegrand):
 
     **References:**
 
-    1.  D.H. Bailey, J.M. Borwein, R.E. Crandall, Box integrals.
-        Journal of Computational and Applied Mathematics, Volume 206, Issue 1, 2007, Pages 196-208, ISSN 0377-0427.
-        [https://doi.org/10.1016/j.cam.2006.06.010](https://doi.org/10.1016/j.cam.2006.06.010).
-        [https://www.sciencedirect.com/science/article/pii/S0377042706004250](https://www.sciencedirect.com/science/article/pii/S0377042706004250).
-        [https://www.davidhbailey.com/dhbpapers/boxintegrals.pdf](https://www.davidhbailey.com/dhbpapers/boxintegrals.pdf)
+    [1] D. H. Bailey, J. M. Borwein, and R. E. Crandall, "Box integrals," *Journal of Computational and Applied Mathematics*, vol. 206, no. 1, pp. 196-208, 2007. [Online]. Available: [https://doi.org/10.1016/j.cam.2006.06.010](https://doi.org/10.1016/j.cam.2006.06.010), [https://www.sciencedirect.com/science/article/pii/S0377042706004250](https://www.sciencedirect.com/science/article/pii/S0377042706004250), [https://www.davidhbailey.com/dhbpapers/boxintegrals.pdf](https://www.davidhbailey.com/dhbpapers/boxintegrals.pdf)
     """
 
-    def __init__(self, sampler, s=1):
-        r"""
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], s: Union[float, np.ndarray] = 1) -> None:
+        r"""Initialize a BoxIntegral integrand.
+
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.
-            s (Union[float, np.ndarray]): `s` parameter or parameters. The output shape of `g` is the shape of `s`.
+            s (Union[float, np.ndarray]): `s` parameter or parameters. The
+                output shape of `g` is the shape of `s`.
         """
         self.parameters = ["s"]
         self.s = np.array(s)
-        assert self.s.size > 0
+        if not (self.s.size > 0):
+            raise AssertionError
         self.sampler = sampler
         self.true_measure = Uniform(self.sampler)
         self.s_over_2 = self.s / 2
@@ -83,7 +88,16 @@ class BoxIntegral(AbstractIntegrand):
             dimension_indv=self.s.shape, dimension_comb=self.s.shape, parallel=False
         )
 
-    def g(self, t, **kwargs):
+    def g(self, t: np.ndarray, **kwargs: dict) -> np.ndarray:
+        r"""Evaluate the box integral function.
+
+        Args:
+            t (np.ndarray): Points in the unit cube, dimensions along the last axis.
+            **kwargs (dict): Unused; accepted for API consistency.
+
+        Returns:
+            np.ndarray: $\lVert t \rVert_2^s$ for each exponent $s$.
+        """
         sum_squares = (t**2).sum(-1)
         y = sum_squares ** self.s_over_2[(...,) + (None,) * sum_squares.ndim]
         return y

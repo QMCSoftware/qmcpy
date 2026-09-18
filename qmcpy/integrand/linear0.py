@@ -1,13 +1,19 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
+import numpy as np
 from .abstract_integrand import AbstractIntegrand
 from ..discrete_distribution import DigitalNetB2
 from ..true_measure import Uniform
 
 
 class Linear0(AbstractIntegrand):
-    r"""
-    Linear Function with analytic mean $0$.
+    r"""Linear Function with analytic mean $0$.
 
-    $$g(\boldsymbol{t}) = \sum_{j=1}^d t_j \qquad \boldsymbol{T} \sim \mathcal{U}[0,1]^d.$$
+    $$g(\boldsymbol{t}) = \sum_{j=1}^d t_j \qquad \boldsymbol{T} \sim
+    \mathcal{U}[0,1]^d.$$
 
     Examples:
         >>> integrand = Linear0(DigitalNetB2(100,seed=7))
@@ -28,10 +34,12 @@ class Linear0(AbstractIntegrand):
         -9.8203e-05
     """
 
-    def __init__(self, sampler):
-        r"""
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure]) -> None:
+        r"""Initialize a Linear0 integrand.
+
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.
@@ -42,7 +50,15 @@ class Linear0(AbstractIntegrand):
             dimension_indv=(), dimension_comb=(), parallel=False
         )
 
-    def g(self, t):
+    def g(self, t: np.ndarray) -> np.ndarray:
+        """Evaluate the centered linear function.
+
+        Args:
+            t (np.ndarray): Points, dimensions along the last axis.
+
+        Returns:
+            np.ndarray: Sum of the coordinates of each point.
+        """
         y = t.sum(-1)
         return y
 

@@ -1,3 +1,4 @@
+from typing import Tuple, Union
 from ..util import MethodImplementationError, _univ_repr, ParameterError
 from ..discrete_distribution.abstract_discrete_distribution import (
     AbstractDiscreteDistribution,
@@ -7,8 +8,17 @@ from scipy import sparse
 
 
 class AbstractTrueMeasure(object):
+    """Abstract base class for QMCPy true measures.
 
-    def __init__(self):
+    A true measure composes a transform (`self.transform`) on top of a
+    sampler (an `AbstractDiscreteDistribution`, or another
+    `AbstractTrueMeasure` for recursive composition), mapping unit-cube
+    samples to samples from the target measure. Concrete measures (e.g.
+    `Gaussian`, `Uniform`) set `self.domain`, `self.range`, and implement the
+    transform/weight/moment logic this base class exposes.
+    """
+
+    def __init__(self) -> None:
         prefix = "A concrete implementation of TrueMeasure must have "
         if not hasattr(self, "domain"):
             raise ParameterError(
@@ -42,14 +52,18 @@ class AbstractTrueMeasure(object):
 
     @staticmethod
     def _read_only_view(value):
-        """Return a view which cannot be made writeable while its base is read only."""
+        """Return a view which cannot be made writeable while its base is
+        read only.
+        """
         view = value.view()
         view.setflags(write=False)
         return view
 
     def _scalar_if_univariate(self, value):
-        """For univariate (``d == 1``) measures, return a Python ``float`` scalar
-        (via :func:`numpy.squeeze`); otherwise return a read only array view."""
+        """For univariate (``d == 1``) measures, return a Python ``float``
+        scalar (via :func:`numpy.squeeze`); otherwise return a read only array
+        view.
+        """
         if getattr(self, "d", None) == 1:
             return float(np.squeeze(value))
         return self._read_only_view(value)
@@ -60,18 +74,34 @@ class AbstractTrueMeasure(object):
 
     @property
     def mean(self):
+        """Union[float, np.ndarray]: The measure's mean, set via `_set_moments`.
+        A Python `float` for univariate (`d == 1`) measures, otherwise a
+        read-only array.
+        """
         return self._scalar_if_univariate(self._mean)
 
     @property
     def variance(self):
+        """Union[float, np.ndarray]: The measure's variance, set via
+        `_set_moments`. A Python `float` for univariate (`d == 1`) measures,
+        otherwise a read-only array.
+        """
         return self._scalar_if_univariate(self._variance)
 
     @property
     def standard_deviation(self):
+        """Union[float, np.ndarray]: The measure's standard deviation, set
+        via `_set_moments`. A Python `float` for univariate (`d == 1`)
+        measures, otherwise a read-only array.
+        """
         return self._scalar_if_univariate(self._standard_deviation)
 
     @property
     def covariance(self):
+        """Union[np.ndarray, scipy.sparse.spmatrix]: The measure's
+        covariance, set via `_set_moments`. Read-only; sparse covariances
+        are returned as-is, dense ones as a read-only view.
+        """
         covariance = self._covariance
         if sparse.issparse(covariance):
             return covariance
@@ -111,7 +141,7 @@ class AbstractTrueMeasure(object):
                 "sampler input should either be a AbstractDiscreteDistribution or AbstractTrueMeasure"
             )
 
-    def __call__(self, n=None, n_min=None, n_max=None, return_weights=False, warn=True):
+    def __call__(self, n: Union[None, int] = None, n_min: Union[None, int] = None, n_max: Union[None, int] = None, return_weights: bool = False, warn: bool = True) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
         r"""
         - If just `n` is supplied, generate samples from the sequence at indices 0,...,`n`-1.
         - If `n_min` and `n_max` are supplied, generate samples from the sequence at indices `n_min`,...,`n_max`-1.
@@ -125,11 +155,13 @@ class AbstractTrueMeasure(object):
             warn (bool): If `False`, disable warnings when generating samples.
 
         Returns:
-            t (np.ndarray): Samples from the sequence.
+            Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]: Samples from the
+                sequence when `return_weights=False`, otherwise the pair
+                `(samples, jacobian_weights)`.
 
-                - If `replications` is `None` then this will be of size (`n_max`-`n_min`) $\times$ `dimension`
-                - If `replications` is a positive int, then `t` will be of size `replications` $\times$ (`n_max`-`n_min`) $\times$ `dimension`
-            weights (np.ndarray): Only returned when `return_weights=True`. The Jacobian weights for the transformation
+                - If `replications` is `None` the samples are of size (`n_max`-`n_min`) $\times$ `dimension`
+                - If `replications` is a positive int, they are of size `replications` $\times$ (`n_max`-`n_min`) $\times$ `dimension`
+                - The jacobian weights, when returned, drop the trailing `dimension` axis
         """
         return self.gen_samples(
             n=n, n_min=n_min, n_max=n_max, return_weights=return_weights, warn=warn
@@ -138,8 +170,12 @@ class AbstractTrueMeasure(object):
     def gen_samples(
         self, n=None, n_min=None, n_max=None, return_weights=False, warn=True
     ):
+        r"""Generate samples from the measure. Called by `__call__`; see its
+        docstring for the full `Args:`/`Returns:` description.
+        """
         x = self.discrete_distrib(n=n, n_min=n_min, n_max=n_max, warn=warn)
-        assert isinstance(return_weights, bool)
+        if not (isinstance(return_weights, bool)):
+            raise AssertionError
         return self._jacobian_transform_r(x=x, return_weights=return_weights)
 
     def _jacobian_transform_r(self, x, return_weights):
@@ -173,17 +209,17 @@ class AbstractTrueMeasure(object):
             return t
 
     def _transform(self, x):
-        r"""Transformation from the standard uniform to the true measure distribution."""
+        r"""Transformation from the standard uniform to the true measure
+        distribution.
+        """
         raise MethodImplementationError(
             self,
             "_transform. Try setting sampler to be in a PDF AbstractTrueMeasure to importance sample by.",
         )
 
-    def _weight(self, x):
-        r"""
-        Non-negative weight function.
-        This is often a PDF, but is not required to be
-        e.g., Lebesgue weight is always 1, but is not a PDF.
+    def _weight(self, x: np.ndarray) -> np.ndarray:
+        r"""Non-negative weight function. This is often a PDF, but is not
+        required to be e.g., Lebesgue weight is always 1, but is not a PDF.
 
         Args:
             x (np.ndarray): n x d  matrix of samples
@@ -195,20 +231,22 @@ class AbstractTrueMeasure(object):
             self, "weight. Try a different true measure with a _weight method."
         )
 
-    def spawn(self, s=1, dimensions=None):
-        r"""
-        Spawn new instances of the current true measure but with new seeds and dimensions.
-        Used by multi-level QMC algorithms which require different seeds and dimensions on each level.
+    def spawn(self, s: int = 1, dimensions: Union[None, np.ndarray] = None) -> list:
+        r"""Spawn new instances of the current true measure but with new seeds
+        and dimensions. Used by multi-level QMC algorithms which require
+        different seeds and dimensions on each level.
 
-        Note:
-            Use `replications` instead of using `spawn` when possible, e.g., when spawning copies which all have the same dimension.
+        Notes:
+            Use `replications` instead of using `spawn` when possible, e.g.,
+            when spawning copies which all have the same dimension.
 
         Args:
             s (int): Number of copies to spawn
-            dimensions (np.ndarray): Length `s` array of dimensions for each copy. Defaults to the current dimension.
+            dimensions (Union[None, np.ndarray]): Length `s` array of dimensions for each
+                copy. Defaults to the current dimension.
 
         Returns:
-            spawned_true_measures (list): True measure with new seeds and dimensions.
+            list: True measure with new seeds and dimensions.
         """
         sampler = self.discrete_distrib if self.transform == self else self.transform
         sampler_spawns = sampler.spawn(s=s, dimensions=dimensions)

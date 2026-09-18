@@ -2,12 +2,11 @@ from .digital_net_any_bases import DigitalNetAnyBases
 
 
 class Faure(DigitalNetAnyBases):
-    r"""
-    Low discrepancy Faure points.
+    r"""Low discrepancy Faure points.
 
-    Note:
+    Notes:
         - The first point of an unrandomized Faure sequence is the origin.
-    
+
     Examples:
         >>> discrete_distrib = Faure(4,seed=7)
         >>> discrete_distrib(25)
@@ -44,8 +43,8 @@ class Faure(DigitalNetAnyBases):
             t               28
             n_limit         2^(32)
             entropy         7
-        
-        Replications of independent randomizations 
+
+        Replications of independent randomizations
 
         >>> x = Faure(3,seed=7,replications=2)(9)
         >>> x.shape
@@ -71,7 +70,7 @@ class Faure(DigitalNetAnyBases):
                 [0.30097968, 0.36957094, 0.23358374],
                 [0.99369356, 0.78380717, 0.74090153]]])
 
-        Unrandomized Faure 
+        Unrandomized Faure
 
         >>> Faure(4,randomize="FALSE",seed=7)(25,warn=False)
         array([[0.  , 0.  , 0.  , 0.  ],
@@ -99,8 +98,8 @@ class Faure(DigitalNetAnyBases):
                [0.56, 0.36, 0.16, 0.96],
                [0.76, 0.56, 0.36, 0.16],
                [0.96, 0.76, 0.56, 0.36]])
-        
-        All randomizations 
+
+        All randomizations
 
         >>> Faure(3,randomize="LMS DP",seed=7)(9)
         array([[0.60869072, 0.76096155, 0.79807281],
@@ -162,8 +161,8 @@ class Faure(DigitalNetAnyBases):
                [0.25089638, 0.17805972, 0.95988146],
                [0.68344029, 0.77065782, 0.26676153],
                [0.4322891 , 0.40799837, 0.34911626]])
-        
-        Replications of randomizations 
+
+        Replications of randomizations
 
         >>> Faure(3,randomize="LMS DP",seed=7,replications=2)(9)
         array([[[0.46995809, 0.81347921, 0.84921511],
@@ -287,7 +286,7 @@ class Faure(DigitalNetAnyBases):
                 [0.59326363, 0.50120469, 0.9906825 ]]])
 
         Higher order Faure
-        
+
         >>> Faure(3,randomize="LMS DP",seed=7,alpha=2)(9)
         array([[0.07060326, 0.24965078, 0.49971375],
                [0.9104272 , 0.77359118, 0.02813304],
@@ -338,9 +337,9 @@ class Faure(DigitalNetAnyBases):
                [0.32098765, 0.43209877, 0.87654321],
                [0.43209877, 0.87654321, 0.32098765],
                [0.87654321, 0.32098765, 0.43209877]])
-        
+
         Replications of higher order Faure
-        
+
         >>> Faure(3,randomize="LMS DP",seed=7,alpha=2,replications=2)(9)
         array([[[0.65006542, 0.84004771, 0.39377772],
                 [0.73541117, 0.25289783, 0.11639162],

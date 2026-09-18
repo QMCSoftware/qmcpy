@@ -1,3 +1,7 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from typing import Union
 from .abstract_true_measure import AbstractTrueMeasure
 from ..util import DimensionError, ParameterError
 from ..discrete_distribution import DigitalNetB2
@@ -6,8 +10,8 @@ import numpy as np
 
 
 class Uniform(AbstractTrueMeasure):
-    r"""
-    Uniform distribution, see [https://en.wikipedia.org/wiki/Continuous_uniform_distribution](https://en.wikipedia.org/wiki/Continuous_uniform_distribution).
+    r"""Uniform distribution, see
+    [https://en.wikipedia.org/wiki/Continuous_uniform_distribution](https://en.wikipedia.org/wiki/Continuous_uniform_distribution).
 
     Examples:
         >>> true_measure = Uniform(DigitalNetB2(2,seed=7),lower_bound=[0,.5],upper_bound=[2,3])
@@ -49,10 +53,12 @@ class Uniform(AbstractTrueMeasure):
                 [1.37943573, 1.10241448, 1.13481488]]])
     """
 
-    def __init__(self, sampler, lower_bound=0, upper_bound=1):
-        r"""
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], lower_bound: Union[float, np.ndarray] = 0, upper_bound: Union[float, np.ndarray] = 1) -> None:
+        r"""Initialize a Uniform true measure.
+
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.
@@ -94,7 +100,8 @@ class Uniform(AbstractTrueMeasure):
             (self.a.reshape((self.d, 1)), self.b.reshape((self.d, 1)))
         )
         super(Uniform, self).__init__()
-        assert self.a.shape == (self.d,) and self.b.shape == (self.d,)
+        if not (self.a.shape == (self.d,) and self.b.shape == (self.d,)):
+            raise AssertionError
 
     def _transform(self, x):
         return x * self.delta + self.a

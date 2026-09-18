@@ -1,10 +1,12 @@
+from typing import Union
+import numpy as np
 from .abstract_discrete_distribution import AbstractLDDiscreteDistribution
 from ..util import ParameterError
 
 
 class DummySampler(AbstractLDDiscreteDistribution):
-    r"""
-    Placeholder discrete distribution for constructing true-measure marginals.
+    r"""Placeholder discrete distribution for constructing true-measure
+    marginals.
 
     ``DummySampler`` is useful when a true measure is needed only for its
     dimension, transform, range, and weight behavior. QMCPy's current
@@ -15,21 +17,31 @@ class DummySampler(AbstractLDDiscreteDistribution):
     Direct calls to ``DummySampler`` raise an error because the sampler is only
     a construction placeholder and cannot generate meaningful QMC points.
 
-    Examples
-    --------
-    >>> from qmcpy import DummySampler
-    >>> sampler = DummySampler(2)
-    >>> sampler.d
-    2
-    >>> sampler.replications
-    1
-    >>> sampler(4)
-    Traceback (most recent call last):
-        ...
-    qmcpy.util.exceptions_warnings.ParameterError: DummySampler is only a construction placeholder for ProductMeasure child true measures and cannot generate samples.
+    Examples:
+        >>> from qmcpy import DummySampler
+        >>> sampler = DummySampler(2)
+        >>> sampler.d
+        2
+        >>> sampler.replications
+        1
+        >>> sampler(4)
+        Traceback (most recent call last):
+            ...
+        qmcpy.util.exceptions_warnings.ParameterError: DummySampler is only a construction placeholder for ProductMeasure child true measures and cannot generate samples.
     """
 
-    def __init__(self, dimension=1, replications=None, seed=None, warn=True):
+    def __init__(self, dimension: int = 1, replications: Union[None, int] = None, seed: Union[None, int, np.random.SeedSequence] = None, warn: bool = True) -> None:
+        """Initialize a DummySampler discrete distribution.
+
+        Args:
+            dimension (int): Dimension of the placeholder sampler.
+            replications (Union[None, int]): Number of independent randomizations, kept
+                for API consistency with the other discrete distributions.
+            seed (Union[None, int, np.random.SeedSequence]): Unused; kept for
+                API consistency with the other discrete distributions.
+            warn (bool): Unused; kept for API consistency with the other
+                discrete distributions.
+        """
         # Keep the same constructor as other discrete distributions.
         del warn
 

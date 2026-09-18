@@ -1,3 +1,5 @@
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union, Callable
 from .abstract_integrand import AbstractIntegrand
 from ..discrete_distribution import DigitalNetB2  #pylint: disable=unused-import
 from ..true_measure import Gaussian, Uniform  #pylint: disable=unused-import
@@ -5,13 +7,13 @@ import numpy as np  #pylint: disable=unused-import
 
 
 class CustomFun(AbstractIntegrand):
-    r"""
-    User supplied integrand $g$. In the following example we implement
+    r"""User supplied integrand $g$. In the following example we implement
 
     Examples:
         First we will implement
 
-        $$g(\boldsymbol{t}) = t_1^2t_2, \qquad \boldsymbol{T}=(T_1,T_2) \sim \mathcal{N}((1,2)^T,\mathsf{I}).$$
+        $$g(\boldsymbol{t}) = t_1^2t_2, \qquad \boldsymbol{T}=(T_1,T_2) \sim
+        \mathcal{N}((1,2)^T,\mathsf{I}).$$
 
         >>> integrand = CustomFun(
         ...     true_measure = Gaussian(DigitalNetB2(2,seed=7),mean=[1,2]),
@@ -36,7 +38,10 @@ class CustomFun(AbstractIntegrand):
 
         Next we will implement the multi-output function
 
-        $$g(\boldsymbol{t}) = \begin{pmatrix} \sin(t_1)\cos(t_2) \\ \cos(t_1)\sin(t_2) \\ \sin(t_1)+\cos(t_2) \\ \cos(t_1)+\sin(t_2) \end{pmatrix} \qquad \boldsymbol{T}=(T_1,T_2) \sim \mathcal{U}[0,2\pi]^2.$$
+        $$g(\boldsymbol{t}) = \begin{pmatrix} \sin(t_1)\cos(t_2) \\
+        \cos(t_1)\sin(t_2) \\ \sin(t_1)+\cos(t_2) \\ \cos(t_1)+\sin(t_2)
+        \end{pmatrix} \qquad \boldsymbol{T}=(T_1,T_2) \sim
+        \mathcal{U}[0,2\pi]^2.$$
 
         >>> def g(t):
         ...     t1,t2 = t[...,0],t[...,1]
@@ -59,8 +64,11 @@ class CustomFun(AbstractIntegrand):
         ...     y.mean(-1)
         array([8.18e-04, 1.92e-06, -2.26e-10, 5.05e-07])
 
-        Stopping criterion which supporting vectorized outputs may pass in Boolean `compute_flags` with `dimension_indv` shape indicating which output need to evaluated,
-            i.e. where `compute_flags` is `False` we do not need to evaluate the integrand. We have not used this in inexpensive example above.
+        Stopping criterion which supporting vectorized outputs may pass in
+        Boolean `compute_flags` with `dimension_indv` shape indicating which
+        output need to evaluated,
+            i.e., where `compute_flags` is `False` we do not need to evaluate
+            the integrand. We have not used this in inexpensive example above.
 
         With independent replications
 
@@ -80,24 +88,27 @@ class CustomFun(AbstractIntegrand):
         >>> with np.printoptions(formatter={"float": lambda x: "%.2e"%x}):
         ...     muhats.mean(-1)
         array([3.83e-03, -6.78e-03, -1.56e-03, -5.65e-04])
-
     """
 
-    def __init__(self, true_measure, g, dimension_indv=(), parallel=False):
-        """
+    def __init__(self, true_measure: AbstractTrueMeasure, g: Callable, dimension_indv: tuple = (), parallel: Union[bool, int] = False) -> None:
+        """Initialize a CustomFun integrand.
+
         Args:
             true_measure (AbstractTrueMeasure): The true measure.
-            g (callable): A function handle.
-            dimension_indv (tuple): Shape of individual solution outputs from `g`.
-            parallel (int): Parallelization flag.
+            g (Callable): A function handle.
+            dimension_indv (tuple): Shape of individual solution outputs from
+                `g`.
+            parallel (Union[bool, int]): Parallelization flag.
 
                 - When `parallel = 0` or `parallel = 1` then function evaluation is done in serial fashion.
                 - `parallel > 1` specifies the number of processes used by `multiprocessing.Pool` or `multiprocessing.pool.ThreadPool`.
 
-                Setting `parallel=True` is equivalent to `parallel = os.cpu_count()`.
+                Setting `parallel=True` is equivalent to `parallel =
+                os.cpu_count()`.
 
-        Note:
-            For `parallel > 1` do *not* set `g` to be anonymous function (i.e. a `lambda` function)
+        Notes:
+            For `parallel > 1` do *not* set `g` to be anonymous function (i.e.
+            a `lambda` function)
         """
         self.parameters = []
         self.true_measure = true_measure
@@ -109,7 +120,17 @@ class CustomFun(AbstractIntegrand):
             parallel=parallel,
         )
 
-    def g(self, t, *args, **kwargs):
+    def g(self, t: np.ndarray, *args: tuple, **kwargs: dict) -> np.ndarray:
+        """Evaluate the user-supplied function.
+
+        Args:
+            t (np.ndarray): Points distributed by the true measure.
+            *args (tuple): Positional arguments forwarded to the user function.
+            **kwargs (dict): Keyword arguments forwarded to the user function.
+
+        Returns:
+            np.ndarray: Function values.
+        """
         return self.__g(t, *args, **kwargs)
 
     def _spawn(self, level, sampler):
