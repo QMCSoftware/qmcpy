@@ -3,18 +3,31 @@ from unittest import TestCase
 import warnings
 
 import numpy as np
-import qmcpy as qp
 import pytest
 from scipy.stats import uniform
 
 from qmcpy import (
     AbstractTrueMeasure,
+    CubBayesLatticeG,
+    CubBayesNetG,
+    CubMCCLT,
+    CubMCCLTVec,
+    CubMCG,
+    CubQMCLatticeG,
+    CubQMCNetG,
+    CubQMCRepStudentT,
+    CustomFun,
     DigitalNetB2,
+    DummySampler,
     Gaussian,
+    IIDStdUniform,
     Kumaraswamy,
+    Lattice,
+    Lebesgue,
     Mixture,
     ProductMeasure,
     SciPyWrapper,
+    SensitivityIndices,
     Uniform,
 )
 from qmcpy.util import DimensionError, MaxSamplesWarning, MethodImplementationError, ParameterError
@@ -455,10 +468,10 @@ class TestMixtureIntegration(TestCase):
     @staticmethod
     def _mixture(sampler):
         d = sampler.d - 1
-        return qp.Mixture(
+        return Mixture(
             sampler,
-            [qp.Uniform(qp.DummySampler(d), 0, 1),
-             qp.Uniform(qp.DummySampler(d), 1, 2)],
+            [Uniform(DummySampler(d), 0, 1),
+             Uniform(DummySampler(d), 1, 2)],
             [.25, .75],
         )
 
@@ -474,8 +487,8 @@ class TestMixtureIntegration(TestCase):
         for reps in (None, 1, 3):
             for vector in (False, True):
                 with self.subTest(replications=reps, vector=vector):
-                    m = self._mixture(qp.DigitalNetB2(2, seed=7, replications=reps))
-                    g = qp.CustomFun(
+                    m = self._mixture(DigitalNetB2(2, seed=7, replications=reps))
+                    g = CustomFun(
                         m, self._moments if vector else self._square,
                         dimension_indv=(2,) if vector else (),
                     )
@@ -493,9 +506,9 @@ class TestMixtureIntegration(TestCase):
     def test_importance(self):
         for reps in (None, 1, 3):
             with self.subTest(replications=reps):
-                m = self._mixture(qp.DigitalNetB2(2, seed=7, replications=reps))
+                m = self._mixture(DigitalNetB2(2, seed=7, replications=reps))
                 # The two intervals cover the complete target support [0, 2].
-                g = qp.CustomFun(qp.Lebesgue(m), lambda t: t[..., 0])
+                g = CustomFun(Lebesgue(m), lambda t: t[..., 0])
                 u = m.discrete_distrib(1024)
                 t = u[..., 1] + (u[..., 0] >= .25)
                 density = np.where(t < 1, .25, .75)
@@ -507,19 +520,19 @@ class TestMixtureIntegration(TestCase):
 
     def test_driver_points(self):
         cases = (
-            (qp.CubMCCLT, qp.IIDStdUniform, None, False),
-            (qp.CubMCG, qp.IIDStdUniform, None, False),
-            (qp.CubMCCLTVec, qp.IIDStdUniform, None, True),
-            (qp.CubQMCNetG, qp.DigitalNetB2, None, False),
-            (qp.CubQMCLatticeG, qp.Lattice, None, False),
-            (qp.CubBayesNetG, qp.DigitalNetB2, None, False),
-            (qp.CubBayesLatticeG, qp.Lattice, None, False),
-            (qp.CubQMCRepStudentT, qp.DigitalNetB2, 4, True),
+            (CubMCCLT, IIDStdUniform, None, False),
+            (CubMCG, IIDStdUniform, None, False),
+            (CubMCCLTVec, IIDStdUniform, None, True),
+            (CubQMCNetG, DigitalNetB2, None, False),
+            (CubQMCLatticeG, Lattice, None, False),
+            (CubBayesNetG, DigitalNetB2, None, False),
+            (CubBayesLatticeG, Lattice, None, False),
+            (CubQMCRepStudentT, DigitalNetB2, 4, True),
         )
         for solver, sampler, reps, vector in cases:
             with self.subTest(solver=solver.__name__):
                 m = self._mixture(sampler(2, seed=7, replications=reps))
-                g = qp.CustomFun(
+                g = CustomFun(
                     m, self._moments if vector else self._square,
                     dimension_indv=(2,) if vector else (),
                 )
@@ -538,12 +551,12 @@ class TestMixtureIntegration(TestCase):
 
     def test_resume_points(self):
         cases = (
-            (qp.CubMCCLTVec, qp.IIDStdUniform, None),
-            (qp.CubQMCNetG, qp.DigitalNetB2, None),
-            (qp.CubQMCLatticeG, qp.Lattice, None),
-            (qp.CubBayesNetG, qp.DigitalNetB2, None),
-            (qp.CubBayesLatticeG, qp.Lattice, None),
-            (qp.CubQMCRepStudentT, qp.DigitalNetB2, 4),
+            (CubMCCLTVec, IIDStdUniform, None),
+            (CubQMCNetG, DigitalNetB2, None),
+            (CubQMCLatticeG, Lattice, None),
+            (CubBayesNetG, DigitalNetB2, None),
+            (CubBayesLatticeG, Lattice, None),
+            (CubQMCRepStudentT, DigitalNetB2, 4),
         )
         for solver, sampler, reps in cases:
             with self.subTest(solver=solver.__name__):
@@ -552,7 +565,7 @@ class TestMixtureIntegration(TestCase):
                 def make_solver(n_limit):
                     m = self._mixture(sampler(2, seed=7, replications=reps))
                     return solver(
-                        qp.CustomFun(m, self._square),
+                        CustomFun(m, self._square),
                         abs_tol=1e-12, n_init=256, n_limit=n_limit,
                     )
 
@@ -581,8 +594,8 @@ class TestMixtureIntegration(TestCase):
     def test_spawn_dims(self):
         for importance in (False, True):
             with self.subTest(importance=importance):
-                m = self._mixture(qp.DigitalNetB2(2, seed=7))
-                g = qp.CustomFun(qp.Lebesgue(m) if importance else m, self._square)
+                m = self._mixture(DigitalNetB2(2, seed=7))
+                g = CustomFun(Lebesgue(m) if importance else m, self._square)
                 children = g.spawn([0, 0])
                 for child in children:
                     self.assertEqual((child.d, child.discrete_distrib.d), (1, 2))
@@ -592,38 +605,38 @@ class TestMixtureIntegration(TestCase):
                 self.assertIsNot(children[0].discrete_distrib, children[1].discrete_distrib)
 
     def test_rejects_nesting(self):
-        m = self._mixture(qp.DigitalNetB2(2, seed=7))
+        m = self._mixture(DigitalNetB2(2, seed=7))
         with self.assertRaises(DimensionError):
-            qp.Mixture(qp.DigitalNetB2(2, seed=11), [m], [1.])
+            Mixture(DigitalNetB2(2, seed=11), [m], [1.])
         with self.assertRaises(DimensionError):
-            qp.ProductMeasure(
-                qp.DigitalNetB2(2, seed=11), [m, qp.Uniform(qp.DummySampler(1))],
+            ProductMeasure(
+                DigitalNetB2(2, seed=11), [m, Uniform(DummySampler(1))],
             )
-        m2 = self._mixture(qp.DigitalNetB2(3, seed=7))
+        m2 = self._mixture(DigitalNetB2(3, seed=7))
         with self.assertRaises(DimensionError):
-            qp.SensitivityIndices(qp.CustomFun(m2, self._square))
+            SensitivityIndices(CustomFun(m2, self._square))
 
     def test_gp_dims(self):
         try:
             import gpytorch
             import torch
-            from qmcpy import SuggesterSimple
+            from qmcpy import PFGPCI, SuggesterSimple
         except ModuleNotFoundError as error:
             self.skipTest(f"Optional GP dependencies unavailable: {error}")
         for use_init_samples in (False, True):
             with self.subTest(use_init_samples=use_init_samples):
                 torch.manual_seed(17)
                 components = [
-                    qp.Uniform(qp.DigitalNetB2(1, seed=11)),
-                    qp.Uniform(qp.DigitalNetB2(1, seed=13), lower_bound=2, upper_bound=3),
+                    Uniform(DigitalNetB2(1, seed=11)),
+                    Uniform(DigitalNetB2(1, seed=13), lower_bound=2, upper_bound=3),
                 ]
-                measure = qp.Mixture(qp.DigitalNetB2(2, seed=7), components, [0.5, 0.5])
-                integrand = qp.CustomFun(measure, lambda t: t[..., 0])
-                x_init = qp.DigitalNetB2(2, seed=19)(8)
+                measure = Mixture(DigitalNetB2(2, seed=7), components, [0.5, 0.5])
+                integrand = CustomFun(measure, lambda t: t[..., 0])
+                x_init = DigitalNetB2(2, seed=19)(8)
                 init_samples = (
                     (x_init, integrand.f(x_init)) if use_init_samples else None
                 )
-                criterion = qp.PFGPCI(
+                criterion = PFGPCI(
                     integrand,
                     failure_threshold=1.5,
                     failure_above_threshold=True,
@@ -635,7 +648,7 @@ class TestMixtureIntegration(TestCase):
                     n_ref_approx=32,
                     seed_ref_approx=23,
                     init_samples=init_samples,
-                    batch_sampler=SuggesterSimple(qp.DigitalNetB2(2, seed=29)),
+                    batch_sampler=SuggesterSimple(DigitalNetB2(2, seed=29)),
                     gpytorch_prior_mean=gpytorch.means.ZeroMean(),
                     gpytorch_prior_cov=gpytorch.kernels.ScaleKernel(
                         gpytorch.kernels.MaternKernel(nu=2.5)
