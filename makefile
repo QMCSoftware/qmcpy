@@ -633,6 +633,16 @@ uml:
 #
 # Use `mkdocs serve` to run a local server. The webpages are stored in a temporary folder and will be deleted when the server is stopped.
 ##########################################################
+# mkdocs is a `docs` extra, installed alongside $(PYTHON) in the qmcpy env.
+# Prefer that colocated binary over a bare PATH lookup: an older `pip install
+# --user` shim earlier on PATH (e.g. left over from a Python version bump
+# that removed the interpreter its shebang points at) can shadow the correct
+# one and fail with "bad interpreter" (exit 126) instead of a clean "not
+# found". Mirror-image of check_pydoclint_dependency's PATH-first order,
+# which instead assumes pydoclint may live in a separate, lighter test-only
+# env rather than this one.
+MKDOCS ?= $(shell test -x "$(dir $(PYTHON))mkdocs" && echo "$(dir $(PYTHON))mkdocs" || command -v mkdocs 2>/dev/null || echo mkdocs)
+
 copydocs:  # mkdocs only looks for content in the docs/ folder, so we have to copy it there
 	@rm -rf docs/paper docs/demos
 	@cp README.md docs/README.md
@@ -670,19 +680,18 @@ runmkdocserve:
 		PORT=$$((PORT+1)); \
 	done; \
 	echo "Starting mkdocs on http://127.0.0.1:$$PORT"; \
-	NO_MKDOCS_2_WARNING=1 JUPYTER_PLATFORM_DIRS=1 mkdocs serve -a 127.0.0.1:$$PORT
-	NO_MKDOCS_2_WARNING=1 JUPYTER_PLATFORM_DIRS=1 mkdocs serve -a 127.0.0.1:$$PORT
+	NO_MKDOCS_2_WARNING=1 JUPYTER_PLATFORM_DIRS=1 $(MKDOCS) serve -a 127.0.0.1:$$PORT
 
 doc: uml copydocs runmkdocserve
 
 docnouml: copydocs runmkdocserve
 
 check_links: copydocs  # internal links + anchors only; fast, no network, safe for CI
-	@NO_MKDOCS_2_WARNING=1 mkdocs build -q -d site
+	@NO_MKDOCS_2_WARNING=1 $(MKDOCS) build -q -d site
 	@$(PYTHON) scripts/check_links.py site
 
 check_links_external: copydocs  # also checks http/https links; slow and network-flaky, run locally
-	@NO_MKDOCS_2_WARNING=1 mkdocs build -q -d site
+	@NO_MKDOCS_2_WARNING=1 $(MKDOCS) build -q -d site
 	@$(PYTHON) scripts/check_links.py site --external
 
 # The targets above check links inside the new site; these check the other

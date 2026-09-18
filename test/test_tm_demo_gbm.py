@@ -10,13 +10,15 @@ Classes:
     TestReplicationMeanIndependence: QuantLib replication-mean rank correlation, M=40.
 
 QMCPy's own replication-independence tests (Sobol/Lattice, via DigitalNetB2
-and Lattice) live in test/test_discrete_distribs.py, which exercises those
+and Lattice) live in test/test_dd_discrete_distribs.py, which exercises those
 distribution classes directly rather than through this demo's wrapper.
 
 Example:
-    python3 -m pytest test/test_demo_gbm.py
+    python3 -m pytest test/test_sr_demo_gbm.py
 """
+import unittest
 from itertools import combinations
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -51,7 +53,7 @@ def _assert_distinct(paths_by_replication):
         assert not np.array_equal(a, b), "replications produced identical paths"
 
 
-class TestCollectLibraryResultsStatistics:
+class TestCollectLibraryResultsStatistics(unittest.TestCase):
     """Verifies Mean/Std Dev/MAE/Std Dev Error computed by collect_library_results().
 
     Mocks both libraries' path generators with known arrays so the reported
@@ -59,10 +61,10 @@ class TestCollectLibraryResultsStatistics:
     called once per test).
 
     Note:
-        Each test's `monkeypatch` fixture replaces `du.qlu.generate_quantlib_paths`
-        and/or `du.qpu.generate_qmcpy_paths` with a lambda returning a fixed array,
-        isolating the arithmetic from actual (randomized) sampling. pytest reverts
-        the patch automatically after each test.
+        `self._patch` replaces `du.qlu.generate_quantlib_paths` and/or
+        `du.qpu.generate_qmcpy_paths` with a lambda returning a fixed array,
+        isolating the arithmetic from actual (randomized) sampling, and
+        restores the original at the end of the test (`addCleanup`).
     """
 
     TIMING = {
@@ -72,16 +74,18 @@ class TestCollectLibraryResultsStatistics:
     THEORETICAL_MEAN = 2.5
     THEORETICAL_STD = 0.75
 
-    def test_quantlib_row_statistics(self, monkeypatch):
+    def _patch(self, target, name, value):
+        """monkeypatch.setattr equivalent: set now, auto-restore at test end."""
+        patcher = patch.object(target, name, value)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_quantlib_row_statistics(self):
         """Checks the QuantLib results row against hand-computed statistics."""
         # QuantLib paths are always 2D: (n_paths, n_steps + 1).
         ql_paths = np.array([[100.0, 1.0], [100.0, 2.0], [100.0, 3.0]])
-        monkeypatch.setattr(
-            du.qlu, "generate_quantlib_paths", lambda **kwargs: (ql_paths, None)
-        )
-        monkeypatch.setattr(
-            du.qpu, "generate_qmcpy_paths", lambda **kwargs: (np.zeros((1, 2, 2)), None)
-        )
+        self._patch(du.qlu, "generate_quantlib_paths", lambda **kwargs: (ql_paths, None))
+        self._patch(du.qpu, "generate_qmcpy_paths", lambda **kwargs: (np.zeros((1, 2, 2)), None))
 
         results = du.collect_library_results(
             "Sobol", "Paths", 2, 3, self.TIMING, self.TIMING,
@@ -89,49 +93,45 @@ class TestCollectLibraryResultsStatistics:
         )
 
         row = next(r for r in results if r["Method"] == "QuantLib")
-        assert row["Mean"] == pytest.approx(2.0)
-        assert row["Std Dev"] == pytest.approx(1.0)
-        assert row["Mean Absolute Error"] == pytest.approx(0.5)
-        assert row["Std Dev Error"] == pytest.approx(0.25)
+        self.assertAlmostEqual(row["Mean"], 2.0)
+        self.assertAlmostEqual(row["Std Dev"], 1.0)
+        self.assertAlmostEqual(row["Mean Absolute Error"], 0.5)
+        self.assertAlmostEqual(row["Std Dev Error"], 0.25)
 
-    def test_qmcpy_row_statistics(self, monkeypatch):
+    def test_qmcpy_row_statistics(self):
         """Checks the QMCPy results row; one replication so pooled and per-replication stats coincide."""
         qp_paths = np.array([[[100.0, 1.0], [200.0, 2.0], [300.0, 3.0]]])
-        monkeypatch.setattr(
-            du.qpu, "generate_qmcpy_paths", lambda **kwargs: (qp_paths, None)
-        )
+        self._patch(du.qpu, "generate_qmcpy_paths", lambda **kwargs: (qp_paths, None))
 
         results = du.collect_library_results(
             "Lattice", "Paths", 2, 3, {}, self.TIMING,
             self.THEORETICAL_MEAN, self.THEORETICAL_STD,
         )
 
-        assert len(results) == 1
+        self.assertEqual(len(results), 1)
         row = results[0]
-        assert row["Method"] == "QMCPy"
-        assert row["Mean"] == pytest.approx(2.0)
-        assert row["Std Dev"] == pytest.approx(1.0)
-        assert row["Mean Absolute Error"] == pytest.approx(0.5)
-        assert row["Std Dev Error"] == pytest.approx(0.25)
+        self.assertEqual(row["Method"], "QMCPy")
+        self.assertAlmostEqual(row["Mean"], 2.0)
+        self.assertAlmostEqual(row["Std Dev"], 1.0)
+        self.assertAlmostEqual(row["Mean Absolute Error"], 0.5)
+        self.assertAlmostEqual(row["Std Dev Error"], 0.25)
 
-    def test_qmcpy_terminal_axis(self, monkeypatch):
+    def test_qmcpy_terminal_axis(self):
         """Regression guard for qp_paths[:, -1] vs qp_paths[..., -1]: a marker value placed
         only at the true terminal (last) axis catches an off-by-axis regression."""
         qp_paths = np.array([[[1.0, 1.0, 999.0], [1.0, 1.0, 999.0]]])
-        monkeypatch.setattr(
-            du.qpu, "generate_qmcpy_paths", lambda **kwargs: (qp_paths, None)
-        )
+        self._patch(du.qpu, "generate_qmcpy_paths", lambda **kwargs: (qp_paths, None))
 
         results = du.collect_library_results(
             "Lattice", "Paths", 3, 2, {}, self.TIMING, 999.0, 0.0
         )
 
         row = results[0]
-        assert row["Mean"] == pytest.approx(999.0)
-        assert row["Std Dev"] == pytest.approx(0.0)
+        self.assertAlmostEqual(row["Mean"], 999.0)
+        self.assertAlmostEqual(row["Std Dev"], 0.0)
 
 
-class TestQuantlibSeedIndependence:
+class TestQuantlibSeedIndependence(unittest.TestCase):
     """QuantLib's `seed` must actually change the Sobol scramble.
 
     demos/GBM/gbm_code/data_util.py:process_sampler_data() builds replications
@@ -142,13 +142,18 @@ class TestQuantlibSeedIndependence:
     a 5-seed loop mirroring that replication pattern.
     """
 
-    @pytest.mark.parametrize("sampler_type", ["IIDStdUniform", "Sobol"])
-    def test_shape_and_values(self, sampler_type):
+    SAMPLER_TYPES = ("IIDStdUniform", "Sobol")
+
+    def test_shape_and_values(self):
         """Checks output shape, initial value, and finiteness for a single seed."""
-        paths = _quantlib_paths(7, sampler_type)
-        assert paths.shape == (QUANTLIB_PARAMS["n_paths"], QUANTLIB_PARAMS["n_steps"] + 1)
-        np.testing.assert_array_equal(paths[:, 0], QUANTLIB_PARAMS["initial_value"])
-        assert np.isfinite(paths).all()
+        for sampler_type in self.SAMPLER_TYPES:
+            with self.subTest(sampler_type=sampler_type):
+                paths = _quantlib_paths(7, sampler_type)
+                self.assertEqual(
+                    paths.shape, (QUANTLIB_PARAMS["n_paths"], QUANTLIB_PARAMS["n_steps"] + 1)
+                )
+                np.testing.assert_array_equal(paths[:, 0], QUANTLIB_PARAMS["initial_value"])
+                self.assertTrue(np.isfinite(paths).all())
 
     def test_vectorized_matches_evolve(self):
         """Checks the vectorized Sobol evolution matches QuantLib's own evolve(), step by step.
@@ -178,24 +183,28 @@ class TestQuantlibSeedIndependence:
 
     def test_unknown_sampler_raises(self):
         """Checks that an unsupported sampler_type raises ValueError (single call)."""
-        with pytest.raises(ValueError, match="Unsupported sampler type"):
+        with self.assertRaisesRegex(ValueError, "Unsupported sampler type"):
             _quantlib_paths(1, sampler_type="unknown")
 
-    @pytest.mark.parametrize("sampler_type", ["IIDStdUniform", "Sobol"])
-    def test_seed_reproducible_effective(self, sampler_type):
+    def test_seed_reproducible_effective(self):
         """Same seed reproduces paths; a different seed changes them (2 seeds)."""
-        np.testing.assert_array_equal(
-            _quantlib_paths(7, sampler_type), _quantlib_paths(7, sampler_type)
-        )
-        assert not np.array_equal(_quantlib_paths(7, sampler_type), _quantlib_paths(8, sampler_type))
+        for sampler_type in self.SAMPLER_TYPES:
+            with self.subTest(sampler_type=sampler_type):
+                np.testing.assert_array_equal(
+                    _quantlib_paths(7, sampler_type), _quantlib_paths(7, sampler_type)
+                )
+                self.assertFalse(
+                    np.array_equal(_quantlib_paths(7, sampler_type), _quantlib_paths(8, sampler_type))
+                )
 
-    @pytest.mark.parametrize("sampler_type", ["IIDStdUniform", "Sobol"])
-    def test_seed_loop_distinct(self, sampler_type):
+    def test_seed_loop_distinct(self):
         """Sequential seeds (mirroring the replication loop) are pairwise distinct (5 seeds)."""
-        _assert_distinct([_quantlib_paths(7 + r, sampler_type) for r in range(5)])
+        for sampler_type in self.SAMPLER_TYPES:
+            with self.subTest(sampler_type=sampler_type):
+                _assert_distinct([_quantlib_paths(7 + r, sampler_type) for r in range(5)])
 
 
-class TestReplicationMeanIndependence:
+class TestReplicationMeanIndependence(unittest.TestCase):
     """QuantLib's per-replication mean statistics show no rank correlation
     across the replication/seed index -- a stronger check than "not bit-identical".
 
@@ -208,7 +217,7 @@ class TestReplicationMeanIndependence:
         actually relies on (per RQMC confidence interval theory) is that
         the *replication means* are independent, which is what's checked
         here. (QMCPy's analog is tested on DigitalNetB2 in
-        test/test_discrete_distribs.py.)
+        test/test_dd_discrete_distribs.py.)
     """
 
     M = 40
@@ -222,6 +231,6 @@ class TestReplicationMeanIndependence:
         means = np.array([
             _quantlib_paths(7 + r, n_paths=self.N_PATHS)[:, -1].mean() for r in range(self.M)
         ])
-        assert means.std() > 0, "replication means are constant -- seed has no effect"
+        self.assertGreater(means.std(), 0, "replication means are constant -- seed has no effect")
         rho, _ = spearmanr(means[:-1], means[1:])
-        assert abs(rho) < self.RHO_THRESHOLD
+        self.assertLess(abs(rho), self.RHO_THRESHOLD)
