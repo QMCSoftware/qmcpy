@@ -11,6 +11,7 @@ from .cub_mlqmc_cont import CubMLQMCCont
 from .cub_qmc_bayes_lattice_g import CubQMCBayesLatticeG
 from .cub_qmc_bayes_net_g import CubQMCBayesNetG
 from .cub_mc_clt_vec import CubMCCLTVec
+from .cub_qmc_american_g import CubQMCAmericanG
 
 try:
     import torch
