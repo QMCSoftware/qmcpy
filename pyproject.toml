@@ -206,13 +206,14 @@ skip-checking-short-docstrings = true
 skip-checking-raises = true
 
 [tool.pylint.typecheck]
-# Members that live on compiled/C-extension objects (numpy, scipy, matplotlib)
-# which pylint's static inference cannot see, so they should not trigger
-# no-member (E1101) false positives.
+# Members that live on compiled/C-extension objects (numpy, scipy, matplotlib,
+# torch) which pylint's static inference cannot see, so they should not
+# trigger no-member (E1101) false positives.
 generated-members = [
     "numpy.*",
     "scipy.*",
     "matplotlib.cm.*",
+    "torch.*",
 ]
 
 [tool.pdm.build]
