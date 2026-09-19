@@ -14,6 +14,7 @@ from .bernoulli_cont import BernoulliCont
 from .johnsons_su import JohnsonsSU
 from .scipy_wrapper import SciPyWrapper
 from .matern_gp import MaternGP
+from .mixture import Mixture
 from .student_t import StudentT
 from .student_t_copula import StudentTCopula
 from .uniform_triangle import UniformTriangle

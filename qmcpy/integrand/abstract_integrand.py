@@ -256,12 +256,13 @@ class AbstractIntegrand(object):
             raise AssertionError
         # function evaluation with chain rule
         i = (None,) * d_indv_ndim + (...,)
+        transformed_shape = batch_shape + (self.true_measure.d,)
         if self.true_measure == self.true_measure.transform:
             # jacobian*weight/pdf will cancel so f(x) = g(\Psi(x))
             xtf = self.true_measure._jacobian_transform_r(
                 xp, return_weights=False
             )  # get transformed samples, equivalent to self.true_measure._transform_r(x)
-            if not (xtf.shape == xp.shape):
+            if not (xtf.shape == transformed_shape):
                 raise AssertionError
             y = self._g(xtf, *args, **kwargs)
         else:  # using importance sampling --> need to compute pdf, jacobian(s), and weight explicitly
@@ -271,7 +272,7 @@ class AbstractIntegrand(object):
             xtf, jacobians = self.true_measure.transform._jacobian_transform_r(
                 xp, return_weights=True
             )  # compute recursive transform+jacobian
-            if not (xtf.shape == xp.shape):
+            if not (xtf.shape == transformed_shape):
                 raise AssertionError
             if not (jacobians.shape == batch_shape):
                 raise AssertionError

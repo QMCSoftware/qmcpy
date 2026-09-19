@@ -110,7 +110,7 @@ class ProductMeasure(AbstractTrueMeasure):
                 marginal dimensions.
             marginals (Union[list, tuple]): Independent true
                 measures to place side by side. A marginal may itself be
-                multidimensional.
+                multidimensional, but must preserve its sampler dimension.
 
         Notes:
             Why one sampler? The product measure should be driven by one
@@ -147,11 +147,12 @@ class ProductMeasure(AbstractTrueMeasure):
         self.marginals = list(marginals)
         for marginal in self.marginals:
             target_dim = getattr(marginal, "target_dim", marginal.d)
-            if target_dim != marginal.d:
+            if target_dim != marginal.d or marginal.discrete_distrib.d != marginal.d:
                 raise DimensionError(
                     "ProductMeasure marginals must be dimension-preserving "
                     "block transforms. Marginal target dimension "
-                    f"{target_dim} does not match sampler dimension {marginal.d}."
+                    f"{target_dim} does not match sampler dimension "
+                    f"{marginal.discrete_distrib.d}."
                 )
 
         self.marginal_dimensions = np.array(

@@ -390,7 +390,7 @@ class AbstractCubBayesLDG(AbstractStoppingCriterion):
             data.n_min = 0
             data.n_max = self.n_init
             data.solution_indv = np.tile(np.nan, self.integrand.d_indv)
-            data.xfull = np.empty((0, self.integrand.d))
+            data.xfull = np.empty((0, self.discrete_distrib.d))
             data.yfull = np.empty(self.integrand.d_indv + (0,))
             data.bounds_half_width = np.tile(np.inf, self.integrand.d_indv)
             data.muhat = np.tile(np.nan, self.integrand.d_indv)
@@ -497,7 +497,7 @@ class AbstractCubBayesLDG(AbstractStoppingCriterion):
         )
         n_total = int(data.n_total)
         output_shape = self.integrand.d_indv + (n_total,)
-        self._validate_resume_shape("xfull", data.xfull, (n_total, self.integrand.d))
+        self._validate_resume_shape("xfull", data.xfull, (n_total, self.discrete_distrib.d))
         self._validate_resume_shape("yfull", data.yfull, output_shape)
         self._validate_resume_shape("_ytildefull", data._ytildefull, output_shape)
         self._validate_resume_shape("n", data.n, self.integrand.d_indv)
