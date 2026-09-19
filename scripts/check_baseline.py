@@ -36,6 +36,7 @@ new, lower count.
 """
 import json
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -43,6 +44,13 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 BASELINE_PATH = Path(__file__).resolve().parent / "baseline_counts.json"
+
+# Mirror the makefile's `$(PYDOCLINT)` resolution: prefer PATH (the common
+# case), else fall back to the same bin/ directory as this interpreter, since
+# pydoclint is installed into the same environment as `python` even when that
+# env isn't the active shell environment. A bare "pydoclint" here would bypass
+# that fallback and reproduce the exact FileNotFoundError it exists to avoid.
+PYDOCLINT = shutil.which("pydoclint") or str(Path(sys.executable).parent / "pydoclint")
 
 def _check_docstring_by_file(output):
     """One finding line is "  - <path>:<line>: <category>: <detail>" --
@@ -95,8 +103,8 @@ CHECKS = {
         "by_file": _check_docstring_by_file,
     },
     "pydoclint": {
-        "cmd": ["pydoclint", "-q", "qmcpy"],
-        "files_cmd": lambda files: ["pydoclint", "-q", *files],
+        "cmd": [PYDOCLINT, "-q", "qmcpy"],
+        "files_cmd": lambda files: [PYDOCLINT, "-q", *files],
         "line_pattern": re.compile(r"^\s*\d+: DOC\d+:", re.M),
         "by_file": _pydoclint_by_file,
     },

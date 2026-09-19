@@ -6,7 +6,8 @@ from ..discrete_distribution.abstract_discrete_distribution import (
 )
 import numpy as np
 from numpy.linalg import cholesky, slogdet
-from scipy.stats import norm, multivariate_normal
+from scipy.special import ndtri
+from scipy.stats import multivariate_normal
 from scipy.linalg import eigh
 from typing import Union
 
@@ -17,6 +18,8 @@ class Gaussian(AbstractTrueMeasure):
 
     Notes:
         - `Normal` is an alias for `Gaussian`
+        - The inverse normal transform uses float64 precision, including for
+          float32 input points.
 
     Examples:
         >>> true_measure = Gaussian(DigitalNetB2(2,seed=7),mean=[1,2],covariance=[[9,4],[4,5]])
@@ -128,7 +131,7 @@ class Gaussian(AbstractTrueMeasure):
                 1 - 2 * (evecs[0] < 0)
             )  # force first entries of eigenvectors to be positive
             order = np.argsort(-evals)
-            self._a_cache = np.dot(evecs[:, order], np.diag(np.sqrt(evals[order])))
+            self._a_cache = evecs[:, order] * np.sqrt(evals[order])
         elif self.decomp_type == "CHOLESKY":
             self._a_cache = cholesky(self.sigma)
         elif self.decomp_type == "BROWNIANBRIDGE":
@@ -168,7 +171,9 @@ class Gaussian(AbstractTrueMeasure):
         self._mvn_scipy_cache = value
 
     def _transform(self, x):
-        return self.mu + np.einsum("...ij,kj->...ik", norm.ppf(x), self.a)
+        # Keep the inverse CDF and accumulation in at least double precision.
+        transformed = ndtri(np.asarray(x, dtype=np.float64)) @ self.a.T
+        return transformed + self.mu
 
     def _weight(self, t):
         return self.mvn_scipy.pdf(t)
