@@ -7,7 +7,6 @@ import numpy as np
 from numpy.lib.npyio import DataSource
 import warnings
 from copy import deepcopy
-import platform
 
 class DigitalNetB2(AbstractLDDiscreteDistribution):
     r"""Low discrepancy digital net in base 2.

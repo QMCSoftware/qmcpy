@@ -4,7 +4,7 @@ from .abstract_cub_qmc_ld_g import AbstractCubQMCLDG, _default_fudge
 from ..fast_transform import fwht, omega_fwht
 from ..util import ParameterError
 from ..discrete_distribution import DigitalNetB2
-from ..true_measure import Gaussian, Uniform
+from ..true_measure import Uniform
 from ..integrand import Keister, BoxIntegral, CustomFun
 from ..integrand.genz import Genz
 from ..integrand.sensitivity_indices import SensitivityIndices

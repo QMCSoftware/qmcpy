@@ -23,6 +23,7 @@
   "demos/linear-scrambled-halton.ipynb",
   "demos/makefile_dev_tools.ipynb",
   "demos/nei_demo.ipynb",
+  "demos/performance_optimizations_demo.ipynb",
   "demos/plot_proj_function.ipynb",
   "demos/pricing_options.ipynb",
   "demos/product_measure.ipynb",
