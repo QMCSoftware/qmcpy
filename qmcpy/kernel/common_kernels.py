@@ -6,8 +6,7 @@ if TYPE_CHECKING:
 
 from .abstract_kernel import AbstractKernelScaleLengthscales
 from ..discrete_distribution import DigitalNetB2
-from ..util.transforms import tf_exp_eps, tf_exp_eps_inv, tf_identity
-from ..util import ParameterError
+from ..util.transforms import tf_exp_eps, tf_exp_eps_inv
 import numpy as np
 import scipy.special
 

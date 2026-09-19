@@ -3,7 +3,7 @@ from .abstract_cub_mlqmc import AbstractCubMLQMC
 from ..integrand.abstract_integrand import AbstractIntegrand
 from ..util.data import Data
 import copy
-from ..discrete_distribution import DigitalNetB2, Lattice, Halton
+from ..discrete_distribution import DigitalNetB2
 from ..discrete_distribution.abstract_discrete_distribution import (
     AbstractLDDiscreteDistribution,
 )
