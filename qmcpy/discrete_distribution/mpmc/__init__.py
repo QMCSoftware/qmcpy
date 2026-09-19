@@ -17,12 +17,13 @@ For torch-geometric wheels, see https://pytorch-geometric.readthedocs.io/en/late
 If these dependencies are not installed, attempting to use MPMC will raise an ImportError
 with installation instructions. You can check availability by running:
 
-    python -c "import torch; import pyg_lib; import torch_geometric; print('MPMC dependencies ready')"
+    python -c "import torch; import torch_geometric; print('MPMC dependencies ready')"
+
+(``pyg_lib`` is an optional accelerator; MPMC runs without it.)
 """
 
 try:
     import torch
-    import pyg_lib
     import torch_geometric
     from .mpmc import MPMC
 except ImportError as e:
@@ -32,11 +33,12 @@ except ImportError as e:
         """Placeholder MPMC class shown when PyTorch dependencies are missing."""
         def __init__(self, *args, **kwargs):
             raise ImportError(
-                f"MPMC requires PyTorch, pyg_lib, and PyTorch Geometric, but they are not installed.\n"
+                f"MPMC requires PyTorch and PyTorch Geometric, but they are not installed.\n"
                 f"Original error: {_missing_dep}\n\n"
                 f"To use MPMC, install dependencies with:\n"
                 f"  python -m pip install 'qmcpy[mpmc]'\n"
                 f"  qmcpy-install-mpmc\n\n"
+                f"(pyg_lib is an optional accelerator; MPMC runs without it.)\n"
                 f"For GPU support, see: https://pytorch.org/get-started/locally/\n"
                 f"For torch-geometric installation details, see: "
                 f"https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html"

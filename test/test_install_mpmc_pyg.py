@@ -62,6 +62,24 @@ def test_main_retries_with_torch_minor_baseline(monkeypatch):
     assert "--only-binary" in calls[1]
 
 
+def test_main_falls_back_to_official_source_release(monkeypatch):
+    """A wheel-index outage falls back to PyG's pinned source release."""
+    calls = []
+
+    def fake_run(*args):
+        calls.append(args)
+        if install_mpmc_pyg.PYG_LIB_REQUIREMENT in args:
+            raise subprocess.CalledProcessError(1, args)
+
+    monkeypatch.setattr(install_mpmc_pyg, "run", fake_run)
+
+    install_mpmc_pyg.main(_torch())
+
+    assert len(calls) == 4
+    assert "--no-build-isolation" in calls[-1]
+    assert calls[-1][-1] == install_mpmc_pyg.PYG_LIB_SOURCE
+
+
 def test_main_explains_that_torch_must_be_installed(monkeypatch):
     """Running the helper before installing the extra gives a useful error."""
     def missing_torch(_name):
@@ -73,13 +91,17 @@ def test_main_explains_that_torch_must_be_installed(monkeypatch):
         install_mpmc_pyg.main()
 
 
-def test_main_reports_missing_wheel(monkeypatch):
-    """Exhausting candidate wheel pages reports the build that failed."""
+def test_main_warns_when_pyg_lib_unavailable(monkeypatch, capsys):
+    """pyg_lib is optional: when every install path fails, main() warns and returns."""
     def fail_pyg_lib(*args):
-        if "pyg_lib>=0.6.0" in args:
+        if (
+            install_mpmc_pyg.PYG_LIB_REQUIREMENT in args
+            or install_mpmc_pyg.PYG_LIB_SOURCE in args
+        ):
             raise subprocess.CalledProcessError(1, args)
 
     monkeypatch.setattr(install_mpmc_pyg, "run", fail_pyg_lib)
 
-    with pytest.raises(RuntimeError, match=r"torch 2\.12\.1\+cpu \(cpu\)"):
-        install_mpmc_pyg.main(_torch())
+    install_mpmc_pyg.main(_torch())  # must not raise
+
+    assert "could not install the optional pyg_lib" in capsys.readouterr().out
