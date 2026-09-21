@@ -97,7 +97,7 @@ def _make_copula(copula_cls, dimension=2, marginals=None, correlation=None, seed
 
 class TestAbstractCopulaAndHelpers(unittest.TestCase):
 
-    def test_abstract_copula_is_importable_from_public_module_path(self):
+    def test_abstract_copula_public_import(self):
         self.assertIs(ModuleAbstractCopula, AbstractCopula)
 
     def test_public_api_imports_and_normal_usage(self):
@@ -123,7 +123,7 @@ class TestAbstractCopulaAndHelpers(unittest.TestCase):
                 self.assertTrue(np.all(np.isfinite(x_gen)))
                 self.assertTrue(np.all((0 <= v) & (v <= 1)))
 
-    def test_abstract_copula_rejects_unimplemented_transform(self):
+    def test_abstract_copula_unimplemented_transform(self):
         tm = AbstractCopula(
             DigitalNetB2(2, seed=101),
             marginals=[stats.uniform(), stats.uniform()],
@@ -153,7 +153,7 @@ class TestAbstractCopulaAndHelpers(unittest.TestCase):
         with self.assertRaisesRegex(DimensionError, "marginals"):
             _validate_dimension(3, [stats.uniform(), stats.uniform()])
 
-    def test_apply_marginal_ppfs_clips_endpoints_and_checks_dimension(self):
+    def test_marginal_ppfs_clip_endpoints_check_dimension(self):
         transformed = _apply_marginal_ppfs(
             np.array([[0.0, 1.0], [1.0, 0.0]]),
             [stats.norm(), stats.norm()],
@@ -165,14 +165,14 @@ class TestAbstractCopulaAndHelpers(unittest.TestCase):
         with self.assertRaisesRegex(DimensionError, "marginals"):
             _apply_marginal_ppfs(np.full((2, 3), 0.5), [stats.uniform(), stats.uniform()])
 
-    def test_marginal_range_falls_back_when_interval_or_ppf_fails(self):
+    def test_marginal_range_interval_and_ppf_fallbacks(self):
         ranges = _build_marginal_range([BadIntervalMarginal(), BadRangeMarginal()])
 
         self.assertEqual(ranges.shape, (2, 2))
         self.assertTrue(np.all(np.isfinite(ranges[0])))
         np.testing.assert_allclose(ranges[1], [-np.inf, np.inf])
 
-    def test_marginal_cdfs_and_logpdf_pdf_branch_and_errors(self):
+    def test_marginal_cdfs_and_logpdf_pdf_branch_errors(self):
         x = np.array([[0.25, 0.75], [0.4, 0.6]])
         u, log_density = _marginal_cdfs_and_logpdf(
             x,
@@ -188,7 +188,7 @@ class TestAbstractCopulaAndHelpers(unittest.TestCase):
         with self.assertRaisesRegex(ParameterError, "pdf"):
             _marginal_cdfs_and_logpdf(x, [CDFOnlyMarginal(), UnitPDFMarginal()])
 
-    def test_validate_correlation_matrix_rejects_nonfinite_values(self):
+    def test_correlation_matrix_rejects_nonfinite_values(self):
         with self.assertRaisesRegex(ValueError, "finite"):
             _validate_correlation_matrix([[1.0, np.nan], [np.nan, 1.0]], 2)
 
@@ -198,7 +198,7 @@ class TestAbstractCopulaAndHelpers(unittest.TestCase):
 
         np.testing.assert_allclose(clipped, [eps, 0.5, 1.0 - eps])
 
-    def test_copula_transform_outputs_dependent_uniforms_in_unit_cube(self):
+    def test_copula_transform_preserves_unit_cube(self):
         for copula_cls in [GaussianCopula, StudentTCopula, ClaytonCopula, GumbelCopula, FrankCopula]:
             with self.subTest(copula_cls=copula_cls.__name__):
                 tm = _make_copula(copula_cls, dimension=3)
@@ -263,7 +263,7 @@ class TestEllipticalCopulas(unittest.TestCase):
 
         self.assertTrue(np.all(np.isfinite(x)))
 
-    def test_return_weights_shape_when_marginal_densities_available(self):
+    def test_weight_shape_with_marginal_densities(self):
         tm = GaussianCopula(
             sampler=DigitalNetB2(2, seed=12),
             marginals=[stats.norm(), stats.gamma(a=2.0)],
@@ -277,7 +277,7 @@ class TestEllipticalCopulas(unittest.TestCase):
         self.assertTrue(np.all(np.isfinite(weights)))
         self.assertTrue(np.all(weights > 0.0))
 
-    def test_identity_correlation_matches_independent_marginal_transforms(self):
+    def test_identity_correlation_independent_marginals(self):
         marginals = [stats.norm(loc=-1.0, scale=2.0), stats.gamma(a=2.0, scale=3.0)]
         tm = GaussianCopula(
             sampler=DigitalNetB2(2, seed=13),
@@ -293,7 +293,7 @@ class TestEllipticalCopulas(unittest.TestCase):
 
         np.testing.assert_allclose(x, expected, rtol=1e-12, atol=1e-12)
 
-    def test_positive_correlation_produces_positive_dependence(self):
+    def test_positive_correlation_positive_dependence(self):
         rho = 0.75
         tm = GaussianCopula(
             sampler=DigitalNetB2(2, seed=17),
@@ -328,7 +328,7 @@ class TestEllipticalCopulas(unittest.TestCase):
                     self.assertTrue(np.all(np.isfinite(x)))
                     self.assertTrue(np.all(np.isfinite(one)))
 
-    def test_elliptical_copulas_handle_valid_near_singular_correlation(self):
+    def test_elliptical_near_singular_correlation(self):
         for copula_cls in [GaussianCopula, StudentTCopula]:
             with self.subTest(copula_cls=copula_cls.__name__):
                 dimension = 5
@@ -345,7 +345,7 @@ class TestEllipticalCopulas(unittest.TestCase):
                 self.assertEqual(x.shape, (32, dimension))
                 self.assertTrue(np.all(np.isfinite(x)))
 
-    def test_elliptical_copulas_reject_singular_correlation(self):
+    def test_elliptical_rejects_singular_correlation(self):
         for copula_cls in [GaussianCopula, StudentTCopula]:
             with self.subTest(copula_cls=copula_cls.__name__):
                 with self.assertRaisesRegex(ValueError, "positive definite"):
@@ -357,7 +357,7 @@ class TestEllipticalCopulas(unittest.TestCase):
                         seed=22,
                     )
 
-    def test_distribution_dimension_matches_number_of_marginals(self):
+    def test_distribution_dimension_matches_marginals(self):
         for copula_cls in [GaussianCopula, StudentTCopula, ClaytonCopula, FrankCopula, GumbelCopula]:
             with self.subTest(copula_cls=copula_cls.__name__):
                 tm = _make_copula(
@@ -405,7 +405,7 @@ class TestEllipticalCopulas(unittest.TestCase):
                         correlation=[[1.0, 0.2, 0.3], [0.2, 1.0, 0.4]],
                     )
 
-    def test_archimedean_dimension_mismatch_raises_dimension_error(self):
+    def test_archimedean_rejects_dimension_mismatch(self):
         for copula_cls in [ClaytonCopula, FrankCopula, GumbelCopula]:
             with self.subTest(copula_cls=copula_cls.__name__):
                 with self.assertRaisesRegex(DimensionError, "marginals"):
@@ -415,7 +415,7 @@ class TestEllipticalCopulas(unittest.TestCase):
                         marginals=[stats.norm(), stats.norm(), stats.norm()],
                     )
 
-    def test_invalid_correlation_matrices_raise_value_error(self):
+    def test_invalid_correlation_matrices(self):
         correlations = [
             [[1.0, 0.2], [0.3, 1.0]],
             [[1.0, 0.2], [0.2, 0.9]],
@@ -432,7 +432,7 @@ class TestEllipticalCopulas(unittest.TestCase):
                             correlation=correlation,
                         )
 
-    def test_marginal_length_mismatch_raises_dimension_error(self):
+    def test_rejects_marginal_length_mismatch(self):
         with self.assertRaisesRegex(DimensionError, "marginals"):
             GaussianCopula(
                 sampler=DigitalNetB2(2, seed=21),
@@ -473,7 +473,7 @@ class TestEllipticalCopulas(unittest.TestCase):
                 self.assertEqual(x.shape, (128, 5))
                 self.assertTrue(np.all(np.isfinite(x)))
 
-    def test_endpoint_uniforms_are_clipped_to_finite_outputs(self):
+    def test_endpoint_clipping_gives_finite_outputs(self):
         for copula_cls in [GaussianCopula, StudentTCopula, ClaytonCopula, FrankCopula, GumbelCopula]:
             with self.subTest(copula_cls=copula_cls.__name__):
                 tm = _make_copula(
@@ -501,7 +501,7 @@ class TestEllipticalCopulas(unittest.TestCase):
                 self.assertEqual(x.shape, (2, 5))
                 self.assertTrue(np.all(np.isfinite(x)))
 
-    def test_student_t_copula_output_shape_and_finite_values(self):
+    def test_student_t_output_shape_and_finite_values(self):
         tm = StudentTCopula(
             sampler=DigitalNetB2(2, seed=29),
             marginals=[stats.norm(), stats.gamma(a=3.0, scale=2.0)],
@@ -514,7 +514,7 @@ class TestEllipticalCopulas(unittest.TestCase):
         self.assertEqual(x.shape, (128, 2))
         self.assertTrue(np.all(np.isfinite(x)))
 
-    def test_student_t_copula_positive_correlation_produces_positive_dependence(self):
+    def test_student_t_positive_dependence(self):
         tm = StudentTCopula(
             sampler=DigitalNetB2(2, seed=31),
             marginals=[stats.norm(), stats.norm()],
@@ -527,7 +527,7 @@ class TestEllipticalCopulas(unittest.TestCase):
 
         self.assertGreater(empirical_corr, 0.45)
 
-    def test_student_t_copula_has_stronger_joint_tail_than_gaussian_copula(self):
+    def test_student_t_stronger_joint_tail_than_gaussian(self):
         rho = 0.7
         df = 4
         n = 2**12
@@ -559,7 +559,7 @@ class TestEllipticalCopulas(unittest.TestCase):
 
         self.assertGreater(student_t_tail, gaussian_tail + 0.08)
 
-    def test_student_t_copula_return_weights_shape_when_density_available(self):
+    def test_student_t_weight_shape_with_density(self):
         tm = StudentTCopula(
             sampler=DigitalNetB2(2, seed=37),
             marginals=[stats.norm(), stats.gamma(a=2.0)],
@@ -574,7 +574,7 @@ class TestEllipticalCopulas(unittest.TestCase):
         self.assertTrue(np.all(np.isfinite(weights)))
         self.assertTrue(np.all(weights > 0.0))
 
-    def test_student_t_copula_boundary_df_values_are_finite(self):
+    def test_student_t_boundary_df_is_finite(self):
         for df in [1.0, 100.0]:
             with self.subTest(df=df):
                 dimension = 3
@@ -590,7 +590,7 @@ class TestEllipticalCopulas(unittest.TestCase):
                 self.assertEqual(x.shape, (128, dimension))
                 self.assertTrue(np.all(np.isfinite(x)))
 
-    def test_student_t_copula_large_df_is_close_to_gaussian_copula(self):
+    def test_student_t_large_df_approaches_gaussian(self):
         rho = 0.6
         correlation = [[1.0, rho], [rho, 1.0]]
         marginals = [stats.norm(), stats.norm()]
@@ -613,7 +613,7 @@ class TestEllipticalCopulas(unittest.TestCase):
 
         self.assertLess(abs(corr_student_t - corr_gaussian), 0.02)
 
-    def test_student_t_copula_invalid_df_raises_parameter_error(self):
+    def test_student_t_rejects_invalid_df(self):
         for df in [0, -1, np.inf, "not-a-number"]:
             with self.subTest(df=df):
                 with self.assertRaisesRegex(ParameterError, "df"):
@@ -624,7 +624,7 @@ class TestEllipticalCopulas(unittest.TestCase):
                         df=df,
                     )
 
-    def test_student_t_copula_marginal_without_ppf_raises_clear_error(self):
+    def test_student_t_rejects_marginal_without_ppf(self):
         class NoPPF:
             pass
 
@@ -651,7 +651,7 @@ class TestArchimedeanCopulas(unittest.TestCase):
         self.assertEqual(x.shape, (128, 2))
         self.assertTrue(np.all(np.isfinite(x)))
 
-    def test_clayton_copula_return_weights_shape_when_density_available(self):
+    def test_clayton_weight_shape_with_density(self):
         tm = ClaytonCopula(
             sampler=DigitalNetB2(3, seed=59),
             marginals=[stats.norm(), stats.gamma(a=2.0), stats.expon()],
@@ -665,7 +665,7 @@ class TestArchimedeanCopulas(unittest.TestCase):
         self.assertTrue(np.all(np.isfinite(weights)))
         self.assertTrue(np.all(weights > 0.0))
 
-    def test_clayton_copula_invalid_theta_raises_parameter_error(self):
+    def test_clayton_rejects_invalid_theta(self):
         for theta in [0, -1, np.inf, "not-a-number"]:
             with self.subTest(theta=theta):
                 with self.assertRaisesRegex(ParameterError, "theta"):
@@ -689,7 +689,7 @@ class TestArchimedeanCopulas(unittest.TestCase):
                 self.assertEqual(x.shape, (128, dimension))
                 self.assertTrue(np.all(np.isfinite(x)))
 
-    def test_clayton_copula_marginal_without_ppf_raises_clear_error(self):
+    def test_clayton_rejects_marginal_without_ppf(self):
         class NoPPF:
             pass
 
@@ -700,7 +700,7 @@ class TestArchimedeanCopulas(unittest.TestCase):
                 theta=2.0,
             )
 
-    def test_clayton_copula_common_scipy_frozen_marginals_work(self):
+    def test_clayton_scipy_frozen_marginals(self):
         for marginals in [
             [stats.norm(), stats.beta(a=2, b=5)],
             [stats.gamma(a=3), stats.expon()],
@@ -718,7 +718,7 @@ class TestArchimedeanCopulas(unittest.TestCase):
                 self.assertEqual(x.shape, (128, 2))
                 self.assertTrue(np.all(np.isfinite(x)))
 
-    def test_clayton_copula_endpoint_uniforms_are_clipped_to_finite_outputs(self):
+    def test_clayton_endpoint_clipping_is_finite(self):
         tm = ClaytonCopula(
             sampler=DigitalNetB2(2, seed=70),
             marginals=[stats.norm(), stats.lognorm(s=0.5)],
@@ -781,7 +781,7 @@ class TestArchimedeanCopulas(unittest.TestCase):
 
         self.assertGreater(empirical_corr, 0.45)
 
-    def test_clayton_copula_has_stronger_lower_tail_than_gaussian_copula(self):
+    def test_clayton_stronger_lower_tail_than_gaussian(self):
         theta = 2.0
         n = 2**12
         marginals = [stats.uniform(), stats.uniform()]
@@ -824,7 +824,7 @@ class TestArchimedeanCopulas(unittest.TestCase):
         self.assertEqual(x.shape, (128, 2))
         self.assertTrue(np.all(np.isfinite(x)))
 
-    def test_frank_copula_positive_theta_supports_higher_dimensions(self):
+    def test_frank_positive_theta_in_higher_dimensions(self):
         for dimension in [3, 5]:
             with self.subTest(dimension=dimension):
                 tm = FrankCopula(
@@ -838,7 +838,7 @@ class TestArchimedeanCopulas(unittest.TestCase):
                 self.assertEqual(x.shape, (128, dimension))
                 self.assertTrue(np.all(np.isfinite(x)))
 
-    def test_frank_copula_return_weights_shape_when_density_available(self):
+    def test_frank_weight_shape_with_density(self):
         tm = FrankCopula(
             sampler=DigitalNetB2(3, seed=77),
             marginals=[stats.norm(), stats.gamma(a=2.0), stats.expon()],
@@ -852,7 +852,7 @@ class TestArchimedeanCopulas(unittest.TestCase):
         self.assertTrue(np.all(np.isfinite(weights)))
         self.assertTrue(np.all(weights > 0.0))
 
-    def test_frank_copula_invalid_theta_raises_parameter_error(self):
+    def test_frank_rejects_invalid_theta(self):
         for theta in [0, np.inf, -np.inf, "not-a-number"]:
             with self.subTest(theta=theta):
                 with self.assertRaisesRegex(ParameterError, "theta"):
@@ -862,7 +862,7 @@ class TestArchimedeanCopulas(unittest.TestCase):
                         theta=theta,
                     )
 
-    def test_frank_copula_negative_theta_rejected_above_two_dimensions(self):
+    def test_frank_rejects_negative_theta_above_2d(self):
         with self.assertRaisesRegex(ParameterError, "d=2"):
             FrankCopula(
                 sampler=DigitalNetB2(3, seed=79),
@@ -870,7 +870,7 @@ class TestArchimedeanCopulas(unittest.TestCase):
                 theta=-2.0,
             )
 
-    def test_frank_copula_dimension_mismatch_raises_dimension_error(self):
+    def test_frank_rejects_dimension_mismatch(self):
         with self.assertRaisesRegex(DimensionError, "marginals"):
             FrankCopula(
                 sampler=DigitalNetB2(2, seed=80),
@@ -878,7 +878,7 @@ class TestArchimedeanCopulas(unittest.TestCase):
                 theta=5.0,
             )
 
-    def test_frank_copula_marginal_without_ppf_raises_clear_error(self):
+    def test_frank_rejects_marginal_without_ppf(self):
         class NoPPF:
             pass
 
@@ -901,7 +901,7 @@ class TestArchimedeanCopulas(unittest.TestCase):
 
         self.assertGreater(empirical_corr, 0.45)
 
-    def test_frank_copula_tiny_theta_is_close_to_independence(self):
+    def test_frank_tiny_theta_approaches_independence(self):
         for theta, dimension in [(1e-8, 3), (-1e-8, 2)]:
             with self.subTest(theta=theta, dimension=dimension):
                 marginals = [stats.uniform()] * dimension
@@ -938,7 +938,7 @@ class TestArchimedeanCopulas(unittest.TestCase):
                 self.assertEqual(x.shape, (128, dimension))
                 self.assertTrue(np.all(np.isfinite(x)))
 
-    def test_frank_copula_negative_theta_produces_negative_dependence_in_2d(self):
+    def test_frank_negative_theta_negative_dependence_2d(self):
         tm = FrankCopula(
             sampler=DigitalNetB2(2, seed=88),
             marginals=[stats.uniform(), stats.uniform()],
@@ -962,7 +962,7 @@ class TestArchimedeanCopulas(unittest.TestCase):
         self.assertEqual(x.shape, (128, 2))
         self.assertTrue(np.all(np.isfinite(x)))
 
-    def test_gumbel_copula_return_weights_shape_when_density_available(self):
+    def test_gumbel_weight_shape_with_density(self):
         tm = GumbelCopula(
             sampler=DigitalNetB2(3, seed=81),
             marginals=[stats.norm(), stats.gamma(a=2.0), stats.expon()],
@@ -976,7 +976,7 @@ class TestArchimedeanCopulas(unittest.TestCase):
         self.assertTrue(np.all(np.isfinite(weights)))
         self.assertTrue(np.all(weights > 0.0))
 
-    def test_gumbel_copula_invalid_theta_raises_parameter_error(self):
+    def test_gumbel_rejects_invalid_theta(self):
         for theta in [0, 0.5, -1, np.inf, "not-a-number"]:
             with self.subTest(theta=theta):
                 with self.assertRaisesRegex(ParameterError, "theta"):
@@ -986,7 +986,7 @@ class TestArchimedeanCopulas(unittest.TestCase):
                         theta=theta,
                     )
 
-    def test_gumbel_copula_theta_one_is_independent_marginal_transform(self):
+    def test_gumbel_theta_one_gives_independent_marginals(self):
         marginals = [stats.norm(loc=-1.0, scale=2.0), stats.gamma(a=2.0, scale=3.0)]
         tm = GumbelCopula(
             sampler=DigitalNetB2(2, seed=85),
@@ -1002,7 +1002,7 @@ class TestArchimedeanCopulas(unittest.TestCase):
 
         np.testing.assert_allclose(x, expected, rtol=1e-12, atol=1e-12)
 
-    def test_gumbel_copula_theta_close_to_one_is_near_independent(self):
+    def test_gumbel_theta_near_one_is_near_independent(self):
         for dimension in [2, 3, 5]:
             with self.subTest(dimension=dimension):
                 marginals = [stats.uniform()] * dimension
@@ -1054,7 +1054,7 @@ class TestArchimedeanCopulas(unittest.TestCase):
                 self.assertEqual(x.shape, (128, dimension))
                 self.assertTrue(np.all(np.isfinite(x)))
 
-    def test_gumbel_copula_marginal_without_ppf_raises_clear_error(self):
+    def test_gumbel_rejects_marginal_without_ppf(self):
         class NoPPF:
             pass
 
@@ -1065,7 +1065,7 @@ class TestArchimedeanCopulas(unittest.TestCase):
                 theta=2.0,
             )
 
-    def test_gumbel_copula_common_scipy_frozen_marginals_work(self):
+    def test_gumbel_scipy_frozen_marginals(self):
         for marginals in [
             [stats.norm(), stats.beta(a=2, b=5)],
             [stats.gamma(a=3), stats.expon()],
@@ -1083,7 +1083,7 @@ class TestArchimedeanCopulas(unittest.TestCase):
                 self.assertEqual(x.shape, (128, 2))
                 self.assertTrue(np.all(np.isfinite(x)))
 
-    def test_gumbel_copula_endpoint_uniforms_are_clipped_to_finite_outputs(self):
+    def test_gumbel_endpoint_clipping_is_finite(self):
         tm = GumbelCopula(
             sampler=DigitalNetB2(2, seed=93),
             marginals=[stats.norm(), stats.lognorm(s=0.5)],
@@ -1108,7 +1108,7 @@ class TestArchimedeanCopulas(unittest.TestCase):
 
         self.assertGreater(empirical_corr, 0.45)
 
-    def test_gumbel_copula_has_stronger_upper_tail_than_gaussian_copula(self):
+    def test_gumbel_stronger_upper_tail_than_gaussian(self):
         theta = 2.0
         n = 2**12
         marginals = [stats.uniform(), stats.uniform()]
@@ -1142,7 +1142,7 @@ class TestArchimedeanCopulas(unittest.TestCase):
 
 class TestCopulaWeightsFallbackAndSpawn(unittest.TestCase):
 
-    def test_copula_weight_fallback_warns_once_when_density_methods_are_missing(self):
+    def test_weight_fallback_warns_once_without_density(self):
         for copula_cls in [GaussianCopula, StudentTCopula, ClaytonCopula, GumbelCopula, FrankCopula]:
             with self.subTest(copula_cls=copula_cls.__name__):
                 tm = _make_copula(
@@ -1177,7 +1177,7 @@ class TestCopulaWeightsFallbackAndSpawn(unittest.TestCase):
                 self.assertEqual(str(wcm.warning), expected_message)
                 self.assertEqual(caught, [])
 
-    def test_student_t_weight_falls_back_when_multivariate_t_is_unavailable(self):
+    def test_student_t_weight_without_multivariate_t(self):
         tm = StudentTCopula(
             DigitalNetB2(2, seed=115),
             marginals=[stats.norm(), stats.norm()],
@@ -1191,7 +1191,7 @@ class TestCopulaWeightsFallbackAndSpawn(unittest.TestCase):
 
         np.testing.assert_allclose(weights, np.ones(3))
 
-    def test_gaussian_weight_uses_pdf_branch_when_logpdf_is_unavailable(self):
+    def test_gaussian_weight_uses_pdf_without_logpdf(self):
         tm = GaussianCopula(
             DigitalNetB2(2, seed=117),
             marginals=[UnitPDFMarginal(), UnitPDFMarginal()],
@@ -1204,7 +1204,7 @@ class TestCopulaWeightsFallbackAndSpawn(unittest.TestCase):
         self.assertTrue(np.all(np.isfinite(weights)))
         self.assertTrue(np.all(weights > 0.0))
 
-    def test_gumbel_theta_one_weight_is_independent_marginal_density(self):
+    def test_gumbel_theta_one_weight_independent_density(self):
         tm = GumbelCopula(
             DigitalNetB2(2, seed=119),
             marginals=[stats.gamma(a=2.0), stats.expon()],
@@ -1231,7 +1231,7 @@ class TestCopulaWeightsFallbackAndSpawn(unittest.TestCase):
         self.assertTrue(np.all(np.isfinite(v)))
         self.assertTrue(np.all((0.0 <= v) & (v <= 1.0)))
 
-    def test_copula_spawn_same_dimension_and_reject_different_dimension(self):
+    def test_copula_spawn_preserves_dimension(self):
         for copula_cls in [GaussianCopula, StudentTCopula, ClaytonCopula, GumbelCopula, FrankCopula]:
             with self.subTest(copula_cls=copula_cls.__name__):
                 tm = _make_copula(copula_cls, dimension=2)
@@ -1244,7 +1244,7 @@ class TestCopulaWeightsFallbackAndSpawn(unittest.TestCase):
                 with self.assertRaises(DimensionError):
                     tm._spawn(DigitalNetB2(3, seed=123), 3)
 
-    def test_frank_one_dimensional_weight_covers_zero_order_eulerian_term(self):
+    def test_frank_1d_weight_zero_order_eulerian_term(self):
         tm = FrankCopula(
             DigitalNetB2(1, seed=125),
             marginals=[UnitPDFMarginal()],
@@ -1257,7 +1257,7 @@ class TestCopulaWeightsFallbackAndSpawn(unittest.TestCase):
         self.assertTrue(np.all(np.isfinite(weights)))
         self.assertTrue(np.all(weights > 0.0))
 
-    def test_frank_rejects_large_negative_theta_when_exponential_overflows(self):
+    def test_frank_rejects_negative_theta_overflow(self):
         with np.errstate(over="ignore"):
             with self.assertRaisesRegex(ParameterError, "too close to 0 or too large"):
                 FrankCopula(
