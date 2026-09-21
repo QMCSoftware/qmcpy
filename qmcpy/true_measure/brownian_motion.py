@@ -4,6 +4,7 @@ from ..discrete_distribution.abstract_discrete_distribution import (
 from ..true_measure.abstract_true_measure import AbstractTrueMeasure
 from typing import Union
 from .gaussian import Gaussian
+from .abstract_true_measure import _clip_unit_interval
 from ..discrete_distribution import DigitalNetB2
 from ..util import ParameterError, ParameterWarning
 import warnings
@@ -266,7 +267,7 @@ class BrownianMotion(Gaussian):
 
     def _transform(self, x):
         if self.decomp_type == "BROWNIANBRIDGE":
-            z = norm.ppf(x)
+            z = norm.ppf(_clip_unit_interval(x))
             w = self._bridge_transform(z)
             paths = self.drift_time_vec_plus_init + np.sqrt(self.diffusion) * w
             return paths[..., self._output_order]

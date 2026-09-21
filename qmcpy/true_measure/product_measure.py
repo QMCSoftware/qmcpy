@@ -105,21 +105,21 @@ class ProductMeasure(AbstractTrueMeasure):
         marginals.
 
         Args:
-            sampler (AbstractDiscreteDistribution): The sampler for the whole
-                product measure. Its dimension must equal the sum of the
-                marginal dimensions.
-            marginals (Union[list, tuple]): Independent true
-                measures to place side by side. A marginal may itself be
-                multidimensional.
+            sampler (AbstractDiscreteDistribution): Sampler for the whole product measure. Its dimension must equal the sum of the marginal dimensions.
+            marginals (Union[list, tuple]): Nonempty sequence of independent `AbstractTrueMeasure` instances to place side by side. A marginal may itself be multidimensional.
 
-        Notes:
-            Why one sampler? The product measure should be driven by one
-            total-dimensional QMC point set. We do not generate separate QMC
-            samples from each marginal. Instead, one sample $u \in [0,1]^d$
-            is split into blocks:
+        Raises:
+            ParameterError: If `sampler` is not an `AbstractDiscreteDistribution`, or if `marginals` is empty or contains a non-`AbstractTrueMeasure` value.
+            DimensionError: If a marginal is not dimension-preserving or the sampler dimension differs from the sum of the marginal dimensions.
 
-            $$u = (u_{\text{marginal},1}, u_{\text{marginal},2}, \ldots, u_{\text{marginal},k}).$$
+        Note:
+            The product measure is driven by one total-dimensional QMC point
+            set. It does not generate separate QMC samples from each marginal.
+            Instead, one sample u in [0,1]^d is split into blocks:
 
+                u = (u_marginal_1, u_marginal_2, ..., u_marginal_k).
+
+            This preserves the intended total-dimensional QMC construction.
             This preserves the intended total-dimensional QMC construction.
         """
         if not isinstance(marginals, (list, tuple)) or len(marginals) == 0:

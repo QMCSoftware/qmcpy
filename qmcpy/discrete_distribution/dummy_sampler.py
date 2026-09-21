@@ -30,17 +30,23 @@ class DummySampler(AbstractLDDiscreteDistribution):
         qmcpy.util.exceptions_warnings.ParameterError: DummySampler is only a construction placeholder for ProductMeasure child true measures and cannot generate samples.
     """
 
-    def __init__(self, dimension: int = 1, replications: Union[None, int] = None, seed: Union[None, int, np.random.SeedSequence] = None, warn: bool = True) -> None:
-        """Initialize a DummySampler discrete distribution.
+    def __init__(
+        self,
+        dimension: Union[int, list, tuple, np.ndarray] = 1,
+        replications: Union[None, int] = None,
+        seed: Union[None, int, np.random.SeedSequence] = None,
+        warn: bool = True,
+    ) -> None:
+        r"""Initialize a placeholder sampler with the given dimension.
 
         Args:
-            dimension (int): Dimension of the placeholder sampler.
-            replications (Union[None, int]): Number of independent randomizations, kept
-                for API consistency with the other discrete distributions.
-            seed (Union[None, int, np.random.SeedSequence]): Unused; kept for
-                API consistency with the other discrete distributions.
-            warn (bool): Unused; kept for API consistency with the other
-                discrete distributions.
+            dimension (Union[int, list, tuple, np.ndarray]): Dimension of the placeholder sampler. A list, tuple, or array specifies unique coordinate indices. Defaults to `1`.
+            replications (Union[None, int]): Replication metadata preserved when spawning placeholders. `None` records no explicit replication axis. Defaults to `None`.
+            seed (Union[None, int, np.random.SeedSequence]): Seed used to initialize the sampler state and spawn child samplers. Defaults to `None`.
+            warn (bool): Compatibility argument matching other discrete-distribution constructors. It is ignored because `DummySampler` cannot generate samples. Defaults to `True`.
+
+        Raises:
+            ParameterError: If an array-like `dimension` is not one-dimensional with unique entries, if it exceeds the dimension limit, or if `replications` is negative.
         """
         # Keep the same constructor as other discrete distributions.
         del warn

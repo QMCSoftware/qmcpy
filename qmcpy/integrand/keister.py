@@ -5,7 +5,7 @@ from ..true_measure.abstract_true_measure import AbstractTrueMeasure
 from typing import Union
 from .abstract_integrand import AbstractIntegrand
 from ..discrete_distribution import DigitalNetB2
-from ..true_measure import Gaussian
+from ..true_measure import Gaussian, ImportanceSampling
 import numpy as np
 from scipy.special import gamma
 
@@ -54,11 +54,16 @@ class Keister(AbstractIntegrand):
             sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
                 Either
 
-                - a discrete distribution from which to transform samples, or
-                - a true measure by which to compose a transform.
+                - a discrete distribution, for the usual Keister Gaussian target;
+                - an ordinary true measure, which is recursively transformed before the Keister Gaussian transformation; or
+                - an explicit `ImportanceSampling` target/proposal measure, which is passed through unchanged.
         """
         self.sampler = sampler
-        self.true_measure = Gaussian(self.sampler, mean=0, covariance=1 / 2)
+        self.true_measure = (
+            self.sampler
+            if isinstance(self.sampler, ImportanceSampling)
+            else Gaussian(self.sampler, mean=0, covariance=1 / 2)
+        )
         super(Keister, self).__init__(
             dimension_indv=(), dimension_comb=(), parallel=False
         )

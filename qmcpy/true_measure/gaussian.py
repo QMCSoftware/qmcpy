@@ -1,4 +1,4 @@
-from .abstract_true_measure import AbstractTrueMeasure
+from .abstract_true_measure import AbstractTrueMeasure, _clip_unit_interval
 from ..util import DimensionError, ParameterError
 from ..discrete_distribution import DigitalNetB2
 from ..discrete_distribution.abstract_discrete_distribution import (
@@ -171,6 +171,7 @@ class Gaussian(AbstractTrueMeasure):
         self._mvn_scipy_cache = value
 
     def _transform(self, x):
+        x = _clip_unit_interval(x)
         # Keep the inverse CDF and accumulation in at least double precision.
         transformed = ndtri(np.asarray(x, dtype=np.float64)) @ self.a.T
         return transformed + self.mu
