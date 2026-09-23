@@ -44,19 +44,19 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
         n_limit: int = 2**30,
         n_train: int = 2**12,
         stopping_criterion: Union[None, type, AbstractStoppingCriterion] = None,
-        **kwargs: dict
+        **kwargs: Any
     ) -> None:
         r"""Initialize the CubQMCAmericanG stopping criterion.
 
         Args:
-            integrand (FinancialOption): FinancialOption instance with option="AMERICAN".
+            integrand (AbstractIntegrand): FinancialOption instance with option="AMERICAN".
             abs_tol (float): Absolute error tolerance for integration.
             rel_tol (float): Relative error tolerance for integration.
             n_init (int): Initial number of samples for pricing integration.
             n_limit (int): Maximum number of samples for pricing integration.
             n_train (int): Number of LSM training samples.
-            stopping_criterion (type or AbstractStoppingCriterion, optional): Custom stopping criterion class or instance to use for pricing stage.
-            **kwargs: Extra keyword arguments passed to the pricing stopping criterion.
+            stopping_criterion (Union[None, type, AbstractStoppingCriterion]): Custom stopping criterion class or instance to use for pricing stage.
+            kwargs: Extra keyword arguments passed to the pricing stopping criterion.
         """
         self.abs_tol = abs_tol
         self.rel_tol = rel_tol
