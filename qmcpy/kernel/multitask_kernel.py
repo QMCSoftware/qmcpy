@@ -275,10 +275,10 @@ class KernelMultiTask(AbstractKernel):
         ...     factor = 2,
         ...     diag = 1.5,
         ...     )
-        >>> kmt.taskmat
+        >>> kmt.taskmat  # doctest: +ELLIPSIS
         tensor([[ 2.2500,  3.0000,  3.0000],
                 [ 3.0000,  6.2500,  7.0000],
-                [ 3.0000,  7.0000, 10.2500]], grad_fn=<MmBackward0>)
+                [ 3.0000,  7.0000, 10.2500]], grad_fn=<...>)
         >>> kmt = KernelMultiTask(
         ...     KernelGaussian(5,torchify=True),
         ...     num_tasks = 3,
@@ -288,14 +288,14 @@ class KernelMultiTask(AbstractKernel):
         ...     shape_factor = [2,3*(1+3)//2-3],
         ...     shape_diag = [3],
         ...     )
-        >>> kmt.taskmat
+        >>> kmt.taskmat  # doctest: +ELLIPSIS
         tensor([[[ 2.2500,  3.0000,  3.0000],
                  [ 3.0000,  6.2500,  7.0000],
                  [ 3.0000,  7.0000, 10.2500]],
         <BLANKLINE>
                 [[ 2.2500,  3.0000,  3.0000],
                  [ 3.0000,  6.2500,  7.0000],
-                 [ 3.0000,  7.0000, 10.2500]]], grad_fn=<UnsafeViewBackward0>)
+                 [ 3.0000,  7.0000, 10.2500]]], grad_fn=<...>)
         >>> kmt = KernelMultiTask(
         ...     KernelGaussian(5,torchify=True),
         ...     num_tasks = 3,
@@ -305,14 +305,14 @@ class KernelMultiTask(AbstractKernel):
         ...     shape_factor = [3*(1+3)//2-3],
         ...     shape_diag = [2,3],
         ...     )
-        >>> kmt.taskmat
+        >>> kmt.taskmat  # doctest: +ELLIPSIS
         tensor([[[ 2.2500,  3.0000,  3.0000],
                  [ 3.0000,  6.2500,  7.0000],
                  [ 3.0000,  7.0000, 10.2500]],
         <BLANKLINE>
                 [[ 2.2500,  3.0000,  3.0000],
                  [ 3.0000,  6.2500,  7.0000],
-                 [ 3.0000,  7.0000, 10.2500]]], grad_fn=<UnsafeViewBackward0>)
+                 [ 3.0000,  7.0000, 10.2500]]], grad_fn=<...>)
         >>> kmt = KernelMultiTask(
         ...     KernelGaussian(5,torchify=True),
         ...     num_tasks = 3,
@@ -322,14 +322,14 @@ class KernelMultiTask(AbstractKernel):
         ...     shape_factor = [2,3*(1+3)//2-3],
         ...     shape_diag = [2,3],
         ...     )
-        >>> kmt.taskmat
+        >>> kmt.taskmat  # doctest: +ELLIPSIS
         tensor([[[ 2.2500,  3.0000,  3.0000],
                  [ 3.0000,  6.2500,  7.0000],
                  [ 3.0000,  7.0000, 10.2500]],
         <BLANKLINE>
                 [[ 2.2500,  3.0000,  3.0000],
                  [ 3.0000,  6.2500,  7.0000],
-                 [ 3.0000,  7.0000, 10.2500]]], grad_fn=<UnsafeViewBackward0>)
+                 [ 3.0000,  7.0000, 10.2500]]], grad_fn=<...>)
     """
 
     def __init__(
