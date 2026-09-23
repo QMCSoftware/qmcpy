@@ -10,7 +10,6 @@ from ..discrete_distribution.abstract_discrete_distribution import (
 )
 from ..true_measure import GeometricBrownianMotion
 from ..util import ParameterError
-import numpy as np
 from time import time
 
 
@@ -18,6 +17,11 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
     r"""
     American Put Option stopping criterion using Longstaff-Schwartz policy training
     and Quasi-Monte Carlo / Monte Carlo pricing integration.
+
+    Note:
+        The error tolerance (`abs_tol`, `rel_tol`) bounds the numerical integration
+        error of the option payoff given the trained exercise policy (`n_train`). Policy
+        training error from finite `n_train` is separate and controlled by choosing `n_train`.
 
     Examples:
         >>> from qmcpy import FinancialOption, Sobol, CubQMCAmericanG
@@ -43,8 +47,8 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
         r"""
         Args:
             integrand (FinancialOption): FinancialOption instance with option="AMERICAN".
-            abs_tol (float or np.ndarray): Absolute error tolerance.
-            rel_tol (float or np.ndarray): Relative error tolerance.
+            abs_tol (float): Absolute error tolerance for integration.
+            rel_tol (float): Relative error tolerance for integration.
             n_init (int): Initial number of samples for pricing integration.
             n_limit (int): Maximum number of samples for pricing integration.
             n_train (int): Number of LSM training samples.
@@ -97,7 +101,16 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
                 return self.stopping_criterion_custom
 
         distrib = self.discrete_distrib
-        if isinstance(distrib, AbstractIIDDiscreteDistribution):
+        if distrib.replications > 1:
+            return CubQMCRepStudentT(
+                self.integrand,
+                abs_tol=self.abs_tol,
+                rel_tol=self.rel_tol,
+                n_init=self.n_init,
+                n_limit=self.n_limit,
+                **self.inner_kwargs
+            )
+        elif isinstance(distrib, AbstractIIDDiscreteDistribution):
             return CubMCCLT(
                 self.integrand,
                 abs_tol=self.abs_tol,

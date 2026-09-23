@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from qmcpy import FinancialOption, Sobol, IIDStdUniform
+from qmcpy import FinancialOption, Sobol
 from qmcpy.util import ParameterError
 
 
@@ -56,7 +56,7 @@ class TestFinancialOptionAmerican(unittest.TestCase):
 
         # Train policy on training paths
         train_paths = opt.true_measure.gen_samples(1024)
-        betas = opt.train_american_policy(train_paths)
+        opt.train_american_policy(train_paths)
 
         self.assertIsNotNone(opt.betas)
         self.assertEqual(len(opt.betas), self.d - 1)

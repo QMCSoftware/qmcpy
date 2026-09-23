@@ -492,7 +492,6 @@ class FinancialOption(AbstractIntegrand):
             )
         return discounted_payoffs
 
-<<<<<<< HEAD
     def laguerre_basis(self, x):
         """
         Evaluate the 4-term Laguerre basis functions for normalized price state x = S / S0.
@@ -600,8 +599,6 @@ class FinancialOption(AbstractIntegrand):
 
         return payoffs.reshape(orig_shape)
 
-    def payoff_european_call(self, gbm):
-=======
     def payoff_european_call(self, gbm: np.ndarray) -> np.ndarray:
         """European call payoff at maturity.
 
@@ -611,7 +608,6 @@ class FinancialOption(AbstractIntegrand):
         Returns:
             np.ndarray: Payoff of each path.
         """
->>>>>>> origin/develop
         return np.maximum(gbm[..., -1] - self.strike_price, 0)
 
     def payoff_european_put(self, gbm: np.ndarray) -> np.ndarray:
