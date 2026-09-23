@@ -2,6 +2,7 @@
  "repo": "QMCSoftware/QMCSoftware",
  "git_ref": "develop",
  "enabled": [
+  "demos/AmericanOption.ipynb",
   "demos/DAKOTA_Genz/dakota_genz.ipynb",
   "demos/GBM/gbm_demo.ipynb",
   "demos/GBM/gbm_examples.ipynb",

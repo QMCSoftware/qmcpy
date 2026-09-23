@@ -312,6 +312,15 @@ class FinancialOption(AbstractIntegrand):
             diffusion=self.volatility**2,
             decomp_type=self.decomp_type,
         )
+        self.call_put = str(call_put).upper()
+        assert self.call_put in ["CALL", "PUT"], "invalid call_put = %s" % self.call_put
+        self.option = str(option).upper()
+        if self.option == "AMERICAN":
+            if self.call_put == "CALL":
+                raise ParameterError("American options currently only support call_put='PUT'")
+            if level is not None:
+                raise ParameterError("American options do not support multilevel integration (level must be None)")
+
         self.discount_factor = np.exp(-self.interest_rate * self.t_final)
         self.level = level
         self.d_coarsest = d_coarsest
@@ -443,6 +452,13 @@ class FinancialOption(AbstractIntegrand):
                 if self.call_put == "CALL"
                 else self.payoff_digital_put
             )
+        elif self.option == "AMERICAN":
+            if self.call_put == "CALL":
+                raise ParameterError("American options currently only support call_put='PUT'")
+            if self.level is not None:
+                raise ParameterError("American options do not support multilevel integration (level must be None)")
+            self.payoff = self.payoff_american_put
+            self.betas = None
         else:
             raise ParameterError("invalid option type %s" % self.option)
         super(FinancialOption, self).__init__(
@@ -461,6 +477,8 @@ class FinancialOption(AbstractIntegrand):
                 and fine payoffs stacked together.
         """
         gbm = t  # GeometricBrownianMotion already provides GBM paths directly
+        if self.option == "AMERICAN":
+            return self.payoff(gbm)
         discounted_payoffs = self.payoff(gbm) * self.discount_factor
         if self.multilevel:
             if self.level == 0:
@@ -473,6 +491,122 @@ class FinancialOption(AbstractIntegrand):
                 [discounted_payoffs_coarse, discounted_payoffs]
             )
         return discounted_payoffs
+
+    def laguerre_basis(self, x: np.ndarray) -> np.ndarray:
+        """
+        Evaluate the 4-term Laguerre basis functions for normalized price state x = S / S0.
+
+        Args:
+            x (np.ndarray): Normalized prices (S / S0).
+
+        Returns:
+            np.ndarray: Design matrix of shape (*x.shape, 4).
+        """
+        x = np.asarray(x, dtype=float)
+        exp_half_x = np.exp(-x / 2.0)
+        col0 = np.ones_like(x)
+        col1 = exp_half_x
+        col2 = exp_half_x * (1.0 - x)
+        col3 = exp_half_x * (1.0 - 2.0 * x + 0.5 * x**2)
+        return np.stack([col0, col1, col2, col3], axis=-1)
+
+    def train_american_policy(self, gbm_paths: np.ndarray) -> list:
+        """
+        Train Longstaff-Schwartz regression coefficients (exercise policy) on training paths.
+
+        Args:
+            gbm_paths (np.ndarray): Sample paths under Geometric Brownian Motion with shape (*batch, n_samples, d).
+
+        Returns:
+            list: List of length d-1 containing regression coefficient vectors (or None if no ITM paths).
+        """
+        shape_2d = (-1, gbm_paths.shape[-1])
+        paths = gbm_paths.reshape(shape_2d)
+        n_samples, d = paths.shape
+        K = self.strike_price
+        S0 = self.start_price
+        r = self.interest_rate
+        t_vec = self.true_measure.time_vec
+
+        # Step 1: Terminal cash flow at maturity t_d
+        cf = np.maximum(K - paths[:, -1], 0.0) * np.exp(-r * t_vec[-1])
+        betas = [None] * (d - 1)
+
+        # Step 2: Backward induction for j = d-1 down to 1 (0-indexed: d-2 down to 0)
+        for step_idx in range(d - 2, -1, -1):
+            S_j = paths[:, step_idx]
+            itm = S_j < K
+            n_itm = np.sum(itm)
+            if n_itm > 0:
+                x_itm = S_j[itm] / S0
+                X_j = self.laguerre_basis(x_itm)
+                y_j = cf[itm]
+                beta_j, _, _, _ = np.linalg.lstsq(X_j, y_j, rcond=None)
+                betas[step_idx] = beta_j
+
+                c_hat = X_j @ beta_j
+                v_imm = (K - S_j[itm]) * np.exp(-r * t_vec[step_idx])
+                exercise = v_imm > c_hat
+
+                itm_indices = np.where(itm)[0]
+                exercised_indices = itm_indices[exercise]
+                cf[exercised_indices] = v_imm[exercise]
+
+        self.betas = betas
+        return betas
+
+    def payoff_american_put(self, gbm: np.ndarray) -> np.ndarray:
+        """
+        Evaluate the American put option payoff for a set of price paths.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion price paths of shape (*batch, d).
+
+        Returns:
+            np.ndarray: Discounted American put option payoffs for each path.
+        """
+        if self.betas is None:
+            raise ParameterError(
+                "American option policy must be trained before evaluating payoffs. Call train_american_policy first or use CubQMCAmericanG."
+            )
+
+        orig_shape = gbm.shape[:-1]
+        d = gbm.shape[-1]
+        paths = gbm.reshape(-1, d)
+        n_samples = len(paths)
+        K = self.strike_price
+        S0 = self.start_price
+        r = self.interest_rate
+        t_vec = self.true_measure.time_vec
+
+        payoffs = np.zeros(n_samples, dtype=float)
+        active = np.ones(n_samples, dtype=bool)
+
+        for step_idx in range(d - 1):
+            beta_j = self.betas[step_idx]
+            if beta_j is None:
+                continue
+            S_j = paths[:, step_idx]
+            cand = active & (S_j < K)
+            if not np.any(cand):
+                continue
+            x_cand = S_j[cand] / S0
+            X_cand = self.laguerre_basis(x_cand)
+            c_hat = X_cand @ beta_j
+            t_j = t_vec[step_idx]
+            v_imm = (K - S_j[cand]) * np.exp(-r * t_j)
+            exercise = v_imm > c_hat
+
+            cand_indices = np.where(cand)[0]
+            exercised_indices = cand_indices[exercise]
+            payoffs[exercised_indices] = v_imm[exercise]
+            active[exercised_indices] = False
+
+        # Maturity for remaining active paths
+        t_d = t_vec[-1]
+        payoffs[active] = np.maximum(K - paths[active, -1], 0.0) * np.exp(-r * t_d)
+
+        return payoffs.reshape(orig_shape)
 
     def payoff_european_call(self, gbm: np.ndarray) -> np.ndarray:
         """European call payoff at maturity.
