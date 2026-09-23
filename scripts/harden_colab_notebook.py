@@ -486,16 +486,20 @@ def main() -> int:
         manifest_path,
     )
     for notebook_rel in successes:
-        print(f"Hardened {notebook_rel} for Colab.")
+        print(f"  - Hardened {notebook_rel} for Colab.")
     if failures:
-        print("")
-        print("Not yet hardened:")
+        print()
+        print("  - Not yet hardened:")
         for notebook_rel, error in failures:
-            print(f"- {notebook_rel}: {error}")
-    print("")
+            print(f"    - {notebook_rel}: {error}")
     print(
-        f"Hardened {len(successes)} notebook(s); {len(failures)} notebook(s) still need manual follow-up."
+        f"  - Hardened {len(successes)} notebook(s); {len(failures)} notebook(s) still need manual follow-up."
     )
+    total = len(successes) + len(failures)
+    if not failures:
+        print(f"clean  (0 of {total} notebooks)")
+    else:
+        print(f"ERROR: {len(failures)} need follow-up  ({len(failures)} of {total} notebooks)")
     return 0 if not failures else 1
 
 

@@ -1,3 +1,7 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from typing import Union
 from .abstract_true_measure import AbstractTrueMeasure
 from ..util import DimensionError
 from ..discrete_distribution import DigitalNetB2
@@ -5,8 +9,9 @@ import numpy as np
 
 
 class BernoulliCont(AbstractTrueMeasure):
-    r"""
-    Continuous Bernoulli distribution with independent marginals as described in [https://en.wikipedia.org/wiki/Continuous_Bernoulli_distribution](https://en.wikipedia.org/wiki/Continuous_Bernoulli_distribution).
+    r"""Continuous Bernoulli distribution with independent marginals as
+    described in
+    [https://en.wikipedia.org/wiki/Continuous_Bernoulli_distribution](https://en.wikipedia.org/wiki/Continuous_Bernoulli_distribution).
 
     Examples:
         >>> true_measure = BernoulliCont(DigitalNetB2(2,seed=7),lam=.2)
@@ -36,14 +41,17 @@ class BernoulliCont(AbstractTrueMeasure):
                 [0.6345258 , 0.60241448, 0.84822692]]])
     """
 
-    def __init__(self, sampler, lam=1 / 2):
-        r"""
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], lam: Union[float, np.ndarray] = 1 / 2) -> None:
+        r"""Initialize a BernoulliCont true measure.
+
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.
-            lam (Union[float, np.ndarray]): Vector of shape parameters, each in $(0,1)$.
+            lam (Union[float, np.ndarray]): Vector of shape parameters, each in
+                $(0,1)$.
         """
         self.parameters = ["lam"]
         self.domain = np.array([[0, 1]])

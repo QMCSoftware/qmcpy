@@ -66,7 +66,10 @@ For QMCPy MPMC, that makes `pyg_lib` the default path we should maintain first.
 
 ## References
 
-- [PyTorch Geometric installation guide](https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html)
-- [PyTorch 2.10.0 on PyPI](https://pypi.org/project/torch/2.10.0/)
-- [torch-geometric on PyPI](https://pypi.org/project/torch-geometric/)
-- [PyG wheel index for `torch-2.10.0+cpu`](https://data.pyg.org/whl/torch-2.10.0+cpu.html)
+[1] "PyTorch Geometric installation guide." [Online]. Available: [https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html](https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html). [Accessed: Sep. 17, 2026].
+
+[2] "PyTorch 2.10.0." [Online]. Available: [https://pypi.org/project/torch/2.10.0/](https://pypi.org/project/torch/2.10.0/). [Accessed: Sep. 17, 2026].
+
+[3] "torch-geometric." [Online]. Available: [https://pypi.org/project/torch-geometric/](https://pypi.org/project/torch-geometric/). [Accessed: Sep. 17, 2026].
+
+[4] "PyG wheel index for `torch-2.10.0+cpu`." [Online]. Available: [https://data.pyg.org/whl/torch-2.10.0+cpu.html](https://data.pyg.org/whl/torch-2.10.0+cpu.html). [Accessed: Sep. 17, 2026].

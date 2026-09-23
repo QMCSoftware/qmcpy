@@ -1,3 +1,5 @@
+from ..integrand.abstract_integrand import AbstractIntegrand
+from typing import Union, Callable
 from .abstract_cub_qmc_ld_g import AbstractCubQMCLDG, _default_fudge
 from ..discrete_distribution import Lattice
 from ..true_measure import Gaussian, Uniform
@@ -10,9 +12,9 @@ import numpy as np
 
 
 class CubQMCLatticeG(AbstractCubQMCLDG):
-    r"""
-    Quasi-Monte Carlo stopping criterion using rank-1 lattice cubature
-    with guarantees for cones of functions with a predictable decay in the Fourier coefficients.
+    r"""Quasi-Monte Carlo stopping criterion using rank-1 lattice cubature
+    with guarantees for cones of functions with a predictable decay in the
+    Fourier coefficients.
 
     Examples:
         >>> k = Keister(Lattice(seed=7))
@@ -160,53 +162,51 @@ class CubQMCLatticeG(AbstractCubQMCLDG):
 
     **References:**
 
-    1.  Lluis Antoni Jimenez Rugama and Fred J. Hickernell.
-        "Adaptive multidimensional integration based on rank-1 lattices,"
-        Monte Carlo and Quasi-Monte Carlo Methods: MCQMC, Leuven, Belgium,
-        April 2014 (R. Cools and D. Nuyens, eds.), Springer Proceedings in Mathematics.
-        and Statistics, vol. 163, Springer-Verlag, Berlin, 2016, arXiv:1411.1966, pp. 407-422.
+    [1] Ll. A. Jimenez Rugama and F. J. Hickernell, "Adaptive multidimensional integration based on rank-1 lattices," in *Monte Carlo and Quasi-Monte Carlo Methods: MCQMC, Leuven, Belgium, April 2014*, R. Cools and D. Nuyens, Eds. Springer Proceedings in Mathematics and Statistics, vol. 163. Berlin: Springer-Verlag, 2016, pp. 407-422. arXiv:1411.1966.
 
-    2.  Sou-Cheng T. Choi, Yuhan Ding, Fred J. Hickernell, Lan Jiang, Lluis Antoni Jimenez Rugama,
-        Da Li, Jagadeeswaran Rathinavel, Xin Tong, Kan Zhang, Yizhi Zhang, and Xuan Zhou,
-        GAIL: Guaranteed Automatic Integration Library (Version 2.3) [MATLAB Software], 2019.
-        [http://gailgithub.github.io/GAIL_Dev/](http://gailgithub.github.io/GAIL_Dev/).
-        [https://github.com/GailGithub/GAIL_Dev/blob/master/Algorithms/IntegrationExpectation/cubLattice_g.m](https://github.com/GailGithub/GAIL_Dev/blob/master/Algorithms/IntegrationExpectation/cubLattice_g.m).
+    [2] S.-C. T. Choi, Y. Ding, F. J. Hickernell, L. Jiang, Ll. A. Jimenez Rugama, D. Li, J. Rathinavel, X. Tong, K. Zhang, Y. Zhang, and X. Zhou, "GAIL: Guaranteed Automatic Integration Library," MATLAB software, Version 2.3, 2019. [Online]. Available: [http://gailgithub.github.io/GAIL_Dev/](http://gailgithub.github.io/GAIL_Dev/) and [https://github.com/GailGithub/GAIL_Dev/blob/master/Algorithms/IntegrationExpectation/cubLattice_g.m](https://github.com/GailGithub/GAIL_Dev/blob/master/Algorithms/IntegrationExpectation/cubLattice_g.m)
     """
 
     def __init__(
         self,
-        integrand,
-        abs_tol=1e-2,
-        rel_tol=0.0,
-        n_init=2**10,
-        n_limit=2**30,
-        error_fun="EITHER",
-        fudge=_default_fudge,
-        check_cone=False,
-        ptransform="BAKER",
-    ):
-        r"""
+        integrand: AbstractIntegrand,
+        abs_tol: Union[float, np.ndarray] = 1e-2,
+        rel_tol: Union[float, np.ndarray] = 0.0,
+        n_init: int = 2**10,
+        n_limit: int = 2**30,
+        error_fun: Union[str, Callable] = "EITHER",
+        fudge: Callable = _default_fudge,
+        check_cone: bool = False,
+        ptransform: str = "BAKER",
+    ) -> None:
+        r"""Initialize a CubQMCLatticeG stopping criterion.
+
         Args:
             integrand (AbstractIntegrand): The integrand.
-            abs_tol (np.ndarray): Absolute error tolerance.
-            rel_tol (np.ndarray): Relative error tolerance.
+            abs_tol (Union[float, np.ndarray]): Absolute error tolerance.
+            rel_tol (Union[float, np.ndarray]): Relative error tolerance.
             n_init (int): Initial number of samples.
             n_limit (int): Maximum number of samples.
-            error_fun (Union[str, callable]): Function mapping the approximate solution, absolute error tolerance, and relative error tolerance to the current error bound.
+            error_fun (Union[str, Callable]): Function mapping the approximate
+                solution, absolute error tolerance, and relative error
+                tolerance to the current error bound.
 
-                - `'EITHER'`, the default, requires the approximation error must be below either the absolue *or* relative tolerance.
+                - `'EITHER'`, the default, requires the approximation error to be below either the absolute *or* relative tolerance.
                     Equivalent to setting
                     ```python
                     error_fun = lambda sv,abs_tol,rel_tol: np.maximum(abs_tol,abs(sv)*rel_tol)
                     ```
-                - `'BOTH'` requires the approximation error to be below both the absolue *and* relative tolerance.
+                - `'BOTH'` requires the approximation error to be below both the absolute *and* relative tolerance.
                     Equivalent to setting
                     ```python
                     error_fun = lambda sv,abs_tol,rel_tol: np.minimum(abs_tol,abs(sv)*rel_tol)
                     ```
-            fudge (function): Positive function multiplying the finite sum of the Fourier coefficients specified in the cone of functions.
-            check_cone (bool): Whether or not to check if the function falls in the cone.
-            ptransform (str): Periodization transform, see the options in `AbstractIntegrand.f`.
+            fudge (Callable): Positive function multiplying the finite sum of
+                the Fourier coefficients specified in the cone of functions.
+            check_cone (bool): Whether or not to check if the function falls in
+                the cone.
+            ptransform (str): Periodization transform, see the options in
+                `AbstractIntegrand.f`.
         """
         super(CubQMCLatticeG, self).__init__(
             integrand,

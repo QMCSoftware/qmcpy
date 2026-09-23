@@ -1,9 +1,11 @@
 from qmcpy import (
     BernoulliCont,
     BrownianMotion,
+    CustomFun,
     DigitalNetB2,
     Gaussian,
     GeometricBrownianMotion,
+    Halton,
     IIDStdUniform,
     JohnsonsSU,
     Kumaraswamy,
@@ -617,7 +619,7 @@ class TestZeroInflatedExpUniform(unittest.TestCase):
         )
         self.assertFalse(hasattr(spawn, "covariance"))
 
-    def test_deprecated_2d_construction_has_no_moment_parameters(self):
+    def test_deprecated_2d_omits_moments(self):
         # The deprecated 2D y_split construction does not define moments.
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", DeprecationWarning)
@@ -777,6 +779,44 @@ class TestGaussian(unittest.TestCase):
             err_msg="Gaussian with custom parameters output changed unexpectedly",
         )
 
+    def test_float32_cholesky_precision_shape(self):
+        """Single-precision inputs use a double-precision Gaussian transform."""
+        gaussian = Gaussian(
+            DigitalNetB2(2, seed=self.seed),
+            mean=[10000.0, -10000.0],
+            covariance=np.array([[1.0, 0.8], [0.8, 1.0]], dtype=np.float32),
+            decomp_type="Cholesky",
+        )
+        uniforms = np.array(
+            [[[0.001, 0.1], [0.2, 0.99]], [[0.25, 0.75], [0.6, 0.4]]],
+            dtype=np.float32,
+        )
+        for x in (uniforms[0], uniforms):
+            with self.subTest(shape=x.shape):
+                expected = gaussian.mu + np.einsum(
+                    "...ij,kj->...ik",
+                    scipy.stats.norm.ppf(x.astype(np.float64)),
+                    gaussian.a,
+                )
+                actual = gaussian._transform(x)
+                self.assertEqual(actual.shape, x.shape)
+                self.assertEqual(actual.dtype, np.dtype(np.float64))
+                np.testing.assert_allclose(actual, expected, rtol=0, atol=1e-11)
+
+    def test_float32_integrand_large_mean(self):
+        """A finite double-precision mean must not overflow during the transform."""
+        gaussian = Gaussian(
+            DigitalNetB2(1, seed=self.seed),
+            mean=1e40,
+            covariance=np.array([[1.0]], dtype=np.float32),
+            decomp_type="Cholesky",
+        )
+        integrand = CustomFun(gaussian, lambda t: t[..., 0])
+        with np.errstate(over="raise", invalid="raise"):
+            actual = integrand.f(np.array([[0.5]], dtype=np.float32))
+        self.assertTrue(np.isfinite(actual).all())
+        np.testing.assert_array_equal(actual, [1e40])
+
     def test_gaussian_weight_computation(self):
         """Test that Gaussian PDF weight computation produces expected values."""
         gaussian = Gaussian(
@@ -883,7 +923,7 @@ class TestGaussian(unittest.TestCase):
             err_msg="Gaussian with scalar parameters output changed unexpectedly",
         )
 
-    def test_moment_attributes_with_diagonal_covariance_vector(self):
+    def test_moments_with_diagonal_covariance(self):
         gaussian = Gaussian(
             Lattice(3, seed=self.seed),
             mean=[-1, 0, 1],
@@ -1196,7 +1236,7 @@ class TestBrownianMotion(unittest.TestCase):
             BrownianMotion(DigitalNetB2(4, seed=self.seed), decomp_type="invalid", lazy_decomp=False)
         self.assertIn("BrownianBridge", str(context.exception))
 
-    def test_brownian_bridge_monitoring_times_exceed_t_final(self):
+    def test_brownian_bridge_times_exceed_t_final(self):
         with self.assertRaises(ParameterError):
             BrownianMotion(DigitalNetB2(4, seed=self.seed), t_final=1.0,
                            decomp_type="BrownianBridge",
@@ -1265,6 +1305,23 @@ class TestGeometricBrownianMotion(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures with fixed seeds for reproducibility."""
         self.seed = 7
+
+    def test_shape_and_terminal_value_across_samplers(self):
+        """Path shape and terminal (last time-step) values are well-defined,
+        finite, and positive across LD and IID samplers."""
+        n_steps, n_paths = 4, 8
+        for sampler_cls in (DigitalNetB2, Lattice, Halton, IIDStdUniform):
+            with self.subTest(sampler=sampler_cls.__name__):
+                gbm = GeometricBrownianMotion(
+                    sampler_cls(n_steps, seed=self.seed),
+                    t_final=1, initial_value=100, drift=0.05, diffusion=0.04,
+                )
+                samples = gbm.gen_samples(n_paths)
+                self.assertEqual(samples.shape, (n_paths, n_steps))
+                self.assertTrue(np.isfinite(samples).all())
+                terminal = samples[..., -1]
+                self.assertEqual(terminal.shape, (n_paths,))
+                self.assertTrue(np.isfinite(terminal).all() and (terminal > 0).all())
 
     def test_gbm_basic_output_reproducibility(self):
         """Test that basic GBM sample generation produces expected values with fixed seed."""
@@ -1468,6 +1525,26 @@ class TestGeometricBrownianMotion(unittest.TestCase):
             lazy_load=False,
         )
         self.assertIsNotNone(gbm_eager._log_mvn_scipy_cache)
+
+    def test_legacy_positional_arguments(self):
+        """A pre-existing positional call (..., decomp_type, lazy_load,
+        lazy_decomp) must land on the same parameters as its keyword
+        equivalent -- monitoring_times was added keyword-only specifically
+        so inserting it does not shift any positional argument.
+        """
+        positional = GeometricBrownianMotion(
+            DigitalNetB2(4, seed=self.seed), 1, 100, 0.05, 0.04, "PCA", False, False,
+        )
+        keyword = GeometricBrownianMotion(
+            DigitalNetB2(4, seed=self.seed),
+            t_final=1, initial_value=100, drift=0.05, diffusion=0.04,
+            decomp_type="PCA", lazy_load=False, lazy_decomp=False,
+        )
+        self.assertFalse(positional.lazy_load)
+        self.assertFalse(positional.lazy_decomp)
+        self.assertEqual(positional.lazy_load, keyword.lazy_load)
+        self.assertEqual(positional.lazy_decomp, keyword.lazy_decomp)
+        np.testing.assert_array_equal(positional.time_vec, keyword.time_vec)
 
 
 class TestAcceptanceRejection(unittest.TestCase):

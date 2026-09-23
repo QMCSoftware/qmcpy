@@ -747,10 +747,19 @@ def flatten_imports(
 ) -> tuple[bytes, int]:
     """Flatten, combine, alphabetize, and deduplicate public imports.
 
-    `public_names` is qmcpy's public API surface (see `_load_qmcpy_public_names`).
-    When it's None, nested imports are left unchanged and existing top-level
-    star imports are deduplicated but left unexpanded. `protect_python` should
-    be true for Python files so strings and comments are never rewritten.
+        `public_names` is qmcpy's public API surface (see `_load_qmcpy_public_names`).
+        When it's None, nested imports are left unchanged and existing top-level
+        star imports are deduplicated but left unexpanded. `protect_python` should
+        be true for Python files so strings and comments are never rewritten.
+
+    Args:
+        content (bytes): File contents to rewrite.
+        public_names (frozenset[str] | None): Names treated as public; defaults to
+            the package's own public API.
+        protect_python (bool): Leave imports inside Python code blocks untouched.
+
+    Returns:
+        bytes: The rewritten contents, unchanged when nothing needed flattening.
     """
 
     change_count = 0
@@ -832,7 +841,14 @@ def _is_supported(path: Path) -> bool:
 
 
 def iter_target_files(paths: Iterable[Path]) -> Iterator[Path]:
-    """Yield supported files under paths, pruning generated and cache directories."""
+    """Yield supported files under paths, pruning generated and cache directories.
+
+    Args:
+        paths (Iterable[Path]): Files or directories to walk.
+
+    Yields:
+        Path: Each supported file, skipping generated and cache directories.
+    """
 
     seen: set[Path] = set()
     for path in paths:
@@ -876,6 +892,15 @@ def _display_path(path: Path, base: Path) -> Path:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the command-line interface.
+
+    Args:
+        argv (list[str] | None): Command-line arguments, excluding the program
+            name; defaults to ``sys.argv[1:]``.
+
+    Returns:
+        int: Process exit status; ``0`` on success.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--check",
@@ -907,7 +932,7 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
 
-    changed_files = 0
+    changed = []  # list of (display_path, import_count)
     changed_imports = 0
     for path in targets:
         original = path.read_bytes()
@@ -919,29 +944,31 @@ def main(argv: list[str] | None = None) -> int:
         if not count:
             continue
 
-        changed_files += 1
+        changed.append((_display_path(path, repository_root), count))
         changed_imports += count
         if not args.check:
             path.write_bytes(updated)
-        action = "Would update" if args.check else "Updated"
-        import_label = "import" if count == 1 else "imports"
-        print(
-            f"{action}: {_display_path(path, repository_root)} "
-            f"({count} {import_label})"
-        )
 
-    if changed_files:
-        action = "need updates" if args.check else "updated"
+    action = "would update" if args.check else "updated"
+    if changed:
+        file_label = "file" if len(changed) == 1 else "files"
         import_label = "import" if changed_imports == 1 else "imports"
-        file_label = "file" if changed_files == 1 else "files"
+        print()
         print(
-            f"{changed_imports} {import_label} in "
-            f"{changed_files} {file_label} {action}."
+            f"  - qmcpy imports {action}: {len(changed)} {file_label}, "
+            f"{changed_imports} {import_label}:"
         )
-    else:
-        print("All eligible QMCPy imports already use the top-level package.")
+        for display_path, count in sorted(changed):
+            per = "import" if count == 1 else "imports"
+            print(f"    - {display_path} ({count} {per})")
 
-    return int(args.check and changed_files > 0)
+    if not changed:
+        print(f"clean  (0 of {len(targets)} files)")
+    elif args.check:
+        print(f"ERROR: {len(changed)} would change  ({len(changed)} of {len(targets)} files)")
+    else:
+        print(f"{len(changed)} changed  ({len(changed)} of {len(targets)} files)")
+    return int(args.check and bool(changed))
 
 
 if __name__ == "__main__":

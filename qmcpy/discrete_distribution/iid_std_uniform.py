@@ -1,3 +1,4 @@
+from typing import Union
 from .abstract_discrete_distribution import AbstractIIDDiscreteDistribution
 from ..util import ParameterError, ParameterWarning
 import numpy as np
@@ -5,10 +6,10 @@ import warnings
 
 
 class IIDStdUniform(AbstractIIDDiscreteDistribution):
-    r"""
-    IID standard uniform points, a wrapper around [`numpy.random.rand`](https://numpy.org/doc/stable/reference/random/generated/numpy.random.rand.html).
+    r"""IID standard uniform points, a wrapper around
+    [`numpy.random.rand`](https://numpy.org/doc/stable/reference/random/generated/numpy.random.rand.html).
 
-    Note:
+    Notes:
         - Unlike low discrepancy sequence, calling an `IIDStdUniform` instance gives new samples every time,
             e.g., running the first doctest below with `dd = Lattice(dimension=2)` would give the same 4 points in both calls,
             but since we are using an `IIDStdUniform` instance it gives different points every call.
@@ -49,18 +50,22 @@ class IIDStdUniform(AbstractIIDDiscreteDistribution):
                 [0.6171181 , 0.1239209 , 0.16809479]]])
     """
 
-    def __init__(self, dimension=1, replications=None, seed=None):
-        r"""
+    def __init__(self, dimension: int = 1, replications: Union[None, int] = None, seed: Union[None, int, np.random.SeedSequence] = None) -> None:
+        r"""Initialize an IIDStdUniform discrete distribution.
+
         Args:
             dimension (int): Dimension of the samples.
-            replications (Union[None, int]): Number of randomizations. This is implemented only for API consistency. Equivalent to reshaping samples.
-            seed (Union[None, int, np.random.SeedSeq): Seed the random number generator for reproducibility.
+            replications (Union[None, int]): Number of randomizations. This is
+                implemented only for API consistency. Equivalent to reshaping
+                samples.
+            seed (Union[None, int, np.random.SeedSequence]): Seed the random
+                number generator for reproducibility.
         """
         super(IIDStdUniform, self).__init__(
             int(dimension), replications, seed, d_limit=np.inf, n_limit=np.inf
         )
         if not (self.dvec == np.arange(self.d)).all():
-            warnings.warn("IIDStdUniform does not accomodate dvec", ParameterWarning)
+            warnings.warn("IIDStdUniform does not accommodate dvec", ParameterWarning)
 
     def _gen_samples(self, n_min, n_max, return_binary, warn):
         if n_min > 0 and warn:
