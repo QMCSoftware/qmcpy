@@ -8,8 +8,10 @@ from ..discrete_distribution.abstract_discrete_distribution import (
     AbstractDiscreteDistribution,
     AbstractIIDDiscreteDistribution,
 )
+from ..integrand.abstract_integrand import AbstractIntegrand
 from ..true_measure import GeometricBrownianMotion
 from ..util import ParameterError
+from typing import Union, Tuple, Any
 from time import time
 
 
@@ -35,15 +37,15 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
 
     def __init__(
         self,
-        integrand,
-        abs_tol=1e-2,
-        rel_tol=0.0,
-        n_init=2**10,
-        n_limit=2**30,
-        n_train=2**12,
-        stopping_criterion=None,
-        **kwargs
-    ):
+        integrand: AbstractIntegrand,
+        abs_tol: float = 1e-2,
+        rel_tol: float = 0.0,
+        n_init: int = 2**10,
+        n_limit: int = 2**30,
+        n_train: int = 2**12,
+        stopping_criterion: Union[None, type, AbstractStoppingCriterion] = None,
+        **kwargs: dict
+    ) -> None:
         r"""Initialize the CubQMCAmericanG stopping criterion.
 
         Args:
@@ -179,16 +181,15 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
                     **self.inner_kwargs
                 )
 
-    def integrate(self, resume=None):
+    def integrate(self, resume: Union[None, object] = None) -> Tuple[float, Any]:
         """
         Train the Longstaff-Schwartz exercise policy and integrate the option payoff.
 
         Args:
-            resume (object, optional): Not supported by this stopping criterion.
+            resume (Union[None, object], optional): Not supported by this stopping criterion.
 
         Returns:
-            solution (float): Estimated American option price.
-            data (Data): Integration result data container.
+            Tuple[float, Any]: Estimated American option price and integration data container.
         """
         t_start = time()
         trace = self._make_trace_logger()
@@ -203,7 +204,7 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
             t_final=self.integrand.t_final,
             initial_value=self.integrand.start_price,
             drift=self.integrand.interest_rate,
-            diffusion=self.integrand.volatility**2,
+            diffusion=self.volatility**2 if hasattr(self, "volatility") else self.integrand.volatility**2,
             decomp_type=self.integrand.decomp_type,
         )
         training_paths = training_gbm.gen_samples(self.n_train)
@@ -227,14 +228,19 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
 
         return solution, data
 
-    def set_tolerance(self, abs_tol=None, rel_tol=None, rmse_tol=None):
+    def set_tolerance(
+        self,
+        abs_tol: Union[None, float] = None,
+        rel_tol: Union[None, float] = None,
+        rmse_tol: Union[None, float] = None,
+    ) -> None:
         """
         Set error tolerances for the stopping criterion.
 
         Args:
-            abs_tol (float, optional): Absolute error tolerance.
-            rel_tol (float, optional): Relative error tolerance.
-            rmse_tol (float, optional): RMSE error tolerance (not supported).
+            abs_tol (Union[None, float], optional): Absolute error tolerance.
+            rel_tol (Union[None, float], optional): Relative error tolerance.
+            rmse_tol (Union[None, float], optional): RMSE error tolerance (not supported).
         """
         assert rmse_tol is None, "rmse_tol not supported by this stopping criterion."
         if abs_tol is not None:

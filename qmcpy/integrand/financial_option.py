@@ -492,7 +492,7 @@ class FinancialOption(AbstractIntegrand):
             )
         return discounted_payoffs
 
-    def laguerre_basis(self, x):
+    def laguerre_basis(self, x: np.ndarray) -> np.ndarray:
         """
         Evaluate the 4-term Laguerre basis functions for normalized price state x = S / S0.
 
@@ -500,7 +500,7 @@ class FinancialOption(AbstractIntegrand):
             x (np.ndarray): Normalized prices (S / S0).
 
         Returns:
-            X (np.ndarray): Design matrix of shape (*x.shape, 4).
+            np.ndarray: Design matrix of shape (*x.shape, 4).
         """
         x = np.asarray(x, dtype=float)
         exp_half_x = np.exp(-x / 2.0)
@@ -510,7 +510,7 @@ class FinancialOption(AbstractIntegrand):
         col3 = exp_half_x * (1.0 - 2.0 * x + 0.5 * x**2)
         return np.stack([col0, col1, col2, col3], axis=-1)
 
-    def train_american_policy(self, gbm_paths):
+    def train_american_policy(self, gbm_paths: np.ndarray) -> list:
         """
         Train Longstaff-Schwartz regression coefficients (exercise policy) on training paths.
 
@@ -518,7 +518,7 @@ class FinancialOption(AbstractIntegrand):
             gbm_paths (np.ndarray): Sample paths under Geometric Brownian Motion with shape (*batch, n_samples, d).
 
         Returns:
-            betas (list): List of length d-1 containing regression coefficient vectors (or None if no ITM paths).
+            list: List of length d-1 containing regression coefficient vectors (or None if no ITM paths).
         """
         shape_2d = (-1, gbm_paths.shape[-1])
         paths = gbm_paths.reshape(shape_2d)
@@ -555,7 +555,7 @@ class FinancialOption(AbstractIntegrand):
         self.betas = betas
         return betas
 
-    def payoff_american_put(self, gbm):
+    def payoff_american_put(self, gbm: np.ndarray) -> np.ndarray:
         """
         Evaluate the American put option payoff for a set of price paths.
 
@@ -563,7 +563,7 @@ class FinancialOption(AbstractIntegrand):
             gbm (np.ndarray): Geometric Brownian motion price paths of shape (*batch, d).
 
         Returns:
-            payoffs (np.ndarray): Discounted American put option payoffs for each path.
+            np.ndarray: Discounted American put option payoffs for each path.
         """
         if self.betas is None:
             raise ParameterError(
