@@ -44,7 +44,8 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
         stopping_criterion=None,
         **kwargs
     ):
-        r"""
+        r"""Initialize the CubQMCAmericanG stopping criterion.
+
         Args:
             integrand (FinancialOption): FinancialOption instance with option="AMERICAN".
             abs_tol (float): Absolute error tolerance for integration.
@@ -179,6 +180,16 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
                 )
 
     def integrate(self, resume=None):
+        """
+        Train the Longstaff-Schwartz exercise policy and integrate the option payoff.
+
+        Args:
+            resume (object, optional): Not supported by this stopping criterion.
+
+        Returns:
+            solution (float): Estimated American option price.
+            data (Data): Integration result data container.
+        """
         t_start = time()
         trace = self._make_trace_logger()
         if resume is not None:
@@ -217,6 +228,14 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
         return solution, data
 
     def set_tolerance(self, abs_tol=None, rel_tol=None, rmse_tol=None):
+        """
+        Set error tolerances for the stopping criterion.
+
+        Args:
+            abs_tol (float, optional): Absolute error tolerance.
+            rel_tol (float, optional): Relative error tolerance.
+            rmse_tol (float, optional): RMSE error tolerance (not supported).
+        """
         assert rmse_tol is None, "rmse_tol not supported by this stopping criterion."
         if abs_tol is not None:
             self.abs_tol = abs_tol

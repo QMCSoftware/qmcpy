@@ -556,6 +556,15 @@ class FinancialOption(AbstractIntegrand):
         return betas
 
     def payoff_american_put(self, gbm):
+        """
+        Evaluate the American put option payoff for a set of price paths.
+
+        Args:
+            gbm (np.ndarray): Geometric Brownian motion price paths of shape (*batch, d).
+
+        Returns:
+            payoffs (np.ndarray): Discounted American put option payoffs for each path.
+        """
         if self.betas is None:
             raise ParameterError(
                 "American option policy must be trained before evaluating payoffs. Call train_american_policy first or use CubQMCAmericanG."
