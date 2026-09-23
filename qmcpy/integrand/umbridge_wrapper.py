@@ -22,10 +22,16 @@ class UMBridgeWrapper(AbstractIntegrand):
 
     Examples:
         >>> _ = os.system('docker run --name muqbppytest -dit -p 4243:4243 linusseelinger/benchmark-muq-beam-propagation:latest > /dev/null')
+        >>> import time
         >>> import umbridge
         >>> dnb2 = DigitalNetB2(dimension=3,seed=7)
         >>> true_measure = Uniform(dnb2,lower_bound=1,upper_bound=1.05)
-        >>> um_bridge_model = umbridge.HTTPModel('http://localhost:4243','forward')
+        >>> for _ in range(30):  # the container above starts detached, so wait for its HTTP server to come up
+        ...     try:
+        ...         um_bridge_model = umbridge.HTTPModel('http://localhost:4243','forward')
+        ...         break
+        ...     except Exception:
+        ...         time.sleep(1)
         >>> um_bridge_config = {"d": dnb2.d}
         >>> integrand = UMBridgeWrapper(true_measure,um_bridge_model,um_bridge_config,parallel=False)
         >>> y = integrand(2**10)

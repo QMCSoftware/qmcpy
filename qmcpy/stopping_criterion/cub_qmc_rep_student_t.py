@@ -16,7 +16,7 @@ from ..util import (
     ParameterError,
 )
 import numpy as np
-from scipy.stats import t
+from scipy.special import stdtrit
 from time import time
 import warnings
 
@@ -292,8 +292,8 @@ class CubQMCRepStudentT(AbstractStoppingCriterion):
             np.full(self.integrand.d_comb, self.alpha)
         )
         self.set_tolerance(abs_tol, rel_tol)
-        self.t_star = -t.ppf(
-            self.alphas_indv / 2, df=self.integrand.discrete_distrib.replications - 1
+        self.t_star = -stdtrit(
+            self.integrand.discrete_distrib.replications - 1, self.alphas_indv / 2
         )
 
     def integrate(self, resume: Union[None, Data] = None) -> tuple:
