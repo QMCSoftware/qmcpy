@@ -764,6 +764,9 @@ format:
 	@echo "> trailing_whitespace"
 	@$(MAKE) rm_trailing_whitespace FORMAT_PATH="$(FORMAT_PATH)"
 	@echo
+	@echo "> strip_notebook_execution_metadata"
+	@$(MAKE) strip_notebook_execution_metadata FORMAT_PATH="$(FORMAT_PATH)"
+	@echo
 	@echo "> harden_colab_notebook"
 	@$(MAKE) harden_colab_notebook
 	@echo
@@ -845,3 +848,6 @@ markdown-unwrap:
 
 rm_trailing_whitespace:
 	@$(PYTHON) scripts/remove_trailing_whitespace.py "$(FORMAT_PATH)"
+
+strip_notebook_execution_metadata:
+	@$(PYTHON) scripts/strip_notebook_execution_metadata.py "$(FORMAT_PATH)"
