@@ -118,7 +118,7 @@ class TestSciPyWrapperCustom(unittest.TestCase):
                         lam=lam,
                     )
 
-    def test_zero_inflated_requires_one_dimensional_sampler(self):
+    def test_zero_inflated_requires_1d_sampler(self):
         with self.assertRaisesRegex(
             DimensionError, "requires a one-dimensional sampler"
         ):
@@ -147,7 +147,7 @@ class TestSciPyWrapperCustom(unittest.TestCase):
         expected = -np.log1p(-u_rescaled) / 2.0
         self.assertTrue(np.allclose(x[3:, 0], expected))
 
-    def test_zero_inflated_inverse_transform_all_zero_branch(self):
+    def test_zero_inflated_all_zero_transform(self):
         tm = ZeroInflatedExpUniform(
             DigitalNetB2(1, seed=17),
             p_zero=0.4,
@@ -174,7 +174,7 @@ class TestSciPyWrapperCustom(unittest.TestCase):
         self.assertTrue(np.isfinite(x).all())
         self.assertGreater(x[0, 0], 0.0)
 
-    def test_zero_inflated_construction_does_not_warn_about_missing_pdf(self):
+    def test_zero_inflated_init_no_pdf_warning(self):
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
             tm = ZeroInflatedExpUniform(
@@ -186,7 +186,7 @@ class TestSciPyWrapperCustom(unittest.TestCase):
         self.assertEqual(tm.d, 1)
         self.assertEqual(_missing_pdf_warnings(caught), [])
 
-    def test_zero_inflated_sampling_does_not_warn_about_missing_pdf(self):
+    def test_zero_inflated_samples_no_pdf_warning(self):
         tm = ZeroInflatedExpUniform(DigitalNetB2(1, seed=17), p_zero=0.4, lam=1.5)
 
         with warnings.catch_warnings(record=True) as caught:
@@ -196,7 +196,7 @@ class TestSciPyWrapperCustom(unittest.TestCase):
         self.assertEqual(x.shape, (8, 1))
         self.assertEqual(_missing_pdf_warnings(caught), [])
 
-    def test_zero_inflated_return_weights_warns_once_for_missing_pdf(self):
+    def test_zero_inflated_weights_warn_once(self):
         tm = ZeroInflatedExpUniform(DigitalNetB2(1, seed=17), p_zero=0.4, lam=1.5)
 
         with self.assertWarnsRegex(UserWarning, MISSING_PDF_WARNING):
@@ -214,7 +214,7 @@ class TestSciPyWrapperCustom(unittest.TestCase):
         self.assertTrue(np.allclose(jac_second, 1.0))
         self.assertEqual(_missing_pdf_warnings(caught), [])
 
-    def test_zero_inflated_y_split_warns_and_uses_one_dimensional_interface(self):
+    def test_zero_inflated_y_split_1d_warning(self):
         with self.assertWarnsRegex(DeprecationWarning, "y_split"):
             tm = ZeroInflatedExpUniform(
                 DigitalNetB2(1, seed=17),
@@ -228,7 +228,7 @@ class TestSciPyWrapperCustom(unittest.TestCase):
         self.assertEqual(x.shape, (4, 1))
         self.assertTrue(np.all(x >= 0.0))
 
-    def test_zero_inflated_y_split_preserves_deprecated_two_dimensional_usage(self):
+    def test_zero_inflated_y_split_legacy_2d(self):
         with self.assertWarnsRegex(DeprecationWarning, "2D zero-inflated"):
             tm = ZeroInflatedExpUniform(
                 DigitalNetB2(2, seed=17),
@@ -245,7 +245,7 @@ class TestSciPyWrapperCustom(unittest.TestCase):
         self.assertTrue(np.all(x[x[:, 0] == 0.0, 1] <= 0.5))
         self.assertTrue(np.all(x[x[:, 0] > 0.0, 1] >= 0.5))
 
-    def test_zero_inflated_y_split_preserves_replicated_two_dimensional_usage(self):
+    def test_zero_inflated_y_split_replicated_2d(self):
         with self.assertWarnsRegex(DeprecationWarning, "2D zero-inflated"):
             tm = ZeroInflatedExpUniform(
                 DigitalNetB2(2, seed=17, replications=2),
