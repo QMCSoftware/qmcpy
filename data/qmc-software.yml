@@ -151,7 +151,7 @@
     Software toolkit for optimization and uncertainty quantification, including support for lattices and digital nets
   language: C++
   status: "Mature"
-  contact: 
+  contact:
     - Pieterjan Robbe
 
 - name: GAIL
@@ -180,7 +180,7 @@
     Part of the SciPy library, providing LDS generators and sampling methods for scientific computing in Python
   language: Python
   status: "Active"
-  contact: 
+  contact:
     - Pamphile Roy
 
 - name: qrng
@@ -189,7 +189,7 @@
     R package for generating LDS, including Sobol and Halton sequences, for statistical computing and data analysis
   language: R
   status: "Active"
-  contact: 
+  contact:
     - name: Marius Hofert
       url: mailto:mhofert@hku.hk
     - Christiane Lemieux
@@ -200,7 +200,7 @@
     Julia package for generating LDS and performing QMC integration, designed for high-performance scientific computing
   language: Julia
   status: "Active"
-  contact: 
+  contact:
     - name: Chris Rackauckas
       url: https://julialang.org/slack/
 
@@ -210,7 +210,7 @@
     Commercial software offering a range of QMC methods for financial modeling and risk analysis
   language: C++ / Fortran
   status: "Mature"
-  contact: 
+  contact:
     - name: Sergei Kucherenko
       url: mailto:info@broda.co.uk
 
@@ -228,7 +228,7 @@
     Database of LD generators
   language: plain text
   status: "Active, Collaboration welcome"
-  contact: 
+  contact:
     - name: Aleksei Sorokin
       url: https://alegresor.github.io
 
@@ -238,7 +238,7 @@
     Nested uniform scrambling of Sobol' sequences and pointer to randomized Halton sequences
   language: R
   status: Mature
-  contact: 
+  contact:
     - Art Owen
 
 - name: Halton
@@ -248,7 +248,7 @@
   language: C++
   status: Mature
 
-- name: 
+- name:
     - label: Lattice
       url: https://web.maths.unsw.edu.au/~fkuo/lattice/index.html
     - label: Sobol'

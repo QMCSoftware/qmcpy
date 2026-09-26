@@ -23,7 +23,7 @@ remote_files=$(git ls-tree -r --name-only "$remote_ref" 2>/dev/null | sed 's/[[:
 tmp_remote=$(mktemp)
 tmp_local=$(mktemp)
 echo "$remote_files" > "$tmp_remote"
-find . -type f -not -path "./.git/*" -print | sed 's#^\./##' | sed 's/[[:space:]]*$//' | sort | uniq > "$tmp_local" 
+find . -type f -not -path "./.git/*" -print | sed 's#^\./##' | sed 's/[[:space:]]*$//' | sort | uniq > "$tmp_local"
 
 comm -23 "$tmp_local" "$tmp_remote"
 

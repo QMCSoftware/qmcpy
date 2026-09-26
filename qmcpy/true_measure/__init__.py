@@ -20,6 +20,7 @@ from .uniform_triangle import UniformTriangle
 from .zero_inflated_exp_uniform import ZeroInflatedExpUniform
 from .triangular import Triangular
 from .acceptance_rejection import AcceptanceRejection, AcceptanceRejectionReal
+from .product_measure import ProductMeasure
 
 TrueMeasure = AbstractTrueMeasure
 _TrueMeasure = AbstractTrueMeasure

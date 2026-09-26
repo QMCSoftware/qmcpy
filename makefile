@@ -1,8 +1,13 @@
+# Prefer an active environment, then the repository's conventional qmcpy Conda
+# environment, before falling back to a system interpreter. Override with
+# ``make PYTHON=/path/to/python <target>`` when needed.
+PYTHON ?= $(shell command -v python 2>/dev/null || { [ -n "$$CONDA_PREFIX" ] && command -v "$$CONDA_PREFIX/bin/python" 2>/dev/null; } || { command -v conda >/dev/null 2>&1 && conda run -n qmcpy python -c 'import sys; print(sys.executable)' 2>/dev/null; } || command -v python3 2>/dev/null)
 # Emit pytest-xdist argument if available; can be overridden on the make command line
-PYTEST_XDIST ?= $(shell python scripts/pytest_xdist.py 2>/dev/null)
+PYTEST_XDIST ?= $(shell $(PYTHON) scripts/pytest_xdist.py 2>/dev/null)
 PYTEST ?=
+SMOKE_CODE_CELLS ?= 2
 WITH_MPMC ?= 0
-HAS_MPMC ?= $(shell python -c "import importlib.util; mods=('torch','pyg_lib','torch_geometric'); print(int(all(importlib.util.find_spec(m) is not None for m in mods)))" 2>/dev/null || echo 0)
+HAS_MPMC ?= $(shell $(PYTHON) -c "import importlib.util; mods=('torch','pyg_lib','torch_geometric'); print(int(all(importlib.util.find_spec(m) is not None for m in mods)))" 2>/dev/null || echo 0)
 
 # set environment variable for documentation
 export JUPYTER_PLATFORM_DIRS=1
@@ -27,17 +32,245 @@ ensure_artifacts:
 # This helps locate generated or local-only folders like build, .pytest_cache, etc.
 find_local_only_files:
 	chmod +x scripts/find_local_only_folders.sh
-	./scripts/find_local_only_folders.sh 
+	./scripts/find_local_only_folders.sh
 
 clean_local_only_files:
-	rm -fr test/booktests/.ipynb_checkpoints/ .pytest_cache/ .ruff_cache/ __pycache__/ */__pycache__/ */*/__pycache__/ raw.githubusercontent.com/ */raw.githubusercontent.com/ */*/raw.githubusercontent.com/ site/ build/ .pdm-build/ artifacts/logs/ artifacts/booktests/ */*/logs/ */*/runinfo/ 
+	rm -fr test/booktests/.ipynb_checkpoints/ .pytest_cache/ .ruff_cache/ __pycache__/ */__pycache__/ */*/__pycache__/ raw.githubusercontent.com/ */raw.githubusercontent.com/ */*/raw.githubusercontent.com/ site/ build/ .pdm-build/ artifacts/logs/ artifacts/booktests/ */*/logs/ */*/runinfo/
 	chmod +x scripts/find_local_only_folders.sh > /dev/null 2>&1
 	for f in $(shell ./scripts/find_local_only_folders.sh > /dev/null 2>&1); do \
 		rm -f "$$f"; > /dev/null 2>&1; \
 	done
 
 clean_coverage:
-	rm -fr artifacts/coverage/ .coverage* test/booktests/.coverage* 
+	rm -fr artifacts/coverage/ .coverage* test/booktests/.coverage*
+
+TEST_STYLE_PATH ?= test
+# Check test/test_*.py against two suite conventions: (1) written as a
+# unittest.TestCase subclass ("object class"), not bare pytest functions;
+# (2) named test_<area>_*.py where <area> is the qmcpy subpackage under test
+# (dd ft ig kn sc tm ut) or a cross-cutting bucket (ee sr).
+# Informational by default; pass --strict to make it fail
+# (e.g. STRICT=--strict make check_test_style).
+check_test_style:
+	@$(PYTHON) scripts/check_test_style.py $(TEST_STYLE_PATH) $(STRICT)
+
+ASSERT_PATH ?= qmcpy
+ASSERT_DIFF_BASE ?= develop
+ASSERT_EXCEPTION ?= AssertionError
+ASSERT_CONVERT_ARGS ?=
+
+check_libcst_dependency:
+	@$(PYTHON) -c "import libcst" 2>/dev/null || { \
+		echo 'Missing LibCST. Install the test tools with: $(PYTHON) -m pip install -e ".[test]"'; \
+		exit 127; \
+	}
+
+check_assert_codemod_dependency: check_libcst_dependency
+
+convert_asserts: check_assert_codemod_dependency
+	$(PYTHON) scripts/convert_asserts.py --exception "$(ASSERT_EXCEPTION)" $(ASSERT_CONVERT_ARGS) $(ASSERT_PATH)
+
+check_asserts: check_assert_codemod_dependency
+	@$(PYTHON) scripts/convert_asserts.py --exception "$(ASSERT_EXCEPTION)" --check $(ASSERT_CONVERT_ARGS) $(ASSERT_PATH)
+
+convert_asserts_changed: check_assert_codemod_dependency
+	@$(PYTHON) scripts/convert_asserts.py --diff "$(ASSERT_DIFF_BASE)" --exception "$(ASSERT_EXCEPTION)" $(ASSERT_CONVERT_ARGS)
+
+check_asserts_changed: check_assert_codemod_dependency
+	@$(PYTHON) scripts/convert_asserts.py --diff "$(ASSERT_DIFF_BASE)" --exception "$(ASSERT_EXCEPTION)" --check $(ASSERT_CONVERT_ARGS)
+
+DOCSTRING_PATH ?= qmcpy
+DOCSTRING_BASE ?= origin/develop
+# pydoclint is a `docs` extra, not `test` -- `pip install -e ".[test]"` alone
+# won't provide it. Prefer PATH (fast, common case); fall back to the same
+# bin/ directory as $(PYTHON) resolved to, which still finds it even when
+# the qmcpy conda env isn't the active shell environment (mirrors how
+# $(PYTHON) itself is resolved, above). check_pydoclint_dependency gives a
+# clear message instead of a bare "command not found" if it's genuinely
+# not installed anywhere.
+PYDOCLINT ?= $(shell command -v pydoclint 2>/dev/null || echo "$(dir $(PYTHON))pydoclint")
+PYDOCLINT_ARGS ?= -q
+DOCSTRING_TYPE_PATH ?= qmcpy
+DOCSTRING_TYPE_DIFF_BASE ?= develop
+DOCSTRING_TYPE_ARGS ?=
+PUBLIC_API_TYPE_PATH ?= qmcpy
+PUBLIC_API_TYPE_DIFF_BASE ?= develop
+PUBLIC_API_ANNOTATE_ARGS ?=
+DOCSTRING_SYNC_ARGS ?=
+# Two-part docstring check for public APIs under qmcpy/:
+#  1. scripts/check_docstring.py -- formatting: a one-line summary before the
+#     first section, no NumPy-style "-----" section underlines, a blank line
+#     before every Args:/Returns:/... header, canonical "Name:" headers, and
+#     public objects with no docstring (pass --skip-missing via
+#     CHECK_DOCSTRING_ARGS to check style only). It also prints a second summary
+#     restricted to files changed relative to DOCSTRING_BASE.
+#  2. pydoclint (config in pyproject.toml [tool.pydoclint]) -- content: every
+#     parameter and return value is documented and matches the signature, in
+#     Google form.
+# Informational by default; pass --strict (STRICT=--strict make check_docstring)
+# to make both parts fail the build.
+check_pydoclint_dependency:
+	@command -v "$(PYDOCLINT)" >/dev/null 2>&1 || { \
+		echo 'Missing pydoclint (it is a `docs` extra, not `test`). Install with: $(PYTHON) -m pip install "pydoclint>=0.5.0"'; \
+		exit 127; \
+	}
+
+check_docstring: check_pydoclint_dependency
+	@$(PYTHON) scripts/check_docstring.py $(DOCSTRING_PATH) --diff $(DOCSTRING_BASE) $(CHECK_DOCSTRING_ARGS) $(STRICT)
+	@out="$$($(PYDOCLINT) $(PYDOCLINT_ARGS) $(DOCSTRING_PATH) 2>&1)"; rc=$$?; \
+	[ -z "$$out" ] || printf '\n%s\n' "$$out"; \
+	$(if $(STRICT),exit $$rc,true)
+
+# Ratchet gate: check_docstring/pydoclint/annotate_public_api_types are
+# informational (existing backlog is large, see PR #613 review F9/F10), but
+# this fails if a change increases any of their full-tree violation counts
+# above scripts/baseline_counts.json. Run with --update after intentionally
+# reducing (or, with justification, increasing) one of the counts.
+# Also runs a second, independent --diff-scoped check: a whole-repo total
+# can improve while a PR's own changed files pick up a brand-new violation
+# (or trade one pre-existing violation for a different new one, a tie the
+# whole-repo count alone can't see) -- this catches that case even when it
+# does.
+BASELINE_DIFF_BASE ?= develop
+
+check_baseline: check_pydoclint_dependency
+	@$(PYTHON) scripts/check_baseline.py --diff "$(BASELINE_DIFF_BASE)"
+
+check_baseline_update:
+	@$(PYTHON) scripts/check_baseline.py --update
+
+REFERENCES_STYLE_PATH ?=
+REFERENCES_STYLE_ARGS ?=
+# Check that "References" / bibliography sections in qmcpy/ docstrings,
+# *.md files, and demos/**/*.ipynb notebooks use this project's house
+# citation style: IEEE numbered brackets ([1], [2], ...), in citation
+# order. See scripts/check_ref_style.py's module docstring for
+# exact scope (generated docs/ copies and paper/ are excluded) and for
+# what each finding category means.
+# Informational by default; pass --strict (STRICT=--strict make
+# check_ref_style) to make it fail the build.
+check_ref_style:
+	@$(PYTHON) scripts/check_ref_style.py $(REFERENCES_STYLE_PATH) $(REFERENCES_STYLE_ARGS) $(STRICT)
+
+# Applies only the unambiguous, purely mechanical fixes that
+# check_ref_style flags (a docstring's `**References**` header
+# missing its colon, and `$[N]$` -> `[N]`); everything else it finds is
+# reported but left for a human -- see the script's docstring for why
+# auto-rewriting free-text citations is not attempted.
+fix_ref_style:
+	$(PYTHON) scripts/check_ref_style.py $(REFERENCES_STYLE_PATH) --fix $(REFERENCES_STYLE_ARGS)
+
+REFERENCES_STYLE_DIFF_BASE ?= develop
+
+# Same check as check_ref_style, but only on qmcpy/*.py, *.md, and
+# demos/**/*.ipynb files that changed relative to REFERENCES_STYLE_DIFF_BASE
+# (committed on the branch, modified in the working tree, or untracked).
+check_ref_style_changed:
+	@$(PYTHON) scripts/check_ref_style.py --diff "$(REFERENCES_STYLE_DIFF_BASE)" $(REFERENCES_STYLE_ARGS) $(STRICT)
+
+LATEX_MATH_PATH ?=
+LATEX_MATH_ARGS ?=
+LATEX_MATH_DIFF_BASE ?= develop
+
+# Flags a LaTeX math command (\boldsymbol, \int, \alpha, ...) that appears
+# outside a $...$ / $$...$$ / \begin{...}...\end{...} math-mode span in
+# qmcpy/ docstrings, *.md files, and demos/**/*.ipynb notebooks -- such a
+# command renders as literal garbled text in built HTML/notebooks, not math.
+# There is no fix_ target: deciding exactly what span to wrap in $...$ is a
+# judgment call, not a mechanical rewrite -- see
+# scripts/check_latex_math.py's module docstring for why this check is
+# deliberately narrow (a bare LaTeX command only, not "does this prose look
+# like it should be math"). Informational by default; pass --strict
+# (STRICT=--strict make check_latex_math) to make it fail the build.
+check_latex_math:
+	@$(PYTHON) scripts/check_latex_math.py $(LATEX_MATH_PATH) $(LATEX_MATH_ARGS) $(STRICT)
+
+# Same check as check_latex_math, but only on files that changed relative to
+# LATEX_MATH_DIFF_BASE (committed on the branch, modified in the working
+# tree, or untracked).
+check_latex_math_changed:
+	@$(PYTHON) scripts/check_latex_math.py --diff "$(LATEX_MATH_DIFF_BASE)" $(LATEX_MATH_ARGS) $(STRICT)
+
+# Same fixes as fix_ref_style, but scoped to files changed relative to
+# REFERENCES_STYLE_DIFF_BASE -- the quick one to run before opening a PR.
+fix_ref_style_changed:
+	$(PYTHON) scripts/check_ref_style.py --diff "$(REFERENCES_STYLE_DIFF_BASE)" --fix $(REFERENCES_STYLE_ARGS)
+
+DOCSTRING_INDENT_PATH ?=
+DOCSTRING_INDENT_ARGS ?=
+DOCSTRING_INDENT_DIFF_BASE ?= develop
+
+# Check that every Google-style docstring section (Args:, Returns:,
+# Examples:, References:, ...) has its body indented deeper than its own
+# header line. A body at the SAME indent as the header is not recognised as
+# belonging to the section by mkdocstrings' Google docstring parser, which is
+# why e.g. an Examples: section's >>> lines can fail to render as a doctest
+# block in the built HTML even though they look fine in an IDE. See
+# scripts/check_docstring_indent.py's module docstring for details.
+# Informational by default; pass --strict (STRICT=--strict make
+# check_docstring_indent) to make it fail the build.
+check_docstring_indent:
+	@$(PYTHON) scripts/check_docstring_indent.py $(DOCSTRING_INDENT_PATH) $(DOCSTRING_INDENT_ARGS) $(STRICT)
+
+# Same check, but only on qmcpy/*.py files that changed relative to
+# DOCSTRING_INDENT_DIFF_BASE (committed on the branch, modified in the
+# working tree, or untracked).
+check_docstring_indent_changed:
+	@$(PYTHON) scripts/check_docstring_indent.py --diff "$(DOCSTRING_INDENT_DIFF_BASE)" $(DOCSTRING_INDENT_ARGS) $(STRICT)
+
+# Shifts a flagged section's body right by a constant number of spaces so its
+# least-indented line sits one level deeper than the header -- this never
+# changes indentation relative to other lines already in the block (a nested
+# doctest continuation or wrapped array repr keeps its own relative offset),
+# and the docstring's closing quote is never touched.
+fix_docstring_indent:
+	$(PYTHON) scripts/check_docstring_indent.py $(DOCSTRING_INDENT_PATH) --fix $(DOCSTRING_INDENT_ARGS)
+
+fix_docstring_indent_changed:
+	$(PYTHON) scripts/check_docstring_indent.py --diff "$(DOCSTRING_INDENT_DIFF_BASE)" --fix $(DOCSTRING_INDENT_ARGS)
+
+add_docstring_arg_types:
+	$(PYTHON) scripts/add_docstring_arg_types.py $(DOCSTRING_TYPE_ARGS) $(DOCSTRING_TYPE_PATH)
+
+add_docstring_arg_types_changed:
+	@$(PYTHON) scripts/add_docstring_arg_types.py --diff "$(DOCSTRING_TYPE_DIFF_BASE)" --root "$(DOCSTRING_TYPE_PATH)" $(DOCSTRING_TYPE_ARGS)
+
+check_docstring_arg_types_changed:
+	$(PYTHON) scripts/add_docstring_arg_types.py --diff "$(DOCSTRING_TYPE_DIFF_BASE)" --root "$(DOCSTRING_TYPE_PATH)" --check $(DOCSTRING_TYPE_ARGS)
+
+annotate_public_api_types_changed: check_libcst_dependency
+	$(PYTHON) -m scripts.annotate_public_api_types --diff "$(PUBLIC_API_TYPE_DIFF_BASE)" --root "$(PUBLIC_API_TYPE_PATH)" $(PUBLIC_API_ANNOTATE_ARGS)
+
+sync_docstring_types_changed:
+	$(PYTHON) scripts/add_docstring_arg_types.py --diff "$(PUBLIC_API_TYPE_DIFF_BASE)" --root "$(PUBLIC_API_TYPE_PATH)" --include-outputs --overwrite-existing $(DOCSTRING_SYNC_ARGS)
+
+check_public_api_types_changed: check_libcst_dependency
+	@status=0; \
+	$(PYTHON) -m scripts.annotate_public_api_types --diff "$(PUBLIC_API_TYPE_DIFF_BASE)" --root "$(PUBLIC_API_TYPE_PATH)" --check $(PUBLIC_API_ANNOTATE_ARGS) || status=$$?; \
+	$(PYTHON) scripts/add_docstring_arg_types.py --diff "$(PUBLIC_API_TYPE_DIFF_BASE)" --root "$(PUBLIC_API_TYPE_PATH)" --include-outputs --overwrite-existing --check $(DOCSTRING_SYNC_ARGS) || { code=$$?; if [ $$code -gt $$status ]; then status=$$code; fi; }; \
+	exit $$status
+
+# Same checks as check_docstring, but only on qmcpy/*.py files that changed
+# relative to DOCSTRING_BASE (committed, staged/unstaged, and untracked).
+check_docstring_changed: check_pydoclint_dependency
+	@set -e; \
+	changed_files="$$( \
+		{ \
+			git diff --name-only --diff-filter=ACMR "$(DOCSTRING_BASE)...HEAD" -- 'qmcpy/*.py' 2>/dev/null || true; \
+			git diff --name-only --diff-filter=ACMR HEAD -- 'qmcpy/*.py'; \
+			git ls-files --others --exclude-standard -- 'qmcpy/*.py'; \
+		} | sort -u \
+	)"; \
+	if [ -z "$$changed_files" ]; then \
+		echo "  - No changed qmcpy/*.py files relative to $(DOCSTRING_BASE)."; \
+	else \
+		file_count=$$(printf '%s\n' "$$changed_files" | wc -l | tr -d ' '); \
+		echo "  - Checking docstrings on $$file_count changed qmcpy file(s) relative to $(DOCSTRING_BASE)."; \
+		$(PYTHON) scripts/check_docstring.py $$changed_files $(CHECK_DOCSTRING_ARGS) $(STRICT); \
+		out="$$($(PYDOCLINT) $(PYDOCLINT_ARGS) $$changed_files 2>&1)"; rc=$$?; \
+		[ -z "$$out" ] || printf '\n%s\n' "$$out"; \
+		$(if $(STRICT),test $$rc -eq 0,true); \
+	fi
 
 ##########################################################
 # Doctests
@@ -45,14 +278,14 @@ clean_coverage:
 doctests_minimal: ensure_artifacts
 	@mkdir -p $(DOCTEST_COV_DIR)/minimal
 	COVERAGE_FILE=$(DOCTEST_COV_DIR)/minimal/.coverage \
-	python -m pytest $(PYTEST_XDIST) -x --cov qmcpy/ --cov-report term --cov-report json:$(DOCTEST_COV_DIR)/minimal/coverage.json --no-header --cov-append \
+	$(PYTHON) -m pytest $(PYTEST_XDIST) -x --cov qmcpy/ --cov-report term --cov-report json:$(DOCTEST_COV_DIR)/minimal/coverage.json --no-header --cov-append \
 		--doctest-modules qmcpy/ \
 		--ignore qmcpy/fast_transform/ft_pytorch.py \
 		--ignore qmcpy/stopping_criterion/pf_gp_ci.py \
 		--ignore qmcpy/kernel/ \
 		--ignore qmcpy/util/dig_shift_invar_ops.py \
 		--ignore qmcpy/util/shift_invar_ops.py \
-		--ignore qmcpy/util/exact_gpytorch_gression_model.py \
+		--ignore qmcpy/util/exact_gpytorch_regression_model.py \
 		--ignore qmcpy/integrand/umbridge_wrapper.py \
 		--ignore qmcpy/integrand/hartmann6d.py \
 		--ignore qmcpy/discrete_distribution/mpmc/ \
@@ -60,7 +293,7 @@ doctests_minimal: ensure_artifacts
 doctests_torch: ensure_artifacts
 	@mkdir -p $(DOCTEST_COV_DIR)/torch
 	COVERAGE_FILE=$(DOCTEST_COV_DIR)/torch/.coverage \
-	python -m pytest $(PYTEST_XDIST) -x --cov qmcpy/ --cov-report term --cov-report json:$(DOCTEST_COV_DIR)/torch/coverage.json --no-header --cov-append \
+	$(PYTHON) -m pytest $(PYTEST_XDIST) -x --cov qmcpy/ --cov-report term --cov-report json:$(DOCTEST_COV_DIR)/torch/coverage.json --no-header --cov-append \
 		--doctest-modules qmcpy/fast_transform/ft_pytorch.py \
 		--doctest-modules qmcpy/kernel/*.py \
 		--doctest-modules qmcpy/util/dig_shift_invar_ops.py \
@@ -69,26 +302,26 @@ doctests_torch: ensure_artifacts
 doctests_gpytorch: ensure_artifacts
 	@mkdir -p $(DOCTEST_COV_DIR)/gpytorch
 	COVERAGE_FILE=$(DOCTEST_COV_DIR)/gpytorch/.coverage \
-	python -m pytest $(PYTEST_XDIST) -x --cov qmcpy/ --cov-report term --cov-report json:$(DOCTEST_COV_DIR)/gpytorch/coverage.json --no-header --cov-append \
+	$(PYTHON) -m pytest $(PYTEST_XDIST) -x --cov qmcpy/ --cov-report term --cov-report json:$(DOCTEST_COV_DIR)/gpytorch/coverage.json --no-header --cov-append \
 		--doctest-modules qmcpy/stopping_criterion/pf_gp_ci.py \
 
 doctests_botorch: ensure_artifacts
 	@mkdir -p $(DOCTEST_COV_DIR)/botorch
 	COVERAGE_FILE=$(DOCTEST_COV_DIR)/botorch/.coverage \
-	python -m pytest $(PYTEST_XDIST) -x --cov qmcpy/ --cov-report term --cov-report json:$(DOCTEST_COV_DIR)/botorch/coverage.json --no-header --cov-append \
+	$(PYTHON) -m pytest $(PYTEST_XDIST) -x --cov qmcpy/ --cov-report term --cov-report json:$(DOCTEST_COV_DIR)/botorch/coverage.json --no-header --cov-append \
 		--doctest-modules qmcpy/integrand/hartmann6d.py \
 
 doctests_mpmc:
 	@mkdir -p $(DOCTEST_COV_DIR)/mpmc
 	COVERAGE_FILE=$(DOCTEST_COV_DIR)/mpmc/.coverage \
-	python -m pytest $(PYTEST_XDIST) -x --cov qmcpy/ --cov-report term --cov-report json:$(DOCTEST_COV_DIR)/mpmc/coverage.json --no-header --cov-append \
+	$(PYTHON) -m pytest $(PYTEST_XDIST) -x --cov qmcpy/ --cov-report term --cov-report json:$(DOCTEST_COV_DIR)/mpmc/coverage.json --no-header --cov-append \
 		--doctest-modules qmcpy/discrete_distribution/mpmc/*.py \
 
 doctests_umbridge: ensure_artifacts # https://github.com/UM-Bridge/umbridge/issues/96
 	@mkdir -p $(DOCTEST_COV_DIR)/umbridge
 	@docker --version
 	COVERAGE_FILE=$(DOCTEST_COV_DIR)/umbridge/.coverage \
-	python -m pytest $(PYTEST_XDIST) -x --cov qmcpy/ --cov-report term --cov-report json:$(DOCTEST_COV_DIR)/umbridge/coverage.json --no-header --cov-append \
+	$(PYTHON) -m pytest $(PYTEST_XDIST) -x --cov qmcpy/ --cov-report term --cov-report json:$(DOCTEST_COV_DIR)/umbridge/coverage.json --no-header --cov-append \
 		--doctest-modules qmcpy/integrand/umbridge_wrapper.py \
 
 doctests_markdown:
@@ -108,17 +341,27 @@ doctests: doctests_markdown doctests_minimal doctests_torch doctests_gpytorch do
 ##########################################################
 unittests: ensure_artifacts
 	@mkdir -p $(UNIT_COV_DIR)
-	@PYTHON_BIN=$$(command -v python 2>/dev/null || { [ -n "$$CONDA_PREFIX" ] && command -v "$$CONDA_PREFIX/bin/python" 2>/dev/null; } || { command -v conda >/dev/null 2>&1 && conda run -n qmcpy python -c 'import sys; print(sys.executable)' 2>/dev/null; } || command -v python3 2>/dev/null); \
-	if [ -z "$$PYTHON_BIN" ]; then \
-		echo "No Python interpreter found (tried: python, $$CONDA_PREFIX/bin/python, python3)."; \
-		exit 127; \
-	fi; \
-	COVERAGE_FILE=$(UNIT_COV_DIR)/.coverage \
-	"$$PYTHON_BIN" -m pytest $(PYTEST_XDIST) -x $(PYTEST_EXTRA_ARGS) \
+	@COVERAGE_FILE=$(UNIT_COV_DIR)/.coverage \
+	$(PYTHON) -m pytest $(PYTEST_XDIST) -x $(PYTEST_EXTRA_ARGS) \
 		--cov=qmcpy \
 		--cov-report term \
 		--cov-report json:$(UNIT_COV_DIR)/coverage.json \
 		--no-header \
+		test/ -W ignore::DeprecationWarning
+
+# Core unit tests only: skips test/booktests/ (needs the notebook stack); other
+# modules self-skip via pytest.importorskip. Pairs with the `test_core` extra so
+# interpreters at the `requires-python` floor can run this. Unlike `unittests`
+# this omits -x: on a compatibility run the full list of failures is the point.
+unittests_core: ensure_artifacts
+	@mkdir -p $(UNIT_COV_DIR)
+	COVERAGE_FILE=$(UNIT_COV_DIR)/.coverage \
+	$(PYTHON) -m pytest $(PYTEST_XDIST) $(PYTEST_EXTRA_ARGS) \
+		--cov=qmcpy \
+		--cov-report term \
+		--cov-report json:$(UNIT_COV_DIR)/coverage.json \
+		--no-header -rs \
+		--ignore=test/booktests \
 		test/ -W ignore::DeprecationWarning
 
 tests_no_docker_no_mpmc: doctests_no_docker_no_mpmc unittests coverage
@@ -128,7 +371,89 @@ tests_no_docker_no_mpmc: doctests_no_docker_no_mpmc unittests coverage
 ##########################################################
 generate_booktests:
 	@echo "\nGenerating missing booktest files..."
-	cd test/booktests/ && python generate_test.py --check-missing
+	cd test/booktests/ && $(PYTHON) generate_test.py --check-missing
+
+check_colab_notebooks:  # faster
+	$(PYTHON) -m scripts.check_colab_notebooks --strict
+
+check_colab_notebooks_smoke:  # slower; executes bootstrap + a few cells of every enabled notebook
+	$(PYTHON) -m scripts.smoke_test_colab_notebooks --cells-after-bootstrap $(SMOKE_CODE_CELLS)
+
+harden_colab_notebook:  # Add Colab button if necessary
+	@if [ -n "$(NOTEBOOK)" ]; then \
+		if [ -n "$(FORCE)" ]; then \
+			$(PYTHON) -m scripts.harden_colab_notebook --notebook "$(NOTEBOOK)" --force; \
+		else \
+			$(PYTHON) -m scripts.harden_colab_notebook --notebook "$(NOTEBOOK)"; \
+		fi; \
+	elif [ -n "$(FORCE)" ]; then \
+		$(PYTHON) -m scripts.harden_colab_notebook --force; \
+	else \
+		$(PYTHON) -m scripts.harden_colab_notebook --all-unclassified; \
+	fi
+
+report_colab_notebook_patterns:
+	$(PYTHON) -m scripts.report_colab_notebook_patterns
+
+open_colab_notebook:  # Open NOTEBOOK in Colab from the current branch, but only when it differs from COLAB_BASE (default develop); usage: make open_colab_notebook NOTEBOOK=demos/foo.ipynb [COLAB_BASE=develop]
+	@nb="$(NOTEBOOK)"; nb="$${nb#./}"; base="$${COLAB_BASE:-develop}"; \
+	if [ -z "$$nb" ]; then echo "Usage: make open_colab_notebook NOTEBOOK=demos/path/to.ipynb [COLAB_BASE=develop]"; exit 2; fi; \
+	case "$$nb" in *.ipynb) ;; *) echo "Not a .ipynb file: $$nb"; exit 2;; esac; \
+	branch=$$(git rev-parse --abbrev-ref HEAD); \
+	slug=$$($(PYTHON) -c "import json; wprint(json.load(open('scripts/colab_notebooks_manifest.json'))['repo'])" 2>/dev/null); \
+	[ -n "$$slug" ] || slug=$$(git remote get-url origin 2>/dev/null | sed -E 's#(git@github\.com:|https://github\.com/)##; s#\.git$$##'); \
+	if [ -z "$$slug" ]; then echo "Cannot determine the GitHub owner/repo (manifest 'repo' or 'origin' remote)."; exit 1; fi; \
+	git fetch -q origin "$$base" "$$branch" 2>/dev/null || true; \
+	if ! git rev-parse -q --verify "origin/$$branch" >/dev/null; then \
+		echo "Branch '$$branch' is not on origin -- push it first (Colab loads notebooks from GitHub)."; exit 1; \
+	fi; \
+	if ! git rev-parse -q --verify "origin/$$base" >/dev/null; then \
+		echo "Base '$$base' is not a branch on origin -- set COLAB_BASE to a pushed branch (e.g. develop)."; exit 1; \
+	fi; \
+	if ! git ls-tree -r --name-only "origin/$$branch" | grep -qxF "$$nb"; then \
+		echo "'$$nb' is not committed on origin/$$branch -- commit and push it first."; exit 1; \
+	fi; \
+	git diff --quiet "origin/$$branch" -- "$$nb" || \
+		echo "note: local '$$nb' differs from origin/$$branch; Colab shows the pushed version."; \
+	if [ "$$branch" = "$$base" ]; then \
+		ref="$$base"; echo "On '$$base' -- opening the $$base version."; \
+	elif ! git ls-tree -r --name-only "origin/$$base" | grep -qxF "$$nb"; then \
+		ref="$$branch"; echo "'$$nb' is new (not on origin/$$base) -- opening the '$$branch' version."; \
+	elif git diff --quiet "origin/$$base" "origin/$$branch" -- "$$nb"; then \
+		ref="$$base"; echo "'$$nb' is unchanged vs origin/$$base -- the standard badge covers it; opening the $$base version."; \
+	else \
+		ref="$$branch"; echo "'$$nb' differs from origin/$$base -- opening the '$$branch' version."; \
+	fi; \
+	url="https://colab.research.google.com/github/$$slug/blob/$$ref/$$nb"; \
+	echo "$$url"; \
+	$(PYTHON) -m webbrowser "$$url" >/dev/null 2>&1 || echo "(could not auto-open a browser; copy the URL above)"
+
+open_colab_notebook_gist:  # Upload NOTEBOOK from the working tree to a throwaway secret gist and open it in Colab (needs the gh CLI); usage: make open_colab_notebook_gist NOTEBOOK=demos/foo.ipynb
+	@nb="$(NOTEBOOK)"; nb="$${nb#./}"; \
+	if [ -z "$$nb" ]; then echo "Usage: make open_colab_notebook_gist NOTEBOOK=demos/path/to.ipynb"; exit 2; fi; \
+	if [ ! -f "$$nb" ]; then echo "No such file: $$nb"; exit 2; fi; \
+	case "$$nb" in *.ipynb) ;; *) echo "Not a .ipynb file: $$nb"; exit 2;; esac; \
+	if ! command -v gh >/dev/null 2>&1; then \
+		echo "The 'gh' CLI is required (https://cli.github.com), then run 'gh auth login'."; exit 1; \
+	fi; \
+	base=$$(basename "$$nb"); \
+	url=$$(gh gist create --desc "qmcpy Colab preview of $$nb (safe to delete)" "$$nb") || exit 1; \
+	id=$${url##*/}; \
+	login=$$(gh api user -q .login 2>/dev/null); \
+	colab="https://colab.research.google.com/gist/$${login:+$$login/}$$id/$$base"; \
+	echo "gist (secret):    $$url"; \
+	echo "colab:            $$colab"; \
+	echo "delete when done: gh gist delete $$id"; \
+	echo "note: sibling .py helpers won't resolve from a gist; the bootstrap cell falls back to develop."; \
+	$(PYTHON) -m webbrowser "$$colab" >/dev/null 2>&1 || echo "(could not auto-open a browser; copy the colab URL above)"
+
+open_notebook:  # Open NOTEBOOK from the working tree in local JupyterLab; usage: make open_notebook NOTEBOOK=demos/foo.ipynb
+	@nb="$(NOTEBOOK)"; nb="$${nb#./}"; \
+	if [ -z "$$nb" ]; then echo "Usage: make open_notebook NOTEBOOK=demos/path/to.ipynb"; exit 2; fi; \
+	if [ ! -f "$$nb" ]; then echo "No such file: $$nb"; exit 2; fi; \
+	case "$$nb" in *.ipynb) ;; *) echo "Not a .ipynb file: $$nb"; exit 2;; esac; \
+	if command -v jupyter >/dev/null 2>&1; then exec jupyter lab "$$nb"; \
+	else exec $(PYTHON) -m jupyterlab "$$nb"; fi
 
 check_booktests:
 	rm -fr demos/.ipynb_checkpoints/*checkpoint.ipynb && \
@@ -155,11 +480,11 @@ booktests_no_docker: check_booktests generate_booktests clean_local_only_files e
 	if [ -z "$(TESTS)" ]; then \
 		PYTHONWARNINGS="ignore::UserWarning,ignore::DeprecationWarning,ignore::FutureWarning,ignore::ImportWarning" \
 		COVERAGE_FILE=../../$(BOOKTEST_COV_DIR)/.coverage \
-		python -W ignore -m coverage run --append --source=../../qmcpy/ -m unittest discover -s . -p "*.py" -v --failfast; \
+		$(PYTHON) -W ignore -m coverage run --append --source=../../qmcpy/ -m unittest discover -s . -p "*.py" -v --failfast; \
 	else \
 		PYTHONWARNINGS="ignore::UserWarning,ignore::DeprecationWarning,ignore::FutureWarning,ignore::ImportWarning" \
 		COVERAGE_FILE=../../$(BOOKTEST_COV_DIR)/.coverage \
-		python -W ignore -m coverage run --append --source=../../qmcpy/ -m unittest $(TESTS) -v --failfast; \
+		$(PYTHON) -W ignore -m coverage run --append --source=../../qmcpy/ -m unittest $(TESTS) -v --failfast; \
 	fi && \
 	cd ../..
 
@@ -169,21 +494,21 @@ booktests_parallel_no_docker: check_booktests generate_booktests clean_local_onl
 	cd test/booktests/ && \
 	rm -fr *.eps *.jpg *.pdf *.png *.part *.txt *.log && rm -fr logs && rm -fr runinfo prob_failure_gp_ci_plots && \
 	PYTHONWARNINGS="ignore::UserWarning,ignore::DeprecationWarning,ignore::FutureWarning,ignore::ImportWarning" \
-	python parsl_test_runner.py $(TESTS) -v --failfast && \
-	cd ../.. 
-	
+	$(PYTHON) parsl_test_runner.py $(TESTS) -v --failfast && \
+	cd ../..
+
 # Windows-compatible parallel booktests using pytest-xdist instead of Parsl
 booktests_parallel_pytest: check_booktests generate_booktests clean_local_only_files ensure_artifacts
 	@mkdir -p $(BOOKTEST_COV_DIR)
 	cd test/booktests/ && \
 	PYTHONWARNINGS="ignore::UserWarning,ignore::DeprecationWarning,ignore::FutureWarning,ignore::ImportWarning" \
 	COVERAGE_FILE=../../$(BOOKTEST_COV_DIR)/.coverage \
-	python -W ignore -m pytest $(PYTEST_XDIST) $(PYTEST) -v tb_*.py \
+	$(PYTHON) -W ignore -m pytest $(PYTEST_XDIST) $(PYTEST) -v tb_*.py \
 		--cov=qmcpy \
 		--cov-append \
 		--cov-report=term \
 		--cov-report=json:../../$(BOOKTEST_COV_DIR)/coverage.json && \
-	cd ../.. 
+	cd ../..
 
 ##########################################################
 # Combinations of Above Tests
@@ -191,7 +516,7 @@ booktests_parallel_pytest: check_booktests generate_booktests clean_local_only_f
 tests:
 	set -e && $(MAKE) doctests && $(MAKE) unittests && $(MAKE) coverage
 
-tests_no_docker: 
+tests_no_docker:
 	@echo "Running environment cleanup for invalid distributions (dry-run will be skipped, applying changes)..."
 	@if [ "$(WITH_MPMC)" = "1" ] || [ "$(HAS_MPMC)" = "1" ]; then \
 		DOCTESTS_TARGET=doctests_no_docker; \
@@ -205,19 +530,23 @@ tests_no_docker:
 # Fast test target: run doctests, unittests, booktests concurrently
 tests_fast:
 	@echo "Running fast tests: doctests and unittests concurrently (splitting CPU cores)."
-	@make clean_local_only_files clean_coverage && \
+	@set -e; \
+	$(MAKE) clean_local_only_files clean_coverage; \
 	if [ "$(WITH_MPMC)" = "1" ] || [ "$(HAS_MPMC)" = "1" ]; then \
 		DOCTESTS_TARGET=doctests_no_docker; \
 		UNITTESTS_ARGS=""; \
 	else \
 		DOCTESTS_TARGET=doctests_no_docker_no_mpmc; \
 		UNITTESTS_ARGS="--ignore=test/test_dd_mpmc.py"; \
-	fi && \
-	set -e && \
-	$(MAKE) $$DOCTESTS_TARGET & \
-	$(MAKE) unittests PYTEST_EXTRA_ARGS="$$UNITTESTS_ARGS" & \
-	$(MAKE) booktests_parallel_no_docker  & \
-	wait
+	fi; \
+	$(MAKE) $$DOCTESTS_TARGET & doctests_pid=$$!; \
+	$(MAKE) unittests PYTEST_EXTRA_ARGS="$$UNITTESTS_ARGS" & unittests_pid=$$!; \
+	$(MAKE) booktests_parallel_no_docker & booktests_pid=$$!; \
+	status=0; \
+	wait $$doctests_pid || status=$$?; \
+	wait $$unittests_pid || status=$$?; \
+	wait $$booktests_pid || status=$$?; \
+	exit $$status
 	$(MAKE) coverage
 
 ##########################################################
@@ -232,7 +561,7 @@ coverage: ensure_artifacts # https://github.com/marketplace/actions/coverage-bad
 	@echo "============================================================"
 	@echo ""
 	COVERAGE_FILE=$(UNIT_COV_DIR)/.coverage \
-	python -m coverage report -m
+	$(PYTHON) -m coverage report -m
 
 combine-coverage-local: ensure_artifacts  # Combine coverage files and build reports locally (NOT official)
 	@echo "Combining coverage files from $(COV_DIR)/ into coverage-data/ and generating reports"
@@ -251,7 +580,7 @@ combine-coverage-local: ensure_artifacts  # Combine coverage files and build rep
 		echo "No coverage data found. Run tests first (e.g., make unittests / make doctests / make booktests_*)"; \
 		exit 1; \
 	fi; \
-	python scripts/combine_coverage.py --dir coverage-data --outdir coverage_html --keep
+	$(PYTHON) scripts/combine_coverage.py --dir coverage-data --outdir coverage_html --keep
 
 coverage_html: ensure_artifacts
 	@mkdir -p $(UNIT_COV_DIR)/html
@@ -262,7 +591,7 @@ coverage_html: ensure_artifacts
 	@echo "============================================================"
 	@echo ""
 	COVERAGE_FILE=$(UNIT_COV_DIR)/.coverage \
-	python -m coverage html -d $(UNIT_COV_DIR)/html
+	$(PYTHON) -m coverage html -d $(UNIT_COV_DIR)/html
 
 delcoverage:
 	@rm -f .coverage coverage.json test/booktests/.coverage
@@ -297,18 +626,39 @@ uml:
 
 ##########################################################
 # Documentation with `mkdocs`
-# run ` mkdocs build -v` to debug
+#
+# Run `mkdocs build -v` to debug. It generates HTML in the site/ folder.
+# You can enter `open site/index.html` to open the local pages in a browser.
+# (However, the search function may be slow.)
+#
+# Use `mkdocs serve` to run a local server. The webpages are stored in a temporary folder and will be deleted when the server is stopped.
 ##########################################################
+# mkdocs is a `docs` extra, installed alongside $(PYTHON) in the qmcpy env.
+# Prefer that colocated binary over a bare PATH lookup: an older `pip install
+# --user` shim earlier on PATH (e.g. left over from a Python version bump
+# that removed the interpreter its shebang points at) can shadow the correct
+# one and fail with "bad interpreter" (exit 126) instead of a clean "not
+# found". Mirror-image of check_pydoclint_dependency's PATH-first order,
+# which instead assumes pydoclint may live in a separate, lighter test-only
+# env rather than this one.
+MKDOCS ?= $(shell test -x "$(dir $(PYTHON))mkdocs" && echo "$(dir $(PYTHON))mkdocs" || command -v mkdocs 2>/dev/null || echo mkdocs)
+
 copydocs:  # mkdocs only looks for content in the docs/ folder, so we have to copy it there
 	@rm -rf docs/paper docs/demos
-	@cp README.md docs/README.md 
+	@cp README.md docs/README.md
+	@cp AGENTS.md docs/AGENTS.md
+	@perl -0pi -e 's!\(docs/good_practices\.md\)!\(good_practices.md\)!g' docs/AGENTS.md
+	@perl -0pi -e 's!\(docs/ai-assisted-contributions\.md\)!\(ai-assisted-contributions.md\)!g' docs/AGENTS.md
+	@perl -0pi -e 's!\(docs/RELEASE\.md\)!\(RELEASE.md\)!g' docs/AGENTS.md
 	@perl -0pi -e 's!\(docs/assets/pep8-badge\.svg\)!\(assets/pep8-badge.svg\)!g' docs/README.md
 	@perl -0pi -e 's!\(docs/qmc-software\.md\)!\(qmc-software.md\)!g' docs/README.md
-	@cp CONTRIBUTING.md docs/CONTRIBUTING.md 
+	@cp CONTRIBUTING.md docs/CONTRIBUTING.md
 	@# Rewrite repo-root-relative link for the copied MkDocs page.
 	@perl -0pi -e 's!\(docs/good_practices\.md\)!\(good_practices.md\)!g' docs/CONTRIBUTING.md
 	@perl -0pi -e 's!\(docs/ai-assisted-contributions\.md\)!\(ai-assisted-contributions.md\)!g' docs/CONTRIBUTING.md
-	@cp community.md docs/community.md 
+	@perl -0pi -e 's!\(docs/tests\.md\)!\(tests.md\)!g' docs/CONTRIBUTING.md
+	@perl -0pi -e 's!\(test/README\.md(#[^)]*)?\)!\(tests.md$$1\)!g' docs/CONTRIBUTING.md
+	@cp community.md docs/community.md
 	@cp -r demos docs
 	@find docs/demos -mindepth 2 -name README.md -delete
 	@cp -r paper docs
@@ -316,7 +666,7 @@ copydocs:  # mkdocs only looks for content in the docs/ folder, so we have to co
 	@./scripts/render_paper_for_mkdocs.sh
 	@cp test/booktests/README.md docs/booktests.md
 	@cp test/README.md docs/tests.md
-	@python scripts/make_qmc_software_page.py
+	@$(PYTHON) scripts/make_qmc_software_page.py
 	@mkdir -p docs/stats
 	@cp stats/pypi_downloads.md docs/stats/pypi_downloads.md
 	@cp docs/assets/logos/qmcpy_logo.png docs/apple-touch-icon.png
@@ -330,30 +680,168 @@ runmkdocserve:
 		PORT=$$((PORT+1)); \
 	done; \
 	echo "Starting mkdocs on http://127.0.0.1:$$PORT"; \
-	NO_MKDOCS_2_WARNING=1 JUPYTER_PLATFORM_DIRS=1 mkdocs serve -a 127.0.0.1:$$PORT
-	NO_MKDOCS_2_WARNING=1 JUPYTER_PLATFORM_DIRS=1 mkdocs serve -a 127.0.0.1:$$PORT
-	
+	NO_MKDOCS_2_WARNING=1 JUPYTER_PLATFORM_DIRS=1 $(MKDOCS) serve -a 127.0.0.1:$$PORT
+
 doc: uml copydocs runmkdocserve
 
 docnouml: copydocs runmkdocserve
 
+check_links: copydocs  # internal links + anchors only; fast, no network, safe for CI
+	@NO_MKDOCS_2_WARNING=1 $(MKDOCS) build -q -d site
+	@$(PYTHON) scripts/check_links.py site
+
+check_links_external: copydocs  # also checks http/https links; slow and network-flaky, run locally
+	@NO_MKDOCS_2_WARNING=1 $(MKDOCS) build -q -d site
+	@$(PYTHON) scripts/check_links.py site --external
+
+# The targets above check links inside the new site; these check the other
+# direction -- already-published URLs that would 404 after the next deploy.
+check_removed_urls: copydocs  # fetches the deployed sitemap.xml; needs network
+	@$(PYTHON) scripts/check_removed_urls.py
+
+check_removed_urls_verify: copydocs  # also HTTP-checks every redirect target
+	@$(PYTHON) scripts/check_removed_urls.py --verify-redirects
+
 ##########################################################
 # PEP8
 ##########################################################
+PYLINT ?= pylint
+PYLINT_BASE ?= develop
+
 check_pep8:
-	@pylint qmcpy --exit-zero --disable=R,C,E0401 --ignored-modules=qmctoolscl
+	@$(PYLINT) qmcpy --exit-zero --disable=R,C,E0401 --ignored-modules=qmctoolscl
+
+check_pep8_changed:
+	@set -e; \
+	changed_files="$$( \
+		{ \
+			git diff --name-only --diff-filter=ACMR "$(PYLINT_BASE)...HEAD" -- '*.py'; \
+			git diff --name-only --diff-filter=ACMR HEAD -- '*.py'; \
+			git ls-files --others --exclude-standard -- '*.py'; \
+		} | sort -u \
+	)"; \
+	if [ -z "$$changed_files" ]; then \
+		echo "No changed Python files relative to $(PYLINT_BASE)."; \
+	else \
+		echo "Running pylint on changed Python files relative to $(PYLINT_BASE):"; \
+		printf '%s\n' "$$changed_files"; \
+		$(PYLINT) --disable=R,C,E0401 --ignored-modules=qmctoolscl $$changed_files; \
+	fi
 
 pep8: update_pep8_badge
 
 update_pep8_badge:
 	@mkdir -p $(LOG_DIR) docs/assets
 	@make check_pep8 > $(LOG_DIR)/pylint.out
-	@python3 scripts/update_pep8_badge.py $(LOG_DIR)/pylint.out docs/assets/pep8-badge.json docs/assets/pep8-badge.svg
+	@$(PYTHON) scripts/update_pep8_badge.py $(LOG_DIR)/pylint.out docs/assets/pep8-badge.json docs/assets/pep8-badge.svg
 
 
 ##########################################################
 # Formatting
 ##########################################################
 
+FORMAT_PATH ?= .
+MARKDOWN_UNWRAP_PATH ?= $(FORMAT_PATH)
+
+RULE := ==========================================================================
+RULE2 := $(subst =,-,$(RULE))
+
+# `make format` rewrites files in place. Every step ends with one summary line:
+#     <tool>: clean         (0/N files)   -- nothing changed
+#     <tool>: 3 changed     (3/N files)   -- 3 files were rewritten
+# Review the result with `git diff` before committing.
+format:
+	@echo "$(RULE)"
+	@echo "make format: rewriting files in place -- review with 'git diff' afterwards"
+	@echo "$(RULE)"
+	@echo
+	@echo "> flatten_qmcpy_imports"
+	@$(MAKE) flatten_qmcpy_imports
+	@echo
+	@echo "> markdown_unwrap"
+	@$(MAKE) markdown-unwrap MARKDOWN_UNWRAP_PATH="$(MARKDOWN_UNWRAP_PATH)"
+	@echo
+	@echo "> trailing_whitespace"
+	@$(MAKE) rm_trailing_whitespace FORMAT_PATH="$(FORMAT_PATH)"
+	@echo
+	@echo "> harden_colab_notebook"
+	@$(MAKE) harden_colab_notebook
+	@echo
+	@echo "> convert_asserts_changed"
+	@$(MAKE) convert_asserts_changed
+	@echo
+	@echo "> add_docstring_arg_types_changed"
+	@$(MAKE) add_docstring_arg_types_changed
+	@echo
+	@echo "> fix_ref_style"
+	@$(MAKE) fix_ref_style
+	@echo
+	@echo "> fix_docstring_indent"
+	@$(MAKE) fix_docstring_indent
+	@echo
+	@echo
+	@echo
+	@echo "make format: done -- a 'clean' line for every step means nothing changed"
+	@echo "$(RULE2)"
+	@echo
+	@# No third-party docstring reformatter here on purpose: format-docstring
+	@# (tried on this codebase) strips Returns:/Yields: types under
+	@# --include-return-and-yield-types=False and rewrites `**References:**` to
+	@# `**References: **`. Wrapping/whitespace-only tools like docformatter are
+	@# safe to add later if wanted; a full reflow pass is not.
+
+# `make check` only reads -- it never edits the tree. Every step ends with one
+# summary line:
+#     <tool>: clean         (0/N files)   -- nothing to fix
+#     <tool>: 2 problem(s)  (2/N files)   -- 2 files need attention
+# Same conventions as alltests.yml's "Check test-suite conventions" step. It
+# stops at the first step that fails; fix that step and rerun.
+check:
+	@echo "$(RULE)"
+	@echo "make check: read-only, same rules as CI -- nothing here edits the tree"
+	@echo "$(RULE)"
+	@echo
+	@echo "> check_test_style"
+	@$(MAKE) check_test_style
+	@echo
+	@echo "> check_docstring_changed"
+	@$(MAKE) check_docstring_changed
+	@echo
+	@echo "> check_ref_style"
+	@$(MAKE) check_ref_style
+	@echo
+	@echo "> check_latex_math"
+	@$(MAKE) check_latex_math
+	@echo
+	@echo "> check_docstring_indent"
+	@$(MAKE) check_docstring_indent
+	@echo
+	@echo "> check_baseline"
+	@$(MAKE) check_baseline
+	@echo
+	@echo "> check_asserts_changed"
+	@$(MAKE) check_asserts_changed
+	@echo
+	@echo "> check_links"
+	@$(MAKE) check_links
+	@echo
+	@echo
+	@echo
+	@echo "make check: every step above is clean"
+	@echo "$(RULE2)"
+	@echo
+	@# check_links_external deliberately NOT included: its own comment already
+	@# says "slow and network-flaky, run locally" -- not something `check`
+	@# should depend on. check_pep8_changed also deliberately excluded: 664
+	@# existing violations in currently-changed files would break `check`
+	@# immediately (same shape as F9/F10's docstring backlog; would need the
+	@# check_baseline ratchet, not a hard gate, if added later).
+
+flatten_qmcpy_imports:
+	@$(PYTHON) scripts/flatten_qmcpy_imports.py
+
 markdown-unwrap:
-	$(PYTHON) scripts/unwrap_markdown.py "$(MARKDOWN_UNWRAP_PATH)"
+	@$(PYTHON) scripts/unwrap_markdown.py "$(MARKDOWN_UNWRAP_PATH)"
+
+rm_trailing_whitespace:
+	@$(PYTHON) scripts/remove_trailing_whitespace.py "$(FORMAT_PATH)"

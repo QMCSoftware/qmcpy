@@ -1,20 +1,18 @@
+from ..integrand.abstract_integrand import AbstractIntegrand
+from typing import Union, Callable
 from .abstract_cub_bayes_ld_g import AbstractCubBayesLDG
 from ..discrete_distribution import Lattice
 from ..integrand import Keister, BoxIntegral, Genz, SensitivityIndices
 from ..fast_transform import fftbr, omega_fftbr
-from ..util import ParameterError  # , ParameterWarning #MaxSamplesWarning,
+from ..util import ParameterError
 
-# from math import factorial
 import numpy as np
-
-# from time import time
-# import warnings
 
 
 class CubQMCBayesLatticeG(AbstractCubBayesLDG):
-    r"""
-    Quasi-Monte Carlo stopping criterion using fast Bayesian cubature and rank-1 lattices
-    with guarantees for Gaussian processes having certain shift invariant kernels.
+    r"""Quasi-Monte Carlo stopping criterion using fast Bayesian cubature and
+    rank-1 lattices with guarantees for Gaussian processes having certain shift
+    invariant kernels.
 
     Examples:
         >>> k = Keister(Lattice(2, seed=123456789))
@@ -38,8 +36,11 @@ class CubQMCBayesLatticeG(AbstractCubBayesLDG):
             order           2^(1)
         Keister (AbstractIntegrand)
         Gaussian (AbstractTrueMeasure)
-            mean            0
-            covariance      2^(-1)
+            mean            [0. 0.]
+            variance        [0.5 0.5]
+            standard_deviation [0.707 0.707]
+            covariance      [[0.5 0. ]
+                             [0.  0.5]]
             decomp_type     PCA
         Lattice (AbstractLDDiscreteDistribution)
             d               2^(1)
@@ -58,7 +59,7 @@ class CubQMCBayesLatticeG(AbstractCubBayesLDG):
         >>> solution,data = sc.integrate()
         >>> solution
         array([1.18837601, 0.95984299])
-        >>> data
+        >>> data  # doctest: +NORMALIZE_WHITESPACE
         Data (Data)
             solution        [1.188 0.96 ]
             comb_bound_low  [1.183 0.95 ]
@@ -79,6 +80,15 @@ class CubQMCBayesLatticeG(AbstractCubBayesLDG):
         Uniform (AbstractTrueMeasure)
             lower_bound     0
             upper_bound     1
+            mean            [0.5 0.5 0.5]
+            variance        [0.083 0.083 0.083]
+            standard_deviation [0.289 0.289 0.289]
+            covariance      <DIAgonal sparse matrix of dtype 'float64'
+                with 3 stored elements (1 diagonals) and shape (3, 3)>
+                 Coords Values
+                 (0, 0) 0.08333333333333333
+                 (1, 1) 0.08333333333333333
+                 (2, 2) 0.08333333333333333
         Lattice (AbstractLDDiscreteDistribution)
             d               3
             replications    1
@@ -98,7 +108,7 @@ class CubQMCBayesLatticeG(AbstractCubBayesLDG):
         >>> integrand = SensitivityIndices(function)
         >>> sc = CubQMCBayesLatticeG(integrand,abs_tol=5e-2,rel_tol=0)
         >>> solution,data = sc.integrate()
-        >>> data
+        >>> data  # doctest: +NORMALIZE_WHITESPACE
         Data (Data)
             solution        [[0.057 0.131 0.269]
                              [0.386 0.523 0.741]]
@@ -132,6 +142,15 @@ class CubQMCBayesLatticeG(AbstractCubBayesLDG):
         Uniform (AbstractTrueMeasure)
             lower_bound     0
             upper_bound     1
+            mean            [0.5 0.5 0.5]
+            variance        [0.083 0.083 0.083]
+            standard_deviation [0.289 0.289 0.289]
+            covariance      <DIAgonal sparse matrix of dtype 'float64'
+                with 3 stored elements (1 diagonals) and shape (3, 3)>
+                 Coords Values
+                 (0, 0) 0.08333333333333333
+                 (1, 1) 0.08333333333333333
+                 (2, 2) 0.08333333333333333
         Lattice (AbstractLDDiscreteDistribution)
             d               3
             replications    1
@@ -143,62 +162,58 @@ class CubQMCBayesLatticeG(AbstractCubBayesLDG):
 
     **References:**
 
-    1.  Jagadeeswaran, Rathinavel, and Fred J. Hickernell.
-        "Fast automatic Bayesian cubature using lattice sampling."
-        Statistics and Computing 29.6 (2019): 1215-1229.
+    [1] R. Jagadeeswaran and F. J. Hickernell, "Fast automatic Bayesian cubature using lattice sampling," *Statistics and Computing*, vol. 29, no. 6, pp. 1215-1229, 2019.
 
-    2.  Jagadeeswaran Rathinavel and Fred J. Hickernell,
-        Fast automatic Bayesian cubature using lattice sampling.
-        Stat Comput 29, 1215-1229 (2019).
-        Available from Springer [https://doi.org/10.1007/s11222-019-09895-9](https://doi.org/10.1007/s11222-019-09895-9).
+    [2] R. Jagadeeswaran and F. J. Hickernell, "Fast automatic Bayesian cubature using lattice sampling," *Statistics and Computing*, vol. 29, pp. 1215-1229, 2019. [Online]. Available: [https://doi.org/10.1007/s11222-019-09895-9](https://doi.org/10.1007/s11222-019-09895-9)
 
-    3.  Sou-Cheng T. Choi, Yuhan Ding, Fred J. Hickernell, Lan Jiang, Lluis Antoni Jimenez Rugama,
-        Da Li, Jagadeeswaran Rathinavel, Xin Tong, Kan Zhang, Yizhi Zhang, and Xuan Zhou,
-        GAIL: Guaranteed Automatic Integration Library (Version 2.3) [MATLAB Software], 2019.
-        [http://gailgithub.github.io/GAIL_Dev/](http://gailgithub.github.io/GAIL_Dev/).
-        [https://github.com/GailGithub/GAIL_Dev/blob/master/Algorithms/IntegrationExpectation/cubBayesLattice_g.m](https://github.com/GailGithub/GAIL_Dev/blob/master/Algorithms/IntegrationExpectation/cubBayesLattice_g.m).
+    [3] S.-C. T. Choi, Y. Ding, F. J. Hickernell, L. Jiang, Ll. A. Jimenez Rugama, D. Li, J. Rathinavel, X. Tong, K. Zhang, Y. Zhang, and X. Zhou, "GAIL: Guaranteed Automatic Integration Library," MATLAB software, Version 2.3, 2019. [Online]. Available: [http://gailgithub.github.io/GAIL_Dev/](http://gailgithub.github.io/GAIL_Dev/) and [https://github.com/GailGithub/GAIL_Dev/blob/master/Algorithms/IntegrationExpectation/cubBayesLattice_g.m](https://github.com/GailGithub/GAIL_Dev/blob/master/Algorithms/IntegrationExpectation/cubBayesLattice_g.m)
     """
 
     def __init__(
         self,
-        integrand,
-        abs_tol=1e-2,
-        rel_tol=0,
-        n_init=2**8,
-        n_limit=2**22,
-        error_fun="EITHER",
-        alpha=0.01,
-        ptransform="C1SIN",
-        errbd_type="MLE",
-        order=2,
-    ):
-        r"""
+        integrand: AbstractIntegrand,
+        abs_tol: Union[float, np.ndarray] = 1e-2,
+        rel_tol: Union[float, np.ndarray] = 0,
+        n_init: int = 2**8,
+        n_limit: int = 2**22,
+        error_fun: Union[str, Callable] = "EITHER",
+        alpha: Union[float, np.ndarray] = 0.01,
+        ptransform: str = "C1SIN",
+        errbd_type: str = "MLE",
+        order: int = 2,
+    ) -> None:
+        r"""Initialize a CubQMCBayesLatticeG stopping criterion.
+
         Args:
             integrand (AbstractIntegrand): The integrand.
-            abs_tol (np.ndarray): Absolute error tolerance.
-            rel_tol (np.ndarray): Relative error tolerance.
+            abs_tol (Union[float, np.ndarray]): Absolute error tolerance.
+            rel_tol (Union[float, np.ndarray]): Relative error tolerance.
             n_init (int): Initial number of samples.
             n_limit (int): Maximum number of samples.
-            error_fun (Union[str, callable]): Function mapping the approximate solution, absolute error tolerance, and relative error tolerance to the current error bound.
+            error_fun (Union[str, Callable]): Function mapping the approximate
+                solution, absolute error tolerance, and relative error
+                tolerance to the current error bound.
 
-                - `'EITHER'`, the default, requires the approximation error must be below either the absolue *or* relative tolerance.
+                - `'EITHER'`, the default, requires the approximation error to be below either the absolute *or* relative tolerance.
                     Equivalent to setting
                     ```python
                     error_fun = lambda sv,abs_tol,rel_tol: np.maximum(abs_tol,abs(sv)*rel_tol)
                     ```
-                - `'BOTH'` requires the approximation error to be below both the absolue *and* relative tolerance.
+                - `'BOTH'` requires the approximation error to be below both the absolute *and* relative tolerance.
                     Equivalent to setting
                     ```python
                     error_fun = lambda sv,abs_tol,rel_tol: np.minimum(abs_tol,abs(sv)*rel_tol)
                     ```
-            alpha (np.ndarray): Uncertainty level in $(0,1)$.
-            ptransform (str): Periodization transform, see the options in `AbstractIntegrand.f`.
+            alpha (Union[float, np.ndarray]): Uncertainty level in $(0,1)$.
+            ptransform (str): Periodization transform, see the options in
+                `AbstractIntegrand.f`.
             errbd_type (str): Options are
 
                 - `'MLE'`: Marginal Log Likelihood.
                 - `'GCV'`: Generalized Cross Validation.
                 - `'FULL'`: Full Bayes.
-            order (int): Bernoulli kernel's order. If zero, choose order automatically
+            order (int): Bernoulli kernel's order. If zero, choose order
+                automatically
         """
         super(CubQMCBayesLatticeG, self).__init__(
             integrand,

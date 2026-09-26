@@ -75,13 +75,13 @@ def render_qmc_software_table(data_path, mode="web", start=0, stop=None, return_
 
     with data_path.open(encoding="utf-8") as f:
         data = yaml.safe_load(f)
-    
+
     if not isinstance(data, list) or not all(isinstance(row, dict) for row in data):
         raise ValueError(
             f"Expected YAML file at {data_path} "
             f"to contain a top-level list of mappings."
         )
-    
+
     data = sorted(data, key=sort_key)
     data = data[start:stop]
 

@@ -479,7 +479,7 @@ def _trim_resume_iteration_log(iteration_log, loose_stage=None):
             break
     if resume_idx is None:
         return iteration_log
-    
+
     # Determine if we should renumber (for ML solvers with loose stage reference)
     loose_final_iter = None
     if loose_stage and isinstance(loose_stage, dict):
@@ -488,15 +488,15 @@ def _trim_resume_iteration_log(iteration_log, loose_stage=None):
             loose_final_iter = int(loose_final_iter) if loose_final_iter is not None else None
         except (TypeError, ValueError):
             loose_final_iter = None
-    
+
     trimmed_lines = lines[:3] + lines[resume_idx:]
-    
+
     # If we have loose_final_iter, renumber the resumed iterations for continuity
     if loose_final_iter is not None:
         result_lines = trimmed_lines[:3]  # Keep header and separator
         iter_offset = None
         solution_col = None
-        
+
         for line in trimmed_lines[3:]:
             stripped = line.lstrip()
             if stripped.startswith("RESUME") or stripped.startswith("ITER"):
@@ -509,15 +509,15 @@ def _trim_resume_iteration_log(iteration_log, loose_stage=None):
                     # Lock the start column of the solution field once per block.
                     if solution_col is None:
                         solution_col = match.start(6)
-                    
+
                     # Calculate offset from RESUME row
                     if iter_offset is None and stage_label == "RESUME":
                         iter_offset = loose_final_iter - old_iter
-                    
+
                     # For first ITER row after RESUME, ensure continuation
                     if iter_offset is None and stage_label == "ITER":
                         iter_offset = loose_final_iter + 1 - old_iter
-                    
+
                     if iter_offset is not None:
                         new_iter = old_iter + iter_offset
                         # Keep iter right-aligned while fixing the solution column position.
@@ -533,7 +533,7 @@ def _trim_resume_iteration_log(iteration_log, loose_stage=None):
             else:
                 result_lines.append(line)
         return "\n".join(result_lines)
-    
+
     return "\n".join(trimmed_lines)
 
 
@@ -587,7 +587,7 @@ def run_resume_case(case, verbose=False):
         sc1.set_tolerance(
             abs_tol=getattr(tight_sc, "abs_tol", None),
             rel_tol=getattr(tight_sc, "rel_tol", None),
-            rmse_tol=getattr(tight_sc, "target_rmse_tol", 
+            rmse_tol=getattr(tight_sc, "target_rmse_tol",
                              getattr(tight_sc, "rmse_tol", None) if not hasattr(tight_sc, "abs_tol") else None,),
         )
         setattr(sc1, "trace_label", f"{name}-RESUME")

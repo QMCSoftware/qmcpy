@@ -7,6 +7,7 @@ import argparse
 import json
 from pathlib import Path
 import re
+import subprocess
 import sys
 
 SUPPORTED_SUFFIXES = {".md", ".ipynb"}
@@ -23,7 +24,43 @@ LATEX_HINT_RE = re.compile(
 HTML_TAG_RE = re.compile(r"^</?[A-Za-z]")
 
 
+def _drop_git_ignored(paths: list[Path]) -> list[Path]:
+    """Drop any path `git check-ignore` reports as ignored.
+
+    A directory walk via `rglob` has no notion of `.gitignore` on its own, so
+    without this a repo-root scan wanders into build/cache output
+    (`.pytest_cache/`, `site/`) and gitignored scratch files (`sc_*`) and
+    rewrites them -- wasted work on files git will never see as changed, and
+    confusing "N file(s) changed" output with nothing to show for it in
+    `git status`. Falls back to returning `paths` unfiltered if git is
+    unavailable or `paths` isn't inside a git working tree.
+    """
+    if not paths:
+        return paths
+    try:
+        result = subprocess.run(
+            ["git", "check-ignore", "--stdin"],
+            input="\n".join(str(p) for p in paths),
+            capture_output=True, text=True,
+        )
+    except OSError:
+        return paths
+    if result.returncode not in (0, 1):
+        return paths  # not a git repo, or another git error -- don't filter
+    ignored = set(result.stdout.splitlines())
+    return [p for p in paths if str(p) not in ignored]
+
+
 def iter_targets(paths: list[str]) -> tuple[list[Path], list[str]]:
+    """Collect the Markdown and notebook files to process.
+
+    Args:
+        paths (list[str]): Files or directories to walk.
+
+    Returns:
+        tuple[list[Path], list[str]]: The files found and a message for each path
+        that was missing or of an unsupported type.
+    """
     files: list[Path] = []
     errors: list[str] = []
     for raw_path in paths:
@@ -37,9 +74,11 @@ def iter_targets(paths: list[str]) -> tuple[list[Path], list[str]]:
                 continue
             files.append(path)
             continue
-        for child in sorted(path.rglob("*")):
-            if child.is_file() and child.suffix.lower() in SUPPORTED_SUFFIXES:
-                files.append(child)
+        candidates = sorted(
+            child for child in path.rglob("*")
+            if child.is_file() and child.suffix.lower() in SUPPORTED_SUFFIXES
+        )
+        files.extend(_drop_git_ignored(candidates))
     return files, errors
 
 
@@ -70,7 +109,21 @@ def _is_structural_line(line: str) -> bool:
 def _unwrap_paragraph(lines: list[str]) -> str:
     if len(lines) <= 1:
         return lines[0]
-    return " ".join(line.strip() for line in lines)
+    return " ".join([lines[0].rstrip(), *(line.strip() for line in lines[1:])])
+
+
+def _relative_to_list_item(line: str, paragraph: list[str]) -> str:
+    """Return a continuation line relative to its active list-item marker."""
+    if not paragraph:
+        return line
+    list_match = LIST_RE.match(paragraph[0])
+    if list_match is None:
+        return line
+    content_indent = list_match.end()
+    leading_whitespace = len(line) - len(line.lstrip())
+    if leading_whitespace < content_indent:
+        return line
+    return line[content_indent:]
 
 
 def _paragraph_has_latex(lines: list[str]) -> bool:
@@ -78,6 +131,17 @@ def _paragraph_has_latex(lines: list[str]) -> bool:
 
 
 def unwrap_markdown_text(text: str, *, preserve_latex: bool = False) -> str:
+    """Join each Markdown paragraph onto a single line.
+
+    Code fences, and optionally display-math blocks, are passed through unchanged.
+
+    Args:
+        text (str): Markdown source to unwrap.
+        preserve_latex (bool): Leave display-math blocks unwrapped.
+
+    Returns:
+        str: The unwrapped text, preserving the original line ending style.
+    """
     if not text:
         return text
 
@@ -180,7 +244,18 @@ def unwrap_markdown_text(text: str, *, preserve_latex: bool = False) -> str:
             out.append(line)
             continue
 
-        if _is_structural_line(line):
+        list_match = LIST_RE.match(line)
+        active_list_item = bool(paragraph and LIST_RE.match(paragraph[0]))
+        indented_as_code = line.startswith("    ") or line.startswith("\t")
+        if list_match and not HR_RE.match(line) and (
+            active_list_item or not indented_as_code
+        ):
+            flush_paragraph()
+            paragraph.append(line)
+            continue
+
+        structural_line = _relative_to_list_item(line, paragraph)
+        if _is_structural_line(structural_line):
             flush_paragraph()
             out.append(line)
             if stripped.startswith("<!--") and "-->" not in stripped:
@@ -207,6 +282,15 @@ def _split_notebook_source(text: str) -> list[str]:
 
 
 def process_markdown_file(path: Path, check: bool) -> bool:
+    """Unwrap the paragraphs of one Markdown file.
+
+    Args:
+        path (Path): Markdown file to process.
+        check (bool): Report whether the file would change without writing.
+
+    Returns:
+        bool: Whether the file changed, or would change under ``check``.
+    """
     original = path.read_text(encoding="utf-8")
     updated = unwrap_markdown_text(original, preserve_latex=True)
     changed = updated != original
@@ -216,6 +300,15 @@ def process_markdown_file(path: Path, check: bool) -> bool:
 
 
 def process_notebook(path: Path, check: bool) -> tuple[bool, int]:
+    """Unwrap the paragraphs of every Markdown cell in one notebook.
+
+    Args:
+        path (Path): Notebook file to process.
+        check (bool): Report whether the notebook would change without writing.
+
+    Returns:
+        tuple[bool, int]: Whether the notebook changed, and how many cells changed.
+    """
     with path.open(encoding="utf-8") as handle:
         notebook = json.load(handle)
 
@@ -255,23 +348,37 @@ def main() -> int:
         print("error: no .md or .ipynb files found", file=sys.stderr)
         return 2
 
-    changed_files = 0
+    changed_paths = []
     changed_cells = 0
     for path in targets:
         suffix = path.suffix.lower()
         if suffix == ".md":
-            changed = process_markdown_file(path, args.check)
-            changed_files += int(changed)
+            if process_markdown_file(path, args.check):
+                changed_paths.append(path)
         elif suffix == ".ipynb":
             changed, cell_count = process_notebook(path, args.check)
-            changed_files += int(changed)
+            if changed:
+                changed_paths.append(path)
             changed_cells += cell_count
 
     mode = "would update" if args.check else "updated"
-    print(
-        f"markdown unwrap {mode}: {changed_files} file(s), {changed_cells} markdown cell(s)",
+    summary = (
+        f"markdown unwrap {mode}: {len(changed_paths)} file(s), "
+        f"{changed_cells} markdown cell(s)"
     )
-    return 1 if args.check and changed_files else 0
+    if changed_paths:
+        print()
+        print("  - " + summary + ":")
+        for path in sorted(changed_paths):
+            print(f"    - {path}")
+
+    if not changed_paths:
+        print(f"clean  (0 of {len(targets)} files)")
+    elif args.check:
+        print(f"ERROR: {len(changed_paths)} would change  ({len(changed_paths)} of {len(targets)} files)")
+    else:
+        print(f"{len(changed_paths)} changed  ({len(changed_paths)} of {len(targets)} files)")
+    return 1 if args.check and changed_paths else 0
 
 
 if __name__ == "__main__":

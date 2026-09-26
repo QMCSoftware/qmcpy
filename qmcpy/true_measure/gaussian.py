@@ -1,19 +1,25 @@
 from .abstract_true_measure import AbstractTrueMeasure
 from ..util import DimensionError, ParameterError
 from ..discrete_distribution import DigitalNetB2
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
 import numpy as np
 from numpy.linalg import cholesky, slogdet
-from scipy.stats import norm, multivariate_normal
+from scipy.special import ndtri
+from scipy.stats import multivariate_normal
 from scipy.linalg import eigh
 from typing import Union
 
 
 class Gaussian(AbstractTrueMeasure):
-    """
-    Gaussian (Normal) distribution as described in [https://en.wikipedia.org/wiki/Multivariate_normal_distribution](https://en.wikipedia.org/wiki/Multivariate_normal_distribution).
+    """Gaussian (Normal) distribution as described in
+    [https://en.wikipedia.org/wiki/Multivariate_normal_distribution](https://en.wikipedia.org/wiki/Multivariate_normal_distribution).
 
-    Note:
+    Notes:
         - `Normal` is an alias for `Gaussian`
+        - The inverse normal transform uses float64 precision, including for
+          float32 input points.
 
     Examples:
         >>> true_measure = Gaussian(DigitalNetB2(2,seed=7),mean=[1,2],covariance=[[9,4],[4,5]])
@@ -24,9 +30,11 @@ class Gaussian(AbstractTrueMeasure):
                [ 0.61222205,  1.48402653]])
         >>> true_measure
         Gaussian (AbstractTrueMeasure)
-            mean            [1 2]
-            covariance      [[9 4]
-                             [4 5]]
+            mean            [1. 2.]
+            variance        [9. 5.]
+            standard_deviation [3.    2.236]
+            covariance      [[9. 4.]
+                             [4. 5.]]
             decomp_type     PCA
 
         With independent replications
@@ -46,33 +54,36 @@ class Gaussian(AbstractTrueMeasure):
                 [ 1.1844196 ,  0.44964332,  1.27760936]]])
     """
 
-    def __init__(self, sampler, mean=0.0, covariance=1.0, decomp_type="PCA"):
-        """
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure], mean: Union[float, np.ndarray] = 0.0, covariance: Union[float, np.ndarray] = 1.0, decomp_type: str = "PCA") -> None:
+        """Initialize a Gaussian true measure.
+
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.
             mean (Union[float, np.ndarray]): Mean vector.
-            covariance (Union[float, np.ndarray]): Covariance matrix. A float or vector will be expanded into a diagonal matrix.
-            decomp_type (str): Method for decomposition for covariance matrix. Options include
+            covariance (Union[float, np.ndarray]): Covariance matrix. A float
+                or vector will be expanded into a diagonal matrix.
+            decomp_type (str): Method for decomposition for covariance matrix.
+                Options include
 
                 - `'PCA'` for principal component analysis, or
                 - `'Cholesky'` for cholesky decomposition.
         """
-        self.parameters = ["mean", "covariance", "decomp_type"]
+        self.parameters = ["mean", "variance", "standard_deviation", "covariance", "decomp_type"]
         # default to transform from standard uniform
         self.domain = np.array([[0, 1]])
         self._parse_sampler(sampler)
         self._parse_gaussian_params(mean, covariance, decomp_type)
         self.range = np.array([[-np.inf, np.inf]])
         super(Gaussian, self).__init__()
-        assert self.mu.shape == (self.d,) and self.a.shape == (self.d, self.d)
+        if not (self.mu.shape == (self.d,) and self.a.shape == (self.d, self.d)):
+            raise AssertionError
 
     def _parse_gaussian_params(self, mean, covariance, decomp_type, lazy_decomp=False):
         self.decomp_type = decomp_type.upper()
-        self.mean = mean
-        self.covariance = covariance
         self.lazy_decomp = lazy_decomp
 
         if np.isscalar(mean):
@@ -90,6 +101,13 @@ class Gaussian(AbstractTrueMeasure):
                     mean must have length d and
                     covariance must be of shape d x d"""
             )
+        variance = np.diag(self.sigma)
+        self._set_moments(
+            mean=self.mu.astype(float, copy=False),
+            variance=variance,
+            standard_deviation=np.sqrt(variance),
+            covariance=self.sigma,
+        )
 
         # Cache for lazy loading
         self._a_cache = None
@@ -101,7 +119,9 @@ class Gaussian(AbstractTrueMeasure):
             self._setup_scipy_mvn()
 
     def _compute_decomposition(self):
-        """Compute matrix decomposition (PCA or Cholesky)."""
+        """Compute matrix decomposition (PCA or Cholesky). Raises
+        ParameterError for BrownianBridge.
+        """
         if self._a_cache is not None:
             return self._a_cache
 
@@ -111,9 +131,11 @@ class Gaussian(AbstractTrueMeasure):
                 1 - 2 * (evecs[0] < 0)
             )  # force first entries of eigenvectors to be positive
             order = np.argsort(-evals)
-            self._a_cache = np.dot(evecs[:, order], np.diag(np.sqrt(evals[order])))
+            self._a_cache = evecs[:, order] * np.sqrt(evals[order])
         elif self.decomp_type == "CHOLESKY":
             self._a_cache = cholesky(self.sigma)
+        elif self.decomp_type == "BROWNIANBRIDGE":
+            raise ParameterError("BrownianBridge does not use matrix decomposition")
         else:
             raise ParameterError("decomp_type should be 'PCA' or 'Cholesky'")
         return self._a_cache
@@ -149,7 +171,9 @@ class Gaussian(AbstractTrueMeasure):
         self._mvn_scipy_cache = value
 
     def _transform(self, x):
-        return self.mu + np.einsum("...ij,kj->...ik", norm.ppf(x), self.a)
+        # Keep the inverse CDF and accumulation in at least double precision.
+        transformed = ndtri(np.asarray(x, dtype=np.float64)) @ self.a.T
+        return transformed + self.mu
 
     def _weight(self, t):
         return self.mvn_scipy.pdf(t)

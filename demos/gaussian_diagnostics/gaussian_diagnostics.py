@@ -6,8 +6,7 @@ from scipy.stats import norm as gaussnorm
 from matplotlib import cm
 import os
 
-from qmcpy.integrand import Keister
-from qmcpy.discrete_distribution.lattice import Lattice
+from qmcpy import Keister, Lattice
 
 # print(plt.style.available)
 # plt.style.use('./presentation.mplstyle')  # custom settings
@@ -41,7 +40,7 @@ def ObjectiveFunction(theta, order, xun, ftilde):
     loss = loss1 + loss2
     if np.imag(loss) != 0:
         # keyboard
-        raise ("error ! : loss value is complex")
+        raise ValueError("error ! : loss value is complex")
 
     # print('L1 %1.3f L2 %1.3f L %1.3f r %1.3e theta %1.3e\n'.format(loss1, loss2, loss, order, theta))
     return loss, Lambda, RKHSnorm
@@ -124,7 +123,7 @@ def doPeriodTx(x, integrand, ptransform):
         xp = x
         w = 1
     else:
-        raise (f"The {ptransform} periodization transform is not implemented")
+        raise ValueError(f"The {ptransform} periodization transform is not implemented")
     y = integrand(xp) * w
     return y
 
@@ -164,7 +163,7 @@ def create_plots(type, vz_real, fName, dim, iii, r, rOpt, theta, thetaOpt):
 
 
 def create_surf_plot(
-    fName, lnthth, lnordord, objfun, objobj, lnParamsOpt, r, theta, iii
+    fName, lnthth, lnordord, objfun, objobj, lnParamsOpt, r, theta, iii, npts, dim
 ):
     figH, axH = plt.subplots(subplot_kw={"projection": "3d"})
     axH.view_init(40, 30)
@@ -212,8 +211,8 @@ def MWE_gaussian_diagnostics_engine(whEx, dim, npts, r, fpar, nReps, nPlots):
     fName = fNames[whEx]
     ptransform = ptransforms[whEx]
 
-    rOptAll = [0] * nRep
-    thOptAll = [0] * nRep
+    rOptAll = [0] * nReps
+    thOptAll = [0] * nReps
 
     # parameters for random function
     # seed = 202326
@@ -302,7 +301,7 @@ def MWE_gaussian_diagnostics_engine(whEx, dim, npts, r, fpar, nReps, nPlots):
 
         if iii <= nPlots:
             create_surf_plot(
-                fName, lnthth, lnordord, objfun, objobj, lnParamsOpt, r, theta, iii
+                fName, lnthth, lnordord, objfun, objobj, lnParamsOpt, r, theta, iii, npts, dim
             )
 
         vlambda = kernel2(thetaOpt, rOpt, xlat)

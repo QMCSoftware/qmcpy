@@ -24,9 +24,17 @@ jupyter:
 
 ::: qmcpy.discrete_distribution.lattice.Lattice
 
+## `KorobovLattice`
+
+::: qmcpy.discrete_distribution.korobov.KorobovLattice
+
 ## `Halton`
 
 ::: qmcpy.discrete_distribution.digital_net_any_bases.halton.Halton
+
+## `Hammersley`
+
+::: qmcpy.discrete_distribution.digital_net_any_bases.hammersley.Hammersley
 
 ## `Faure`
 
@@ -40,6 +48,15 @@ jupyter:
 
 ::: qmcpy.discrete_distribution.kronecker.Kronecker
 
+## `LatinHypercube`
+
+::: qmcpy.discrete_distribution.latin_hypercube.LatinHypercube
+
+## `DummySampler`
+
+::: qmcpy.discrete_distribution.dummy_sampler.DummySampler
+
+
 ## `IIDStdUniform`
 
 ::: qmcpy.discrete_distribution.iid_std_uniform.IIDStdUniform
@@ -49,11 +66,11 @@ jupyter:
 MPMC requires PyTorch and PyTorch Geometric. Install with:
 
 ```bash
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-pip install pyg_lib torch-geometric
+python -m pip install "qmcpy[mpmc]"
+qmcpy-install-mpmc
 ```
 
-For GPU support or platform-specific wheels, see the [PyTorch installation guide](https://pytorch.org/get-started/locally/) and the [PyTorch Geometric installation guide](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html).
+The second command selects the `pyg_lib` wheel page matching the installed PyTorch and accelerator builds. For GPU support or platform-specific wheels, see the [PyTorch installation guide](https://pytorch.org/get-started/locally/) and the [PyTorch Geometric installation guide](https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html).
 
 ::: qmcpy.discrete_distribution.mpmc.mpmc.MPMC
 

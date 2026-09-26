@@ -14,9 +14,62 @@ This document describes the available test targets in the Makefile for QMCSoftwa
 | `make doctests` | All doctests with Docker | Slow | Full docstring validation |
 | `make booktests_no_docker` | Jupyter notebook tests | Slow | Validate demo notebooks |
 | `make booktests_parallel_no_docker` | Notebook tests with Parsl parallelization | Variable | Distributed notebook execution |
+| `make check_colab_notebooks` | Audit enabled notebooks for Colab-readiness | Fast | Catch missing pip installs, repo-local imports, and source-install drift |
+| `make check_colab_notebooks_smoke` | Execute Colab notebook setup smoke tests | Fast | Run bootstrap plus early import/setup cells for enabled notebooks |
+| `make harden_colab_notebook [NOTEBOOK=...]` | Insert Colab bootstrap and classify notebook(s) | Fast | Harden one notebook, or attempt to harden unclassified demo notebooks |
+| `make report_colab_notebook_patterns` | Group notebooks by Colab bootstrap family | Fast | Audit which notebooks use basic, extra-pip, LaTeX, or repo-local setup cells |
+| `make open_colab_notebook NOTEBOOK=...` | Open a notebook in Colab from the current branch | Fast | Preview branch-only notebook changes in Colab before merge |
+| `make open_colab_notebook_gist NOTEBOOK=...` | Upload the working-tree notebook to a secret gist and open it in Colab | Fast | Preview uncommitted notebook edits in Colab (needs `gh`) |
+| `make open_notebook NOTEBOOK=...` | Open the working-tree notebook in local JupyterLab | Instant | Edit/run a demo notebook locally with full repo context |
 | `make coverage` | Display coverage report | Instant | View test coverage summary |
 | `make delcoverage` | Reset coverage tracking | Instant | Start fresh coverage analysis |
 
+
+## Test File Organization
+
+Unit tests live flat in `test/` (no subpackage subfolders). Every file is named:
+
+```
+test_<area>_<topic>.py
+```
+
+`<area>` is a short code for the `qmcpy` subpackage under test, or a cross-cutting bucket:
+
+| area | scope |
+|------|-------|
+| `dd` | `qmcpy/discrete_distribution` |
+| `ft` | `qmcpy/fast_transform` |
+| `ig` | `qmcpy/integrand` |
+| `kn` | `qmcpy/kernel` |
+| `sc` | `qmcpy/stopping_criterion` |
+| `tm` | `qmcpy/true_measure` |
+| `ut` | `qmcpy/util` |
+| `ee` | end-to-end / cross-cutting pipeline (`integrate()`, worked problems such as Keister and pi) |
+| `sr` | `scripts/` tooling, packaging, and docs checks |
+
+This keeps related tests adjacent when the directory is sorted, and lets you run one area at a time:
+
+```bash
+python -m pytest test/ -k test_tm_      # every true_measure test
+make unittests PYTEST_EXTRA_ARGS="-k test_sc_"
+```
+
+When a test spans two areas (say a stopping criterion exercised against a particular kernel), file it under the component actually under test and name the other in `<topic>` — e.g. `test_sc_cubbayes_kernels.py`. Reserve `ee` for cases where neither side is the clear subject. Do not invent new area codes: only the prefixes in the table are accepted, and `make check_test_style STRICT=--strict` fails on anything else.
+
+Notebook tests are separate: they live in `test/booktests/` as `tb_*.py` and are generated from `demos/` (see `test/booktests/README.md`).
+
+### Conventions checked by `make check_test_style`
+
+1. **Area prefix** — the filename must start with a recognized `test_<area>_` prefix from the table above.
+2. **Object class** — write a test file as one or more `unittest.TestCase` subclasses rather than bare `def test_*` pytest functions. A class groups related assertions under a name (so `pytest -k TestCubMCG` selects them and a failure report names the group), shares construction through `setUp` / `setUpClass` / `self.addCleanup`, and runs identically under `pytest`, `python -m unittest`, and the coverage and booktest runners without depending on pytest fixtures. Most of the suite already follows this; a few legacy files still use bare functions and new files should not.
+
+`make check_test_style` lists any violation and is informational (exit 0). It also runs as part of `make format`. To make it fail instead — for a pre-commit hook or CI gate — pass `--strict`:
+
+```bash
+STRICT=--strict make check_test_style
+```
+
+`STRICT=--strict make check_test_style` also runs in CI (the `alltests` workflow), so both conventions are enforced on every pull request.
 
 ## Detailed Descriptions
 
@@ -107,6 +160,18 @@ Validates embedded Python code in markdown files under `docs/`.
 - **Time**: ~3–5 seconds
 - **Note**: Usually called via `doctests`; rarely used standalone
 
+#### Running doctests for a single file
+Call pytest's `--doctest-modules` flag directly on the file, for example,
+  ```bash
+  python -m pytest --doctest-modules qmcpy/discrete_distribution/lattice/lattice.py
+  ```
+
+#### Suppressing an expected doctest warning (`conftest.py`)
+
+For warnings intentionally triggered by a doctest, add a file-specific filter to `DOCTEST_WARNING_FILTERS` in the root-level `conftest.py`. This avoids hiding the warning globally or importing the test-only `pytest` dependency in library code.
+
+Only filter expected, documented warnings. Fix unexpected warnings at their source.
+
 ---
 
 ### Unit & Notebook Test Targets
@@ -134,11 +199,6 @@ Runs notebook tests with **Parsl distributed parallelization** for compute-heavy
 - **Dependencies**: Parsl must be installed and configured
 - **Use when**: Running large notebook suites with distributed compute resources
 
-#### `make tests_parallel_no_docker`
-Runs only unit tests with parallel pytest workers (no doctests or booktests).
-- **Time**: ~13–20 seconds
-- **Coverage**: Incremental
-- **Use when**: Testing unit tests only in parallel mode
 
 ---
 
@@ -154,6 +214,72 @@ Auto-generates missing test stub files for notebooks.
 - **Output**: Reports any generated files
 - **Note**: Called automatically by `booktests_no_docker`; rarely used standalone
 
+#### `make check_colab_notebooks`
+Runs the strict static Colab-readiness checks.
+- **Behavior**: Validates the manifest, badge and bootstrap placement, early dependencies, and repo-local imports
+- **Use when**: You change a demo notebook or its Colab setup
+
+#### `make check_colab_notebooks_smoke`
+Runs a lightweight execution smoke test for each Colab-enabled notebook.
+- **Execution scope**: Simulates a Colab runtime, rewrites shell install commands to no-ops, then executes the bootstrap cell plus up to `$(SMOKE_CODE_CELLS)` smoke-safe import/setup code cells
+- **Purpose**: Catch runtime regressions in early import/setup logic that static checks miss
+- **CI usage**: Invoked in Linux CI after test dependencies are installed
+- **Default depth**: `SMOKE_CODE_CELLS=2`
+
+#### `make harden_colab_notebook [NOTEBOOK=...]`
+Hardens one notebook, or if `NOTEBOOK` is omitted, scans `demos/` for notebooks that are not yet listed in either `enabled` or `disabled`.
+- **What it does**: Inserts the badge, adds a generated Colab bootstrap cell, infers common extra pip dependencies, and adds repo-local `sys.path` setup when needed
+- **Classification rule**: Existing `disabled` entries are left untouched; unclassified notebooks are added to `enabled` only after hardening validates. Failures remain unclassified for manual review
+- **Force mode**: `make harden_colab_notebook FORCE=1` regenerates the Open in Colab badge and the `# @title Execute this cell to install dependencies` cell for every notebook already listed in `enabled`; `make harden_colab_notebook NOTEBOOK=... FORCE=1` does the same for one notebook
+- **Cell order**: The generated `import google.colab` bootstrap cell is always inserted after the Open in Colab badge
+- **Validation**: Runs the existing Colab checks after rewriting; if validation fails, the notebook and manifest are restored and the failure is reported
+- **Examples**: `make harden_colab_notebook NOTEBOOK=demos/plot_proj_function.ipynb`, `make harden_colab_notebook`, and `make harden_colab_notebook FORCE=1`
+
+#### `make report_colab_notebook_patterns`
+Groups notebooks already classified in `scripts/colab_notebooks_manifest.json` by the current Colab badge/bootstrap cell pattern.
+- **Pattern families**: Reports basic `qmcpy`-only bootstrap cells, extra-pip variants, LaTeX setup cells, repo-clone/path-setup cells, and disabled notebooks grouped by reason
+- **Dependency details**: Lists extra install commands for notebooks that need more than `qmcpy`
+- **Placement summary**: Reports where the badge and bootstrap cells appear, for example `badge cell 1, bootstrap cell 2`
+- **Use when**: You want to batch-normalize notebook Colab setup or review which notebooks will be affected by bootstrap changes
+
+Every enabled notebook, grouped by its Colab bootstrap pattern family (regenerate with `make report_colab_notebook_patterns`):
+
+- **Basic qmcpy bootstrap** (28): [acceptance_rejection.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/acceptance_rejection.ipynb), [asian-option-mlqmc.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/asian-option-mlqmc.ipynb), [brownian_bridge.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/brownian_bridge.ipynb), [control_variates.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/control_variates.ipynb), [copula_examples.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/copula_examples.ipynb), [Iteration_Log_Tolerance_Demo.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/demo_resume_data/Iteration_Log_Tolerance_Demo.ipynb), [digital_net_b2.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/digital_net_b2.ipynb), [gaussian_diagnostics_demo.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/gaussian_diagnostics/gaussian_diagnostics_demo.ipynb), [korobov_hammersley_latinhypercube_demos.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/korobov_hammersley_latinhypercube_demos.ipynb), [lattice_random_generator.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/lattice_random_generator.ipynb), [lebesgue_integration.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/lebesgue_integration.ipynb), [linear-scrambled-halton.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/linear-scrambled-halton.ipynb), [nei_demo.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/nei_demo.ipynb), [plot_proj_function.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/plot_proj_function.ipynb), [pricing_options.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/pricing_options.ipynb), [product_measure.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/product_measure.ipynb), [qei-demo-for-blog.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/qei-demo-for-blog.ipynb), [qmcpy-logo.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/qmcpy-logo.ipynb), [qmcpy_intro.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/qmcpy_intro.ipynb), [quickstart.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/quickstart.ipynb), [ray_tracing.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/ray_tracing.ipynb), [sample_scatter_plots.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/sample_scatter_plots.ipynb), [scipywrapper_demo.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/scipywrapper_dependence_custom/scipywrapper_demo.ipynb), [some_true_measures.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/some_true_measures.ipynb), [statistics_for_TrueMeasure.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/statistics_for_TrueMeasure.ipynb), [sorokin_thesis_2025.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/talk_paper_demos/SorokinThesis2025/sorokin_thesis_2025.ipynb), [pydata_chi_2023.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/talk_paper_demos/pydata_chi_2023.ipynb), [why_add_q_to_mc_blog.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/talk_paper_demos/why_add_q_to_mc_blog/why_add_q_to_mc_blog.ipynb)
+- **Extra pip bootstrap** (4): [iris.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/iris.ipynb), [joss2026.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/talk_paper_demos/JOSS2026/joss2026.ipynb), [MCQMC_2020_QMC_Software_Tutorial.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/talk_paper_demos/MCQMC_Tutorial_2020/MCQMC_2020_QMC_Software_Tutorial.ipynb), [Sorokin_random_LD_seq_QMC_fast_kernel_methods_2026.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/talk_paper_demos/Sorokin_random_LD_seq_QMC_fast_kernel_methods_2026/Sorokin_random_LD_seq_QMC_fast_kernel_methods_2026.ipynb)
+- **LaTeX bootstrap** (4): [dakota_genz.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/DAKOTA_Genz/dakota_genz.ipynb), [elliptic-pde.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/elliptic-pde.ipynb), [vectorized_qmc.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/vectorized_qmc.ipynb), [vectorized_qmc_bayes.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/vectorized_qmc_bayes.ipynb)
+- **Repo-local bootstrap** (7): [gbm_examples.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/GBM/gbm_examples.ipynb), [accuracy_and_resume.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/demo_resume_data/accuracy_and_resume.ipynb), [resume_examples.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/demo_resume_data/resume_examples.ipynb), [01_sequential.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/talk_paper_demos/Parslfest_2025/01_sequential.ipynb), [02_parallel.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/talk_paper_demos/Parslfest_2025/02_parallel.ipynb), [03_visualize_speedup.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/talk_paper_demos/Parslfest_2025/03_visualize_speedup.ipynb), [01_sequential_output.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/talk_paper_demos/Parslfest_2025/output/01_sequential_output.ipynb)
+- **Repo-local bootstrap + extra pip installs** (1): [gbm_demo.ipynb](https://colab.research.google.com/github/QMCSoftware/QMCSoftware/blob/develop/demos/GBM/gbm_demo.ipynb)
+
+### Opening a demo notebook
+
+| Target | Notebook source | Opens in | Requires |
+|--------|-----------------|----------|----------|
+| `make open_notebook` | working tree | local JupyterLab | `jupyterlab` |
+| `make open_colab_notebook` | `origin/<branch>` (or `<base>` when unchanged) | Google Colab | branch + notebook pushed to `origin` |
+| `make open_colab_notebook_gist` | working tree | Google Colab | `gh` CLI |
+
+#### `make open_colab_notebook NOTEBOOK=demos/<path>.ipynb`
+Opens a demo notebook in Google Colab from the **current git branch** instead of the committed `develop` badge URL, so you can preview branch-only notebook changes in Colab before they merge.
+- **When it uses the branch**: The Colab link points at the current branch when the notebook is new on the branch, or when its content on `origin/<branch>` differs from `origin/<base>`; otherwise it opens the `<base>` version, since the committed badge already covers that case
+- **Requires a push**: Colab loads notebooks from GitHub, so the branch and the notebook must already be pushed to `origin`; the target stops with a hint if they are not, and warns when your local working copy differs from what is pushed
+- **Base branch**: The comparison base is `COLAB_BASE` (default `develop`) and must itself be a branch on `origin`
+- **Output**: Prints the `https://colab.research.google.com/github/<owner>/<repo>/blob/<ref>/<path>` URL and opens it with `python -m webbrowser`
+- **Examples**: `make open_colab_notebook NOTEBOOK=demos/nei_demo.ipynb`, `make open_colab_notebook NOTEBOOK=demos/GBM/gbm_demo.ipynb COLAB_BASE=master`
+
+#### `make open_colab_notebook_gist NOTEBOOK=demos/<path>.ipynb`
+Uploads the **working-tree** copy of a notebook to a throwaway secret GitHub gist and opens that gist in Colab, so you can preview uncommitted edits without pushing to a branch.
+- **Requires**: The [`gh` CLI](https://cli.github.com), authenticated with `gh auth login`
+- **What it prints**: The gist URL, the `https://colab.research.google.com/gist/<login>/<id>/<file>` URL (also opened with `python -m webbrowser`), and the `gh gist delete <id>` cleanup command
+- **Gist visibility**: "secret" means unlisted, not private; delete it when finished
+- **Limitation**: A gist is a single file, so sibling `.py` helpers and repo-local imports will not resolve; the bootstrap cell's `git clone` falls back to `develop`. Use `make open_colab_notebook` for notebooks that depend on repo files
+- **Example**: `make open_colab_notebook_gist NOTEBOOK=demos/quickstart.ipynb`
+
+#### `make open_notebook NOTEBOOK=demos/<path>.ipynb`
+Opens the working-tree notebook in local JupyterLab (`jupyter lab <path>`, falling back to `python -m jupyterlab`).
+- **Use when**: You want to edit or run a demo notebook locally with the current source install, helper files, and uncommitted changes all in place
+- **Note**: Runs the Lab server in the foreground; stop it with `Ctrl+C`
+- **Example**: `make open_notebook NOTEBOOK=demos/quickstart.ipynb`
+
 #### `make coverage`
 Displays the current coverage report (must run other targets first to accumulate coverage data).
 - **Output**: Terminal summary of coverage percentages per file/module
@@ -162,15 +288,6 @@ Displays the current coverage report (must run other targets first to accumulate
 #### `make delcoverage`
 Deletes `.coverage` and `coverage.json` files to reset coverage tracking.
 - **Use before**: Running a fresh coverage report without accumulated data
-
-## Redundancy Analysis & Status
-
-### Removed Redundant Target ✅
-
-#### `make tests_parallel_no_docker` (REMOVED)
-- **Was redundant**: Ran only unit tests in parallel. `make tests_fast` is a strict superset (doctests + unittests + booktests in parallel).
-- **Status**: **Removed from Makefile** to simplify maintenance and reduce user confusion.
-- **Migration**: Users should use `make tests_fast` instead (faster, more comprehensive).
 
 ---
 
@@ -270,7 +387,7 @@ make tests_no_docker        # Sequential, safe (60–120s)
 ## Coverage Report Strategy
 
 ### Overview
-QMCSoftware uses a **multi-platform unified coverage report** approach in GitHub Actions CI. Coverage data from all test types (doctests, unittests, booktests) running on all platforms (Ubuntu, macOS, Windows) is combined into a single  coverage percentage.
+QMCSoftware uses a **multi-platform unified coverage report** approach in GitHub Actions CI. Coverage data from all test types (doctests, unittests, booktests) running on all platforms (Ubuntu, macOS, Windows) is combined into a single coverage percentage.
 
 ### Official Coverage Metric (Unit Tests Only)
 
@@ -359,7 +476,7 @@ All test targets use `--cov-append` (pytest) or `coverage run --append` to accum
 
 ## CI & Coverage (summary)
 
-- **GitHub Actions:** The main CI workflow is `.github/workflows/alltests.yml` (referred to in this document as `alltests.yml`). It runs a matrix across OSes, and calls Makefile targets 
+- **GitHub Actions:** The main CI workflow is `.github/workflows/alltests.yml` (referred to in this document as `alltests.yml`). It runs a matrix across OSes, and calls Makefile targets.
 
     _Note_: The project CI is configured to upload coverage to Codecov.
 

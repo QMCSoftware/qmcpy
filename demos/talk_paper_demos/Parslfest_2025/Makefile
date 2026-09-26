@@ -15,7 +15,7 @@ sequential:
 		--output-dir=$(OUTDIR) --output=01_sequential_output.ipynb
 
 parallel:
-	@echo "Running 02_parallel.ipynb (parallel) for workers  2" 
+	@echo "Running 02_parallel.ipynb (parallel) for workers  2"
 	@for w in  2 ; do \
 		 echo " -> running with $$w workers"; \
 		 PARSL_MAX_WORKERS=$$w $(PYTHON) -m nbconvert --to notebook --execute 02_parallel.ipynb \

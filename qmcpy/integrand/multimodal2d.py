@@ -1,3 +1,8 @@
+from ..discrete_distribution.abstract_discrete_distribution import (
+    AbstractDiscreteDistribution,
+)
+from ..true_measure.abstract_true_measure import AbstractTrueMeasure
+from typing import Union
 import numpy as np
 from .abstract_integrand import AbstractIntegrand
 from ..true_measure import Uniform
@@ -5,20 +10,28 @@ from ..discrete_distribution import DigitalNetB2
 
 
 class Multimodal2d(AbstractIntegrand):
-    r"""
-    Multimodal function in $d=2$ dimensions.
+    r"""Multimodal function in $d=2$ dimensions.
 
-    $$g(\boldsymbol{t}) = (t_0^2+4)(t_1-1)/20-\sin(5t_0/2)-2 \qquad \boldsymbol{T} = (T_0,T_1) \sim \mathcal{U}([-4,7] \times [-3,8]).$$
+    $$g(\boldsymbol{t}) = (t_0^2+4)(t_1-1)/20-\sin(5t_0/2)-2 \qquad
+    \boldsymbol{T} = (T_0,T_1) \sim \mathcal{U}([-4,7] \times [-3,8]).$$
 
     Examples:
         >>> integrand = Multimodal2d(DigitalNetB2(2,seed=7))
         >>> y = integrand(2**10)
         >>> print("%.4f"%y.mean())
         -0.7365
-        >>> integrand.true_measure
+        >>> integrand.true_measure  # doctest: +NORMALIZE_WHITESPACE
         Uniform (AbstractTrueMeasure)
             lower_bound     [-4 -3]
             upper_bound     [7 8]
+            mean            [1.5 2.5]
+            variance        [10.083 10.083]
+            standard_deviation [3.175 3.175]
+            covariance      <DIAgonal sparse matrix of dtype 'float64'
+                             with 2 stored elements (1 diagonals) and shape (2, 2)>
+                              Coords Values
+                              (0, 0) 10.083333333333334
+                              (1, 1) 10.083333333333334
 
         With independent replications
 
@@ -33,16 +46,19 @@ class Multimodal2d(AbstractIntegrand):
         -0.7366
     """
 
-    def __init__(self, sampler):
-        r"""
+    def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure]) -> None:
+        r"""Initialize a Multimodal2d integrand.
+
         Args:
-            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]): Either
+            sampler (Union[AbstractDiscreteDistribution, AbstractTrueMeasure]):
+                Either
 
                 - a discrete distribution from which to transform samples, or
                 - a true measure by which to compose a transform.
         """
         self.sampler = sampler
-        assert self.sampler.d == 2
+        if not (self.sampler.d == 2):
+            raise AssertionError
         self.true_measure = Uniform(
             self.sampler, lower_bound=[-4, -3], upper_bound=[7, 8]
         )
@@ -50,7 +66,15 @@ class Multimodal2d(AbstractIntegrand):
             dimension_indv=(), dimension_comb=(), parallel=False
         )
 
-    def g(self, t):
+    def g(self, t: np.ndarray) -> np.ndarray:
+        """Evaluate the two-dimensional multimodal function.
+
+        Args:
+            t (np.ndarray): Two-dimensional points.
+
+        Returns:
+            np.ndarray: Function values.
+        """
         t0, t1 = t[..., 0], t[..., 1]
         return (t0**2 + 4) * (t1 - 1) / 20 - np.sin(5 * t0 / 2) - 2
 
