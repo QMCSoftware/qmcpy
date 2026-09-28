@@ -11,7 +11,7 @@ from ..integrand import Keister, BoxIntegral, CustomFun, Genz, SensitivityIndice
 from ..util import MaxSamplesWarning, ParameterWarning, ParameterError
 import numpy as np
 from time import time
-from scipy.stats import norm
+from scipy.special import ndtri
 import warnings
 
 
@@ -241,7 +241,7 @@ class CubMCCLTVec(AbstractStoppingCriterion):
             np.full(self.integrand.d_comb, self.alpha)
         )
         self.set_tolerance(abs_tol, rel_tol)
-        self.z_star = -norm.ppf(self.alphas_indv / 2)
+        self.z_star = -ndtri(self.alphas_indv / 2)
 
     def _validate_resume(self, data):
         self._validate_resume_data(data, required_fields=self._RESUME_REQUIRED_FIELDS)

@@ -15,7 +15,7 @@ from ..util import DimensionError, ParameterError
 from ..discrete_distribution import DigitalNetB2
 
 import numpy as np
-from scipy.stats import norm
+from scipy.special import ndtr, ndtri
 
 
 class GaussianCopula(AbstractCopula):
@@ -112,7 +112,7 @@ class GaussianCopula(AbstractCopula):
 
         u = _clip_unit_interval(x)
         z_dep = self._gaussian_transform._transform(u)
-        return _clip_unit_interval(norm.cdf(z_dep))
+        return _clip_unit_interval(ndtr(z_dep))
 
 
     def _weight(self, x):
@@ -122,8 +122,8 @@ class GaussianCopula(AbstractCopula):
         except ParameterError:
             return self._unit_weight_with_warning(x)
 
-        z = norm.ppf(u)
-        quad = np.einsum("...i,ij,...j->...", z, self._corr_inv_minus_eye, z)
+        z = ndtri(u)
+        quad = ((z @ self._corr_inv_minus_eye) * z).sum(-1)
         log_copula_density = -0.5 * self._logdet_corr - 0.5 * quad
 
         return np.exp(log_copula_density + log_marginal_density)

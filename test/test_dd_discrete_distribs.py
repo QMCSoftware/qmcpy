@@ -587,6 +587,10 @@ class TestHalton(unittest.TestCase):
         )
         self.assertTrue((x_ur == x_true).all())
 
+    def test_instances_do_not_share_prime_table(self):
+        Halton(dimension=3).all_primes[0] = 4
+        npt.assert_array_equal(Halton(dimension=3).bases, [[2, 3, 5]])
+
 
 class TestLatinHypercube(unittest.TestCase):
     """Unit tests for LatinHypercube DiscreteDistribution."""

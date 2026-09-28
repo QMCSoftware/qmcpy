@@ -5,7 +5,7 @@ from ..discrete_distribution.abstract_discrete_distribution import (
     AbstractDiscreteDistribution,
 )
 import numpy as np
-from numpy.linalg import cholesky, slogdet
+from numpy.linalg import cholesky
 from scipy.special import ndtri
 from scipy.stats import multivariate_normal
 from scipy.linalg import eigh

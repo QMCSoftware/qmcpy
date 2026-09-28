@@ -17,7 +17,7 @@ from ..util import MaxSamplesWarning, ParameterError
 import warnings
 import time
 import numpy as np
-from scipy.stats import norm
+from scipy.special import ndtr, ndtri
 import torch
 import gpytorch
 
@@ -479,7 +479,7 @@ def _get_phi(gp, x):
     yhat, yhatstd = gp.predict(x)
     with np.errstate(all="ignore"):
         z = yhat / yhatstd
-    return norm.cdf(z)
+    return ndtr(z)
 
 
 def _error_udens_from_phi(phi):
@@ -737,7 +737,7 @@ class PFGPCIData(Data):
         """
         from matplotlib import pyplot, gridspec
 
-        beta = norm.ppf(np.mean([ci_percentage, 1]))
+        beta = ndtri(np.mean([ci_percentage, 1]))
         n_batches = len(self.n_batch)
         fig = pyplot.figure(constrained_layout=False, figsize=(5 * n_batches, 5 * 3))
         gs = gridspec.GridSpec(3, n_batches, figure=fig)

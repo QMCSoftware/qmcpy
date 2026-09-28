@@ -1175,6 +1175,111 @@ class TestBrownianMotion(unittest.TestCase):
             err_msg="4 evenly spaced custom times should match van der Corput ordering"
         )
 
+    def test_brownian_bridge_chronological_grid_is_sequential(self):
+        """An increasing monitoring_times grid with bridge_vdc_gray_ordering=False gives every
+        point exactly one (left) anchor, collapsing Owen's bisection tree into a linear chain
+        (each depth level holds a single index). _bridge_transform must fall back to the
+        original scalar per-dimension loop for this case (see _bridge_max_level_size /
+        _BRIDGE_LEVEL_BATCH_MIN in brownian_motion.py) rather than pay vectorization overhead
+        for zero batching benefit -- this pins the *result*, independent of that internal
+        implementation choice, against the closed-form sequential Brownian increment
+        construction the chain degenerates to: W(s_j) = W(s_{j-1}) + sqrt(s_j - s_{j-1}) * Z_j.
+        """
+        d, n = 16, 4
+        t = np.linspace(1 / d, 1.0, d)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            bm = BrownianMotion(
+                DigitalNetB2(d, seed=self.seed),
+                decomp_type="BrownianBridge", monitoring_times=t, bridge_vdc_gray_ordering=False
+            )
+        self.assertEqual([len(level) for level in bm._bridge_levels], [1] * d)
+        self.assertEqual(bm._bridge_max_level_size, 1)
+
+        u = DigitalNetB2(d, seed=self.seed).gen_samples(n)
+        automated = bm._transform(u)
+
+        z = scipy.stats.norm.ppf(u)
+        increments = np.diff(np.r_[0.0, bm.time_vec])
+        expected = np.cumsum(np.sqrt(increments) * z, axis=-1)
+
+        np.testing.assert_array_almost_equal(
+            expected, automated, decimal=10,
+            err_msg="chronological BrownianBridge grid should match sequential increment construction"
+        )
+
+    def test_brownian_bridge_large_d_matches_reference_loop(self):
+        """At d=16 (default van der Corput ordering, levels [1,1,2,4,8]) _bridge_max_level_size
+        lands exactly on the _BRIDGE_LEVEL_BATCH_MIN boundary; at d=64 it's comfortably past it.
+        Either way, _bridge_transform's level-batched path mixes vectorized levels (size >=
+        _BRIDGE_LEVEL_BATCH_MIN) with per-level scalar fallback for the smaller early-depth
+        levels. Check both branches together, at both d, against a direct, unoptimized
+        transcription of Owen's Algorithm 6.2."""
+        n = 4
+        for d, expected_max_level_size in [(16, 8), (64, 32)]:
+            bm = BrownianMotion(DigitalNetB2(d, seed=self.seed), decomp_type="BrownianBridge")
+            level_sizes = [len(level) for level in bm._bridge_levels]
+            self.assertEqual(bm._bridge_max_level_size, expected_max_level_size)
+            self.assertGreaterEqual(bm._bridge_max_level_size, 8)  # exercises the vectorized branch
+            self.assertTrue(any(size < 8 for size in level_sizes))  # ...and the per-level fallback
+
+            u = DigitalNetB2(d, seed=self.seed).gen_samples(n)
+            automated = bm._transform(u)
+
+            z = scipy.stats.norm.ppf(u)
+            left, right = bm._bridge_left, bm._bridge_right
+            a, b, w = bm._bridge_a, bm._bridge_b, bm._bridge_w
+            paths = np.empty(z.shape[:-1] + (d,))
+            for j in range(d):
+                paths[..., j] = w[j] * z[..., j]
+                if left[j] >= 0:
+                    paths[..., j] += a[j] * paths[..., left[j]]
+                if right[j] >= 0:
+                    paths[..., j] += b[j] * paths[..., right[j]]
+            expected = paths[..., bm._increasing_order]
+
+            np.testing.assert_array_almost_equal(
+                expected, automated, decimal=10,
+                err_msg=f"level-batched BrownianBridge transform (d={d}) should match the unoptimized reference loop"
+            )
+
+    def test_brownian_bridge_large_d_with_replications_matches_reference_loop(self):
+        """test_brownian_bridge_large_d_matches_reference_loop only ever uses n=4, no
+        replications; test_brownian_bridge_manual_replications_d3/d4 only ever use d=3/4, well
+        under _BRIDGE_LEVEL_BATCH_MIN. Neither combination exercises the level-batched path
+        (Cases 2/3 of _bridge_transform) on a 3-D (replications, n, d) array -- the extra batch
+        axis both _bridge_scalar_step's idx_of and the vectorized reshape/broadcast need to
+        handle correctly. This pins that combination directly."""
+        d, n, reps = 64, 4, 3
+        bm = BrownianMotion(DigitalNetB2(d, seed=self.seed, replications=reps), decomp_type="BrownianBridge")
+        level_sizes = [len(level) for level in bm._bridge_levels]
+        self.assertGreaterEqual(bm._bridge_max_level_size, 8)  # exercises the vectorized branch
+        self.assertTrue(any(size < 8 for size in level_sizes))  # ...and the per-level fallback
+
+        u = DigitalNetB2(d, seed=self.seed, replications=reps).gen_samples(n)
+        self.assertEqual(u.shape, (reps, n, d))
+        automated = bm._transform(u)
+        self.assertEqual(automated.shape, (reps, n, d))
+
+        z = scipy.stats.norm.ppf(u)
+        left, right = bm._bridge_left, bm._bridge_right
+        a, b, w = bm._bridge_a, bm._bridge_b, bm._bridge_w
+        paths = np.empty(z.shape[:-1] + (d,))
+        for j in range(d):
+            paths[..., j] = w[j] * z[..., j]
+            if left[j] >= 0:
+                paths[..., j] += a[j] * paths[..., left[j]]
+            if right[j] >= 0:
+                paths[..., j] += b[j] * paths[..., right[j]]
+        expected = paths[..., bm._increasing_order]
+
+        np.testing.assert_array_almost_equal(
+            expected, automated, decimal=10,
+            err_msg="level-batched BrownianBridge transform with replications should match "
+                    "the unoptimized reference loop"
+        )
+
     def test_brownian_bridge_output_order(self):
         """Test that custom ordered output matches given input and contains same values as increasing output"""
         times = [0.6, 1.0, 0.3, 0.8]
@@ -1391,6 +1496,40 @@ class TestGeometricBrownianMotion(unittest.TestCase):
             decimal=6,
             err_msg="GBM covariance computation changed unexpectedly",
         )
+
+    def test_gbm_covariance_computation_above_former_loop_threshold(self):
+        """test_gbm_covariance_computation only exercises d=4, the branch that was already
+        vectorized on develop. _compute_gbm_covariance used to switch to a nested Python loop
+        for n>200; this pins the (now sole, for every n) broadcasted implementation at n=252, a
+        trading year and the default throughout demos/GBM/gbm_demo.ipynb, via symmetry plus a
+        closed-form spot check at a few (i, j) pairs."""
+        n = 252
+        gbm = GeometricBrownianMotion(
+            DigitalNetB2(n, seed=self.seed),
+            t_final=1,
+            initial_value=100,
+            drift=0.05,
+            diffusion=0.04,
+        )
+        cov = gbm.covariance_gbm
+        self.assertEqual(cov.shape, (n, n))
+        np.testing.assert_array_almost_equal(
+            cov, cov.T, err_msg="GBM covariance must be symmetric"
+        )
+
+        t = gbm.time_vec
+        S0_sq = gbm.initial_value**2
+        for i, j in [(0, 0), (0, n - 1), (n // 2, n - 1), (n - 1, n - 1)]:
+            t_min = min(t[i], t[j])
+            expected = S0_sq * np.exp(gbm.drift * (t[i] + t[j])) * (
+                np.exp(gbm.diffusion * t_min) - 1
+            )
+            self.assertAlmostEqual(
+                cov[i, j],
+                expected,
+                places=6,
+                msg=f"GBM covariance[{i},{j}] does not match the closed form",
+            )
 
     def test_gbm_weight_specific_values(self):
         """Test that PDF weight computation produces expected values for specific inputs."""

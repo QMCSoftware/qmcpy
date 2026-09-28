@@ -46,6 +46,7 @@ TEST_RUNTIMES_FALLBACK = {
     "tb_sample_scatter_plots": 8.16,
     "tb_nei_demo": 7.58,
     "tb_some_true_measures": 7.18,
+    "tb_performance_optimizations_demo": 6.05,
     "tb_copula_examples": 5.68,
     "tb_why_add_q_to_mc_blog": 4.73,
     "tb_acceptance_rejection": 4.54,

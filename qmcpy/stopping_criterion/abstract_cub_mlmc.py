@@ -3,7 +3,7 @@ from .abstract_stopping_criterion import AbstractStoppingCriterion
 from ..util.data import Data
 from ..util import ParameterError
 import numpy as np
-from scipy.stats import norm
+from scipy.special import ndtri
 
 
 class AbstractCubMLMC(AbstractStoppingCriterion):
@@ -91,7 +91,7 @@ class AbstractCubMLMC(AbstractStoppingCriterion):
         if rmse_tol != None:
             self.rmse_tol = float(rmse_tol)
         elif abs_tol != None:
-            self.rmse_tol = float(abs_tol) / norm.ppf(1 - self.alpha / 2.0)
+            self.rmse_tol = float(abs_tol) / ndtri(1 - self.alpha / 2.0)
 
     def _update_data(self, data):
         for l in range(data.levels + 1):
