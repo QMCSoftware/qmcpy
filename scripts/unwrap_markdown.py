@@ -5,12 +5,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
 import sys
 
 SUPPORTED_SUFFIXES = {".md", ".ipynb"}
+GENERATED_NOTEBOOK_DIRS = {".virtual_documents", ".ipynb_checkpoints"}
 FENCE_RE = re.compile(r"^\s*([`~]{3,})")
 LIST_RE = re.compile(r"^\s*(?:[-+*]|\d+[.)])\s+")
 REFERENCE_DEF_RE = re.compile(r"^\s*\[[^\]]+\]:\s+\S")
@@ -28,7 +30,7 @@ HTML_TAG_RE = re.compile(r"^</?[A-Za-z]")
 def _drop_git_ignored(paths: list[Path]) -> list[Path]:
     """Drop any path `git check-ignore` reports as ignored.
 
-    A directory walk via `rglob` has no notion of `.gitignore` on its own, so
+    A directory walk via `os.walk` has no notion of `.gitignore` on its own, so
     without this a repo-root scan wanders into build/cache output
     (`.pytest_cache/`, `site/`) and gitignored scratch files (`sc_*`) and
     rewrites them -- wasted work on files git will never see as changed, and
@@ -75,10 +77,15 @@ def iter_targets(paths: list[str]) -> tuple[list[Path], list[str]]:
                 continue
             files.append(path)
             continue
-        candidates = sorted(
-            child for child in path.rglob("*")
-            if child.is_file() and child.suffix.lower() in SUPPORTED_SUFFIXES
-        )
+        candidates = []
+        for root, dirs, names in os.walk(path):
+            dirs[:] = sorted(name for name in dirs if name not in GENERATED_NOTEBOOK_DIRS)
+            candidates.extend(
+                Path(root) / name for name in names
+                if Path(name).suffix.lower() in SUPPORTED_SUFFIXES
+                and (Path(root) / name).is_file()
+            )
+        candidates.sort()
         files.extend(_drop_git_ignored(candidates))
     return files, errors
 
@@ -359,6 +366,20 @@ def main() -> int:
     if not targets:
         print("error: no .md or .ipynb files found", file=sys.stderr)
         return 2
+
+    # Check every notebook before writing anything, so a malformed notebook
+    # cannot leave a directory-wide run only partly updated.
+    for path in targets:
+        if path.suffix.lower() != ".ipynb":
+            continue
+        try:
+            with path.open(encoding="utf-8") as handle:
+                notebook = json.load(handle)
+            if not isinstance(notebook, dict):
+                raise ValueError("expected a JSON object")
+        except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
+            print(f"error: invalid notebook {path}: {exc}", file=sys.stderr)
+            return 2
 
     changed_paths = []
     changed_cells = 0

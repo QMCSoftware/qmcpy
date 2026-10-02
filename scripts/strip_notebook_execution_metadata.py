@@ -41,7 +41,9 @@ def strip_execution_metadata(path: Path) -> bool:
     nb = nbformat.read(path, as_version=nbformat.NO_CONVERT)
     changed = False
     for cell in nb.cells:
-        if cell.get("metadata", {}).pop("execution", None) is not None:
+        metadata = cell.get("metadata", {})
+        if "execution" in metadata:
+            del metadata["execution"]
             changed = True
     if changed:
         nbformat.write(nb, path)

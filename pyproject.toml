@@ -115,6 +115,7 @@ test_core = [
     "scikit-learn >= 1.0.0",
     "pandas >= 1.3.0",
     "pyyaml >= 6.0",
+    "nbformat >= 5.0", # required by test_sr_strip_notebook_execution_metadata.py; itself 3.9-compatible, unlike the parsl/testbook notebook stack omitted above
     ]
 test_torch = [
     "torch >= 2.7.0, < 2.13", # kept in sync with the mpmc extra: PyG pyg_lib wheels stop at torch 2.12

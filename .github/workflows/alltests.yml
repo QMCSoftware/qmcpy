@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 # CodeQL "Workflow does not contain permissions": restrict the GITHUB_TOKEN to
-# the minimum. These jobs only read the repo -- checkout, conda/python setup,
+# the minimum. These jobs only read the repo: checkout, conda/python setup,
 # caching, and tests. Codecov uploads authenticate with CODECOV_TOKEN, not the
 # GITHUB_TOKEN, so no write scope is needed.
 permissions:
@@ -72,6 +72,20 @@ jobs:
             python-version: ['3.13']
     steps:
       - uses: actions/checkout@v4
+      - name: Deepen history for diff-based checks (develop and this commit only)
+        # fetch-depth: 0 fetches every remote branch's full history, which
+        # fails on Windows for any branch name containing a character invalid
+        # in a filename (e.g. '>': "cannot lock ref ... Invalid argument").
+        # check_baseline and friends only ever diff against develop (some by
+        # the bare name, DOCSTRING_BASE by "origin/develop"), so fetch just
+        # that plus this commit instead of every branch in the repo. The bare
+        # name doesn't resolve from a remote-tracking ref alone (verified:
+        # `git rev-parse develop` fails with only origin/develop present), so
+        # create a local develop branch explicitly after fetching it.
+        run: |
+          git fetch --no-tags --prune --no-recurse-submodules --depth=10000 origin ${{ github.sha }}
+          git fetch --no-tags --prune --no-recurse-submodules --depth=10000 origin develop
+          git branch develop refs/remotes/origin/develop
       - uses: conda-incubator/setup-miniconda@v3
         with:
           miniconda-version: "latest"

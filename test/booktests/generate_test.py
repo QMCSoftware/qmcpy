@@ -5,6 +5,7 @@ Can be called from the Makefile or used standalone.
 """
 
 import os
+import re
 import argparse
 from pathlib import Path
 
@@ -105,6 +106,13 @@ def generate_missing_tests(demos_dir="../../demos", output_dir=None):
         if "Parslfest_2025" in str(notebook_path):
             continue
 
+        # Skip scratch copies (e.g. _RUN_tmp.ipynb): generating and executing
+        # a tb_*.py for a transient working file is never wanted, and the
+        # resulting tb_*_tmp*.py would itself get picked up by the pytest
+        # runner's tb_*.py glob.
+        if "tmp" in notebook_name.lower():
+            continue
+
         # Convert notebook name to test file name
         test_name = notebook_name.replace("-", "_")  # .replace('.', '_')
         test_file_path = output_dir / f"tb_{test_name}.py"
@@ -122,7 +130,25 @@ def generate_missing_tests(demos_dir="../../demos", output_dir=None):
             generated_file = generate_test_file(rel_notebook_path, output_dir)
             generated_files.append(generated_file)
 
+    remove_orphaned_tests(output_dir)
     return generated_files
+
+
+def remove_orphaned_tests(output_dir):
+    """Delete a generated scratch tb_*tmp*.py whose notebook no longer exists.
+
+    Leftover from a scratch notebook copy (e.g. _RUN_tmp3.ipynb) that was
+    generated against, then deleted: without this, the dangling tb_*.py
+    keeps failing with FileNotFoundError on every run instead of just
+    vanishing along with the notebook it was generated for.
+    """
+    for test_file_path in Path(output_dir).glob("tb_*.py"):
+        match = re.search(r"@testbook\('([^']+)'", test_file_path.read_text())
+        if not match or "tmp" not in Path(match.group(1)).stem.lower():
+            continue
+        if not (output_dir / match.group(1)).resolve().exists():
+            print(f"Removing orphaned test (notebook no longer exists): {test_file_path}")
+            test_file_path.unlink()
 
 
 def main():

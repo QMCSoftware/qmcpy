@@ -30,6 +30,16 @@ What is checked (informational by default; ``--strict`` fails the build):
 * ``numbering-not-sequential`` -- a section's bracket/dot numbers are not
   exactly ``1, 2, 3, ...`` in the order they appear.
 * ``missing-year`` -- an entry with no 4-digit year anywhere in its text.
+* ``undefined-citation`` (``*.md``/``*.ipynb`` only) -- a ``[N]`` cited in
+  the text has no matching ``[N]`` entry in that same document's References
+  section.
+* ``unused-reference`` (``*.md``/``*.ipynb`` only) -- a References entry
+  ``[N]`` is never cited anywhere else in that same document. Citation and
+  entry must be in the same file; this does not check across files. Not
+  checked for ``qmcpy/**/*.py`` docstrings: a class's References: section
+  commonly lists its one or two source papers without an inline ``[N]``
+  marker anywhere in the prose, a looser convention than this project
+  expects of notebooks/markdown.
 
 What ``--fix`` actually rewrites (only the unambiguous, purely presentational
 cases; everything else above is reported but left for a human, since blindly
@@ -74,8 +84,10 @@ _GENERATED_DIRS = (REPO_ROOT / "docs" / "demos", REPO_ROOT / "docs" / "paper")
 
 # A docstring/markdown/notebook line that *is* a References-type heading.
 _DOCSTRING_HEADER = re.compile(r"^\*{0,2}References:?\*{0,2}\s*$")
-_MD_HEADING = re.compile(r"^#{1,6}\s.*\bReferences\b", re.IGNORECASE)
-_MD_BOLD_HEADING = re.compile(r"^\*\*[^*]*\bReferences\b[^*]*\*\*\s*$", re.IGNORECASE)
+_MD_HEADING = re.compile(r"^#{1,6}\s.*\b(?:References|Bibliography)\b", re.IGNORECASE)
+_MD_BOLD_HEADING = re.compile(
+    r"^\*\*[^*]*\b(?:References|Bibliography)\b[^*]*\*\*\s*$", re.IGNORECASE
+)
 # Any other canonical Google docstring section that would end a References
 # block (kept in sync with check_docstring.py's GOOGLE_SECTIONS).
 _NEXT_DOCSTRING_SECTION = re.compile(
@@ -266,10 +278,104 @@ def _iter_notebook_files(root):
 
 
 # --------------------------------------------------------------------------
+# Citation/entry key matching (cited [N] vs. defined [N], same document)
+# --------------------------------------------------------------------------
+
+# A prose citation is always preceded by whitespace/punctuation or
+# line-start ("following [2]", "[1] Author..."); require that so code-like
+# indexing (`s(1)[0]`, `w[0]`, `data['x'][-1]`) in a doctest/example line
+# doesn't get mistaken for citing reference [0].
+_CITATION = re.compile(r"(?<![\w)\]'\"])\[(\d+)\]")
+_CODE_FENCE = re.compile(r"^\s*(`{3,}|~{3,})")
+_INLINE_CODE = re.compile(r"(`+).*?\1")
+
+
+def _mask_markdown_code(scan_lines):
+    """Blank fenced code and inline code spans before scanning citations."""
+    masked = []
+    fence = None
+    for loc, line in scan_lines:
+        match = _CODE_FENCE.match(line)
+        if fence is not None:
+            if match and match.group(1)[0] == fence[0] and len(match.group(1)) >= len(fence):
+                fence = None
+            masked.append((loc, ""))
+            continue
+        if match:
+            fence = match.group(1)
+            masked.append((loc, ""))
+            continue
+        masked.append((loc, _INLINE_CODE.sub("", line)))
+    return masked
+
+
+def _citation_key_findings(scan_lines, definitions):
+    """Cross-reference in-text ``[N]`` citations against defined entries.
+
+    Args:
+        scan_lines: ``[(loc, line_text), ...]`` for every line in the
+            document EXCEPT a References entry's own defining marker line
+            (those come in via `definitions` instead, so a definition is
+            never also counted as a self-citation).
+        definitions: ``[(loc, number), ...]``, one per ``[N] ...`` entry.
+
+    Returns:
+        list of ``(loc, category, detail)``: ``undefined-citation`` for a
+        ``[N]`` cited in `scan_lines` with no matching `definitions` entry,
+        ``unused-reference`` for a `definitions` entry never cited in
+        `scan_lines`.
+    """
+    defined = {}
+    for loc, number in definitions:
+        defined.setdefault(number, loc)
+
+    cited = {}
+    for loc, line in scan_lines:
+        if _MARKERS[1][1].match(line.strip()):
+            # A `[N] ...`-shaped line is a bibliography entry even if the
+            # section header it belongs to wasn't recognized as a
+            # References-type heading (e.g. "### Bibliography"): still not
+            # a citation of itself.
+            continue
+        for m in _CITATION.finditer(line):
+            cited.setdefault(int(m.group(1)), loc)
+
+    findings = []
+    for number, loc in sorted(cited.items()):
+        if number not in defined:
+            findings.append((
+                loc, "undefined-citation",
+                f"[{number}] is cited here but no References entry defines it",
+            ))
+    for number, loc in sorted(defined.items()):
+        if number not in cited:
+            findings.append((
+                loc, "unused-reference",
+                f"[{number}] is defined in References but never cited elsewhere in this document",
+            ))
+    return findings
+
+
+def _bracket_entries(section):
+    """This section's `[N] ...`-marker entries, as (lineno, number) pairs."""
+    return [
+        (lineno, number) for lineno, kind, number, _ in section.entries
+        if kind == "bracket" and number is not None
+    ]
+
+
+# --------------------------------------------------------------------------
 # Per-file-type check/fix
 # --------------------------------------------------------------------------
 
 def check_python_file(path):
+    # Citation-key matching (undefined-citation/unused-reference) is skipped
+    # for .py docstrings on purpose: a class docstring's References: section
+    # commonly lists the one or two papers a whole algorithm is based on
+    # without an inline [N] marker anywhere in the prose, since there's only
+    # one obvious source. That's a different, looser convention than
+    # notebooks/markdown, where this project does expect every entry to be
+    # inline-cited. Still runs the other four checks below.
     lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
     findings = []
     for section in _find_sections_in_lines(lines, is_docstring=True):
@@ -288,8 +394,14 @@ def fix_python_file(path):
 def check_markdown_file(path):
     lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
     findings = []
-    for section in _find_sections_in_lines(lines, is_docstring=False):
+    sections = _find_sections_in_lines(lines, is_docstring=False)
+    for section in sections:
         findings.extend(_check_section(path, section))
+
+    definitions = [pair for s in sections for pair in _bracket_entries(s)]
+    definition_linenos = {lineno for lineno, _ in definitions}
+    scan_lines = [(i + 1, l) for i, l in enumerate(lines) if (i + 1) not in definition_linenos]
+    findings.extend(_citation_key_findings(_mask_markdown_code(scan_lines), definitions))
     return findings
 
 
@@ -310,11 +422,31 @@ def _notebook_markdown_cells(notebook):
 def check_notebook_file(path):
     notebook = json.loads(path.read_text(encoding="utf-8"))
     findings = []
+    sections_by_cell = []  # (idx, section)
     for idx, cell in _notebook_markdown_cells(notebook):
         lines = cell.get("source", [])
         for section in _find_sections_in_lines(lines, is_docstring=False):
             for lineno, cat, detail in _check_section(path, section):
                 findings.append((f"cell {idx}, line {lineno}", cat, detail))
+            sections_by_cell.append((idx, section))
+
+    definitions = [
+        (f"cell {idx}, line {lineno}", number)
+        for idx, s in sections_by_cell for lineno, number in _bracket_entries(s)
+    ]
+    definition_locs = {
+        (idx, lineno) for idx, s in sections_by_cell for lineno, _ in _bracket_entries(s)
+    }
+    scan_lines = []
+    for idx, cell in _notebook_markdown_cells(notebook):
+        cell_lines = []
+        for j, line in enumerate(cell.get("source", [])):
+            if (idx, j + 1) not in definition_locs:
+                cell_lines.append((f"cell {idx}, line {j + 1}", line))
+        # Markdown fences cannot span notebook cells, so reset fence state
+        # for each cell instead of masking all cells as one synthetic file.
+        scan_lines.extend(_mask_markdown_code(cell_lines))
+    findings.extend(_citation_key_findings(scan_lines, definitions))
     return findings
 
 
@@ -438,10 +570,23 @@ def main(argv):
             changed = _changed_files(diff_ref)
         except RuntimeError as exc:
             print(f"--diff {diff_ref}: skipped ({exc})", file=sys.stderr)
+            changed = None
         else:
             py_files = [f for f in py_files if f.resolve() in changed]
             md_files = [f for f in md_files if f.resolve() in changed]
             nb_files = [f for f in nb_files if f.resolve() in changed]
+    else:
+        # unused-reference is noisy on pre-existing bibliography-style
+        # References sections (e.g. community.md's publication list) that
+        # were never meant to be inline-cited. Always restrict that one
+        # category to files changed relative to develop, even when the
+        # whole repo is otherwise in scope (no --diff passed), so plain
+        # `make check`/`check_ref_style` stays quiet about files nobody's
+        # touching; --diff already does this for every category.
+        try:
+            changed = _changed_files("develop")
+        except RuntimeError:
+            changed = None
 
     checkers = (
         (py_files, check_python_file, fix_python_file),
@@ -463,6 +608,8 @@ def main(argv):
             except (SyntaxError, json.JSONDecodeError, UnicodeDecodeError) as exc:
                 print(f"{_display_path(f, root)}: skipped ({exc})", file=sys.stderr)
                 continue
+            if changed is not None and f.resolve() not in changed:
+                findings = [finding for finding in findings if finding[1] != "unused-reference"]
             if findings:
                 per_file[f] = findings
                 for _, cat, _ in findings:
@@ -483,7 +630,10 @@ def main(argv):
         print(f"clean  (0 of {n_files} files)")
     else:
         prefix = "ERROR" if (strict and total) else "WARNING"
-        print(f"{prefix}: {len(per_file)} file(s) with issues  ({len(per_file)} of {n_files} files)")
+        print(
+            f"{prefix}: {len(per_file)} file(s) with issues  "
+            f"({len(per_file)} of {n_files} files)"
+        )
     return 1 if (strict and total) else 0
 
 
