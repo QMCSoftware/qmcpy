@@ -1,6 +1,6 @@
 from typing import Union, Tuple, Callable
-from .abstract_discrete_distribution import AbstractLDDiscreteDistribution
-from ..util import ParameterError
+from ..abstract_discrete_distribution import AbstractLDDiscreteDistribution
+from ...util import ParameterError
 import numpy as np
 import warnings
 
@@ -249,6 +249,7 @@ class Kronecker(AbstractLDDiscreteDistribution):
                 - `"CBC"`: uses the first $d$ components of a known good Component-by-Component (CBC) generating vector.
                 - `"RICHTMYER"`: uses $\boldsymbol{\alpha}_j = \sqrt{p_j} \bmod 1$, where $p_j$ are primes. This is the classical Richtmyer construction.
                 - `"SUZUKI"`: uses a deterministic construction $\boldsymbol{\alpha}_j = 2^{j/(d+1)}$.
+                - `"CBC_MT"`: uses the first $d$ components of a known good CBC generating vector obtained using the Mobius transformation method, which can be found in kronecker_search_methods.py.
                 - np.array: user-specified generating vector.
 
             shift (Union[None, np.ndarray]): Shift vector $\boldsymbol{\delta}$. If
@@ -293,6 +294,117 @@ class Kronecker(AbstractLDDiscreteDistribution):
         elif isinstance(generating_vector, str) and generating_vector.lower() == "suzuki":
             self.gen_vec_source = "SUZUKI"
             gen_vec = _suzuki_generating_vector(self.dvec.max()+1)
+        elif isinstance(generating_vector, str) and generating_vector.lower() == "cbc_mt":
+            self.gen_vec_source = "CBC_MT"
+            CBC_MT = np.array([0.618033988749895,
+                0.3173225474723,
+                0.59332263014446,
+                0.20776441643926,
+                0.27373719258623,
+                0.649734278361753,
+                0.478954018631769,
+                0.86866022435182,
+                0.22845082022244,
+                0.581365429377986,
+                0.282365231829842,
+                0.0822850909119904,
+                0.223849641007295,
+                0.5770772201756,
+                0.51769659336634,
+                0.568025390904592,
+                0.156782234569368,
+                0.82246227056154,
+                0.805675312097409,
+                0.63877102813393,
+                0.358300563495856,
+                0.241741343018598,
+                0.705003192174204,
+                0.1931911954956,
+                0.261022001488623,
+                0.897938992038015,
+                0.46839743115877,
+                0.884022067965329,
+                0.752352896871505,
+                0.1601583600427,
+                0.10727599509739,
+                0.151478435512877,
+                0.163863657127101,
+                0.948303450359399,
+                0.80350943597439,
+                0.426371623468333,
+                0.435930910910882,
+                0.21329852459791,
+                0.661698149534002,
+                0.900679822160453,
+                0.122436710671457,
+                0.483663584095611,
+                0.928181067731583,
+                0.443143014606576,
+                0.74491332336194,
+                0.87948409225588,
+                0.0428242449803,
+                0.534576896789579,
+                0.24340042100879,
+                0.30424418245585,
+                0.574003104342617,
+                0.897289023268963,
+                0.541424476559586,
+                0.356895660350464,
+                0.507567280910795,
+                0.513983550428507,
+                0.0610821922457415,
+                0.183871471606587,
+                0.446015178033969,
+                0.455684287415085,
+                0.280817534817491,
+                0.115220095666085,
+                0.433740673279323,
+                0.515605957977756,
+                0.113076735656464,
+                0.733928297688305,
+                0.0597515651584137,
+                0.422268695684775,
+                0.0979181139173599,
+                0.213699261322352,
+                0.866811679881922,
+                0.0878569329036737,
+                0.678412735893121,
+                0.181093969536107,
+                0.128913741473518,
+                0.109341703717108,
+                0.289067270578427,
+                0.352218331663839,
+                0.303605902333137,
+                0.0613899204730832,
+                0.959535877660851,
+                0.475508309069064,
+                0.688698902674194,
+                0.657037932118495,
+                0.645555897563869,
+                0.720658665263604,
+                0.914423387894897,
+                0.425763295044487,
+                0.328825255006553,
+                0.892452975558004,
+                0.16973367306396,
+                0.912292406867098,
+                0.0923260018966512,
+                0.216301713289429,
+                0.147861410064151,
+                0.8600781655845,
+                0.752129792595509,
+                0.337431120990153,
+                0.542476014178907,
+                0.307279789725491], dtype=np.float64)
+            gen_vec = CBC_MT
+            if not (self.dvec.max() < len(gen_vec)):
+                if warn:
+                    warnings.warn(
+                        f"CBC_MT generating vector only supports dimension <= {len(CBC_MT)}; falling back to Richtmyer.",
+                        RuntimeWarning,
+                    )
+                self.gen_vec_source = "RICHTMYER"
+                gen_vec = _richtmyer_generating_vector(self.dvec.max()+1)
         else:
             self.gen_vec_source = "CUSTOM"
             gen_vec = np.asarray(generating_vector, dtype=float)
@@ -353,7 +465,9 @@ class Kronecker(AbstractLDDiscreteDistribution):
             gamma (Union[None, np.ndarray]): Coordinate weights, shape `(d,)`.
 
         Returns:
-            np.ndarray: The discrepancy.
+            np.ndarray: Discrepancies for prefixes 1 through `n`, shape `(n,)`
+                when replications are omitted, or `(g, n)` otherwise, where
+                `g` is the number of generating vectors.
 
         Note:
             - If `k_tilde` is not specified, the second Bernoulli polynomial is used.
@@ -367,19 +481,19 @@ class Kronecker(AbstractLDDiscreteDistribution):
 
         return np.sqrt(self._square_periodic_discrepancies(n, k_tilde, gamma))
 
-
-    def wssd_discrepancy(self, n: int, weights: np.ndarray, k_tilde: Union[None, Tuple[Callable, float]] = None, gamma: Union[None, np.ndarray] = None) -> np.ndarray:
+    def wssd_discrepancy(self, n: int, sample_weights: np.ndarray, k_tilde: Union[None, Tuple[Callable, float]] = None, gamma: Union[None, np.ndarray] = None) -> np.ndarray:
         """Calculate the weighted sum of squared discrepancies.
 
         Args:
             n (int): The number of sample points.
-            weights (np.ndarray): Weights applied to each squared discrepancy
+            sample_weights (np.ndarray): Weights applied to each squared discrepancy
                 before summing.
             k_tilde (Union[None, Tuple[Callable, float]]): Same as in `periodic_discrepancy`.
             gamma (Union[None, np.ndarray]): Coordinate weights, shape `(d,)`.
 
         Returns:
-            np.ndarray: The weighted sum of squared discrepancies.
+            np.ndarray: A scalar when replications are omitted, or one value
+                per generating vector otherwise.
         """
         if gamma is None:
             gamma = np.ones(self.d)
@@ -388,12 +502,15 @@ class Kronecker(AbstractLDDiscreteDistribution):
             k_tilde = (lambda x, gamma: np.prod(1 + (x * (x - 1) + 1/6) * gamma, axis=-1), 1)
 
         discrepancies = self._square_periodic_discrepancies(n, k_tilde, gamma)
-        return np.sum(weights * discrepancies, axis=-1)
+        return np.sum(sample_weights * discrepancies, axis=-1)
 
 
     def _square_periodic_discrepancies(self, n, k_tilde, gamma):
         n_array = np.arange(1, n + 1)
-        k_tilde_terms = k_tilde[0](self.gen_samples(n=n), gamma)
+        # we need the points without a random shift for the calculation, so we can't use self._gen_samples
+        i = np.arange(0, n)
+        points = (i[:,None] * self.gen_vec[:,None,:]) % 1
+        k_tilde_terms = k_tilde[0](points, gamma)
 
         left_sum = np.cumsum(k_tilde_terms[...,1:], axis=-1) * n_array[1:]
         right_sum = np.cumsum(n_array[:-1] * k_tilde_terms[...,1:], axis=-1)
@@ -401,7 +518,8 @@ class Kronecker(AbstractLDDiscreteDistribution):
         k_tilde_zero_terms = k_tilde_terms[...,0] * n_array
         summation = np.zeros_like(k_tilde_terms)
         summation[...,1:] = left_sum - right_sum
-        return (k_tilde_zero_terms + 2 * summation) / (n_array ** 2) - k_tilde[1]
+        squared = (k_tilde_zero_terms + 2 * summation) / (n_array ** 2) - k_tilde[1]
+        return squared[0] if self.no_replications else squared
 
 
     def _spawn(self, child_seed, dimension):

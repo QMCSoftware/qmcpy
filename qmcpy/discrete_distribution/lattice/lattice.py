@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Callable, Union
 from ..abstract_discrete_distribution import AbstractLDDiscreteDistribution
 from ...util import ParameterError, ParameterWarning
 import qmctoolscl
@@ -182,6 +182,17 @@ class Lattice(AbstractLDDiscreteDistribution):
                 + "/generating_vectors/kuo.lattice-33002-1024-1048576.9125.npy"
             )[None, :]
             d_limit = 9125
+            n_limit = 1048576
+        elif (
+            isinstance(generating_vector, str)
+            and generating_vector == "kuo.lattice-39102-1024-1048576.3600.txt"
+        ):
+            self.gen_vec_source = generating_vector
+            gen_vec = np.load(
+                dirname(abspath(__file__))
+                + "/generating_vectors/kuo.lattice-39102-1024-1048576.3600.npy"
+            )[None, :]
+            d_limit = 3600
             n_limit = 1048576
         elif isinstance(generating_vector, str):
             self.gen_vec_source = generating_vector
@@ -407,3 +418,98 @@ class Lattice(AbstractLDDiscreteDistribution):
             order=self.order,
             m_max=self.input_m_max,
         )
+
+    def expected_squared_periodic_discrepancies(
+        self,
+        n_max: int,
+        coord_weights: Union[None, np.ndarray] = None,
+        kernel: Union[None, Callable] = None,
+    ) -> np.ndarray:
+        """Returns the expected squared periodic discrepancies for each of the first n_max points of the lattice sequence.
+
+        Args:
+            n_max (int): Maximum number of points to calculate the squared periodic discrepancies for.
+            coord_weights (Union[None, np.ndarray]): Coordinate weights for the discrepancy calculation. If None, uses weights gamma_j = j^(-2).
+            kernel (Union[None, Callable]): Kernel function for the discrepancy calculation. If None, uses the second bernoulli polynomial.
+        
+        Returns:
+            discs (np.ndarray): The expected squared periodic discrepancies for the first n_max points.
+        """
+
+        if coord_weights is not None and len(coord_weights) < self.d:
+            raise ValueError("Length of coord_weights must be greater than or equal to the dimension of the lattice")
+        if coord_weights is None:
+            coord_weights = np.array([j**(-2) for j in range(1, self.d + 1)], dtype=np.float64)
+        if self.order == "LINEAR":
+            raise NotImplementedError("expected_squared_periodic_discrepancies not implemented for linear order")
+
+        if kernel is None:
+            kernel = lambda x: x * (x - 1) + 1/6
+
+        coord_weights = coord_weights[:self.d]
+
+        k_tilde = lambda x: np.prod(1 + coord_weights * kernel(x), axis=-1)
+        
+        # generate the vdc points without any random shift
+        r_x = np.uint64(self.gen_vec.shape[0])
+        n = np.uint64(2**(np.ceil(np.log2(n_max))))
+        d = np.uint64(self.d)
+        n_start = np.uint64(0)
+        x = np.empty((r_x, n, d), dtype=np.float64)
+        _ = qmctoolscl.lat_gen_natural(r_x, n, d, n_start, self.gen_vec, x, backend="c")
+        s = x
+
+        # evaluate the kernel on the sample points
+        k_vector = k_tilde(s)
+        k_vector = k_vector.reshape(-1)
+
+        # get the constant vector term of the summation
+        k_const = -1 + k_vector[0] / np.arange(1, n_max + 1, dtype=np.float64)
+
+        # group the kernel evaluations by powers of 2
+        k_sum = np.zeros(np.ceil(np.log2(n_max)).astype(int), dtype=np.float64)
+        for i in range(k_sum.size):
+            k_sum[i] = np.sum(k_vector[2**i:(2**(i+1))])
+
+        # k_sum @ freq_mtx in O(n_max) memory: the shared 1/(j+1)**2 factor collapses the
+        # (log2(n_max), n_max) frequency matrix to cumsum(2*w) / (j+1)**2, with w[j] the sum
+        # of k_sum over the set bits of j.
+        idx = np.arange(n_max)
+        w = np.zeros(n_max, dtype=np.float64)
+        for l in range(k_sum.size):
+            w += k_sum[l] * ((idx >> l) & 1)
+        discs = k_const + np.cumsum(2.0 * w) / (idx + 1.0) ** 2
+        return discs
+
+
+    def wssd(
+        self,
+        n_max: int,
+        coord_weights: Union[None, np.ndarray] = None,
+        sample_weights: Union[None, np.ndarray] = None,
+        kernel: Union[None, Callable] = None,
+    ) -> float:
+        """Returns the weighted sum of the expected squared periodic discrepancies for the first n_max points of the lattice sequence.
+
+        Args:
+            n_max (int): Number of points to calculate the weighted squared periodic discrepancy for.
+            coord_weights (Union[None, np.ndarray]): Coordinate weights for the discrepancy calculation. If None, uses weights gamma_j = j^(-2).
+            sample_weights (Union[None, np.ndarray]): Sample weights for the weighted squared periodic discrepancy calculation. If None, uses weights w_n = n. Note that the time cost may be higher for other sample weights.
+            kernel (Union[None, Callable]): Kernel function for the discrepancy calculation. If None, uses the second bernoulli polynomial.
+
+        Returns:
+            wssd (float): The weighted squared periodic discrepancy.
+        """
+        if coord_weights is not None and len(coord_weights) < self.d:
+            raise ValueError("Length of coord_weights must be greater than or equal to the dimension of the lattice")
+        if coord_weights is not None:
+            coord_weights = coord_weights[:self.d]
+        if sample_weights is not None and len(sample_weights) != n_max:
+            raise ValueError("Length of sample_weights must equal n_max")
+        if sample_weights is None:
+            sample_weights = np.arange(1, n_max + 1, dtype=np.float64)
+
+        discs = self.expected_squared_periodic_discrepancies(n_max, coord_weights=coord_weights, kernel=kernel)
+        wssd = np.dot(sample_weights, discs)
+
+        return wssd

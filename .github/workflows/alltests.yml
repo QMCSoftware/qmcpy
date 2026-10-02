@@ -297,12 +297,12 @@ jobs:
       - name: Validate MPMC dependencies (Unix)
         if: runner.os != 'Windows'
         shell: bash -el {0}
-        run: python -c "import torch, pyg_lib, torch_geometric; print(f'torch={torch.__version__}'); print('MPMC dependencies ready')"
+        run: python -c "import torch, torch_geometric; print(f'torch={torch.__version__}'); print('MPMC dependencies ready')"
 
       - name: Validate MPMC dependencies (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: python -c "import torch, pyg_lib, torch_geometric; print(f'torch={torch.__version__}'); print('MPMC dependencies ready')"
+        run: python -c "import torch, torch_geometric; print(f'torch={torch.__version__}'); print('MPMC dependencies ready')"
       # -----------------------------------------------------------
       # Colab readiness tests (Linux only)
       # -----------------------------------------------------------
