@@ -102,7 +102,14 @@ def generate_missing_tests(demos_dir="../../demos", output_dir=None):
 
         # Skip all notebooks in demos/talk_paper_demos/Parslfest_2025/
         # These are presentation/demo notebooks and should not have tests generated
-        if "Parslfest_2025" in str(notebook_path):
+        if "Parslfest_2025" in str(notebook_path) or notebook_path.name in ["archive.ipynb"]:
+            continue
+
+        # Skip scratch notebooks (gitignored via "*tmp*"): they can exist on disk
+        # transiently (e.g. during a manual execute-and-merge pass) and are deleted
+        # afterward, which would otherwise leave a generated tb_*.py permanently
+        # pointing at a now-missing notebook.
+        if "tmp" in notebook_path.name:
             continue
 
         # Convert notebook name to test file name

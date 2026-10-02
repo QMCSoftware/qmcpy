@@ -35,18 +35,26 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 def make_prelude_cell(notebook_path: Path) -> dict:
     notebook_dir = notebook_path.parent.resolve().as_posix()
     repo_root = REPO_ROOT.resolve().as_posix()
-    source = f"""import os
+    source = f"""import importlib
+import os
 import sys
 import types
 
-google = sys.modules.get("google")
-if google is None:
+# Prefer the real "google" namespace package (e.g. the one `protobuf` installs)
+# so later cells that need google.protobuf still resolve it; only synthesize a
+# bare stand-in -- with an explicit (empty) __path__ so it still reads as a
+# package -- if no real "google" package exists at all.
+try:
+    google = importlib.import_module("google")
+except ImportError:
     google = types.ModuleType("google")
+    google.__path__ = []
     sys.modules["google"] = google
 
-colab = types.ModuleType("google.colab")
-google.colab = colab
-sys.modules["google.colab"] = colab
+if not hasattr(google, "colab"):
+    colab = types.ModuleType("google.colab")
+    google.colab = colab
+    sys.modules["google.colab"] = colab
 
 os.environ["QMC_COLAB_SMOKE"] = "1"
 os.environ["QMC_COLAB_SMOKE_REPO_ROOT"] = r"{repo_root}"

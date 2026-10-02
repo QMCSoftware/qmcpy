@@ -470,6 +470,9 @@ check_booktests:
 		if echo "$$nb" | grep -q "Parslfest_2025"; then \
 			continue; \
 		fi; \
+		if echo "$$base" | grep -q "tmp"; then \
+			continue; \
+		fi; \
 		if ! ls test/booktests/tb_"$$test_base".py > /dev/null 2>&1; then \
 			echo "    Missing test for: $$nb -> Expected: test/booktests/tb_$$test_base.py"; \
 		fi; \

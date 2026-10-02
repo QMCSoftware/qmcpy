@@ -39,6 +39,7 @@ from scripts.check_colab_notebooks import (
     validate_manifest,
     manifest_sets,
     validate_strict_enabled_notebook,
+    wants_source_install,
 )
 
 
@@ -177,7 +178,8 @@ def bootstrap_cell_source(notebook_path: Path, manifest: dict, cells: list[dict]
     packages = extra_pip_packages(cells)
     rel_paths = extra_repo_paths(notebook_path, cells)
     latex_setup = needs_latex_setup(cells)
-    needs_repo_clone = bool(local_repo_import_matches(notebook_path, cells))
+    source_install = wants_source_install(cells)
+    needs_repo_clone = bool(local_repo_import_matches(notebook_path, cells)) or source_install
 
     lines = [
         f"{BOOTSTRAP_CELL_MARKER}\n",
@@ -201,7 +203,12 @@ def bootstrap_cell_source(notebook_path: Path, manifest: dict, cells: list[dict]
             ]
         )
 
-    lines.append("  !pip install -q qmcpy\n")
+    if source_install:
+        # Branch-only code (not yet released to PyPI) -- install from the clone
+        # made above instead of the public package.
+        lines.append("  !pip install -q -e {repo_root}\n")
+    else:
+        lines.append("  !pip install -q qmcpy\n")
 
     if packages:
         lines.append(f"  !pip install -q {' '.join(packages)}\n")

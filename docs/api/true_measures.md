@@ -36,6 +36,10 @@ jupyter:
 
 ::: qmcpy.true_measure.uniform_triangle.UniformTriangle
 
+## `SimplexUniform`
+
+::: qmcpy.true_measure.simplex_uniform.SimplexUniform
+
 ## `ZeroInflatedExpUniform`
 
 ::: qmcpy.true_measure.zero_inflated_exp_uniform.ZeroInflatedExpUniform

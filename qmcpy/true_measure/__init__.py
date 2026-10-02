@@ -17,6 +17,7 @@ from .matern_gp import MaternGP
 from .student_t import StudentT
 from .student_t_copula import StudentTCopula
 from .uniform_triangle import UniformTriangle
+from .simplex_uniform import SimplexUniform
 from .zero_inflated_exp_uniform import ZeroInflatedExpUniform
 from .triangular import Triangular
 from .acceptance_rejection import AcceptanceRejection, AcceptanceRejectionReal

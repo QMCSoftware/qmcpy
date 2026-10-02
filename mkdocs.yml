@@ -69,6 +69,9 @@ nav:
       - Geometric Brownian Motion: demos/GBM/gbm_demo.ipynb
       - GBM Examples: demos/GBM/gbm_examples.ipynb
       - Brownian Bridge: demos/brownian_bridge.ipynb
+      - Portfolio Allocation:
+        - Getting Financial Data: demos/portfolio/data_portfolio_allocation.ipynb
+        - Portfolio Allocation Demo: demos/portfolio/portfolio_allocation_demo.ipynb
       - Control Variates: demos/control_variates.ipynb
       - Sensitivity Analysis for the Iris Dataset: demos/iris.ipynb
       - Ray Tracing: demos/ray_tracing.ipynb

@@ -91,7 +91,7 @@ test = [
     "testbook >= 0.4.2",
     "psutil >= 5.9.5",
     "parsl >= 2026.01.05",
-    "seaborn >= 0.8",
+    "seaborn >= 0.13.0", # older seaborn vendors a `six` shim (seaborn.external.six.moves) that fails to import on Python 3.13
     "scikit-learn >= 1.0.0",
     "scikit-optimize",
     "ipykernel",

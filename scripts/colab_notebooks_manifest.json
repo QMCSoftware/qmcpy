@@ -24,6 +24,8 @@
   "demos/makefile_dev_tools.ipynb",
   "demos/nei_demo.ipynb",
   "demos/plot_proj_function.ipynb",
+  "demos/portfolio/data_portfolio_allocation.ipynb",
+  "demos/portfolio/portfolio_allocation_demo.ipynb",
   "demos/pricing_options.ipynb",
   "demos/product_measure.ipynb",
   "demos/qei-demo-for-blog.ipynb",

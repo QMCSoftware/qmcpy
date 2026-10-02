@@ -32,6 +32,7 @@ qmcpy.egg-info/
 *.npy
 *.pkl
 *.gz
+!demos/portfolio/data/*.csv.gz
 .DS_Store
 .idea/
 demos/.jupyter
@@ -39,7 +40,7 @@ demos/prob_failure_gp_ci_plots/
 demos/fgpr_figs/
 demos/GBM/images/*.png
 demos/GBM/outputs/*.*
-.tmp_*
+*tmp*
 
 # Generated notebook/demo images
 figures/
@@ -138,3 +139,4 @@ _ags/*
 .vscode/settings.json
 /sc_*
 sc_*
+

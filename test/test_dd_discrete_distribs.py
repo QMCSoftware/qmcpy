@@ -782,6 +782,5 @@ class TestLatinHypercube(unittest.TestCase):
             distribution.gen_samples(4, warn=False)
 
 
-
 if __name__ == "__main__":
     unittest.main()

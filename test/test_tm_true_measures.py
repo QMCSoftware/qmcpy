@@ -1,6 +1,7 @@
 from qmcpy import (
     BernoulliCont,
     BrownianMotion,
+    CubQMCCLT,
     CustomFun,
     DigitalNetB2,
     Gaussian,
@@ -12,6 +13,7 @@ from qmcpy import (
     Lattice,
     Lebesgue,
     MaternGP,
+    SimplexUniform,
     Uniform,
     ZeroInflatedExpUniform,
 )
@@ -22,6 +24,7 @@ from scipy.sparse import issparse
 import unittest
 import warnings
 from qmcpy.true_measure.uniform_triangle import UniformTriangle, _UniformTriangleAdapter
+from qmcpy.true_measure.simplex_transform import _SimplexTransform
 from qmcpy import SciPyWrapper
 
 
@@ -688,6 +691,281 @@ class TestUniformTriangle(unittest.TestCase):
         x = adapter.transform(u)
         lp = adapter.logpdf(x)
         self.assertEqual(lp.shape, (5,))
+
+
+class TestSimplexTransform(unittest.TestCase):
+    """ Unit tests for _SimplexTransform. """
+
+    def test_drop_examples_1d_to_4d(self):
+        examples = {
+            1: (np.array([0.3]), np.array([[0.3]])),
+            2: (np.array([[0.3, 0.7], [0.8, 0.4]]), np.array([[0.3, 0.7]])),
+            3: (np.array([[0.1, 0.4, 0.9], [0.6, 0.2, 0.8]]), np.array([[0.1, 0.4, 0.9]])),
+            4: (np.array([[0.1, 0.2, 0.3, 0.4], [0.2, 0.1, 0.3, 0.4]]), np.array([[0.1, 0.2, 0.3, 0.4]])),
+        }
+        for dim, (points, expected) in examples.items():
+            with self.subTest(dimension=dim):
+                transformer = _SimplexTransform(dimension=dim)
+                result = transformer.drop(points)
+                np.testing.assert_allclose(result, expected)
+
+    def test_sort_examples_1d_to_4d(self):
+        examples = {
+            1: (np.array([0.8]), np.array([[0.8]])),
+            2: (np.array([[0.8, 0.4], [0.3, 0.7]]), np.array([[0.4, 0.8], [0.3, 0.7]])),
+            3: (np.array([[0.7, 0.2, 0.9], [0.6, 0.2, 0.8]]), np.array([[0.2, 0.7, 0.9], [0.2, 0.6, 0.8]])),
+            4: (np.array([[0.9, 0.1, 0.4, 0.2], [0.2, 0.1, 0.3, 0.4]]), np.array([[0.1, 0.2, 0.4, 0.9], [ 0.1, 0.2, 0.3, 0.4]])),
+        }
+        for dim, (points, expected) in examples.items():
+            with self.subTest(dimension=dim):
+                transformer = _SimplexTransform(dimension=dim)
+                result = transformer.sort(points)
+                np.testing.assert_allclose(result, expected)
+
+    def test_root_examples_1d_to_4d(self):
+        examples = {
+            1: (np.array([0.8]), np.array([[0.8]])),
+            2: (np.array([[0.8, 0.4], [0.3, 0.7]]),
+                np.array([[0.50596443, 0.63245553], [0.25099801, 0.83666003]])),
+            3: (np.array([[0.7, 0.2, 0.9], [0.6, 0.2, 0.8]]),
+                np.array([[0.30224599, 0.43177998, 0.96548938], [0.2490938, 0.41515633, 0.92831777]])),
+            4: (np.array([[0.9, 0.1, 0.4, 0.2], [0.2, 0.1, 0.3, 0.4]]),
+                np.array([[0.14023401, 0.15581556, 0.49273207, 0.6687403], [0.03367069, 0.16835347, 0.53238043, 0.79527073]])),
+        }
+        for dim, (points, expected) in examples.items():
+            with self.subTest(dimension=dim):
+                transformer = _SimplexTransform(dimension=dim)
+                result = transformer.root(points)
+                np.testing.assert_allclose(result, expected, atol=1e-8)
+        # Pillards & Cools (2005), Sec. 2.5, and Pillards (2006), Sec. 4.3.5.
+        transformer = _SimplexTransform(dimension=2)
+        np.testing.assert_allclose(transformer.root(np.array([0.5, 0.01])), [[0.05, 0.1]])
+        np.testing.assert_allclose(transformer.root(np.array([0.5, 0.99])), [[0.497494, 0.994987]], atol=1e-6)
+
+    def test_mirror_examples_1d_to_4d(self):
+        examples = {
+            1: (np.array([0.8]), np.array([[0.8]])),
+            2: (np.array([[0.8, 0.4], [0.3, 0.7]]), np.array([[0.2, 0.6], [0.3, 0.7]])),
+            3: (np.array([[0.7, 0.2, 0.9], [0.6, 0.2, 0.8]]), np.array([[0.2, 0.7, 0.9], [0.2, 0.6, 0.8]])),
+        }
+        for dim, (points, expected) in examples.items():
+            with self.subTest(dimension=dim):
+                transformer = _SimplexTransform(dimension=dim)
+                result = transformer.mirror(points)
+                np.testing.assert_allclose(result, expected)
+        with self.subTest(dimension=4), self.assertRaises(NotImplementedError):
+            _SimplexTransform(dimension=4).mirror(np.array([[0.9, 0.1, 0.4, 0.2]]))
+
+    def test_origami_examples_1d_to_4d(self):
+        examples = {
+            1: (np.array([0.8]), np.array([[0.8]])),
+            2: (np.array([[0.8, 0.4], [0.3, 0.7]]), np.array([[0.4, 0.8], [0.2, 0.8]])),
+            3: (np.array([[0.7, 0.2, 0.9], [0.6, 0.2, 0.8]]), np.array([[0.2, 0.7, 0.9], [0.2, 0.6, 0.8]])),
+            4: (np.array([[0.9, 0.1, 0.4, 0.2], [0.2, 0.1, 0.3, 0.4]]), np.array([[0.2, 0.4, 0.4, 0.6], [0.1, 0.2, 0.3, 0.4]])),
+        }
+        for dim, (points, expected) in examples.items():
+            with self.subTest(dimension=dim):
+                transformer = _SimplexTransform(dimension=dim)
+                result = transformer.origami(points, base=2, depth=1)
+                np.testing.assert_allclose(result, expected)
+        # depth=0 has no coarser scale above the base grid, i.e. plain Sort.
+        np.testing.assert_allclose(
+            transformer.origami(points, base=2, depth=0), transformer.sort(points)
+        )
+
+    def test_shift_examples_1d_to_4d(self):
+        examples = {
+            1: (np.array([0.8]), np.array([[0.8]])),
+            2: (np.array([[0.8, 0.4], [0.3, 0.7]]), np.array([[0.6, 0.8], [0.15, 0.7]])),
+            3: (np.array([[0.7, 0.2, 0.9], [0.6, 0.2, 0.8]]),
+                np.array([[0.31666667, 0.38333333, 0.9], [0.26666667, 0.33333333, 0.8]])),
+            4: (np.array([[0.9, 0.1, 0.4, 0.2], [0.2, 0.1, 0.3, 0.4]]),
+                np.array([[0.65833333, 0.68333333, 0.84166667, 0.9], [0.05833333, 0.08333333, 0.19166667, 0.4]])),
+        }
+        for dim, (points, expected) in examples.items():
+            with self.subTest(dimension=dim):
+                transformer = _SimplexTransform(dimension=dim)
+                result = transformer.shift(points)
+                np.testing.assert_allclose(result, expected, atol=1e-8)
+
+    def test_transforms_stay_in_simplex(self):
+        # Broader than the fixed 1D-4D examples above: random points across more
+        # dimensions should always come out ascending and within [0, 1).
+        rng = np.random.default_rng(0)
+        for dim in range(1, 6):
+            transformer = _SimplexTransform(dimension=dim)
+            points = rng.random((50, dim))
+            for name, kwargs in [("root", {}), ("shift", {}), ("origami", {"base": 3, "depth": 2})]:
+                with self.subTest(dimension=dim, transform=name):
+                    result = getattr(transformer, name)(points, **kwargs)
+                    self.assertTrue(np.all((result >= 0) & (result < 1)))
+                    self.assertTrue(np.all(result[:, :-1] <= result[:, 1:] + 1e-12))
+            if dim <= 3:
+                with self.subTest(dimension=dim, transform="mirror"):
+                    result = transformer.mirror(points)
+                    self.assertTrue(np.all((result >= 0) & (result < 1)))
+                    self.assertTrue(np.all(result[:, :-1] <= result[:, 1:] + 1e-12))
+
+    def test_replicated_points_use_last_axis(self):
+        points = DigitalNetB2(3, seed=7, replications=2).gen_samples(4)
+        transformer = _SimplexTransform(dimension=3)
+        for name, kwargs in [
+            ("sort", {}),
+            ("root", {}),
+            ("mirror", {}),
+            ("origami", {"base": 2, "depth": 1}),
+            ("shift", {}),
+        ]:
+            with self.subTest(transform=name):
+                result = getattr(transformer, name)(points, **kwargs)
+                self.assertEqual(result.shape, points.shape)
+                self.assertTrue(
+                    np.all(result[..., :-1] <= result[..., 1:] + 1e-12)
+                )
+
+        mask = np.all(points[..., :-1] <= points[..., 1:], axis=-1)
+        expected = points.reshape(-1, 3)[mask.reshape(-1)]
+        np.testing.assert_allclose(transformer.drop(points), expected)
+
+    def test_dimension_and_domain_validation(self):
+        with self.assertRaises(ParameterError):
+            _SimplexTransform(dimension=0)
+        transformer = _SimplexTransform(dimension=2)
+        for case, points in (
+            ("wrong dimension", np.array([[0.1, 0.2, 0.3]])),
+            ("outside unit cube", np.array([[1.1, 0.2]])),
+            ("nonfinite value", np.array([[np.nan, 0.2]])),
+        ):
+            with self.subTest(case=case), self.assertRaises(ParameterError):
+                transformer.root(points)
+        with self.assertRaises(ParameterError):
+            transformer.origami(np.array([[0.1, 0.2]]), base=1)
+        with self.assertRaises(ParameterError):
+            transformer.origami(np.array([[0.1, 0.2]]), depth=-1)
+
+    def test_uniform_simplex_moments(self):
+        rng = np.random.default_rng(0)
+        n, dim = 2**16, 4
+        points = rng.random((n, dim))
+        transformer = _SimplexTransform(dimension=dim)
+        expected = np.arange(1, dim + 1) / (dim + 1)
+        variances = (
+            np.arange(1, dim + 1)
+            * np.arange(dim, 0, -1)
+            / ((dim + 1) ** 2 * (dim + 2))
+        )
+        for name in ("sort", "root", "shift"):
+            with self.subTest(transform=name):
+                result = getattr(transformer, name)(points)
+                z_scores = np.abs(result.mean(axis=0) - expected) / np.sqrt(
+                    variances / n
+                )
+                self.assertLess(np.max(z_scores), 4)
+
+
+class TestSimplexUniform(unittest.TestCase):
+    """Tests for SimplexUniform."""
+
+    def test_basic_usage(self):
+        tm = SimplexUniform(DigitalNetB2(4, seed=7))
+        x = tm(8)
+        self.assertEqual(x.shape, (8, 4))
+        self.assertTrue(np.all(x >= -1e-12))
+        self.assertTrue(np.all(x.sum(axis=-1) <= 1 + 1e-12))
+
+    def test_default_transform_method(self):
+        self.assertEqual(SimplexUniform(DigitalNetB2(3, seed=7)).transform_method, "root")
+
+    def test_all_methods_run(self):
+        for method in ("root", "sort", "shift", "origami"):
+            tm = SimplexUniform(DigitalNetB2(3, seed=7), transform_method=method)
+            x = tm(8)
+            self.assertEqual(x.shape, (8, 3))
+            self.assertTrue(np.all(x >= -1e-12))
+            self.assertTrue(np.all(x.sum(axis=-1) <= 1 + 1e-12))
+
+    def test_mirror_warns_and_dimension_limit(self):
+        # 'mirror' folds a symmetric point set (e.g. a lattice) onto itself,
+        # so it's accepted but warns; _SimplexTransform itself still rejects
+        # dimension > 3 (at transform time, not construction).
+        with self.assertWarns(UserWarning):
+            tm = SimplexUniform(DigitalNetB2(3, seed=7), transform_method="mirror")
+        x = tm(8)
+        self.assertEqual(x.shape, (8, 3))
+        self.assertTrue(np.all(x >= -1e-12))
+        self.assertTrue(np.all(x.sum(axis=-1) <= 1 + 1e-12))
+        with self.assertWarns(UserWarning):
+            tm4 = SimplexUniform(DigitalNetB2(4, seed=7), transform_method="mirror")
+        with self.assertRaises(NotImplementedError):
+            tm4(8)
+
+    def test_invalid_transform_method(self):
+        # 'drop' rejects rather than mapping 1:1, so it does not fit the
+        # _transform/_weight contract at all.
+        with self.assertRaises(ParameterError):
+            SimplexUniform(DigitalNetB2(3, seed=7), transform_method="drop")
+
+    def test_uniform_on_simplex(self):
+        # Appending 1-sum(w) makes w the first d of d+1 Dirichlet(1,...,1)
+        # weights, each with mean 1/(d+1) (exchangeable, so every coordinate
+        # shares the same mean, unlike the old ordered-simplex output).
+        d = 4
+        tm = SimplexUniform(DigitalNetB2(d, seed=7, replications=16))
+        x = tm(2**10)
+        theory = 1 / (d + 1)
+        np.testing.assert_allclose(x.mean(axis=(0, 1)), np.full(d, theory), atol=0.02)
+
+    def test_second_moment_weights(self):
+        # Catches a wrong joint shape (e.g. right marginals, wrong covariance)
+        # that a first-moment-only check would miss. For w ~ Dirichlet(1,...,1)
+        # with d+1 categories, E[w_i^2] = 2 / ((d+1)(d+2)) for every i.
+        d = 4
+        tm = SimplexUniform(DigitalNetB2(d, seed=7, replications=16))
+        x = tm(2**10)
+        theory = 2 / ((d + 1) * (d + 2))
+        np.testing.assert_allclose((x**2).mean(), theory, atol=0.01)
+
+    def test_weight_is_constant_density(self):
+        d = 4
+        tm = SimplexUniform(DigitalNetB2(d, seed=7))
+        x = tm(8)
+        density = tm._weight(x)
+        np.testing.assert_allclose(density, 24.0)  # d! = 1 / Vol(T_d)
+        _, jacobian = tm(8, return_weights=True)
+        np.testing.assert_allclose(jacobian, 1 / 24.0)
+
+    def test_weight_off_support(self):
+        # _weight must vanish off K_d, not stay a constant d! Direct construction
+        # never exercises this (self-generated points are always on-support); composition does.
+        d = 2
+        tm = SimplexUniform(DigitalNetB2(d, seed=7))
+        off_support = np.array([[0.8, 0.5], [-0.1, 0.8], [0.2, 1.2]])  # sum>1, <0, sum>1
+        np.testing.assert_allclose(tm._weight(off_support), 0.0)
+        on_support = np.array([[0.2, 0.3], [0.0, 0.0], [0.5, 0.5]])  # sum<1, sum<1, sum==1
+        np.testing.assert_allclose(tm._weight(on_support), 2.0)  # unchanged: d! = 2! = 2
+        composed = SimplexUniform(Uniform(DigitalNetB2(d, seed=7)))
+        mean = CustomFun(composed, lambda x: np.ones(x.shape[:-1]))(2**12).mean()
+        self.assertAlmostEqual(mean, 1.0, delta=0.05)  # any true measure integrates to 1
+
+    def test_spawn(self):
+        tm = SimplexUniform(DigitalNetB2(3, seed=7), transform_method="shift")
+        spawns = tm.spawn(s=2)
+        self.assertEqual(len(spawns), 2)
+        self.assertTrue(all(isinstance(s, SimplexUniform) for s in spawns))
+        self.assertTrue(all(s.transform_method == "shift" for s in spawns))
+        self.assertEqual(spawns[0](4).shape, (4, 3))
+
+    def test_integration_exact_value(self):
+        # E[sum(w)] = d/(d+1) (d of the d+1 Dirichlet(1,...,1) weights, each
+        # with mean 1/(d+1)); verify a real QMC integration (not just
+        # sampling) reproduces it -- the actual point of making this a
+        # TrueMeasure instead of a standalone transform.
+        d = 3
+        tm = SimplexUniform(DigitalNetB2(d, seed=11, replications=16), transform_method="root")
+        integrand = CustomFun(tm, lambda x: x.sum(axis=-1))
+        solution, _ = CubQMCCLT(integrand, abs_tol=1e-3).integrate()
+        exact = d / (d + 1)
+        self.assertAlmostEqual(solution, exact, delta=5e-3)
 
 
 class TestGaussian(unittest.TestCase):

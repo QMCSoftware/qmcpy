@@ -43,6 +43,7 @@ REPO_FETCH_FRAGMENTS = ("git clone", "raw.githubusercontent.com", "wget ", "curl
 PATH_SETUP_FRAGMENTS = ("sys.path.insert", "os.chdir(", "%cd ", "cd ")
 IGNORED_NOTEBOOK_NAME_PREFIXES = (".tmp", "._tmp")
 EXTRA_DEPS_MARKER = "# colab-deps:"
+SOURCE_INSTALL_MARKER = "# colab-install-from-source"
 COLAB_URL_HOSTNAME = "colab.research.google.com"
 URL_PATTERN = re.compile(r"https?://[^\s)\]\"']+")
 
@@ -182,6 +183,17 @@ def declared_extra_pip_packages(cells: list[dict]) -> list[str]:
                 if name and name not in packages:
                     packages.append(name)
     return packages
+
+
+def wants_source_install(cells: list[dict]) -> bool:
+    """Escape hatch for notebooks that need branch-only qmcpy code not yet on
+    PyPI: a `# colab-install-from-source` comment anywhere in a code cell."""
+    return any(
+        SOURCE_INSTALL_MARKER in line
+        for cell in cells
+        if cell.get("cell_type") == "code"
+        for line in cell_source_text(cell).splitlines()
+    )
 
 
 def is_bootstrap_cell(cell: dict) -> bool:

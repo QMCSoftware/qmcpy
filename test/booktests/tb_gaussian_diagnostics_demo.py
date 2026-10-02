@@ -9,7 +9,7 @@ class NotebookTests(BaseNotebookTest):
     def setUp(self):
         super().setUp()
         # Install required packages
-        pip_install("matplotlib", "scipy", "seaborn==0.8")
+        pip_install("matplotlib", "scipy")
         # Create outputs directory if needed
         os.makedirs("outputs_nb", exist_ok=True)
 

@@ -171,6 +171,39 @@ class TestColabNotebooks(unittest.TestCase):
         self.assertNotIn("except:\n", source)
         compile(smoke.rewrite_shell_magics(source), "<bootstrap>", "exec")
 
+    def test_source_install_marker(self):
+        plain_cells = [code_cell("import qmcpy as qp\n")]
+        marked_cells = [
+            code_cell(
+                "# colab-install-from-source: _Internal is branch-only, not yet on PyPI.\n"
+                "from qmcpy._internal import _Internal\n"
+            )
+        ]
+        self.assertFalse(check.wants_source_install(plain_cells))
+        self.assertTrue(check.wants_source_install(marked_cells))
+
+        tmp_path = self._tmp_path()
+        self._setattr(harden, "REPO_ROOT", tmp_path)
+        notebook_path = tmp_path / "demos" / "example.ipynb"
+        notebook_path.parent.mkdir()
+        manifest = {"repo": "QMCSoftware/QMCSoftware"}
+
+        plain_source = "".join(
+            harden.bootstrap_cell_source(notebook_path, manifest, plain_cells)
+        )
+        marked_source = "".join(
+            harden.bootstrap_cell_source(notebook_path, manifest, marked_cells)
+        )
+
+        self.assertIn("!pip install -q qmcpy", plain_source)
+        self.assertNotIn("-e {repo_root}", plain_source)
+
+        self.assertIn("!pip install -q -e {repo_root}", marked_source)
+        self.assertNotIn("!pip install -q qmcpy\n", marked_source)
+        self.assertIn("!git clone", marked_source)  # editable install needs the clone
+        self.assertTrue(check.installs_qmcpy(marked_source))
+        compile(smoke.rewrite_shell_magics(marked_source), "<bootstrap>", "exec")
+
     def test_extra_pip_packages_preserves_later_explicit_installs(self):
         cells = [
             code_cell("import qmcpy as qp\n"),
