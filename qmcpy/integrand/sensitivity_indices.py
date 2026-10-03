@@ -3,6 +3,7 @@ from .abstract_integrand import AbstractIntegrand
 from .keister import Keister
 from .box_integral import BoxIntegral
 from ..discrete_distribution import DigitalNetB2
+from ..util import DimensionError
 import numpy as np
 from itertools import combinations
 import scipy.special
@@ -109,7 +110,7 @@ class SensitivityIndices(AbstractIntegrand):
 
         Args:
             integrand (AbstractIntegrand): Integrand to find sensitivity
-                indices of.
+                indices of. Its true measure must preserve the sampler dimension.
             indices (Union[str, np.ndarray]): Bool array with shape $(\dots,d)$ where each
                 length $d$ vector item indicates which dimensions are active in
                 the subset.
@@ -119,6 +120,10 @@ class SensitivityIndices(AbstractIntegrand):
         """
         self.parameters = ["indices"]
         self.integrand = integrand
+        if integrand.discrete_distrib.d != integrand.d:
+            raise DimensionError(
+                "SensitivityIndices requires a dimension-preserving true measure."
+            )
         self.dtilde = self.integrand.d
         if not (self.dtilde > 1):
             raise AssertionError("SensitivityIndices does not make sense for d=1")

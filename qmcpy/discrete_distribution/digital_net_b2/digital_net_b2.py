@@ -704,7 +704,17 @@ class DigitalNetB2(AbstractLDDiscreteDistribution):
                 if warn:
                     warnings.warn("DigitalNetB2 in graycode order recommends n_min and n_max be 0 or powers of 2 at which the digital net achieves superior uniformity properties")
             elif self.order == "RADICAL INVERSE":
-                raise ParameterError("DigitalNetB2 in radical inverse order requires n_min and n_max be 0 or powers of 2")
+                message = (
+                    "DigitalNetB2 in radical inverse order cannot generate "
+                    f"n={n_max - n_min} samples with n_min={n_min} and n_max={n_max}: "
+                    "both endpoints must be 0 or powers of 2."
+                )
+                if n_min == 0:
+                    message += (
+                        " When starting at index 0, use a sample count "
+                        "of 0, 1, 2, 4, 8, ... ."
+                    )
+                raise ParameterError(message)
             else:
                 raise ValueError("invalid digital net order")
         r = np.uint64(self.replications)

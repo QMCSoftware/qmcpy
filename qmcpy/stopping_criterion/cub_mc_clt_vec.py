@@ -302,7 +302,7 @@ class CubMCCLTVec(AbstractStoppingCriterion):
             data.n_min = 0
             data.n_max = self.n_init
             data.solution_indv = np.tile(np.nan, self.integrand.d_indv)
-            data.xfull = np.empty((0, self.integrand.d))
+            data.xfull = np.empty((0, self.discrete_distrib.d))
             data.yfull = np.empty(self.integrand.d_indv + (0,))
         first_resume_iter = resume is not None
         while True:

@@ -308,7 +308,7 @@ class PFGPCI(AbstractStoppingCriterion):
         self.integrand = integrand
         self.true_measure = self.integrand.true_measure
         self.discrete_distrib = self.integrand.discrete_distrib
-        self.d = self.integrand.d
+        self.d = self.discrete_distrib.d
         self.sampler = self.d
         self.failure_threshold = failure_threshold
         self.failure_above_threshold = failure_above_threshold

@@ -334,7 +334,7 @@ class CubQMCRepStudentT(AbstractStoppingCriterion):
             data.n_min = 0
             data.n_max = self.n_init
             data.solution_indv = np.tile(np.nan, self.integrand.d_indv)
-            data.xfull = np.empty((self.discrete_distrib.replications, 0, self.integrand.d))
+            data.xfull = np.empty((self.discrete_distrib.replications, 0, self.discrete_distrib.d))
             data.yfull = np.empty(self.integrand.d_indv + (self.discrete_distrib.replications, 0))
             data._ysums = np.zeros(self.integrand.d_indv + (self.discrete_distrib.replications,), dtype=float)
         first_resume_iter = resume is not None
@@ -410,10 +410,10 @@ class CubQMCRepStudentT(AbstractStoppingCriterion):
             raise ParameterError(
                 "resume data must include at least n_init samples per replication."
             )
-        if data.xfull.shape != (replications, n_rep_max, self.integrand.d):
+        if data.xfull.shape != (replications, n_rep_max, self.discrete_distrib.d):
             raise ParameterError(
                 "resume data xfull shape must be (%d, %d, %d); got %s."
-                % (replications, n_rep_max, self.integrand.d, data.xfull.shape)
+                % (replications, n_rep_max, self.discrete_distrib.d, data.xfull.shape)
             )
         expected_y_shape = self.integrand.d_indv + (replications, n_rep_max)
         if np.shape(data.yfull) != expected_y_shape:
