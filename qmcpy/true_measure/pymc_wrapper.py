@@ -39,11 +39,11 @@ def hide( ## tongue in cheek, opposite of `observe`
 ) -> Model:
     """Convert ALL observed RVs to free RVs.
 
-    Parameters
+    Parameters:
     ----------
     model: PyMC Model
 
-    Returns
+    Returns:
     -------
     new_model: PyMC model
         A distinct PyMC model with all variables free.
@@ -127,7 +127,7 @@ def conditional_icdf(
     ``u2_vv = pt.scalar("u2")``, then ``conditional_icdf({Y_rv: u_vv, sigma2_rv: u2_vv})``
     yields the conditional icdf of the two variables.
 
-    Parameters
+    Parameters:
     ----------
     rv_values: dict
         A ``dict`` of variables that maps stochastic elements
@@ -143,7 +143,7 @@ def conditional_icdf(
         Extra rewrites to be applied (e.g. reparameterizations, transforms,
         etc.)
 
-    Returns
+    Returns:
     -------
     values_to_icdf: dict
         A ``dict`` that maps each value variable to the conditional icdf term derived
@@ -293,14 +293,14 @@ def icdf(
     repeated calls return the same object and ``compile_fn`` can reuse a compiled
     function. Do not mutate it in place.
 
-    Parameters
+    Parameters:
     ----------
     model : pymc Model
     vars : list of random variables, optional
         Compute the gradient with respect to those variables. If None, use all
         free and observed random variables in model.
 
-    Returns
+    Returns:
     -------
     icdf graph(s)
     """
@@ -349,7 +349,7 @@ def compile_icdf(
 
     The function expects as input a dictionary with the same structure as self.initial_point()
 
-    Parameters
+    Parameters:
     ----------
     model : pymc Model
     vars : list of random variables or potential terms, optional
@@ -372,6 +372,43 @@ def compile_icdf(
         point_fn=point_fn,
         **compile_kwargs,
     )
+
+def compile_vectorized_logp(
+        model: Model,
+        vars: Variable | Sequence[Variable] | None = None,
+        jacobian: bool = True,
+        sum: bool = True,
+        **compile_kwargs,
+    ) -> PointFunc:
+        """Compiled log probability density function.
+
+        Parameters:
+        ----------
+        vars : list of random variables or potential terms, optional
+            Compute the gradient with respect to those variables. If None, use all
+            free and observed random variables, as well as potential terms in model.
+        jacobian : bool
+            Whether to include jacobian terms in logprob graph. Defaults to True.
+        sum : bool
+            Whether to sum all logp terms or return elemwise logp for each variable.
+            Defaults to True.
+        """
+        pytensor.config.on_unused_input = 'warn'
+        compile_kwargs.setdefault("on_unused_input", "ignore")
+        logp_graph = model.logp(vars=model.value_vars, jacobian=jacobian, sum=sum)
+        # use `vectorize_graph` to convert the input shapes to (None,*old_shape) to automatically vectorize the calculations
+        var_shapes = [pt.utils.get_static_shape_from_size_variables([x.size]) for x in model.value_vars]
+        # if right shape is None, it indicates already a batch shape, so delete it
+        var_shapes = [shape[:-1] if shape[-1] is None else shape for shape in var_shapes]
+        replacements = {var: pt.TensorType(dtype="float64", shape=(None,*size))(var.name) for (var, size) in 
+                    zip(model.value_vars, var_shapes)}
+        logp_graph = pytensor.graph.vectorize_graph(logp_graph, replacements)
+        inputs = list(replacements.values())
+        return model.compile_fn(
+            inputs=inputs,
+            outs=logp_graph,
+            **compile_kwargs,
+        )
 
 ############# wrapper
 
@@ -536,7 +573,7 @@ class PyMCWrapper(AbstractTrueMeasure):
         # Remember what the user originally passed in so that _spawn can reuse it.
         self.model = hide(model)
         self.icdf = compile_icdf(self.model)
-        self.logpdf = self.model.compile_logp(point_fn=False) # TODO: vectorize this function and treat as 
+        self.logpdf = compile_vectorized_logp(self.model, point_fn=False) 
         # determine shapes of random variables and prepare their indices in a flat vector
         static_shapes = [pt.utils.get_static_shape_from_size_variables([x.size]) for x in self.model.value_vars]
         # if right shape is None, it indicates already a batch shape, so delete it. 
@@ -617,7 +654,17 @@ class PyMCWrapper(AbstractTrueMeasure):
         Compute density weights, pdf(x)
         """
         x = np.asarray(x, dtype=float)
-        return np.exp(self.logpdf(x))
+        batch_shape = x.shape[:-1]
+        if self.d > 1:
+            inputs_list = np.split(x, self.split_indices, axis=-1)
+        else:
+            inputs_list = [x.ravel()]
+        inputs_list = [_x.ravel() for _x in inputs_list]
+        if np.prod(inputs_list[-1].shape) == 0:
+            inputs_list = inputs_list[:-1]
+        inputs_list = [np.reshape(_x, (*batch_shape, *shape)) for _x, shape in zip(inputs_list, self.shapes)]
+
+        return np.exp(self.logpdf(*inputs_list))
 
     def _spawn(self, sampler, dimension):
         """Create a child true measure that shares the same distribution
