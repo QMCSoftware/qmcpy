@@ -69,9 +69,15 @@ def hide( ## tongue in cheek, opposite of `observe`
         # NOTE: this seems to convert rv -> whatever is actually in the fgraph??
         model_var = memo[rv] # was like this in `observe`, not sure of exact meaning...
 
-        # THIS LINE IS GOING TO BE BROKEN IN UPCOMING RELEASE OF PYMC. NEW VERSION IN COMMENT BELOW
-        free_rv = model_free_rv(rv, rv.type(), model.rvs_to_transforms[rv], *model.named_vars_to_dims.get(rv.name, ()))
-        # free_rv = model_free_rv(rv, rv.type(), model.rvs_to_transforms[rv], rv.name, *model.named_vars_to_dims.get(rv.name, ()))
+        # `model_free_rv` had a breaking change on version 6.1.0
+        # https://github.com/pymc-devs/pymc/pull/8340
+        # call the correct version accoring to installed PyMC version
+        from packaging.version import Version
+        PYMC_VERSION_INTERNAL_CHANGE = Version("6.1.0") 
+        if Version(pymc.__version__) < PYMC_VERSION_INTERNAL_CHANGE:
+            free_rv = model_free_rv(rv, rv.type(), model.rvs_to_transforms[rv], *model.named_vars_to_dims.get(rv.name, ()))
+        else:
+            free_rv = model_free_rv(rv, rv.type(), model.rvs_to_transforms[rv], rv.name, *model.named_vars_to_dims.get(rv.name, ()))
         replacements[model_var] = free_rv
 
     fgraph.replace_all(tuple(replacements.items()), import_missing=True)
