@@ -40,16 +40,13 @@ def hide( ## tongue in cheek, opposite of `observe`
     """Convert ALL observed RVs to free RVs.
 
     Parameters:
-    ----------
-    model: PyMC Model
+        model (Model): PyMC Model
 
     Returns:
-    -------
-    new_model: PyMC model
-        A distinct PyMC model with all variables free.
+        new_model (Model): PyMC model
+            A distinct PyMC model with all variables free.
 
-    Examples
-    --------
+    Examples:
     .. code-block:: python
 
         import pymc as pm
@@ -92,10 +89,10 @@ def hide( ## tongue in cheek, opposite of `observe`
 ###### based on `conditional_logp` and `transformed_conditional_logp` from pymc logprob/basic.py
 def conditional_icdf(
     rv_values: dict[Variable, Variable],
-    warn_rvs=True,
+    warn_rvs: bool=True,
     ir_rewriter: GraphRewriter | None = None,
     extra_rewrites: GraphRewriter | NodeRewriter | None = None,
-    **kwargs,
+    **kwargs: Mapping,
 ) -> dict[Variable, Variable]:
     r"""Create a map between variables and conditional icdfs
 
@@ -128,26 +125,25 @@ def conditional_icdf(
     yields the conditional icdf of the two variables.
 
     Parameters:
-    ----------
-    rv_values: dict
-        A ``dict`` of variables that maps stochastic elements
-        (e.g. `RandomVariable`\s) to symbolic `Variable`\s representing conditional probability
-        values in a joint icdf
-    warn_rvs : bool, default True
-        When ``True``, issue a warning when a `RandomVariable` is found in
-        the logp graph and doesn't have a corresponding value variable specified in
-        `rv_values`.
-    ir_rewriter
-        Rewriter that produces the intermediate representation of Measurable Variables.
-    extra_rewrites
-        Extra rewrites to be applied (e.g. reparameterizations, transforms,
-        etc.)
+        rv_values (dict[Variable, Variable]):
+            A ``dict`` of variables that maps stochastic elements
+            (e.g. `RandomVariable`\s) to symbolic `Variable`\s representing conditional probability
+            values in a joint icdf
+        warn_rvs (bool): default True
+            When ``True``, issue a warning when a `RandomVariable` is found in
+            the logp graph and doesn't have a corresponding value variable specified in
+            `rv_values`.
+        ir_rewriter (GraphRewriter | None):
+            Rewriter that produces the intermediate representation of Measurable Variables.
+        extra_rewrites (GraphRewriter | NodeRewriter | None):
+            Extra rewrites to be applied (e.g. reparameterizations, transforms,
+            etc.),
+        **kwargs (Mapping): other compilation related arguments
 
     Returns:
-    -------
-    values_to_icdf: dict
-        A ``dict`` that maps each value variable to the conditional icdf term derived
-        from the respective `RandomVariable`.
+        values_to_icdf (dict[Variable, Variable]):
+            A ``dict`` that maps each value variable to the conditional icdf term derived
+            from the respective `RandomVariable`.
 
     """
     fgraph: FunctionGraph = pymc.logprob.rewriting.construct_ir_fgraph(rv_values, ir_rewriter=ir_rewriter)
@@ -294,15 +290,13 @@ def icdf(
     function. Do not mutate it in place.
 
     Parameters:
-    ----------
-    model : pymc Model
-    vars : list of random variables, optional
-        Compute the gradient with respect to those variables. If None, use all
-        free and observed random variables in model.
+        model (Model): pymc Model
+        vars (Variable | Sequence[Variable] | None): list of random variables, optional
+            Compute the gradient with respect to those variables. If None, use all
+            free and observed random variables in model.
 
     Returns:
-    -------
-    icdf graph(s)
+        icdf graph(s)
     """
     varlist: list[TensorVariable]
     if vars is None:
@@ -343,18 +337,22 @@ def compile_icdf(
         model: Model,
         vars: Variable | Sequence[Variable] | None = None,
         point_fn: bool = False,
-        **compile_kwargs,
+        **compile_kwargs: Mapping,
     ) -> PointFunc | Function:
     """Compiled log probability density function.
 
     The function expects as input a dictionary with the same structure as self.initial_point()
 
     Parameters:
-    ----------
-    model : pymc Model
-    vars : list of random variables or potential terms, optional
-        Compute the gradient with respect to those variables. If None, use all
-        free and observed random variables in model.
+        model (Model): pymc Model
+        vars (Variable | Sequence[Variable] | None): list of random variables or potential terms, optional
+            Compute the gradient with respect to those variables. If None, use all
+            free and observed random variables in model.
+        point_fn (bool): controls return type PointFun or Function
+        **compile_kwargs (Mapping): other compilation related options
+
+    Returns:
+        icdf (PointFunc | Function): compiled icdf function
     """
     compile_kwargs.setdefault("on_unused_input", "ignore")
     icdf_graph = icdf(model, vars=vars)
@@ -378,20 +376,24 @@ def compile_vectorized_logp(
         vars: Variable | Sequence[Variable] | None = None,
         jacobian: bool = True,
         sum: bool = True,
-        **compile_kwargs,
-    ) -> PointFunc:
+        **compile_kwargs: Mapping,
+    ) -> PointFunc | Function:
         """Compiled log probability density function.
 
         Parameters:
-        ----------
-        vars : list of random variables or potential terms, optional
-            Compute the gradient with respect to those variables. If None, use all
-            free and observed random variables, as well as potential terms in model.
-        jacobian : bool
-            Whether to include jacobian terms in logprob graph. Defaults to True.
-        sum : bool
-            Whether to sum all logp terms or return elemwise logp for each variable.
-            Defaults to True.
+            model (Model): PyMC Model
+            vars (Variable | Sequence[Variable] | None): list of random variables or potential terms, optional
+                Compute the gradient with respect to those variables. If None, use all
+                free and observed random variables, as well as potential terms in model.
+            jacobian (bool):
+                Whether to include jacobian terms in logprob graph. Defaults to True.
+            sum (bool): 
+                Whether to sum all logp terms or return elemwise logp for each variable.
+                Defaults to True.
+            **compile_kwargs (Mapping): compilation related options
+
+        Returns:
+            logp (PointFunc | Function): compiled vectorized logp function
         """
         pytensor.config.on_unused_input = 'warn'
         compile_kwargs.setdefault("on_unused_input", "ignore")
@@ -552,13 +554,13 @@ class PyMCWrapper(AbstractTrueMeasure):
         >>> mv_normal_samples = iid_samples @ np.linalg.cholesky(cov).T + mu # equivalent to sampling from mv_x
     """
 
-    def __init__(self, sampler: AbstractDiscreteDistribution, model: pymc.Model) -> None:
+    def __init__(self, sampler: AbstractDiscreteDistribution, model: Model) -> None:
         r"""Wrap a PyMC Model as a QMCPy true measure.
 
         Args:
             sampler (AbstractDiscreteDistribution): Low discrepancy or iid
                 sampler in dimension d, living on $[0,1)^d$.
-            model pymc.Model: A single PyMC model.
+            model (Model): A single PyMC model.
         """
         self.domain = np.tile([0, 1], (sampler.d, 1))
 
