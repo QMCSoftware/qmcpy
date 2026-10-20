@@ -66,6 +66,10 @@ dependencies = [
 qmcpy-install-mpmc = "qmcpy.util.install_mpmc_pyg:main"
 
 [project.optional-dependencies]
+pymc = [
+    "pymc >= 6.0.1",
+    "pytensor >= 3.0.4"
+]
 torch = [
     "torch >= 2.2.0",
     ]

@@ -75,5 +75,28 @@ except ImportError as error:
         def __init__(self, *args, **kwargs):
             _raise_missing_mpmc_dependency("MPMC_net")
 
+pymc_available = False
+try:
+    
+    from .true_measure.pymc_wrapper import PyMCWrapper
+    pymc_available = True
+except ImportError as error:
+    _missing_module = getattr(error, "name", None)
+    if _missing_module is None or _missing_module.split(".", 1)[0] not in {
+        "pymc",
+        "pytensor",
+    }:
+        raise
+
+    def _raise_missing_pymc_dependency(component):
+        raise ModuleNotFoundError(
+            f"{component} requires optional PyMC dependencies; missing module "
+            f"'{_missing_module}'. Install the pymc >= 6.0.1"
+        )
+
+    class PyMCWrapper(AbstractTrueMeasure):
+        def __init__(self, *args, **kwargs):
+            _raise_missing_pymc_dependency("PyMCWrapper")
+
 name = "qmcpy"
 __version__ = "2.4"
