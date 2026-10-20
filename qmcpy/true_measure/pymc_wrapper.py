@@ -480,6 +480,12 @@ class PyMCWrapper(AbstractTrueMeasure):
     The suggested approach to construct these is to transform a set of conditionaly independent
     distributions. See example below.
 
+    Limitations:
+     - The samples correspond strictly to the random variables, not to any transformation of them or any Deterministics in the model.
+     - Multivariate distributions are not supported (see workaround below).
+     - Only sampling from the prior distribution is supported. Posterior sampling takes extra steps shown in the demo notebook.
+     - Discrete and some other distributions are currently not supported as their icdf is not currently defined by PyMC.
+
     Examples:
         A simple single distribution model and basic usage:
 
