@@ -2909,5 +2909,14 @@ class TestPyMC(unittest.TestCase):
                         model_dict["model"] 
                     )
 
+    def test_replications(self):
+        """replications work as expected"""
+        from qmcpy import PyMCWrapper
+        for model_dict in self.models:
+            with self.subTest(name=model_dict["name"]):
+                m = PyMCWrapper(DigitalNetB2(dimension=model_dict["dims"], replications=2, seed=self.seed), model_dict["model"])
+                s = m.gen_samples(n=8)
+                self.assertEqual(s.shape, (2, 8, model_dict["dims"]))
+
 if __name__ == "__main__":
     unittest.main()

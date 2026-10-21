@@ -1,4 +1,4 @@
-from typing import cast, Sequence
+from typing import cast, Sequence, Mapping
 
 from .abstract_true_measure import AbstractTrueMeasure, _clip_unit_interval
 from ..util import DimensionError, ParameterError
@@ -491,67 +491,74 @@ class PyMCWrapper(AbstractTrueMeasure):
     Examples:
         A simple single distribution model and basic usage:
 
-        >>> import pymc as pm
-        >>> import qmcpy
-        >>> with pm.Model() as model:
-        >>>    x = pm.Normal("x", mu=0.0, sigma=1.0)
+        >>> import pymc, qmcpy
+        >>> import numpy as np
+        >>> import pytensor.tensor as pt
+        >>> from qmcpy import PyMCWrapper, DigitalNetB2
+        >>> with pymc.Model() as model:
+        ...    x = pymc.Normal("x", mu=0.0, sigma=1.0)
 
-        >>> tm_normal = PyMCWrapper(DigitalNetB2(2, seed=7), model)
+        >>> tm_normal = PyMCWrapper(DigitalNetB2(1, seed=7), model)
         >>> samples = tm_normal(4)
         >>> np.round(samples, 7)
-        array([[2.4432471, 2.82991  ],
-               [1.3269111, 1.8592971],
-               [2.9735251, 1.0687277],
-               [1.8591331, 2.1175268]])
+        array([[-0.337347 ],
+               [ 0.8774886],
+               [-1.271268 ],
+               [ 0.1124088]])
 
         With independent replications:
 
-        >>> tm_rep = PyMCWrapper(
-        ...     DigitalNetB2(2, seed=7, replications=2), model,
-        ... )
+        >>> tm_rep = PyMCWrapper(DigitalNetB2(1, seed=7, replications=2), model)
         >>> samples = tm_rep(4)
         >>> np.round(samples, 7)
-        array([[[2.2430875, 2.3910377],
-                [1.1130705, 1.4202436],
-                [2.7128095, 1.6326878],
-                [1.5808484, 2.6815461]],
+        array([[[ 0.5876714],
+                [-0.9803547],
+                [ 2.2191739],
+                [-0.1774778]],
         <BLANKLINE>
-               [[1.1581018, 1.523123 ],
-                [2.5518115, 2.4480553],
-                [1.8520442, 2.8815606],
-                [2.4966629, 1.0896807]]])
+               [[ 1.3719147],
+                [-0.177269 ],
+                [ 0.1478348],
+                [-1.8202058]]])
 
         T distribution specified by the hierarchical InverseGamma-Normal construnction:
 
-        >>> with pm.Model() as model:
-        >>>     s = pm.InverseGamma("sigma", alpha=10.0)
-        >>>     x = pm.Normal("x", mu=0.0, sigma=pt.sqrt(s))
-        >>> tm = PyMCWrapper(sampler=DigitalNetB2(3, seed=7), model)
+        >>> with pymc.Model() as model:
+        ...     s = pymc.InverseGamma("sigma", alpha=10.0)
+        ...     x = pymc.Normal("x", mu=0.0, sigma=pt.sqrt(s))
+        >>> tm = PyMCWrapper(DigitalNetB2(2, seed=7), model)
         >>> x = tm(2)
         >>> np.round(x, 7)
-        array([[ 2.2653505,  0.8401944, 11.4581   ],
-               [ 1.3794988, -0.5395231,  9.3339231]])
+        array([[ 0.1256344,  0.4862743],
+               [ 0.0767114, -0.0490979]])
         >>> x.shape
-        (2, 3)
+        (2, 2)
 
         Multivariate normal not directly supported:
 
-        >>> with pm.Model() as model:
-        >>>     s = pm.MvNormal("x", mu=0.0, cov=np.array([[1, 0.5], 0.5, 1]))
+        >>> with pymc.Model() as model:
+        ...     s = pymc.MvNormal("x", mu=np.zeros(2), cov=np.array([[1, 0.5], [0.5, 1]]))
         >>> # model created normaly, but:
-        >>> tm_joint = PyMCWrapper(DigitalNetB2(2, seed=7), model) # raises exception
-        NotImplementedError: Inverse CDF method not implemented for MvNormalRV{name='multivariate_normal', signature='(n),(n,n)->(n)', dtype='float64', inplace=False, method='cholesky'}
+        >>> try:
+        ...     tm_joint = PyMCWrapper(DigitalNetB2(2, seed=7), model) # raises exception
+        ... except NotImplementedError as err:
+        ...     print(f"caught {str(err)[:70]}...")
+        caught Inverse CDF method not implemented for MvNormalRV{name='multivariate_n...
 
         Multivariate normal as transformed i.i.d:
 
-        >>> with pm.Model() as model:
-        >>>    cov = np.array([[1, 0.5], 0.5, 1])
-        >>>    mu = np.array([-0.2, 0.2])
-        >>>    x = pm.Normal("x_diag", mu=0.0, sigma=np.ones_like(np.diag(cov)))
-        >>>    mv_x = pm.Deterministic("x", x @ np.linalg.cholesky(cov).T + mu) # can be used in other distributions, but not directly sampled
+        >>> with pymc.Model() as model:
+        ...    cov = np.array([[1, 0.5], [0.5, 1]])
+        ...    mu = np.array([-0.2, 0.2])
+        ...    x = pymc.Normal("x_diag", mu=0.0, sigma=np.ones_like(np.diag(cov)))
+        ...    mv_x = pymc.Deterministic("x", x @ np.linalg.cholesky(cov).T + mu) # can be used in other distributions, but not directly sampled
         >>> tm_joint_iid = PyMCWrapper(DigitalNetB2(2, seed=7), model)
-        >>> iid_samples = tm_joint_iid(2)
-        >>> mv_normal_samples = iid_samples @ np.linalg.cholesky(cov).T + mu # equivalent to sampling from mv_x
+        >>> samples = tm_joint_iid(2)
+        >>> # equivalent to sampling from mv_x
+        >>> mv_normal_samples = samples @ np.linalg.cholesky(cov).T + mu
+        >>> mv_normal_samples
+        array([[ 0.3876714 ,  1.68194866],
+               [-1.18035468, -0.44369678]])
     """
 
     def __init__(self, sampler: AbstractDiscreteDistribution, model: Model) -> None:
@@ -645,6 +652,7 @@ class PyMCWrapper(AbstractTrueMeasure):
         x = np.asarray(x, dtype=float)
         x = _clip_unit_interval(x)
         batch_shape = x.shape[:-1]
+        flat_batch = np.prod(batch_shape)
         if self.d > 1:
             inputs_list = np.split(x, self.split_indices, axis=-1)
         else:
@@ -652,7 +660,7 @@ class PyMCWrapper(AbstractTrueMeasure):
         inputs_list = [_x.ravel() for _x in inputs_list]
         if np.prod(inputs_list[-1].shape) == 0:
             inputs_list = inputs_list[:-1]
-        inputs_list = [np.reshape(_x, (*batch_shape, *shape)) for _x, shape in zip(inputs_list, self.shapes)]
+        inputs_list = [np.reshape(_x, (flat_batch, *shape)) for _x, shape in zip(inputs_list, self.shapes)]
         samples = self.icdf(*inputs_list)
         samples = samples.reshape(*batch_shape, -1)
         return samples
@@ -663,6 +671,7 @@ class PyMCWrapper(AbstractTrueMeasure):
         """
         x = np.asarray(x, dtype=float)
         batch_shape = x.shape[:-1]
+        flat_batch = np.prod(batch_shape)
         if self.d > 1:
             inputs_list = np.split(x, self.split_indices, axis=-1)
         else:
@@ -670,7 +679,7 @@ class PyMCWrapper(AbstractTrueMeasure):
         inputs_list = [_x.ravel() for _x in inputs_list]
         if np.prod(inputs_list[-1].shape) == 0:
             inputs_list = inputs_list[:-1]
-        inputs_list = [np.reshape(_x, (*batch_shape, *shape)) for _x, shape in zip(inputs_list, self.shapes)]
+        inputs_list = [np.reshape(_x, (flat_batch, *shape)) for _x, shape in zip(inputs_list, self.shapes)]
 
         return np.exp(self.logpdf(*inputs_list))
 
