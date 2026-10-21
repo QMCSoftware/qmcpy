@@ -681,7 +681,7 @@ class PyMCWrapper(AbstractTrueMeasure):
             inputs_list = inputs_list[:-1]
         inputs_list = [np.reshape(_x, (flat_batch, *shape)) for _x, shape in zip(inputs_list, self.shapes)]
 
-        return np.exp(self.logpdf(*inputs_list))
+        return np.exp(self.logpdf(*inputs_list)).reshape(*batch_shape)
 
     def _spawn(self, sampler, dimension):
         """Create a child true measure that shares the same distribution
