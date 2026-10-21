@@ -258,32 +258,32 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash -el {0}
         run: |
-          python -m pip wheel -w ./.wheels ".[test,test_torch,test_gpytorch,test_botorch,test_umbridge]" || true
+          python -m pip wheel -w ./.wheels ".[test,test_torch,test_gpytorch,test_botorch,test_umbridge,test_pymc]" || true
       - name: Install Python dependencies (Linux)
         if: runner.os == 'Linux'
         shell: bash -el {0}
         run: |
-          pip install --find-links ./.wheels -e ".[test,test_torch,test_gpytorch,test_botorch,test_umbridge]"
+          pip install --find-links ./.wheels -e ".[test,test_torch,test_gpytorch,test_botorch,test_umbridge,test_pymc]"
       - name: Build and cache wheels (macOS)
         if: runner.os == 'macOS'
         shell: bash -el {0}
         run: |
-          python -m pip wheel -w ./.wheels ".[test,test_torch,test_gpytorch,test_botorch]" || true
+          python -m pip wheel -w ./.wheels ".[test,test_torch,test_gpytorch,test_botorch,test_pymc]" || true
       - name: Install Python dependencies (macOS)
         if: runner.os == 'macOS'
         shell: bash -el {0}
         run: |
-          pip install --find-links ./.wheels -e ".[test,test_torch,test_gpytorch,test_botorch]"
+          pip install --find-links ./.wheels -e ".[test,test_torch,test_gpytorch,test_botorch,test_pymc]"
       - name: Build and cache wheels (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          python -m pip wheel -w ./.wheels .[test,test_torch,test_gpytorch,test_botorch] || Write-Host 'wheel build step completed'
+          python -m pip wheel -w ./.wheels .[test,test_torch,test_gpytorch,test_botorch,test_pymc] || Write-Host 'wheel build step completed'
       - name: Install Python dependencies (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          pip install --find-links ./.wheels -e '.[test,test_torch,test_gpytorch,test_botorch]'
+          pip install --find-links ./.wheels -e '.[test,test_torch,test_gpytorch,test_botorch,test_pymc]'
       - name: Install MPMC dependencies (Unix)
         if: runner.os != 'Windows'
         shell: bash -el {0}
@@ -511,6 +511,15 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: make doctests_botorch
+      - name: doctests_pymc (Unix)
+        if: runner.os != 'Windows'
+        shell: bash -el {0}
+        run: make doctests_pymc
+
+      - name: doctests_pymc (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: make doctests_pymc
       - name: doctests_markdown (Unix)
         if: runner.os != 'Windows'
         shell: bash -el {0}
@@ -570,7 +579,8 @@ jobs:
             ./artifacts/coverage/doctests/mpmc/coverage.json,
             ./artifacts/coverage/doctests/torch/coverage.json,
             ./artifacts/coverage/doctests/gpytorch/coverage.json,
-            ./artifacts/coverage/doctests/botorch/coverage.json
+            ./artifacts/coverage/doctests/botorch/coverage.json,
+            ./artifacts/coverage/doctests/pymc/coverage.json
 
       # -----------------------------------------------------------
       # Free disk + conda cache before booktests (OS-specific)
