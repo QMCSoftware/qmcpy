@@ -5,14 +5,11 @@ import unittest
 
 torch = pytest.importorskip("pymc")
 
-from qmcpy import (
-    PyMCWrapper,
-    DigitalNetB2,
-)
+from qmcpy import DigitalNetB2, PyMCWrapper
 from qmcpy.util import (
     DimensionError,
 )
-import numpy as np 
+import numpy as np
 
 class TestPyMC(unittest.TestCase):
     """Unit tests for PyMCWrapper"""
@@ -106,7 +103,7 @@ class TestPyMC(unittest.TestCase):
                 with self.assertRaises(DimensionError):
                     PyMCWrapper(
                         DigitalNetB2(dimension=10, seed=self.seed),
-                        model_dict["model"] 
+                        model_dict["model"]
                     )
 
     def test_replications(self):

@@ -239,25 +239,43 @@ jobs:
         if: runner.os == 'macOS'
         shell: bash -el {0}
         run: |
-          python -m pip wheel -w ./.wheels ".[test,test_torch,test_gpytorch,test_botorch,test_pymc]" || true
+          EXTRAS=".[test,test_torch,test_gpytorch,test_botorch,test_pymc]"
+          # pymc >= 6.0.1 requires Python >= 3.12; drop it below that floor.
+          if [ "${{ matrix.python-version }}" = "3.11" ]; then
+            EXTRAS=".[test,test_torch,test_gpytorch,test_botorch]"
+          fi
+          python -m pip wheel -w ./.wheels "$EXTRAS" || true
 
       - name: Install Python dependencies (macOS)
         if: runner.os == 'macOS'
         shell: bash -el {0}
         run: |
-          pip install --find-links ./.wheels -e ".[test,test_torch,test_gpytorch,test_botorch,test_pymc]"
+          EXTRAS=".[test,test_torch,test_gpytorch,test_botorch,test_pymc]"
+          if [ "${{ matrix.python-version }}" = "3.11" ]; then
+            EXTRAS=".[test,test_torch,test_gpytorch,test_botorch]"
+          fi
+          pip install --find-links ./.wheels -e "$EXTRAS"
 
       - name: Build and cache wheels (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          python -m pip wheel -w ./.wheels .[test,test_torch,test_gpytorch,test_botorch,test_pymc] || Write-Host 'wheel build step completed'
+          $Extras = ".[test,test_torch,test_gpytorch,test_botorch,test_pymc]"
+          # pymc >= 6.0.1 requires Python >= 3.12; drop it below that floor.
+          if ("${{ matrix.python-version }}" -eq "3.10") {
+            $Extras = ".[test,test_torch,test_gpytorch,test_botorch]"
+          }
+          python -m pip wheel -w ./.wheels $Extras || Write-Host 'wheel build step completed'
 
       - name: Install Python dependencies (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          pip install --find-links ./.wheels -e '.[test,test_torch,test_gpytorch,test_botorch,test_pymc]'
+          $Extras = ".[test,test_torch,test_gpytorch,test_botorch,test_pymc]"
+          if ("${{ matrix.python-version }}" -eq "3.10") {
+            $Extras = ".[test,test_torch,test_gpytorch,test_botorch]"
+          }
+          pip install --find-links ./.wheels -e "$Extras"
 
       # -----------------------------------------------------------
       # Run unittests for Python source files

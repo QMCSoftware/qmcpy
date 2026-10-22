@@ -31,7 +31,8 @@ from pymc.model.fgraph import (
 )
 from pymc import Model
 
-assert int(pymc.__version__.split('.')[0]) == 6 # backends matter here
+if not (int(pymc.__version__.split('.')[0]) == 6): # backends matter here
+    raise AssertionError
 ###### based on `observe` from pymc model/transform/conditioning
 
 def hide( ## tongue in cheek, opposite of `observe`
@@ -47,7 +48,7 @@ def hide( ## tongue in cheek, opposite of `observe`
             A distinct PyMC model with all variables free.
 
     Examples:
-    .. code-block:: python
+        .. code-block:: python
 
         import pymc as pm
 
@@ -70,7 +71,7 @@ def hide( ## tongue in cheek, opposite of `observe`
         # https://github.com/pymc-devs/pymc/pull/8340
         # call the correct version accoring to installed PyMC version
         from packaging.version import Version
-        PYMC_VERSION_INTERNAL_CHANGE = Version("6.1.0") 
+        PYMC_VERSION_INTERNAL_CHANGE = Version("6.1.0")
         if Version(pymc.__version__) < PYMC_VERSION_INTERNAL_CHANGE:
             free_rv = model_free_rv(rv, rv.type(), model.rvs_to_transforms[rv], *model.named_vars_to_dims.get(rv.name, ()))
         else:
@@ -325,7 +326,8 @@ def icdf(
             rvs=rvs,
             rvs_to_values=model.rvs_to_values,
         )
-        assert isinstance(rv_icdfs, list)
+        if not (isinstance(rv_icdfs, list)):
+            raise AssertionError
 
     icdf_factors = [None] * len(varlist)
     for icdf_order, _icdf in zip(rv_order, rv_icdfs):
@@ -360,7 +362,7 @@ def compile_icdf(
     var_shapes = [pt.utils.get_static_shape_from_size_variables([x.size]) for x in model.value_vars]
     # if right shape is None, it indicates already a batch shape, so delete it
     var_shapes = [shape[:-1] if shape[-1] is None else shape for shape in var_shapes]
-    replacements = {var: pt.TensorType(dtype="float64", shape=(None,*size))(var.name) for (var, size) in 
+    replacements = {var: pt.TensorType(dtype="float64", shape=(None,*size))(var.name) for (var, size) in
                     zip(model.value_vars, var_shapes)}
     icdf_graph = pytensor.graph.vectorize_graph(icdf_graph, replacements)
     inputs = list(replacements.values())
@@ -402,7 +404,7 @@ def compile_vectorized_logp(
         var_shapes = [pt.utils.get_static_shape_from_size_variables([x.size]) for x in model.value_vars]
         # if right shape is None, it indicates already a batch shape, so delete it
         var_shapes = [shape[:-1] if shape[-1] is None else shape for shape in var_shapes]
-        replacements = {var: pt.TensorType(dtype="float64", shape=(None,*size))(var.name) for (var, size) in 
+        replacements = {var: pt.TensorType(dtype="float64", shape=(None,*size))(var.name) for (var, size) in
                     zip(model.value_vars, var_shapes)}
         logp_graph = pytensor.graph.vectorize_graph(logp_graph, replacements)
         inputs = list(replacements.values())
@@ -588,10 +590,10 @@ class PyMCWrapper(AbstractTrueMeasure):
         # Remember what the user originally passed in so that _spawn can reuse it.
         self.model = hide(model)
         self.icdf = compile_icdf(self.model)
-        self.logpdf = compile_vectorized_logp(self.model, point_fn=False) 
+        self.logpdf = compile_vectorized_logp(self.model, point_fn=False)
         # determine shapes of random variables and prepare their indices in a flat vector
         static_shapes = [pt.utils.get_static_shape_from_size_variables([x.size]) for x in self.model.value_vars]
-        # if right shape is None, it indicates already a batch shape, so delete it. 
+        # if right shape is None, it indicates already a batch shape, so delete it.
         self.shapes = [shape[:-1] if shape[-1] is None else shape for shape in static_shapes]
         shaped_arrays = [np.atleast_1d(np.ones(shape)) for shape in self.shapes]
         lens_at_least_1d = [np.prod(arr.shape) for arr in shaped_arrays]
@@ -612,7 +614,7 @@ class PyMCWrapper(AbstractTrueMeasure):
         #     if self.d > 1:
         #         inputs_list = np.split(inputs, self.split_indices, axis=-1)
         #     else:
-        #         inputs_list = [inputs.ravel()] 
+        #         inputs_list = [inputs.ravel()]
         #     inputs_list = [_x.ravel() for _x in inputs_list]
         #     if np.prod(inputs[-1].shape) == 0:
         #         inputs_list = inputs_list[:-1]
