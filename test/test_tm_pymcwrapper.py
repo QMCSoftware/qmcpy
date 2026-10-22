@@ -1,3 +1,10 @@
+
+import numpy as np
+import pytest
+import unittest
+
+torch = pytest.importorskip("pymc")
+
 from qmcpy import (
     PyMCWrapper,
     DigitalNetB2,
@@ -5,7 +12,6 @@ from qmcpy import (
 from qmcpy.util import (
     DimensionError,
 )
-import unittest
 import numpy as np 
 
 class TestPyMC(unittest.TestCase):
