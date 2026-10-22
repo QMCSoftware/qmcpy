@@ -118,7 +118,7 @@ jupyter:
 
 ## `PyMCWrapper`
 
-::: qmcpy.true_measure.PyMCWrapper
+::: qmcpy.true_measure.pymc_wrapper.PyMCWrapper
 
 ## UML Specific
 
