@@ -1,5 +1,6 @@
 import unittest
 from __init__ import BaseNotebookTest
+# from .__init__ import BaseNotebookTest # uncomment when running just this file
 
 class NotebookTests(BaseNotebookTest):
 
@@ -14,6 +15,7 @@ class NotebookTests(BaseNotebookTest):
             "2**3": "2**3",
             "2**3": "2**3",
             "2**3": "2**3",
+            "n_replications=2**7": "n_replications=2",
         }
         self.run_notebook(notebook_path, replacements)
 
