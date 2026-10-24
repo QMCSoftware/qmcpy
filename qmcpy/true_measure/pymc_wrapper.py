@@ -1,4 +1,4 @@
-from typing import cast, Sequence, Mapping
+from typing import cast, Sequence, Mapping, Union
 
 from .abstract_true_measure import AbstractTrueMeasure, _clip_unit_interval
 from ..util import DimensionError, ParameterError
@@ -90,8 +90,8 @@ def hide( ## tongue in cheek, opposite of `observe`
 def conditional_icdf(
     rv_values: dict[Variable, Variable],
     warn_rvs: bool=True,
-    ir_rewriter: GraphRewriter | None = None,
-    extra_rewrites: GraphRewriter | NodeRewriter | None = None,
+    ir_rewriter: Union[GraphRewriter, None] = None,
+    extra_rewrites: Union[GraphRewriter ,NodeRewriter, None] = None,
     **kwargs: Mapping,
 ) -> dict[Variable, Variable]:
     r"""Create a map between variables and conditional icdfs
@@ -133,9 +133,9 @@ def conditional_icdf(
             When ``True``, issue a warning when a `RandomVariable` is found in
             the logp graph and doesn't have a corresponding value variable specified in
             `rv_values`.
-        ir_rewriter (GraphRewriter | None):
+        ir_rewriter (Union[GraphRewriter, None]):
             Rewriter that produces the intermediate representation of Measurable Variables.
-        extra_rewrites (GraphRewriter | NodeRewriter | None):
+        extra_rewrites (Union[GraphRewriter ,NodeRewriter, None]):
             Extra rewrites to be applied (e.g. reparameterizations, transforms,
             etc.),
         **kwargs (Mapping): other compilation related arguments
@@ -256,6 +256,9 @@ def transformed_conditional_icdf(
        rvs (Sequence[Variable]):
        rvs_to_values (dict[Variable, Variable]):
        **kwargs:
+
+    Returns:
+       icdf_terms_list (list[Variable]):
     """
     kwargs.setdefault("warn_rvs", False)
     temp_icdf_terms = conditional_icdf(
@@ -286,8 +289,8 @@ def transformed_conditional_icdf(
 ######## based on functions from pymc model/core.py
 def icdf(
         model: Model,
-        vars: Variable | Sequence[Variable] | None = None,
-    ) -> Variable | list[Variable]:
+        vars: Union[Variable, Sequence[Variable], None] = None,
+    ) -> Union[Variable, list[Variable]]:
     """Elemwise log-probability of the model.
 
     On frozen models the returned graph is memoized (keyed on the arguments), so
@@ -296,12 +299,12 @@ def icdf(
 
     Args:
         model (Model): pymc Model
-        vars (Variable | Sequence[Variable] | None): list of random variables, optional
+        vars (Union[Variable, Sequence[Variable], None]): list of random variables, optional
             Compute the gradient with respect to those variables. If None, use all
             free and observed random variables in model.
 
     Returns:
-        icdf graph(s)
+        icdf (Union[Variable, list[Variable]]): icdf graph(s) 
     """
     varlist: list[TensorVariable]
     if vars is None:
@@ -341,24 +344,24 @@ def icdf(
 
 def compile_icdf(
         model: Model,
-        vars: Variable | Sequence[Variable] | None = None,
+        vars: Union[Variable, Sequence[Variable], None] = None,
         point_fn: bool = False,
         **compile_kwargs: Mapping,
-    ) -> PointFunc | Function:
+    ) -> Union[PointFunc, Function]:
     """Compiled log probability density function.
 
     The function expects as input a dictionary with the same structure as self.initial_point()
 
     Args:
         model (Model): pymc Model
-        vars (Variable | Sequence[Variable] | None): list of random variables or potential terms, optional
+        vars (Union[Variable, Sequence[Variable], None]): list of random variables or potential terms, optional
             Compute the gradient with respect to those variables. If None, use all
             free and observed random variables in model.
         point_fn (bool): controls return type PointFun or Function
         **compile_kwargs (Mapping): other compilation related options
 
     Returns:
-        icdf (PointFunc | Function): compiled icdf function
+        icdf (Union[PointFunc, Function]): compiled icdf function
     """
     compile_kwargs.setdefault("on_unused_input", "ignore")
     icdf_graph = icdf(model, vars=vars)
@@ -379,16 +382,16 @@ def compile_icdf(
 
 def compile_vectorized_logp(
         model: Model,
-        vars: Variable | Sequence[Variable] | None = None,
+        vars: Union[Variable, Sequence[Variable], None] = None,
         jacobian: bool = True,
         sum: bool = True,
         **compile_kwargs: Mapping,
-    ) -> PointFunc | Function:
+    ) -> Union[PointFunc, Function]:
         """Compiled log probability density function.
 
         Args:
             model (Model): PyMC Model
-            vars (Variable | Sequence[Variable] | None): list of random variables or potential terms, optional
+            vars (Union[Variable, Sequence[Variable], None]): list of random variables or potential terms, optional
                 Compute the gradient with respect to those variables. If None, use all
                 free and observed random variables, as well as potential terms in model.
             jacobian (bool):
@@ -399,7 +402,7 @@ def compile_vectorized_logp(
             **compile_kwargs (Mapping): compilation related options
 
         Returns:
-            logp (PointFunc | Function): compiled vectorized logp function
+            logp (Union[PointFunc, Function]): compiled vectorized logp function
         """
         pytensor.config.on_unused_input = 'warn'
         compile_kwargs.setdefault("on_unused_input", "ignore")
