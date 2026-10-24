@@ -6,7 +6,7 @@ from pathlib import Path
 
 def _execute_optional_import(blocked_import):
     repository_root = Path(__file__).resolve().parent.parent
-    init_path = repository_root / "qmcpy" / "__init__.py"
+    init_path = repository_root / "qmcpy" / "discrete_distribution" / "__init__.py"
     init_tree = ast.parse(init_path.read_text())
     optional_import = next(
         node
@@ -14,7 +14,7 @@ def _execute_optional_import(blocked_import):
         if isinstance(node, ast.Try)
         and any(
             isinstance(statement, ast.ImportFrom)
-            and statement.module == "discrete_distribution.mpmc"
+            and statement.module == "mpmc"
             for statement in node.body
         )
     )
@@ -34,7 +34,7 @@ def _execute_optional_import(blocked_import):
 
     test_builtins = vars(builtins).copy()
     test_builtins["__import__"] = guarded_import
-    namespace = {"__builtins__": test_builtins, "__package__": "qmcpy"}
+    namespace = {"__builtins__": test_builtins, "__package__": "qmcpy.discrete_distribution"}
     module = ast.Module(body=[optional_import], type_ignores=[])
     exec(compile(module, str(init_path), "exec"), namespace)
     return namespace
@@ -49,7 +49,7 @@ class TestMPMCOptionalImports(unittest.TestCase):
             self.skipTest("torch not available")
 
         def block_pyg_models(name, fromlist, level):
-            if level == 1 and name == "discrete_distribution.mpmc.models":
+            if level == 1 and name == "mpmc.models":
                 return "torch_geometric"
             return None
 
@@ -74,7 +74,7 @@ class TestMPMCOptionalImports(unittest.TestCase):
         def block_torch_utils(name, fromlist, level):
             if (
                 level == 1
-                and name == "discrete_distribution.mpmc"
+                and name == "mpmc"
                 and "utils" in fromlist
             ):
                 return "torch"
@@ -97,7 +97,7 @@ class TestMPMCOptionalImports(unittest.TestCase):
             self.skipTest("torch not available")
 
         def block_torch_scatter(name, fromlist, level):
-            if level == 1 and name == "discrete_distribution.mpmc.models":
+            if level == 1 and name == "mpmc.models":
                 return "torch_scatter"
             return None
 
