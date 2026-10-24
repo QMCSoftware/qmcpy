@@ -9,7 +9,6 @@ from ..discrete_distribution import DigitalNetB2
 
 import numpy as np
 import warnings
-from pytensor.tensor.utils import get_static_shape_from_size_variables
 
 import pymc
 import pytensor
@@ -40,7 +39,7 @@ def hide( ## tongue in cheek, opposite of `observe`
 ) -> Model:
     """Convert ALL observed RVs to free RVs.
 
-    Parameters:
+    Args:
         model (Model): PyMC Model
 
     Returns:
@@ -113,8 +112,8 @@ def conditional_icdf(
 
     .. math::
 
-        \sigma^2 \sim& \operatorname{InvGamma}(0.5, 0.5) \\
-        Y \sim& \operatorname{N}(0, \sigma^2)
+        $$\sigma^2 \sim& \operatorname{InvGamma}(0.5, 0.5) \\
+        Y \sim& \operatorname{N}(0, \sigma^2)$$
 
     If we create a value variable for ``u_rv``, i.e. ``u_vv = pt.scalar("u")``,
     the graph of ``conditional_icdf({Y_rv: u_vv})`` is equivalent to the
@@ -125,7 +124,7 @@ def conditional_icdf(
     ``u2_vv = pt.scalar("u2")``, then ``conditional_icdf({Y_rv: u_vv, sigma2_rv: u2_vv})``
     yields the conditional icdf of the two variables.
 
-    Parameters:
+    Args:
         rv_values (dict[Variable, Variable]):
             A ``dict`` of variables that maps stochastic elements
             (e.g. `RandomVariable`\s) to symbolic `Variable`\s representing conditional probability
@@ -252,6 +251,11 @@ def transformed_conditional_icdf(
 
     This helper will only return the subset of logprob terms corresponding to `rvs`.
     All rvs_to_values and rvs_to_transforms mappings are required.
+
+    Args:
+       rvs (Sequence[Variable]):
+       rvs_to_values (dict[Variable, Variable]):
+       **kwargs:
     """
     kwargs.setdefault("warn_rvs", False)
     temp_icdf_terms = conditional_icdf(
@@ -290,7 +294,7 @@ def icdf(
     repeated calls return the same object and ``compile_fn`` can reuse a compiled
     function. Do not mutate it in place.
 
-    Parameters:
+    Args:
         model (Model): pymc Model
         vars (Variable | Sequence[Variable] | None): list of random variables, optional
             Compute the gradient with respect to those variables. If None, use all
@@ -345,7 +349,7 @@ def compile_icdf(
 
     The function expects as input a dictionary with the same structure as self.initial_point()
 
-    Parameters:
+    Args:
         model (Model): pymc Model
         vars (Variable | Sequence[Variable] | None): list of random variables or potential terms, optional
             Compute the gradient with respect to those variables. If None, use all
@@ -382,7 +386,7 @@ def compile_vectorized_logp(
     ) -> PointFunc | Function:
         """Compiled log probability density function.
 
-        Parameters:
+        Args:
             model (Model): PyMC Model
             vars (Variable | Sequence[Variable] | None): list of random variables or potential terms, optional
                 Compute the gradient with respect to those variables. If None, use all
