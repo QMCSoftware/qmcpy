@@ -32,7 +32,7 @@ from pymc.model.fgraph import (
 from pymc import Model
 
 if not (int(pymc.__version__.split('.')[0]) == 6): # backends matter here
-    raise AssertionError
+    raise AssertionError(f"PyMC{pymc.__version__} unsupported. PyMCWrapper supports running models in PyMC6")
 ###### based on `observe` from pymc model/transform/conditioning
 
 def hide( ## tongue in cheek, opposite of `observe`
@@ -535,6 +535,28 @@ class PyMCWrapper(AbstractTrueMeasure):
                [ 0.0767114, -0.0490979]])
         >>> x.shape
         (2, 2)
+
+        With replications:
+
+        >>> tm = PyMCWrapper(DigitalNetB2(2, seed=7,replications=3), model)
+        >>> x = tm(4)
+        >>> x.shape
+        (3, 4, 2)
+        >>> np.round(x, 7)
+        array([[[ 0.0836618, -0.2623627],
+                [ 0.1207955,  0.144963 ],
+                [ 0.1018947,  0.2665866],
+                [ 0.1664003, -0.2195593]],
+        <BLANKLINE>
+               [[ 0.1290611, -0.0462615],
+                [ 0.0977059,  0.0285278],
+                [ 0.1331088,  0.2494873],
+                [ 0.0682587, -0.1911961]],
+        <BLANKLINE>
+               [[ 0.1491155,  0.0053208],
+                [ 0.0625432, -0.1061282],
+                [ 0.1125356, -0.4990805],
+                [ 0.0872658,  0.2179012]]])
 
         Multivariate normal not directly supported:
 

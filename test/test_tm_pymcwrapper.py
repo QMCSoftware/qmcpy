@@ -5,7 +5,7 @@ import unittest
 
 torch = pytest.importorskip("pymc")
 
-from qmcpy import DigitalNetB2, PyMCWrapper
+from qmcpy import DigitalNetB2
 from qmcpy.util import (
     DimensionError,
 )
@@ -19,18 +19,18 @@ class TestPyMC(unittest.TestCase):
         self.models = []
         # define models for tests
         with pymc.Model() as normal_model:
-            x = pymc.Normal("x", mu=0.0, sigma=1.0)
+            pymc.Normal("x", mu=0.0, sigma=1.0)
         self.models.append({"model": normal_model, "dims":1, "name": "normal", "mean": 0.0})
 
         nu = 5.0
         with pymc.Model() as t_model:
             s = pymc.ChiSquared("s", nu=nu)
-            x = pymc.Normal("x", mu=0.0, sigma=pymc.math.sqrt(nu/s))
+            pymc.Normal("x", mu=0.0, sigma=pymc.math.sqrt(nu/s))
         self.models.append({"model": t_model, "dims": 2, "name": "t_dist", "mean": [5.0, 0.0]})
 
         with pymc.Model() as observed_t_model:
             s = pymc.ChiSquared("s", nu=nu)
-            x = pymc.Normal("x", mu=0.0, sigma=pymc.math.sqrt(nu/s), observed=np.ones(3))
+            pymc.Normal("x", mu=0.0, sigma=pymc.math.sqrt(nu/s), observed=np.ones(3))
         self.models.append({"model": observed_t_model, "dims": 4, "name": "observed_t_dist",
                             "mean": [5.0, 0.0, 0.0, 0.0]})
         self.seed = 7
