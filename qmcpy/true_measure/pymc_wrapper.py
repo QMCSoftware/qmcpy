@@ -28,6 +28,7 @@ from pymc.model.fgraph import (
     model_free_rv,
     model_from_fgraph,
 )
+from pymc.model.transform.conditioning import remove_value_transforms
 from pymc import Model
 
 if not (int(pymc.__version__.split('.')[0]) == 6): # backends matter here
@@ -383,7 +384,7 @@ def compile_icdf(
 def compile_vectorized_logp(
         model: Model,
         vars: Union[Variable, Sequence[Variable], None] = None,
-        jacobian: bool = True,
+        jacobian: bool = False,
         sum: bool = True,
         **compile_kwargs: Mapping,
     ) -> Union[PointFunc, Function]:
@@ -616,8 +617,12 @@ class PyMCWrapper(AbstractTrueMeasure):
                 "model parameter must be a pymc.Model object."
             )
         self._parse_sampler(sampler)
-        # Remember what the user originally passed in so that _spawn can reuse it.
-        self.model = hide(model)
+        # remember original ordering of the model random variables because the transformations used here can reorder them
+        self.rv_original_order = {ind: rv.name for ind, rv in zip(range(len(model.basic_RVs)), model.basic_RVs)}
+        self.model = hide(remove_value_transforms(model)) # transforms are used in MCMC to sample in unconstrained (transformed) space. for QMC we get rid of this
+        # potentially new ordering of the model random variables
+        self.rv_order = {rv.name: ind for ind, rv in zip(range(len(self.model.basic_RVs)), self.model.basic_RVs)}
+        self.model.potentials = pymc.util.treelist() # make sure we are not getting potentials into the logpdf
         self.icdf = compile_icdf(self.model)
         self.logpdf = compile_vectorized_logp(self.model, point_fn=False)
         # determine shapes of random variables and prepare their indices in a flat vector
@@ -633,6 +638,13 @@ class PyMCWrapper(AbstractTrueMeasure):
                 f"sampler dimension {sampler.d} must match the model joint samples dimension {self.dimension}."
             )
         self.split_indices = np.cumsum(lens_at_least_1d)
+        start = np.concat([np.array([0]), self.split_indices])
+        end = np.roll(start, -1)
+        start = start[:-1]
+        end = end[:-1]
+        slices = [np.arange(s,e) for s,e in zip(start, end)]
+        reorder_list = [self.rv_order[self.rv_original_order[n]] for n in range(len(self.model.basic_RVs))]
+        self.reorder_to_original_ind = np.concat([slices[i] for i in reorder_list])
 
         # TODO: we have some checks commented here, because not really sure they are needed
         # try:
@@ -694,7 +706,7 @@ class PyMCWrapper(AbstractTrueMeasure):
         inputs_list = [np.reshape(_x, (flat_batch, *shape)) for _x, shape in zip(inputs_list, self.shapes)]
         samples = self.icdf(*inputs_list)
         samples = samples.reshape(*batch_shape, -1)
-        return samples
+        return samples[..., self.reorder_to_original_ind]
 
     def _weight(self, x):
         """
