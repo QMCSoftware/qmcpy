@@ -30,6 +30,7 @@
   "demos/portfolio/portfolio_allocation_demo.ipynb",
   "demos/pricing_options.ipynb",
   "demos/product_measure.ipynb",
+  "demos/pymc_model.ipynb",
   "demos/qei-demo-for-blog.ipynb",
   "demos/qmcpy-logo.ipynb",
   "demos/qmcpy_intro.ipynb",

@@ -32,16 +32,17 @@ qmcpy.egg-info/
 *.npy
 *.pkl
 *.gz
-!demos/portfolio/data/*.csv.gz
-demos/portfolio/data/log_returns*.csv.gz
 .DS_Store
 .idea/
+*tmp*
+!demos/portfolio/data/*.csv.gz
+demos/portfolio/data/log_returns*.csv.gz
 demos/.jupyter
 demos/prob_failure_gp_ci_plots/
 demos/fgpr_figs/
 demos/GBM/images/*.png
 demos/GBM/outputs/*.*
-*tmp*
+demos/arma.json*
 
 # Generated notebook/demo images
 figures/

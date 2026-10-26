@@ -86,6 +86,7 @@ nav:
         - Acceptance-Rejection Sampling: demos/acceptance_rejection.ipynb
         - Copula TrueMeasure Examples: demos/copula_examples.ipynb
         - Cube-to-Simplex Transforms and SimplexUniform: demos/simplex_uniform.ipynb
+        - PyMC Wrapper and Model: demos/pymc_model.ipynb
   - For Developers:
     - Release Manual: RELEASE.md
     - Contribution Good Practices: good_practices.md
