@@ -10,6 +10,7 @@ from qmcpy.util import (
     DimensionError,
 )
 import numpy as np
+from scipy import stats
 
 class TestPyMC(unittest.TestCase):
     """Unit tests for PyMCWrapper"""
@@ -20,19 +21,29 @@ class TestPyMC(unittest.TestCase):
         # define models for tests
         with pymc.Model() as normal_model:
             pymc.Normal("x", mu=0.0, sigma=1.0)
-        self.models.append({"model": normal_model, "dims":1, "name": "normal", "mean": 0.0})
+        self.models.append({"model": normal_model, "dims":1, "name": "normal",
+                            "mean": 0.0, "weight": lambda x: 1/stats.norm.pdf(x[:, 0], loc=0.0, scale=1.0)})
 
         nu = 5.0
         with pymc.Model() as t_model:
             s = pymc.ChiSquared("s", nu=nu)
             pymc.Normal("x", mu=0.0, sigma=pymc.math.sqrt(nu/s))
-        self.models.append({"model": t_model, "dims": 2, "name": "t_dist", "mean": [nu, 0.0]})
+        self.models.append({"model": t_model, "dims": 2, "name": "t_dist",
+                            "mean": [nu, 0.0], "weight": lambda x: 1/(stats.norm.pdf(x[:,1], loc=0.0, scale=np.sqrt(nu/x[:,0]))*stats.chi2.pdf(x[:,0], df=nu))})
 
+        # test the observed variable is removed (only prior is sampled)
         with pymc.Model() as observed_t_model:
             s = pymc.ChiSquared("s", nu=nu)
             pymc.Normal("x", mu=0.0, sigma=pymc.math.sqrt(nu/s), observed=np.ones(3))
-        self.models.append({"model": observed_t_model, "dims": 4, "name": "observed_t_dist",
-                            "mean": [nu, 0.0, 0.0, 0.0]})
+        self.models.append({"model": observed_t_model, "dims": 1, "name": "observed_t_dist",
+                            "mean": [nu], "weight": lambda x: 1/(np.prod(stats.norm.pdf(x[:,1:], loc=0.0, scale=np.sqrt(nu/x[:,[0]])), axis=1)*stats.chi2.pdf(x[:,0], df=nu))})
+
+        # designed to catch wrong reordering in internal qmc model
+        with pymc.Model() as model_that_gets_reordered:
+            pymc.Normal("x", mu=0.0, sigma=1.0)
+            pymc.ChiSquared("s", nu=nu)
+        self.models.append({"model": model_that_gets_reordered, "dims": 2, "name": "model_that_gets_reordered",
+                            "mean": [0.0, nu], "weight": lambda x: 1/(stats.norm.pdf(x[:,0], loc=0.0, scale=1.0)*stats.chi2.pdf(x[:,1], df=nu))})
         self.seed = 7
 
     def _make_sampler(self, dims, seed=None):
@@ -70,6 +81,13 @@ class TestPyMC(unittest.TestCase):
                 self.assertEqual(s.shape, (64, model_dict["dims"]))
                 self.assertEqual(w.shape, (64,))
                 self.assertTrue(np.all(w > 0))
+                # this is designed to catch big errors due to transformations, model reordering etc
+                # it is not designed to test bit exact results. The scipy pdfs are not exactly equivalent
+                # to pymc, but very close. However in edge cases they can differ
+                np.testing.assert_array_almost_equal(
+                    w,
+                    model_dict["weight"](s), 2
+                )
 
     def test_continued_sampling_matches_single_call(self):
         """Two batches via n_min/n_max equal one single call."""
