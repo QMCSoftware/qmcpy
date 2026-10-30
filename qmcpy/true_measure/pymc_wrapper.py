@@ -9,6 +9,7 @@ from ..discrete_distribution import DigitalNetB2
 
 import numpy as np
 import warnings
+from copy import copy
 
 import pymc
 import pytensor
@@ -48,43 +49,22 @@ def hide( ## tongue in cheek, opposite of `observe`
             A distinct PyMC model with all variables free.
 
     Examples:
-        .. code-block:: python
 
-        import pymc as pm
+        >>> import pymc as pm
+        >>> with pm.Model() as m:
+        ...     x = pm.Normal("x")
+        ...     y = pm.Normal("y", x)
+        ...     z = pm.Normal("z", y, observed=1.0)
 
-        with pm.Model() as m:
-            x = pm.Normal("x")
-            y = pm.Normal("y", x)
-            z = pm.Normal("z", y, observed=1.0)
-
-        m_new = pm.hide(m)
+        >>> m_new = hide(m)
+        >>> [rv.name for rv in m.observed_RVs]
+        ['z']
+        >>> [rv.name for rv in m_new.observed_RVs]
+        []
 
     """
-    fgraph, memo = fgraph_from_model(model)
-
-    replacements = {}
-    for rv in model.basic_RVs:
-        # NOTE: this seems to convert rv -> whatever is actually in the fgraph??
-        model_var = memo[rv] # was like this in `observe`, not sure of exact meaning...
-
-        # `model_free_rv` had a breaking change on version 6.1.0
-        # https://github.com/pymc-devs/pymc/pull/8340
-        # call the correct version accoring to installed PyMC version
-        from packaging.version import Version
-        PYMC_VERSION_INTERNAL_CHANGE = Version("6.1.0")
-        if Version(pymc.__version__) < PYMC_VERSION_INTERNAL_CHANGE:
-            free_rv = model_free_rv(rv, rv.type(), model.rvs_to_transforms[rv], *model.named_vars_to_dims.get(rv.name, ()))
-        else:
-            free_rv = model_free_rv(rv, rv.type(), model.rvs_to_transforms[rv], rv.name, *model.named_vars_to_dims.get(rv.name, ()))
-        replacements[model_var] = free_rv
-
-    fgraph.replace_all(tuple(replacements.items()), import_missing=True)
-
-    model = model_from_fgraph(fgraph, mutate_fgraph=True)
-    # toposort the model to undo any possible reordering that took place
-    fgraph, memo = fgraph_from_model(model)
-    toposort_replace(fgraph, {})
-    model = model_from_fgraph(fgraph, mutate_fgraph=True)
+    model = copy(model)
+    model.observed_RVs = []
     return model
 
 ###### based on `conditional_logp` and `transformed_conditional_logp` from pymc logprob/basic.py
@@ -424,57 +404,6 @@ def compile_vectorized_logp(
 
 ############# wrapper
 
-# def _detect_issues(icdf_f, dims, split_indices, n_grid=3):
-#     issues = []
-
-#     eps = np.finfo(float).eps
-#     us = np.meshgrid(*[np.linspace(eps, 1.0 - eps, n_grid) for _ in range(dims)], indexing='ij')
-#     us = [u.ravel() for u in us]
-#     us = np.stack(us, axis=-1)
-#     us = np.split(us, split_indices, axis=-1)
-#     us = [_x.ravel() for _x in us]
-#     if np.prod(us[-1].shape) == 0:
-#         us = us[:-1]
-#     try:
-#         x = icdf_f(*us)
-#     except Exception as e:
-#         return [f"icdf raised {type(e).__name__}: {e}"]
-
-#     if np.any(~np.isfinite(x)):
-#         issues.append("ppf() returned non-finite values")
-
-#     # TODO: can we generalize this for dims>1?
-#     # dx = np.diff(x)
-#     # if np.any(dx < -1e-12):
-#     #     issues.append("ppf() is not nondecreasing (looks non-monotone)")
-
-#     # Light-touch pdf/logpdf checks on quantiles (works for bounded/unbounded support)
-#     # uq = np.linspace(0.01, 0.99, 9)
-#     # try:
-#     #     xq = np.asarray(icdf_f(uq), dtype=float)
-#     # except Exception:
-#     #     xq = None
-
-#     # if xq is not None and hasattr(dist, "pdf"):
-#     #     try:
-#     #         p = np.asarray(dist.pdf(xq), dtype=float)
-#     #         if np.any(~np.isfinite(p)):
-#     #             issues.append("pdf() returned non-finite values on quantiles")
-#     #         if np.any(p < -1e-12):
-#     #             issues.append("pdf() returned negative values on quantiles")
-#     #     except Exception as e:
-#     #         issues.append(f"pdf() raised {type(e).__name__}: {e}")
-
-#     # if xq is not None and hasattr(dist, "logpdf"):
-#     #     try:
-#     #         lp = np.asarray(dist.logpdf(xq), dtype=float)
-#     #         if np.any(~np.isfinite(lp)):
-#     #             issues.append("logpdf() returned non-finite values on quantiles")
-#     #     except Exception as e:
-#     #         issues.append(f"logpdf() raised {type(e).__name__}: {e}")
-
-#     return issues
-
 class PyMCWrapper(AbstractTrueMeasure):
     r"""True measure that wraps PyMC Model (i.e. distribution).
 
@@ -619,7 +548,8 @@ class PyMCWrapper(AbstractTrueMeasure):
         self._parse_sampler(sampler)
         # remember original ordering of the model random variables because the transformations used here can reorder them
         self.rv_original_order = {ind: rv.name for ind, rv in zip(range(len(model.basic_RVs)), model.basic_RVs)}
-        self.model = hide(remove_value_transforms(model)) # transforms are used in MCMC to sample in unconstrained (transformed) space. for QMC we get rid of this
+        self.model = hide(model) # remove observed variables so that all variables are free RVs
+        self.model = remove_value_transforms(self.model) # transforms are used in MCMC to sample in unconstrained (transformed) space. for QMC we get rid of this
         # potentially new ordering of the model random variables
         self.rv_order = {rv.name: ind for ind, rv in zip(range(len(self.model.basic_RVs)), self.model.basic_RVs)}
         self.model.potentials = pymc.util.treelist() # make sure we are not getting potentials into the logpdf
@@ -645,38 +575,6 @@ class PyMCWrapper(AbstractTrueMeasure):
         slices = [np.arange(s,e) for s,e in zip(start, end)]
         reorder_list = [self.rv_order[self.rv_original_order[n]] for n in range(len(self.model.basic_RVs))]
         self.reorder_to_original_ind = np.concat([slices[i] for i in reorder_list])
-
-        # TODO: we have some checks commented here, because not really sure they are needed
-        # try:
-        #     # do some sampling and check no errors
-        #     bs = 10
-        #     inputs = np.ones((bs, self.d))*0.5
-        #     # split to right array lengths and remove trailing empty array if present
-        #     if self.d > 1:
-        #         inputs_list = np.split(inputs, self.split_indices, axis=-1)
-        #     else:
-        #         inputs_list = [inputs.ravel()]
-        #     inputs_list = [_x.ravel() for _x in inputs_list]
-        #     if np.prod(inputs[-1].shape) == 0:
-        #         inputs_list = inputs_list[:-1]
-        #     # reshape to correct shapes
-        #     print(self.shapes)
-        #     print(inputs_list)
-        #     inputs_list = [np.reshape(_x, bs, *shape) for _x, shape in zip(inputs_list, self.shapes)]
-        #     _ = self.icdf(*inputs_list)
-        # except:
-        #     raise DimensionError(
-        #         f"sampler dimension {sampler.d} must match the model joint samples dimension {self.dimension}."
-        #     )
-
-        # issues = _detect_issues(self.icdf, sampler.d, self.split_indices)
-        # if issues:
-        #     warnings.warn(
-        #         "PyMCWrapper received a PyMC Model "
-        #         "and it failed sanity checks:\n  - " + "\n  - ".join(issues),
-        #         UserWarning,
-        #         stacklevel=2,
-        #     )
 
         # There does not seem to be a reliable way to determine the range, so we set it to [-inf, inf]
         lo = -np.inf
