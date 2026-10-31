@@ -2381,6 +2381,79 @@ class TestBrownianMotion(unittest.TestCase):
 
 
 class TestGeometricBrownianMotion(unittest.TestCase):
+
+    def test_standalone_effective_range(self):
+        for decomposition in ("PCA", "Cholesky", "BrownianBridge"):
+            with self.subTest(decomposition=decomposition):
+                gbm = GeometricBrownianMotion(
+                    DigitalNetB2(4, seed=7), decomp_type=decomposition
+                )
+                bounds = gbm.effective_range
+                np.testing.assert_array_equal(bounds, np.tile([0, np.inf], (4, 1)))
+                self.assertFalse(bounds.flags.writeable)
+        singular = GeometricBrownianMotion(DigitalNetB2(2, seed=7), t_final=0)
+        self.assertIsNone(singular.effective_range)
+        composed = GeometricBrownianMotion(Uniform(DigitalNetB2(2, seed=7)))
+        self.assertIsNone(composed.effective_range)
+        self.assertIsNone(BrownianMotion(DigitalNetB2(2, seed=7)).effective_range)
+
+    def test_weight_preserves_batch_shape_and_positive_reference(self):
+        gbm = GeometricBrownianMotion(
+            DigitalNetB2(3, seed=7), initial_value=30, drift=0.05, diffusion=0.25
+        )
+        single_path = np.full(gbm.d, 30.0)
+        self.assertEqual(gbm._weight(single_path).shape, ())
+        for batch_shape in ((), (5,), (2, 5), (2, 3, 5)):
+            with self.subTest(batch_shape=batch_shape):
+                prices = (
+                    single_path if batch_shape == ()
+                    else np.linspace(20, 40, np.prod(batch_shape) * gbm.d).reshape(
+                        batch_shape + (gbm.d,)
+                    )
+                )
+                reference = scipy.stats.multivariate_normal.pdf(
+                    np.log(prices / gbm.initial_value),
+                    mean=(gbm.drift - gbm.diffusion / 2) * gbm.time_vec,
+                    cov=gbm.diffusion * np.minimum.outer(gbm.time_vec, gbm.time_vec),
+                ) / prices.prod(axis=-1)
+                weights = gbm._weight(prices)
+                self.assertEqual(weights.shape, batch_shape)
+                np.testing.assert_allclose(weights, reference, rtol=2e-15)
+        univariate = GeometricBrownianMotion(DigitalNetB2(1, seed=7))
+        self.assertEqual(univariate._weight(np.ones((2, 3, 1))).shape, (2, 3))
+
+    def test_weight_zero_outside_positive_support(self):
+        gbm = GeometricBrownianMotion(DigitalNetB2(3, seed=7))
+        prices = np.ones((2, 4, 3))
+        prices[0, 0] = 0
+        prices[0, 1] = -1
+        prices[1, 0, 1] = 0
+        prices[1, 1, 2] = -1
+        with np.errstate(divide="raise", invalid="raise"):
+            weights = gbm._weight(prices)
+            invalid_weights = gbm._weight(np.zeros((2, 3)))
+        self.assertEqual(weights.shape, (2, 4))
+        np.testing.assert_array_equal(weights[:, :2], 0)
+        self.assertTrue((weights[:, 2:] > 0).all())
+        np.testing.assert_array_equal(invalid_weights, 0)
+        np.testing.assert_allclose(
+            weights[:, 2:], gbm._weight(prices[:, 2:]), rtol=0, atol=0
+        )
+
+    def test_spawn_preserves_price_law_and_custom_grid(self):
+        gbm = GeometricBrownianMotion(
+            DigitalNetB2(4, seed=7), t_final=2, initial_value=30,
+            drift=0.3, diffusion=0.25, decomp_type="BrownianBridge",
+            monitoring_times=[0.3, 0.8, 1.4, 2],
+        )
+        child = gbm.spawn()[0]
+        self.assertIsNot(child.discrete_distrib, gbm.discrete_distrib)
+        for field in ("initial_value", "drift", "diffusion", "t", "decomp_type"):
+            self.assertEqual(getattr(child, field), getattr(gbm, field))
+        np.testing.assert_array_equal(child.time_vec, gbm.time_vec)
+        np.testing.assert_array_equal(child.monitoring_times, gbm.monitoring_times)
+        np.testing.assert_array_equal(child.effective_range, gbm.effective_range)
+
     def setUp(self):
         """Set up test fixtures with fixed seeds for reproducibility."""
         self.seed = 7

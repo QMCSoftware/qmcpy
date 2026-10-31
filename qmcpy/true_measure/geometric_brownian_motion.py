@@ -13,6 +13,7 @@ from numpy import (
     log,
     ndarray,
 )
+import numpy as np
 from scipy.stats import multivariate_normal
 
 
@@ -23,7 +24,7 @@ class GeometricBrownianMotion(BrownianMotion):
     $$\mathrm{GBM}(t) = S_0 \exp[(\gamma - \sigma^2/2) t + \sigma
     \mathrm{BM}(t)]$$
 
-    where BM is a Brownian Motion drift $\gamma$ and diffusion $\sigma^2$.
+    where BM is standard Brownian motion with zero drift and unit diffusion.
 
     Examples:
         >>> gbm = GeometricBrownianMotion(DigitalNetB2(4,seed=7), t_final=2, drift=0.1, diffusion=0.2)
@@ -189,6 +190,28 @@ class GeometricBrownianMotion(BrownianMotion):
         samples = self.initial_value * exp(exponent)
         return samples
 
+    def _map_effective_range(self, input_range):
+        """Certify the positive-orthant envelope of a standalone GBM."""
+        if type(self) is not GeometricBrownianMotion or self.transform is not self:
+            return None
+        bounds = self._broadcast_box(input_range, self.d)
+        if bounds is None or not np.array_equal(
+            bounds, self._broadcast_box(self.domain, self.d)
+        ):
+            return None
+        if (
+            not np.isfinite([self.initial_value, self.drift, self.diffusion]).all()
+            or self.initial_value <= 0
+            or self.diffusion <= 0
+            or not np.isfinite(self.time_vec).all()
+            or self.time_vec[0] <= 0
+            or not (np.diff(self.time_vec) > 0).all()
+        ):
+            return None
+        # Distinct positive times make min(t_i, t_j) positive definite.
+        # Zero and infinity are the closed-envelope bounds, not attained prices.
+        return np.tile([0.0, np.inf], (self.d, 1))
+
     def _spawn(self, sampler, dimension):
         monitoring_times = None
         if self.decomp_type == "BROWNIANBRIDGE" and dimension == self.d:
@@ -291,24 +314,24 @@ class GeometricBrownianMotion(BrownianMotion):
         normal PDF.
 
         Args:
-            x (ndarray): GBM sample paths of shape (n_samples, n_timepoints)
+            x (ndarray): GBM price paths of shape (*batch_shape, d).
 
         Returns:
-            ndarray: PDF values for each sample path
+            ndarray: PDF values of shape batch_shape. Paths with any nonpositive
+                coordinate have density zero.
         """
-        if x.ndim == 1:
-            x = x.reshape(1, -1)
-
-        # Transform to log space: log(x/S0)
-        log_transformed = log(x / self.initial_value)
-
-        # Get PDF of underlying multivariate normal
-        normal_pdf = self.log_mvn_scipy.pdf(log_transformed)
-
-        # Apply Jacobian transformation: divide by product of x values
-        jacobian = 1.0 / x.prod(axis=1)
-
-        return normal_pdf * jacobian
+        x = np.asarray(x)
+        batch_shape = x.shape[:-1]
+        flat_x = x.reshape(-1, self.d)
+        flat_weights = np.zeros(flat_x.shape[0], dtype=float)
+        positive = (flat_x > 0).all(axis=-1)
+        if positive.any():
+            # Evaluate only positive paths, then restore every batch dimension.
+            prices = flat_x[positive]
+            log_transformed = log(prices / self.initial_value)
+            normal_pdf = self.log_mvn_scipy.pdf(log_transformed)
+            flat_weights[positive] = normal_pdf * (1.0 / prices.prod(axis=-1))
+        return flat_weights.reshape(batch_shape)
 
     def gen_samples(
         self, n: Union[None, int] = None, n_min: Union[None, int] = None, n_max: Union[None, int] = None, return_weights: bool = False, warn: bool = True
