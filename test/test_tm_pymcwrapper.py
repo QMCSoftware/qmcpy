@@ -22,28 +22,36 @@ class TestPyMC(unittest.TestCase):
         with pymc.Model() as normal_model:
             pymc.Normal("x", mu=0.0, sigma=1.0)
         self.models.append({"model": normal_model, "dims":1, "name": "normal",
-                            "mean": 0.0, "weight": lambda x: 1/stats.norm.pdf(x[:, 0], loc=0.0, scale=1.0)})
+                            "mean": 0.0, "weight": lambda x: 1/stats.norm.pdf(x[:, 0], loc=0.0, scale=1.0),
+                            "transform_unconstrained_to_constrained": lambda x: x,
+                            "jac_unconstrained_to_constrained": lambda x: 1.0})
 
         nu = 5.0
         with pymc.Model() as t_model:
             s = pymc.ChiSquared("s", nu=nu)
             pymc.Normal("x", mu=0.0, sigma=pymc.math.sqrt(nu/s))
         self.models.append({"model": t_model, "dims": 2, "name": "t_dist",
-                            "mean": [nu, 0.0], "weight": lambda x: 1/(stats.norm.pdf(x[:,1], loc=0.0, scale=np.sqrt(nu/x[:,0]))*stats.chi2.pdf(x[:,0], df=nu))})
+                            "mean": [nu, 0.0], "weight": lambda x: 1/(stats.norm.pdf(x[:,1], loc=0.0, scale=np.sqrt(nu/x[:,0]))*stats.chi2.pdf(x[:,0], df=nu)),
+                            "transform_unconstrained_to_constrained": lambda x: np.stack([np.exp(x[:,0]), x[:,1]], axis=1),
+                            "jac_unconstrained_to_constrained": lambda x: np.exp(x[:,0])})
 
         # test the observed variable is removed (only prior is sampled)
         with pymc.Model() as observed_t_model:
             s = pymc.ChiSquared("s", nu=nu)
             pymc.Normal("x", mu=0.0, sigma=pymc.math.sqrt(nu/s), observed=np.ones(3))
         self.models.append({"model": observed_t_model, "dims": 1, "name": "observed_t_dist",
-                            "mean": [nu], "weight": lambda x: 1/(np.prod(stats.norm.pdf(x[:,1:], loc=0.0, scale=np.sqrt(nu/x[:,[0]])), axis=1)*stats.chi2.pdf(x[:,0], df=nu))})
+                            "mean": [nu], "weight": lambda x: 1/(np.prod(stats.norm.pdf(x[:,1:], loc=0.0, scale=np.sqrt(nu/x[:,[0]])), axis=1)*stats.chi2.pdf(x[:,0], df=nu)),
+                            "transform_unconstrained_to_constrained": lambda x: np.exp(x),
+                            "jac_unconstrained_to_constrained": lambda x: np.squeeze(np.exp(x))})
 
         # designed to catch wrong reordering in internal qmc model
         with pymc.Model() as model_that_gets_reordered:
             pymc.Normal("x", mu=0.0, sigma=1.0)
             pymc.ChiSquared("s", nu=nu)
         self.models.append({"model": model_that_gets_reordered, "dims": 2, "name": "model_that_gets_reordered",
-                            "mean": [0.0, nu], "weight": lambda x: 1/(stats.norm.pdf(x[:,0], loc=0.0, scale=1.0)*stats.chi2.pdf(x[:,1], df=nu))})
+                            "mean": [0.0, nu], "weight": lambda x: 1/(stats.norm.pdf(x[:,0], loc=0.0, scale=1.0)*stats.chi2.pdf(x[:,1], df=nu)),
+                            "transform_unconstrained_to_constrained": lambda x: np.stack([x[:,0], np.exp(x[:,1])], axis=1),
+                            "jac_unconstrained_to_constrained": lambda x: np.exp(x[:,1])})
         self.seed = 7
 
     def _make_sampler(self, dims, seed=None):
@@ -132,6 +140,34 @@ class TestPyMC(unittest.TestCase):
                 m = PyMCWrapper(DigitalNetB2(dimension=model_dict["dims"], replications=2, seed=self.seed), model_dict["model"])
                 s = m.gen_samples(n=8)
                 self.assertEqual(s.shape, (2, 8, model_dict["dims"]))
+
+    def test_unconstrained_space_samples(self):
+        from qmcpy import PyMCWrapper
+        for model_dict in self.models:
+            with self.subTest(name=model_dict["name"]):
+                m_constrained   = PyMCWrapper(DigitalNetB2(dimension=model_dict["dims"], seed=self.seed), model_dict["model"])
+                m_unconstrained = PyMCWrapper(DigitalNetB2(dimension=model_dict["dims"], seed=self.seed), model_dict["model"], unconstrained_samples=True)
+                samples               = m_constrained(8)
+                unconstrained_samples = m_unconstrained(8)
+                transform = model_dict["transform_unconstrained_to_constrained"]
+                jac       = model_dict["jac_unconstrained_to_constrained"]
+                np.testing.assert_array_almost_equal(
+                    samples, transform(unconstrained_samples)
+                )
+
+    def test_unconstrained_space_weights(self):
+        from qmcpy import PyMCWrapper
+        for model_dict in self.models:
+            with self.subTest(name=model_dict["name"]):
+                m_constrained   = PyMCWrapper(DigitalNetB2(dimension=model_dict["dims"], seed=self.seed), model_dict["model"])
+                m_unconstrained = PyMCWrapper(DigitalNetB2(dimension=model_dict["dims"], seed=self.seed), model_dict["model"], unconstrained_samples=True)
+                samples,               weights               = m_constrained(8, return_weights=True)
+                unconstrained_samples, unconstrained_weights = m_unconstrained(8, return_weights=True)
+                transform = model_dict["transform_unconstrained_to_constrained"]
+                jac       = model_dict["jac_unconstrained_to_constrained"]
+                np.testing.assert_array_almost_equal(
+                    1/weights * jac(unconstrained_samples), 1/unconstrained_weights
+                )
 
 if __name__ == "__main__":
     unittest.main()
