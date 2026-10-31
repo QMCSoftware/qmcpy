@@ -5,8 +5,8 @@ from ..true_measure.abstract_true_measure import AbstractTrueMeasure
 from typing import Union
 from .abstract_integrand import AbstractIntegrand
 from ..discrete_distribution import DigitalNetB2
-from ..true_measure import GeometricBrownianMotion
-from ..util import ParameterError
+from ..true_measure import GeometricBrownianMotion, ImportanceSampling
+from ..util import DimensionError, ParameterError
 import numpy as np
 from scipy.special import ndtr
 
@@ -18,24 +18,30 @@ class FinancialOption(AbstractIntegrand):
     - Strike price $K$
     - Interest rate $r$
     - Volatility $\sigma$
-    - Drift $\gamma$
     - Equidistant monitoring times $\boldsymbol{\tau} = (\tau_1,\dots,\tau_d)^T$ with $\tau_d$ the final (exercise) time and $\tau_j = \tau_d j/d$.
 
-    Define the [geometric brownian
-    motion](https://en.wikipedia.org/wiki/Geometric_Brownian_motion) as
+    Define the target [geometric brownian
+    motion](https://en.wikipedia.org/wiki/Geometric_Brownian_motion) using an
+    underlying Brownian driver:
 
-    $$\boldsymbol{S}(\boldsymbol{t}) = S_0
-    e^{(\gamma-\sigma^2/2)\boldsymbol{\tau}+\sigma\boldsymbol{t}}, \qquad
-    \boldsymbol{T} \sim \mathcal{N}(\boldsymbol{0},\mathsf{\Sigma})$$
+    $$\boldsymbol{S}(\boldsymbol{w}) = S_0
+    e^{(r-\sigma^2/2)\boldsymbol{\tau}+\sigma\boldsymbol{w}}, \qquad
+    \boldsymbol{W} \sim \mathcal{N}(\boldsymbol{0},\mathsf{\Sigma})$$
 
-    where $\boldsymbol{T}$ is a standard Brownian motion so $\mathsf{\Sigma} =
+    where $\boldsymbol{W}$ contains standard Brownian motion values at the
+    monitoring times, so $\mathsf{\Sigma} =
     \left(\min\{\tau_j,\tau_{j'}\}\right)_{j,j'=1}^d$.
+    FinancialOption uses the interest rate $r$ (`interest_rate`) as the target
+    GBM drift.
 
-    The discounted payoff is
+    The payoff method consumes the generated asset-price path $\boldsymbol{S}$.
+    Its discounted payoff is
 
-    $$g(\boldsymbol{t}) = P(\boldsymbol{S}(\boldsymbol{t}))e^{-r \tau_d}$$
+    $$g(\boldsymbol{S}) = P(\boldsymbol{S})e^{-r T}, \qquad T=\tau_d$$
 
-    where the payoff function $P$ will be defined depending on the option.
+    where the payoff function $P$ depends on the option. An explicit
+    importance-sampling proposal may use a different GBM law, but must generate
+    asset-price paths in the same monitoring-time coordinates.
 
     Below we will use $S_{-1}$ to denote the final element of $\boldsymbol{S}$,
     the value of the path at exercise time.
@@ -188,6 +194,15 @@ class FinancialOption(AbstractIntegrand):
         >>> print("%.4f"%muhats.mean())
         1.7765
 
+        Explicit importance sampling uses a proposal in asset-price coordinates.
+        The financial parameters still define the target model.
+
+        >>> dd = DigitalNetB2(4, seed=7)
+        >>> proposal = GeometricBrownianMotion(dd, initial_value=30, drift=0.25, diffusion=0.25)
+        >>> option = FinancialOption(dd, proposal=proposal)
+        >>> bool(np.isfinite(option(16)).all())
+        True
+
         Multi-level options
 
         >>> seed_seq = np.random.SeedSequence(7)
@@ -256,6 +271,8 @@ class FinancialOption(AbstractIntegrand):
         barrier_in_out: str = "IN",
         barrier_price: float = 38,
         digital_payout: float = 10,
+        *,
+        proposal: Union[None, GeometricBrownianMotion] = None,
     ) -> None:
         r"""Initialize a FinancialOption integrand.
 
@@ -287,6 +304,19 @@ class FinancialOption(AbstractIntegrand):
             barrier_in_out (str): Either `'IN'` or `'OUT'`.
             barrier_price (float): $B$.
             digital_payout (float): $\rho$.
+            proposal (Union[None, GeometricBrownianMotion]): Keyword-only
+                standalone GBM proposal in asset-price coordinates. It must use
+                `sampler`, which must be a discrete distribution, and match the
+                target horizon and ordered monitoring times. Its initial value,
+                drift, diffusion, and decomposition may differ from the target.
+                FinancialOption parameters always define the target model.
+                Defaults to ordinary sampling when `None`.
+
+        Raises:
+            DimensionError: If proposal and target dimensions differ.
+            ParameterError: If the proposal is not a standalone GBM, uses a
+                different sampler, or has an incompatible horizon or time grid.
+                ImportanceSampling also requires certified nondegenerate support.
         """
         self.parameters = [
             "option",
@@ -312,6 +342,13 @@ class FinancialOption(AbstractIntegrand):
             diffusion=self.volatility**2,
             decomp_type=self.decomp_type,
         )
+        self.proposal = proposal
+        if self.proposal is not None:
+            self._validate_proposal(self.true_measure)
+            self.true_measure = ImportanceSampling(
+                target=self.true_measure, proposal=self.proposal
+            )
+            self.parameters += ["proposal"]
         self.discount_factor = np.exp(-self.interest_rate * self.t_final)
         self.level = level
         self.d_coarsest = d_coarsest
@@ -449,11 +486,30 @@ class FinancialOption(AbstractIntegrand):
             dimension_indv=dim_shape, dimension_comb=dim_shape, parallel=False
         )
 
+    def _validate_proposal(self, target):
+        """Validate a standalone proposal in the target price coordinates."""
+        if not isinstance(self.proposal, GeometricBrownianMotion):
+            raise ParameterError("proposal must be a standalone GeometricBrownianMotion")
+        if self.proposal.transform is not self.proposal:
+            raise ParameterError("proposal must be a standalone GeometricBrownianMotion")
+        if self.proposal.d != target.d:
+            raise DimensionError("proposal and target must have matching dimensions")
+        if not isinstance(self.sampler, AbstractDiscreteDistribution) or (
+            self.proposal.discrete_distrib is not self.sampler
+        ):
+            raise ParameterError("proposal must use the supplied discrete distribution")
+        if self.proposal.t != target.t:
+            raise ParameterError("proposal and target must have the same horizon")
+        if not np.array_equal(self.proposal.time_vec, target.time_vec):
+            raise ParameterError("proposal and target must have the same ordered monitoring times")
+
     def g(self, t: np.ndarray, **kwargs: dict) -> np.ndarray:
         """Evaluate the discounted option payoff along each price path.
 
         Args:
-            t (np.ndarray): Geometric Brownian motion paths from the true measure.
+            t (np.ndarray): Asset-price paths in the target price coordinates,
+                generated either by the ordinary GBM transform or by an explicit
+                importance-sampling proposal.
             **kwargs (dict): Unused; accepted for API consistency.
 
         Returns:
@@ -891,6 +947,11 @@ class FinancialOption(AbstractIntegrand):
         return self.d_coarsest * 2**level
 
     def _spawn(self, level, sampler):
+        proposal = (
+            None
+            if self.proposal is None
+            else self.proposal._spawn(sampler, sampler.d)
+        )
         return FinancialOption(
             sampler=sampler,
             option=self.option,
@@ -908,6 +969,7 @@ class FinancialOption(AbstractIntegrand):
             barrier_in_out=self.barrier_in_out,
             barrier_price=self.barrier_price,
             digital_payout=self.digital_payout,
+            proposal=proposal,
         )
 
 

@@ -6,6 +6,7 @@ from qmcpy import (
     BrownianMotion,
     DigitalNetB2,
     Gaussian,
+    GeometricBrownianMotion,
     ImportanceSampling,
     Kumaraswamy,
     Lebesgue,
@@ -15,6 +16,35 @@ from qmcpy.util import DimensionError, ParameterError
 
 
 class TestImportanceSampling(unittest.TestCase):
+
+    def test_gbm_price_samples_weights_and_replications(self):
+        for replications in (None, 3):
+            with self.subTest(replications=replications):
+                sampler = DigitalNetB2(4, seed=7, replications=replications)
+                target = GeometricBrownianMotion(
+                    sampler, initial_value=30, drift=0.05, diffusion=0.25
+                )
+                proposal = GeometricBrownianMotion(
+                    sampler, initial_value=30, drift=0.30, diffusion=0.25
+                )
+                importance = ImportanceSampling(target, proposal)
+                samples, weights = importance(16, return_weights=True)
+                self.assertEqual(weights.shape, samples.shape[:-1])
+                self.assertTrue(np.isfinite(weights).all())
+                np.testing.assert_allclose(
+                    weights, target._weight(samples) / proposal._weight(samples), rtol=2e-15
+                )
+                child = importance.spawn()[0]
+                self.assertIsInstance(child.target, GeometricBrownianMotion)
+                self.assertEqual(child.proposal.drift, 0.30)
+                self.assertTrue(np.isfinite(child(8, return_weights=True)[1]).all())
+                with self.assertRaisesRegex(ParameterError, "cannot be used as a sampler"):
+                    GeometricBrownianMotion(importance)
+                with self.assertRaisesRegex(ParameterError, "cannot be the target"):
+                    ImportanceSampling(importance, proposal)
+                with self.assertRaisesRegex(ParameterError, "cannot be the proposal"):
+                    ImportanceSampling(target, importance)
+
 
     def test_sampling_delegates_to_proposal(self):
         proposal = Uniform(
