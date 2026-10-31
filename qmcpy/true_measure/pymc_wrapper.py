@@ -226,9 +226,10 @@ def transformed_conditional_icdf(
     rvs: Sequence[Variable],
     *,
     rvs_to_values: dict[Variable, Variable],
+    rvs_to_transforms: dict[Variable, Variable],
     **kwargs,
 ) -> list[Variable]:
-    """Thin wrapper around conditional_, which creates a value transform rewrite.
+    """Thin wrapper around conditional_icdf, which applies transforms to samples.
 
     This helper will only return the subset of logprob terms corresponding to `rvs`.
     All rvs_to_values and rvs_to_transforms mappings are required.
@@ -250,10 +251,15 @@ def transformed_conditional_icdf(
     # The function returns the icdf for every single value term we provided to it.
     # This includes the extra values we plugged in above, so we filter those we
     # actually wanted in the same order they were given in.
+    # Then, we apply transforms
     icdf_terms = {}
     for rv in rvs:
         value_var = rvs_to_values[rv]
-        icdf_terms[value_var] = temp_icdf_terms[value_var]
+        transform = rvs_to_transforms.get(rv, None)
+        if transform is None:
+            icdf_terms[value_var] = temp_icdf_terms[value_var]
+        else:
+            icdf_terms[value_var] = transform.forward(temp_icdf_terms[value_var])
 
     icdf_terms_list = list(icdf_terms.values())
 
@@ -313,9 +319,8 @@ def icdf(
         rv_icdfs = transformed_conditional_icdf(
             rvs=rvs,
             rvs_to_values=model.rvs_to_values,
+            rvs_to_transforms=model.rvs_to_transforms,
         )
-        if not (isinstance(rv_icdfs, list)):
-            raise AssertionError
 
     icdf_factors = [None] * len(varlist)
     for icdf_order, _icdf in zip(rv_order, rv_icdfs):
@@ -411,11 +416,16 @@ class PyMCWrapper(AbstractTrueMeasure):
     A `Model` is a (collection of) pytensor "graphs" for each random variable, that are later compiled
     into c/c++/numba/jax functions called from python. Some scipy code is also used.
 
-    PyMC focuses on MCMC methods and compiles the model to a `logpdf` function and its derivatives for use MCMC.
+    PyMC focuses on MCMC methods and compiles the model to a `logpdf` function and its derivatives for use in MCMC.
 
     This class compiles:
      - a transform based on the icdf for the distributions,
-     - a vectorized version of the PyMC logpdf - without any potentials or variable transforms 
+     - a vectorized version of the PyMC logpdf
+    and uses these for samples and weights of the TrueMeasure based on the PyMC model.
+
+    By default, the samples and weights are provided in the "constrained" variable space, defined either explicitly
+    or implicitly in the PyMC model (`default_transform` is used for each distribution if not specified).  
+    if `unconstrained_samples=True` is used, samples and weights are obtained for the unconstrained space.
 
     Multivariate distributions are not supported currently due to missing icdf for these in PyTensor.
     The suggested approach to construct these is to transform a set of conditionaly independent
@@ -495,6 +505,17 @@ class PyMCWrapper(AbstractTrueMeasure):
                 [ 0.1125356, -0.4990805],
                 [ 0.0872658,  0.2179012]]])
 
+        Unconstrained space sampling:
+        >>> tm_unconstrained = PyMCWrapper(DigitalNetB2(2, seed=7,replications=3), model,
+        ...                                unconstrained_samples=True)
+        >>> x_unconstrained = tm_unconstrained(4)
+        >>> x_unconstrained.shape
+        (3, 4, 2)
+        >>> np.allclose(np.exp(x_unconstrained[...,0]), x[...,0])
+        True
+        >>> np.allclose(x_unconstrained[...,1], x[...,1])
+        True
+
         Multivariate normal not directly supported:
 
         >>> with pymc.Model() as model:
@@ -522,13 +543,14 @@ class PyMCWrapper(AbstractTrueMeasure):
                [-1.18035468, -0.44369678]])
     """
 
-    def __init__(self, sampler: AbstractDiscreteDistribution, model: Model) -> None:
+    def __init__(self, sampler: AbstractDiscreteDistribution, model: Model, unconstrained_samples: bool=False) -> None:
         r"""Wrap a PyMC Model as a QMCPy true measure.
 
         Args:
             sampler (AbstractDiscreteDistribution): Low discrepancy or iid
                 sampler in dimension d, living on $[0,1)^d$.
             model (Model): A single PyMC model.
+            unconstrained_samples (bool): (default `False`), if True, samples and weights are returned in unconstrained space.
         """
         self.domain = np.tile([0, 1], (sampler.d, 1))
 
@@ -546,15 +568,17 @@ class PyMCWrapper(AbstractTrueMeasure):
                 "model parameter must be a pymc.Model object."
             )
         self._parse_sampler(sampler)
+        self.unconstrained_samples = unconstrained_samples
         # remember original ordering of the model random variables because the transformations used here can reorder them
         self.rv_original_order = {ind: rv.name for ind, rv in zip(range(len(model.basic_RVs)), model.basic_RVs)}
         self.model = hide(model) # remove observed variables so that all variables are free RVs
-        self.model = remove_value_transforms(self.model) # transforms are used in MCMC to sample in unconstrained (transformed) space. for QMC we get rid of this
+        if not self.unconstrained_samples:
+            self.model = remove_value_transforms(copy(self.model)) # transforms are used in MCMC to sample in unconstrained (transformed) space. for QMC we get rid of this
         # potentially new ordering of the model random variables
         self.rv_order = {rv.name: ind for ind, rv in zip(range(len(self.model.basic_RVs)), self.model.basic_RVs)}
         self.model.potentials = pymc.util.treelist() # make sure we are not getting potentials into the logpdf
         self.icdf = compile_icdf(self.model)
-        self.logpdf = compile_vectorized_logp(self.model, point_fn=False)
+        self.logpdf = compile_vectorized_logp(self.model, point_fn=False, jacobian=self.unconstrained_samples)
         # determine shapes of random variables and prepare their indices in a flat vector
         static_shapes = [pt.utils.get_static_shape_from_size_variables([x.size]) for x in self.model.value_vars]
         # if right shape is None, it indicates already a batch shape, so delete it.
@@ -575,6 +599,9 @@ class PyMCWrapper(AbstractTrueMeasure):
         slices = [np.arange(s,e) for s,e in zip(start, end)]
         reorder_list = [self.rv_order[self.rv_original_order[n]] for n in range(len(self.model.basic_RVs))]
         self.reorder_to_original_ind = np.concat([slices[i] for i in reorder_list])
+        # invert self.reorder_to_original_ind
+        self.inv_reorder_to_original_ind = np.empty_like(self.reorder_to_original_ind)
+        self.inv_reorder_to_original_ind[self.reorder_to_original_ind] = np.arange(len(self.inv_reorder_to_original_ind))
 
         # There does not seem to be a reliable way to determine the range, so we set it to [-inf, inf]
         lo = -np.inf
@@ -587,11 +614,10 @@ class PyMCWrapper(AbstractTrueMeasure):
     # Core AbstractTrueMeasure interface
     # ------------------------------------------------------------------
 
-    def _transform(self, x):
-        """Map unit cube samples to the physical space.
-        """
+    def _prepare_inputs(self, x, clip=False):
         x = np.asarray(x, dtype=float)
-        x = _clip_unit_interval(x)
+        if clip:
+            x = _clip_unit_interval(x)
         batch_shape = x.shape[:-1]
         flat_batch = np.prod(batch_shape)
         if self.d > 1:
@@ -602,6 +628,12 @@ class PyMCWrapper(AbstractTrueMeasure):
         if np.prod(inputs_list[-1].shape) == 0:
             inputs_list = inputs_list[:-1]
         inputs_list = [np.reshape(_x, (flat_batch, *shape)) for _x, shape in zip(inputs_list, self.shapes)]
+        return inputs_list, batch_shape
+
+    def _transform(self, x):
+        """Map unit cube samples to the physical space.
+        """
+        inputs_list, batch_shape = self._prepare_inputs(x, clip=True)
         samples = self.icdf(*inputs_list)
         samples = samples.reshape(*batch_shape, -1)
         return samples[..., self.reorder_to_original_ind]
@@ -610,18 +642,8 @@ class PyMCWrapper(AbstractTrueMeasure):
         """
         Compute density weights, pdf(x)
         """
-        x = np.asarray(x, dtype=float)
-        batch_shape = x.shape[:-1]
-        flat_batch = np.prod(batch_shape)
-        if self.d > 1:
-            inputs_list = np.split(x, self.split_indices, axis=-1)
-        else:
-            inputs_list = [x.ravel()]
-        inputs_list = [_x.ravel() for _x in inputs_list]
-        if np.prod(inputs_list[-1].shape) == 0:
-            inputs_list = inputs_list[:-1]
-        inputs_list = [np.reshape(_x, (flat_batch, *shape)) for _x, shape in zip(inputs_list, self.shapes)]
-
+        x = x[..., self.inv_reorder_to_original_ind]
+        inputs_list, batch_shape = self._prepare_inputs(x)
         return np.exp(self.logpdf(*inputs_list)).reshape(*batch_shape)
 
     def _spawn(self, sampler, dimension):
@@ -633,4 +655,4 @@ class PyMCWrapper(AbstractTrueMeasure):
         """
         # TODO: check if we can reuse the compiled functions and only change sampler
         # this will involve adding a constructor
-        return PyMCWrapper(sampler, self.model)
+        return PyMCWrapper(sampler, self.model, self.unconstrained_samples)
