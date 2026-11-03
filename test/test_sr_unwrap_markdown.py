@@ -1,6 +1,12 @@
+from contextlib import redirect_stderr
+from io import StringIO
+from pathlib import Path
+import sys
+import tempfile
 import unittest
+from unittest.mock import patch
 
-from scripts.unwrap_markdown import unwrap_markdown_text
+from scripts.unwrap_markdown import iter_targets, main, unwrap_markdown_text
 
 
 class TestUnwrapMarkdown(unittest.TestCase):
@@ -128,6 +134,38 @@ class TestUnwrapMarkdown(unittest.TestCase):
         source = "    [1] not a real citation, just code\n"
 
         self.assertEqual(unwrap_markdown_text(source), source)
+
+    def test_skips_generated_notebook_dirs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            kept = root / "kept.md"
+            kept.write_text("kept\n", encoding="utf-8")
+            for dirname in (".ipynb_checkpoints", ".virtual_documents"):
+                generated = root / dirname
+                generated.mkdir()
+                (generated / "ignored.md").write_text("ignored\n", encoding="utf-8")
+
+            targets, errors = iter_targets([str(root)])
+
+        self.assertEqual(errors, [])
+        self.assertEqual(targets, [kept])
+
+    def test_invalid_notebook_prevents_partial_rewrite(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            markdown = root / "a.md"
+            original = "first line\nsecond line\n"
+            markdown.write_text(original, encoding="utf-8")
+            (root / "z.ipynb").write_text("not json", encoding="utf-8")
+
+            stderr = StringIO()
+            with patch.object(sys, "argv", ["unwrap_markdown.py", str(root)]):
+                with redirect_stderr(stderr):
+                    status = main()
+
+            self.assertEqual(status, 2)
+            self.assertIn("invalid notebook", stderr.getvalue())
+            self.assertEqual(markdown.read_text(encoding="utf-8"), original)
 
 
 if __name__ == "__main__":

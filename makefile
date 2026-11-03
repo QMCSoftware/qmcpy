@@ -159,6 +159,26 @@ check_ref_style:
 check_demo_references:
 	@$(PYTHON) scripts/check_demo_references.py --diff develop
 
+NOTEBOOK_EXECUTION_PATH ?=
+NOTEBOOK_EXECUTION_ARGS ?=
+NOTEBOOK_EXECUTION_DIFF_BASE ?= develop
+
+# Check that every code cell in demos/**/*.ipynb has a sequential
+# execution_count (1, 2, 3, ... with no gaps or out-of-order numbers) and no
+# cell has a saved error output: evidence the notebook was actually run
+# top-to-bottom in one pass before saving, not edited/reordered after a
+# partial run. See scripts/check_notebook_execution.py's module docstring.
+# Informational by default; pass --strict (STRICT=--strict make
+# check_notebook_execution) to make it fail the build.
+check_notebook_execution:
+	@$(PYTHON) scripts/check_notebook_execution.py $(NOTEBOOK_EXECUTION_PATH) $(NOTEBOOK_EXECUTION_ARGS) $(STRICT)
+
+# Same check as check_notebook_execution, but only on notebooks that changed
+# relative to NOTEBOOK_EXECUTION_DIFF_BASE (committed on the branch, modified
+# in the working tree, or untracked).
+check_notebook_execution_changed:
+	@$(PYTHON) scripts/check_notebook_execution.py --diff "$(NOTEBOOK_EXECUTION_DIFF_BASE)" $(NOTEBOOK_EXECUTION_ARGS) $(STRICT)
+
 # Applies only the unambiguous, purely mechanical fixes that
 # check_ref_style flags (a docstring's `**References**` header
 # missing its colon, and `$[N]$` -> `[N]`); everything else it finds is
@@ -427,9 +447,9 @@ open_colab_notebook:  # Open NOTEBOOK in Colab from the current branch, but only
 	elif ! git ls-tree -r --name-only "origin/$$base" | grep -qxF "$$nb"; then \
 		ref="$$branch"; echo "'$$nb' is new (not on origin/$$base): opening the '$$branch' version."; \
 	elif git diff --quiet "origin/$$base" "origin/$$branch" -- "$$nb"; then \
-		ref="$$base"; echo "'$$nb' is unchanged vs origin/$$base -- the standard badge covers it; opening the $$base version."; \
+		ref="$$base"; echo "'$$nb' is unchanged vs origin/$$base: the standard badge covers it; opening the $$base version."; \
 	else \
-		ref="$$branch"; echo "'$$nb' differs from origin/$$base -- opening the '$$branch' version."; \
+		ref="$$branch"; echo "'$$nb' differs from origin/$$base: opening the '$$branch' version."; \
 	fi; \
 	url="https://colab.research.google.com/github/$$slug/blob/$$ref/$$nb"; \
 	echo "$$url"; \
@@ -680,7 +700,7 @@ copydocs:  # mkdocs only looks for content in the docs/ folder, so we have to co
 	@cp community.md docs/community.md
 	@cp -r demos docs
 	@find docs/demos -mindepth 2 -name README.md -delete
-	@# Editor/kernel artifacts, not real demo content -- and the same source of
+	@# Editor/kernel artifacts, not real demo content, and the same source of
 	@# the ENOTEMPTY race this target's own rm -rf above retries around.
 	@find docs/demos -name ".ipynb_checkpoints" -type d -exec rm -rf {} +
 	@cp -r paper docs
@@ -717,7 +737,7 @@ check_links_external: copydocs  # also checks http/https links; slow and network
 	@$(PYTHON) scripts/check_links.py site --external
 
 # The targets above check links inside the new site; these check the other
-# direction -- already-published URLs that would 404 after the next deploy.
+# direction: already-published URLs that would 404 after the next deploy.
 check_removed_urls: copydocs  # fetches the deployed sitemap.xml; needs network
 	@$(PYTHON) scripts/check_removed_urls.py
 
@@ -769,12 +789,12 @@ RULE := ========================================================================
 RULE2 := $(subst =,-,$(RULE))
 
 # `make format` rewrites files in place. Every step ends with one summary line:
-#     <tool>: clean         (0/N files)   -- nothing changed
-#     <tool>: 3 changed     (3/N files)   -- 3 files were rewritten
+#     <tool>: clean         (0/N files)   : nothing changed
+#     <tool>: 3 changed     (3/N files)   : 3 files were rewritten
 # Review the result with `git diff` before committing.
 format:
 	@echo "$(RULE)"
-	@echo "make format: rewriting files in place -- review with 'git diff' afterwards"
+	@echo "make format: rewriting files in place, review with 'git diff' afterwards"
 	@echo "$(RULE)"
 	@echo
 	@echo "> flatten_qmcpy_imports"
@@ -805,8 +825,7 @@ format:
 	@$(MAKE) fix_docstring_indent
 	@echo
 	@echo
-	@echo
-	@echo "make format: done -- a 'clean' line for every step means nothing changed"
+	@echo "make format: done. A 'clean' line for every step means nothing changed"
 	@echo "$(RULE2)"
 	@echo
 	@# No third-party docstring reformatter here on purpose: format-docstring
@@ -815,15 +834,29 @@ format:
 	@# `**References: **`. Wrapping/whitespace-only tools like docformatter are
 	@# safe to add later if wanted; a full reflow pass is not.
 
-# `make check` only reads -- it never edits the tree. Every step ends with one
+# Read-only counterparts for the mechanical steps in make format.
+check_format:
+	@echo "$(RULE)"
+	@echo "make check_format: verifying formatting without editing the tree"
+	@echo "$(RULE)"
+	@$(PYTHON) scripts/flatten_qmcpy_imports.py --check
+	@$(PYTHON) scripts/unwrap_markdown.py --check "$(MARKDOWN_UNWRAP_PATH)"
+	@$(PYTHON) scripts/remove_trailing_whitespace.py --check "$(FORMAT_PATH)"
+	@$(PYTHON) scripts/strip_notebook_execution_metadata.py --check "$(FORMAT_PATH)"
+	@$(MAKE) check_colab_notebooks
+	@$(MAKE) check_asserts_changed
+	@$(MAKE) check_docstring_arg_types_changed
+	@$(MAKE) check_docstring_indent_changed STRICT=--strict
+
+# `make check` only reads: it never edits the tree. Every step ends with one
 # summary line:
-#     <tool>: clean         (0/N files)   -- nothing to fix
-#     <tool>: 2 problem(s)  (2/N files)   -- 2 files need attention
+#     <tool>: clean         (0/N files)   : nothing to fix
+#     <tool>: 2 problem(s)  (2/N files)   : 2 files need attention
 # Same conventions as alltests.yml's "Check test-suite conventions" step. It
 # stops at the first step that fails; fix that step and rerun.
 check:
 	@echo "$(RULE)"
-	@echo "make check: read-only, same rules as CI -- nothing here edits the tree"
+	@echo "make check: read-only, same rules as CI, nothing here edits the tree"
 	@echo "$(RULE)"
 	@echo
 	@echo "> check_test_style"
@@ -832,8 +865,11 @@ check:
 	@echo "> check_docstring_changed"
 	@$(MAKE) check_docstring_changed
 	@echo
-	@echo "> check_ref_style"
-	@$(MAKE) check_ref_style
+	@echo "> check_ref_style_changed"
+	@$(MAKE) check_ref_style_changed
+	@echo
+	@echo "> check_notebook_execution_changed"
+	@$(MAKE) check_notebook_execution_changed #STRICT=--strict
 	@echo
 	@echo "> check_demo_references"
 	@$(MAKE) check_demo_references
@@ -855,12 +891,12 @@ check:
 	@echo
 	@echo
 	@echo
-	@echo "make check: done -- check_ref_style and check_demo_references are"
+	@echo "make check: done. check_ref_style and check_demo_references are"
 	@echo "informational only and never fail the build; re-read their output above"
 	@echo "$(RULE2)"
 	@echo
 	@# check_links_external deliberately NOT included: its own comment already
-	@# says "slow and network-flaky, run locally" -- not something `check`
+	@# says "slow and network-flaky, run locally", not something `check`
 	@# should depend on. check_pep8_changed also deliberately excluded: 664
 	@# existing violations in currently-changed files would break `check`
 	@# immediately (same shape as F9/F10's docstring backlog; would need the
@@ -877,3 +913,32 @@ rm_trailing_whitespace:
 
 strip_notebook_execution_metadata:
 	@$(PYTHON) scripts/strip_notebook_execution_metadata.py "$(FORMAT_PATH)"
+
+##########################################################
+# Prepush: the subset of `make check` that's safe to enforce
+##########################################################
+
+# `make check`'s own checks are whole-repo and informational on purpose:
+# e.g. check_ref_style's citation-key matching currently flags findings in
+# dozens of pre-existing files nobody's touching, so making that strict
+# repo-wide would block every future push regardless of what changed. This
+# instead runs read-only formatting checks and the two strict checks that
+# catch the most common recurring mistakes (a notebook saved
+# without being fully re-run; a citation added without updating
+# References, or vice versa), scoped to files changed relative to develop,
+# in STRICT mode: a check that can only fail because of something this
+# branch actually introduced. It then runs `make check` for broad visibility.
+# Static checks run first (seconds) so a doc mistake fails fast before paying
+# for the slower test suite below.
+prepush:
+	@time $(MAKE) check_format
+	@echo
+	@echo "$(RULE)"
+	@echo "make prepush: enforcing on files changed relative to develop"
+	@echo "$(RULE)"
+	@time $(MAKE) check_notebook_execution_changed STRICT=--strict
+	@time $(MAKE) check_ref_style_changed STRICT=--strict
+	@time $(MAKE) check
+	@time $(MAKE) tests_fast
+	@echo
+	@echo "make prepush: done, nothing blocking found. Safe to push."
