@@ -1,7 +1,9 @@
 # Kernel and discrepancy collaboration
 
-**Status:** Draft for discussion. This branch establishes guidance; it does
-not implement or approve a new public API.
+**Status:** Draft for discussion, updated after auditing `develop` at
+`3c89e7fc`. This branch establishes guidance; it does not implement or approve
+a new public API. See the [audit and reproductions](kernel-discrepancy-audit.md)
+and the [paper copies and reading guide](references/README.md).
 
 **Collaborators:** Fred Hickernell and [Laasya (`Laasya-73`)](https://github.com/Laasya-73).
 
@@ -27,21 +29,35 @@ here through a reviewed change before treating it as an implementation contract.
 ## Goal and scope
 
 Extend QMCPy's existing kernels with a coherent discrepancy interface for
-point-set-versus-measure and point-set-versus-point-set comparisons. Keep a
-path toward two-sample tests and GP/Bayesian-cubature use without replacing the
-existing kernel model prematurely.
+point-set-versus-measure and point-set-versus-point-set comparisons. Fred's
+requirements are:
+
+- Cheap discrepancy evaluation for periodic shift-invariant (SI) kernels with
+  matching lattice sequences and digitally shift-invariant (DSI) kernels with
+  matching digital sequences.
+- Reusable structured Gram-matrix operations for Bayesian credible intervals
+  and related kernel methods, preserving existing backend/batch capabilities.
+- A general dense or blocked path for kernels, measures, or designs without
+  a validated fast pairing. Not every kernel supports cheap evaluation.
+- Cancellation-resistant evaluation of small discrepancies, spectra, and
+  credible-interval factors, following the joint Jagadeeswaran–Hickernell
+  papers [1], [2].
+
+Keep a path toward two-sample tests and GP/Bayesian-cubature use without
+replacing the existing kernel model prematurely.
 
 Retain the [original MATH 565 convergence plan](https://github.com/fjhickernell/HickernellAcademicLib/blob/83a47281d7763eb8b4b6b2bc1f44412fa531b7f7/classlib/math_565_%E2%86%92_qmcpy_kernels_discrepancy_convergence_plan.md)
 as provenance. It uses former repository names, includes placeholder sections,
 and predates current QMCPy capabilities; its proposed dataclasses and module
 layout are not an approved migration specification.
 
-The initial implementation should reuse existing kernel evaluation and
-analytical-integral hooks, establish a small dense reference calculation, and
-validate it independently. An existing squared-exponential kernel with the
-uniform unit-cube target is a candidate; the collaborators must confirm the
-first supported pair and deliverable. Broader kernel/measure families, prefix
-calculations, and structure-specific acceleration can follow in separate PRs.
+The first supported fast examples should include one existing SI/lattice
+pair and one existing DSI/digital-net pair, with the uniform unit-cube target.
+Agree on the exact classes and admissible sampler settings. Reuse existing
+kernel evaluation and analytical-integral hooks, with small dense reference
+calculations for independent validation. A squared-exponential or another
+nonmatching kernel can demonstrate the general path; it does not inherit the
+torus/digital-group shortcut merely by being stationary.
 
 ## Verified starting point
 
@@ -55,6 +71,7 @@ recheck affected interfaces when `develop` advances.
 | Existing `single_integral_01d` and `double_integral_01d` kernel methods | These are unit-cube integrals, not expectations for an arbitrary `TrueMeasure`. Gaussian/squared-exponential and SI/DSI families implement them; not every kernel does. |
 | [Classlib discrepancy prototype](https://github.com/fjhickernell/HickernellAcademicLib/tree/83a47281d7763eb8b4b6b2bc1f44412fa531b7f7/classlib/discrepancy) | Contains sample/sample and sample/analytical-measure comparisons, prefix calculations, and several kernels. The uniform-measure adapter has analytical formulas for the centered kernel. It is reference code to evaluate, not a package to copy wholesale. |
 | [Kronecker helpers](https://github.com/QMCSoftware/qmcpy/blob/3c89e7fc/qmcpy/discrete_distribution/kronecker.py) and [MPMC utilities](https://github.com/QMCSoftware/qmcpy/blob/3c89e7fc/qmcpy/discrete_distribution/mpmc/utils.py) | Existing specialized discrepancy calculations and losses provide comparison cases. Their weight and output conventions need explicit reconciliation with a general interface. |
+| [SI/DSI examples](https://github.com/QMCSoftware/qmcpy/blob/3c89e7fc/qmcpy/kernel/si_dsi_kernels.py) and [Bayesian cubature](https://github.com/QMCSoftware/qmcpy/blob/3c89e7fc/qmcpy/stopping_criterion/abstract_cub_bayes_ld_g.py) | FFT/FWHT products and solves already appear in public-kernel doctests; private Bayesian paths already use first-column spectra. The gap is a shared, validated operator/discrepancy interface. The audit also found baseline correctness defects that must not become the new contract. |
 
 Related work includes [historical discrepancy PR #378](https://github.com/QMCSoftware/qmcpy/pull/378),
 [Lattice kronecker PR #556](https://github.com/QMCSoftware/qmcpy/pull/556),
@@ -62,6 +79,104 @@ Related work includes [historical discrepancy PR #378](https://github.com/QMCSof
 [shape issue #629](https://github.com/QMCSoftware/qmcpy/issues/629).
 Check their latest state and avoid duplicating pending fixes. Do not base this
 feature on an unmerged branch without an explicit dependency decision.
+
+## Structured and general computation paths
+
+Treat speed as a property of the kernel, design, target measure, and requested
+operation together. The operator should expose its supported capabilities and
+requirements instead of assuming every invariant kernel is fast on every design.
+
+For a complete, compatible design of `n = 2**m` points in `d` dimensions:
+
+| Pairing | Equal-weight uniform-target squared discrepancy | Structured Gram operations |
+| --- | --- | --- |
+| Periodic SI kernel + rank-1 lattice | Evaluate one correctly indexed kernel/remainder column and reduce it: `O(nd)` for fixed-cost coordinate kernels. No FFT is needed for this scalar. | `O(nd + n log n)` spectral setup; `O(n log n)` matvec/solve; `O(n)` log determinant after the spectrum, subject to a valid positive spectrum. |
+| DSI kernel + compatible digital net | The analogous one-column reduction: `O(nd)`. | FWHT spectral setup/products/solves with analogous costs and explicit binary precision/order conventions. |
+| General/nonmatching pair | Dense or blocked pairwise reference calculation, typically `O(n^2 d)` kernel work; retain analytical target integrals only for supported pairs. | Dense assembly/storage are quadratic; a general dense factorization is typically cubic. Blocking controls evaluation memory and does not create a fast factorization. |
+
+Here, cheap Gram matrices mean a representation supporting cheap operations,
+not a promise to return all `n*n` entries cheaply. Materializing the full array
+still has quadratic output/storage cost. For fixed kernel parameters, retain
+the generator column and spectrum using linear additional storage. Repeated
+hyperparameter fitting incurs setup/likelihood work for each parameter trial;
+arbitrary-query cross-covariances and posterior variances have separate costs.
+
+Compatibility checks must cover complete dyadic point sets, ordering and
+transform normalization, common shifts, digital linear scrambling, binary
+precision, interlacing, independent sampler replications, and kernel batches.
+`fftbr` expects bit-reversed ordering; other lattice orders need a validated
+permutation/transform. Do not enable the simple FWHT route for nested uniform
+(Owen/NUS) scrambling, arbitrary prefixes, or arbitrary permutations without
+an additional valid construction. Pooling independent replications does not
+automatically yield one structured Gram matrix. Target transformations,
+derivatives, and observation-noise models need their own compatibility contract.
+
+The proposed Gram interface should provide first-column/remainder data,
+spectrum, matvec, solve, log determinant, kernel integrals, and explicit dense
+materialization. Final method names remain a design decision. Preserve scalar
+scale and parameter conventions when connecting it to Bayesian consumers.
+
+## Cancellation resistance is part of the interface
+
+For the normalized product form in [1, sec. 4.4], compute the remainder
+directly. With coordinate terms `a_j`, use `r_1 = a_1` and
+`r_j = r_(j-1) * (1 + a_j) + a_j`; do not form the product and subtract one.
+
+For ordinary SI/DSI kernel values with constant cube integral `S`, retain
+`K = S * 11^T + R` as separate components. Transform the directly evaluated
+remainder column to obtain its constant-mode eigenvalue `rho_0`. For a valid
+matching equal-weight design, squared discrepancy is `rho_0 / n`. For
+normalized sample weights `w`, it is `w^T R w`; nonnormalized weights require
+the additional term `S * (sum(w) - 1)^2`.
+
+In the normalized credible-factor calculation of [1], evaluate
+`rho_0 / (n*S + rho_0)` rather than `1 - n*S/lambda_0`. This is a
+dimensionless factor, not by itself every model's posterior variance or full
+Bayes half-width. Preserve the paper's mean/scale estimation, normalization,
+and the distinct MLE/FULL/GCV formulas. A general measure or derivative
+kernel cannot inherit these formulas without verifying their assumptions.
+
+Current public kernels have an internal constant/remainder recurrence, but
+ordinary evaluation adds the constant back. Thus `kernel(stable=True) - S`
+can still destroy the small answer. The new interface must expose and carry
+the remainder and its spectrum through discrepancy and Bayesian operations.
+Reconstructing them as `K - S*11^T` or `lambda_0 - n*S` defeats that purpose.
+
+Provide a convenient public remainder-evaluation function; a candidate name
+is `kernel_minus_constant(...)`. Its contract is direct evaluation of the
+small remainder, with the same array/backend/batch conventions as the full
+kernel and access to the associated constant `S`. Naming and return type
+remain to be reviewed. Reuse the internal recurrence without requiring users
+to prepare its low-level component/derivative arguments. Initially define
+this for ordinary SI/DSI values; derivative combinations and general
+measure-centered kernels need their own reviewed contracts. Unsupported
+kernels must not silently implement it as full-kernel subtraction while
+claiming cancellation resistance.
+
+Require high-precision or independently known tiny-discrepancy cases, small
+coordinate weights, increasing dimension/sample size, scale changes, and
+NumPy/PyTorch dtype checks. Include a case where subtraction returns zero but
+the reference is positive; an absolute tolerance that accepts zero is
+insufficient. Define zero/singular cases and distinguish harmless roundoff,
+negative unbiased estimates, and materially invalid covariance spectra.
+Unconditional absolute values or undocumented jitter must not hide defects.
+
+## Implementation sequence
+
+1. Triage the [audited baseline defects](kernel-discrepancy-audit.md) into
+   focused bug work and independent regression cases. Correctness fixes are
+   separate from introducing a new abstraction.
+2. Agree on kernel/measure, estimator/output, weight, and stable-remainder
+   contracts. Establish a dense/blocked reference without replacing the
+   existing object model.
+3. Expose validated SI/lattice and DSI/digital-net discrepancy and structured
+   Gram operations, preserving remainder information and explicit fast-path
+   eligibility. Validate both against dense and high-precision references.
+4. Connect Bayesian consumers to the shared operations. Check signed
+   integrands, all supported MLE/FULL/GCV modes, hyperparameter conversions,
+   and stable credible factors; do not require parity with known defects.
+5. Expand kernel/measure families, prefix operations, and other uses through
+   focused follow-up issues, with explicit cost and capability documentation.
 
 ## Decisions to resolve together
 
@@ -90,10 +205,11 @@ feature on an unmerged branch without an explicit dependency decision.
    reference; define blocked evaluation of the same finite sum before large
    examples. Decide
    whether the first implementation needs PyTorch/autograd support.
-6. **Fast paths.** Add lattice/digital-net acceleration only for documented
-   kernel/design combinations. Verify agreement with the dense reference and
-   measure scaling; the old plan's general fast-path ambition is not a
-   complexity guarantee for every kernel or point set.
+6. **Fast paths and stable representations.** Agree on capability dispatch,
+   transform/order metadata, remainder/spectrum access, singular behavior,
+   and dense fallback. Validate matrix symmetry/positive semidefiniteness,
+   operations, and discrepancy separately; matching a dense multiplication
+   alone does not establish a valid covariance.
 
 ## First implementation acceptance criteria
 
@@ -108,6 +224,13 @@ should include:
   differences; compare dense and blocked calculations when blocking is added.
 - Edge cases for insufficient samples, mismatched dimensions, unsupported
   kernel–measure pairs, weight conventions, and finite numerical results.
+- SI/lattice and DSI/digital-net structured-versus-dense products/solves,
+  symmetry and spectra, common-shift invariance, ordering/scrambling rejection,
+  independent replications, and supported Torch parameter gradients.
+- Cancellation-sensitive discrepancies and credible factors checked against
+  high precision, including explicit preservation of a tiny positive result.
+- Bayesian signed-integrand and MLE/FULL/GCV regression checks, and clearly
+  measured setup, repeated-operation, and dense-output costs.
 - A reproducible demo and doctestable examples explaining the interpretation
   and limits of the reported discrepancy.
 - Focused tests, affected documentation checks, AI-use disclosure, CI, and
@@ -167,3 +290,16 @@ A useful first prompt to either AI is:
 > and its linked PRs. Summarize the current decisions, task owner, validation,
 > and next action. Check the branch and worktree before editing; do not begin
 > a task already being edited by the other collaborator.
+
+## References
+
+[1] R. Jagadeeswaran and F. J. Hickernell, "Fast automatic Bayesian cubature
+using lattice sampling," *Statistics and Computing*, vol. 29, pp. 1215–1229,
+2019, doi: [10.1007/s11222-019-09895-9](https://doi.org/10.1007/s11222-019-09895-9).
+See sec. 4.4, printed p. 1224, in the [local paper copy](references/jagadeeswaran-hickernell-2019-lattice.pdf).
+
+[2] R. Jagadeeswaran and F. J. Hickernell, "Fast Automatic Bayesian Cubature
+Using Sobol’ Sampling," in *Advances in Modeling and Simulation: Festschrift
+for Pierre L’Ecuyer*, Z. Botev, A. Keller, C. Lemieux, and B. Tuffin, Eds.,
+pp. 301–318, 2022, doi: [10.1007/978-3-031-10193-9_15](https://doi.org/10.1007/978-3-031-10193-9_15).
+See sec. 3.3, printed pp. 307–310, in the [local paper copy](references/jagadeeswaran-hickernell-2022-sobol.pdf).
