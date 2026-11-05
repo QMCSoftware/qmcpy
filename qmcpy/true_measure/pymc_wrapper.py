@@ -232,6 +232,7 @@ def transformed_conditional_icdf(
     Args:
        rvs (Sequence[Variable]):
        rvs_to_values (dict[Variable, Variable]):
+       rvs_to_transforms (dict[Variable, Variable]):
        **kwargs:
 
     Returns:
