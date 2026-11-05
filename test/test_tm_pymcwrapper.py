@@ -41,7 +41,7 @@ class TestPyMC(unittest.TestCase):
             pymc.Normal("x", mu=0.0, sigma=pymc.math.sqrt(nu/s), observed=np.ones(3))
         self.models.append({"model": observed_t_model, "dims": 1, "name": "observed_t_dist",
                             "mean": [nu], "weight": lambda x: 1/(np.prod(stats.norm.pdf(x[:,1:], loc=0.0, scale=np.sqrt(nu/x[:,[0]])), axis=1)*stats.chi2.pdf(x[:,0], df=nu)),
-                            "transform_unconstrained_to_constrained": lambda x: np.exp(x),
+                            "transform_unconstrained_to_constrained": np.exp,
                             "jac_unconstrained_to_constrained": lambda x: np.squeeze(np.exp(x))})
 
         # designed to catch wrong reordering in internal qmc model
@@ -150,7 +150,6 @@ class TestPyMC(unittest.TestCase):
                 samples               = m_constrained(8)
                 unconstrained_samples = m_unconstrained(8)
                 transform = model_dict["transform_unconstrained_to_constrained"]
-                jac       = model_dict["jac_unconstrained_to_constrained"]
                 np.testing.assert_array_almost_equal(
                     samples, transform(unconstrained_samples)
                 )
@@ -163,7 +162,6 @@ class TestPyMC(unittest.TestCase):
                 m_unconstrained = PyMCWrapper(DigitalNetB2(dimension=model_dict["dims"], seed=self.seed), model_dict["model"], unconstrained_samples=True)
                 samples,               weights               = m_constrained(8, return_weights=True)
                 unconstrained_samples, unconstrained_weights = m_unconstrained(8, return_weights=True)
-                transform = model_dict["transform_unconstrained_to_constrained"]
                 jac       = model_dict["jac_unconstrained_to_constrained"]
                 np.testing.assert_array_almost_equal(
                     1/weights * jac(unconstrained_samples), 1/unconstrained_weights
