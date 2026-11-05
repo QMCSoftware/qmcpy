@@ -24,11 +24,6 @@ from pymc.logprob.abstract import MeasurableOp, _icdf
 from pymc.logprob.basic import _find_unallowed_rvs_in_graph
 from pymc.logprob.utils import get_related_valued_nodes
 from pymc.pytensorf import PointFunc, replace_vars_in_graphs, Function
-from pymc.model.fgraph import (
-    fgraph_from_model,
-    model_free_rv,
-    model_from_fgraph,
-)
 from pymc.model.transform.conditioning import remove_value_transforms
 from pymc import Model
 
