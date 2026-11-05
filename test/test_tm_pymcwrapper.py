@@ -169,5 +169,25 @@ class TestPyMC(unittest.TestCase):
                     1/weights * jac(unconstrained_samples), 1/unconstrained_weights
                 )
 
+    def test_spawn(self):
+        for model_dict in self.models:
+            with self.subTest(name=model_dict["name"]):
+                tm = self._make_pymcwrapper(model_dict)
+                s = 3
+                spawns = tm.spawn(s=s)
+                self.assertEqual(len(spawns), s)
+                self.assertTrue(all(type(spawn) == type(tm) for spawn in spawns))
+                self.assertTrue(
+                    (
+                        all(
+                            spawn.discrete_distrib != tm.discrete_distrib
+                            for spawn in spawns
+                        )
+                    )
+                )
+                self.assertTrue(
+                    all(spawn.transform != tm.transform for spawn in spawns)
+                )
+
 if __name__ == "__main__":
     unittest.main()
