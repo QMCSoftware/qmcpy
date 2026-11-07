@@ -18,7 +18,9 @@ class FinancialOption(AbstractIntegrand):
     - Strike price $K$
     - Interest rate $r$
     - Volatility $\sigma$
-    - Equidistant monitoring times $\boldsymbol{\tau} = (\tau_1,\dots,\tau_d)^T$ with $\tau_d$ the final (exercise) time and $\tau_j = \tau_d j/d$.
+    - Monitoring times $\boldsymbol{\tau} = (\tau_1,\dots,\tau_d)^T$, with
+      $\tau_d$ the exercise time. PCA and Cholesky use $\tau_j = \tau_d j/d$;
+      BrownianBridge uses its default monitoring grid.
 
     Define the target [geometric brownian
     motion](https://en.wikipedia.org/wiki/Geometric_Brownian_motion) using an
@@ -305,8 +307,9 @@ class FinancialOption(AbstractIntegrand):
             barrier_price (float): $B$.
             digital_payout (float): $\rho$.
             proposal (Union[None, GeometricBrownianMotion]): Keyword-only
-                standalone GBM proposal in asset-price coordinates. It must use
-                `sampler`, which must be a discrete distribution, and match the
+                standalone, built-in GBM proposal in asset-price coordinates
+                (subclasses are unsupported). It must use `sampler`, which
+                must be a discrete distribution, and match the
                 target horizon and ordered monitoring times. Its initial value,
                 drift, diffusion, and decomposition may differ from the target.
                 FinancialOption parameters always define the target model.
@@ -488,8 +491,10 @@ class FinancialOption(AbstractIntegrand):
 
     def _validate_proposal(self, target):
         """Validate a standalone proposal in the target price coordinates."""
-        if not isinstance(self.proposal, GeometricBrownianMotion):
-            raise ParameterError("proposal must be a standalone GeometricBrownianMotion")
+        if type(self.proposal) is not GeometricBrownianMotion:
+            raise ParameterError(
+                "proposal must be a standalone built-in GeometricBrownianMotion"
+            )
         if self.proposal.transform is not self.proposal:
             raise ParameterError("proposal must be a standalone GeometricBrownianMotion")
         if self.proposal.d != target.d:

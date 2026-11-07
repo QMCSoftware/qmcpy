@@ -3,6 +3,7 @@ from typing import Union
 import numpy as np
 
 from .abstract_true_measure import AbstractTrueMeasure
+from .geometric_brownian_motion import GeometricBrownianMotion
 from .lebesgue import Lebesgue
 from ..util import DimensionError, ParameterError
 
@@ -19,7 +20,8 @@ class ImportanceSampling(AbstractTrueMeasure):
     an ordinary ``TrueMeasure``, or nested as the target or proposal of another
     ``ImportanceSampling`` object. Calling ``gen_samples(return_weights=True)``
     returns proposal samples and their importance weights, not merely proposal
-    Jacobian weights.
+    Jacobian weights. GBM importance weights require finite, positive proposal
+    prices and numerically nonsingular log-price covariances.
 
     Examples:
         >>> import numpy as np
@@ -146,6 +148,42 @@ class ImportanceSampling(AbstractTrueMeasure):
                 "importance-sampling inputs must have shape (*batch_shape, d)"
             )
         batch_shape = x.shape[:-1]
+        if (
+            type(self.target) is GeometricBrownianMotion
+            and type(self.proposal) is GeometricBrownianMotion
+            and self.target.transform is self.target
+            and self.proposal.transform is self.proposal
+            and self.discrete_distrib.mimics == "StdUniform"
+        ):
+            # For a standalone proposal with unit-uniform inputs, the
+            # Jacobian is the reciprocal of its density. Form the ratio in
+            # log space without materializing either factor.
+            price_error = "GBM importance sampling requires finite, positive proposal prices"
+            try:
+                proposal_samples = self.proposal._jacobian_transform_r(
+                    x, return_weights=False
+                )
+            except FloatingPointError as error:
+                raise ParameterError(price_error) from error
+            if proposal_samples.shape != x.shape:
+                raise AssertionError
+            if not (np.isfinite(proposal_samples) & (proposal_samples > 0)).all():
+                raise ParameterError(price_error)
+            density_error = "GBM importance sampling requires finite log densities at proposal prices"
+            try:
+                log_target = self.target._log_weight(proposal_samples)
+                log_proposal = self.proposal._log_weight(proposal_samples)
+            except FloatingPointError as error:
+                raise ParameterError(density_error) from error
+            if log_target.shape != batch_shape or log_proposal.shape != batch_shape:
+                raise AssertionError
+            if not (np.isfinite(log_target) & np.isfinite(log_proposal)).all():
+                raise ParameterError(density_error)
+            importance_weights = np.exp(log_target - log_proposal)
+            if importance_weights.shape != batch_shape:
+                raise AssertionError
+            return proposal_samples, importance_weights
+
         pdf = self.discrete_distrib.pdf(x)
         if not (pdf.shape == batch_shape):
             raise AssertionError
@@ -194,6 +232,11 @@ class ImportanceSampling(AbstractTrueMeasure):
         Returns:
             samples (np.ndarray): Samples generated through the proposal measure.
             importance_weights (np.ndarray): Returned only when `return_weights=True`.
+
+        Raises:
+            ParameterError: If GBM weights are requested and proposal prices or
+                log densities are not representable, or a log-price covariance
+                is numerically singular.
         """
         x = self.discrete_distrib(n=n, n_min=n_min, n_max=n_max, warn=warn)
         if not (isinstance(return_weights, bool)):

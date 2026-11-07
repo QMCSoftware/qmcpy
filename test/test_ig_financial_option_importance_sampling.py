@@ -91,6 +91,67 @@ class TestFinancialOptionImportanceSampling(unittest.TestCase):
                 self.assertIs(importance.true_measure.target.discrete_distrib, sampler)
                 self.assertIs(importance.discrete_distrib, sampler)
 
+    def test_high_dimensional_identity_proposal(self):
+        # Use the reviewer's configuration with a fixed seed for regression.
+        model = dict(
+            start_price=30, interest_rate=0.05, volatility=0.5, strike_price=35
+        )
+        sampler = DigitalNetB2(256, seed=7)
+        proposal = GeometricBrownianMotion(
+            sampler, initial_value=30, drift=0.05, diffusion=0.25
+        )
+        option = FinancialOption(sampler, proposal=proposal, **model)
+
+        with np.errstate(over="raise", divide="raise", invalid="raise"):
+            prices, weights = option.true_measure(8, return_weights=True)
+            points = sampler(8)
+            values = option.f(points)
+            ordinary_values = FinancialOption(sampler, **model).f(points)
+
+        self.assertTrue(np.isfinite(values).all())
+        np.testing.assert_allclose(values, ordinary_values, rtol=1e-13, atol=1e-14)
+        self.assertEqual(prices.shape, (8, 256))
+        self.assertEqual(weights.shape, (8,))
+        self.assertTrue(np.isfinite(prices).all())
+        self.assertTrue(np.isfinite(weights).all())
+        np.testing.assert_allclose(weights, np.ones(8), rtol=1e-13, atol=1e-14)
+
+    def test_high_dimensional_drifted_proposal(self):
+        sampler = DigitalNetB2(256, seed=7)
+        proposal = self.make_proposal(sampler, drift=0.30)
+        option = FinancialOption(sampler, proposal=proposal, **self.model)
+
+        with np.errstate(over="raise", divide="raise", invalid="raise"):
+            prices, weights = option.true_measure(8, return_weights=True)
+
+        self.assertEqual(prices.shape, (8, 256))
+        self.assertEqual(weights.shape, (8,))
+        self.assertTrue(np.isfinite(prices).all())
+        self.assertTrue(np.isfinite(weights).all())
+        sigma = self.model["volatility"]
+        target_drift = self.model["interest_rate"]
+        theta = (proposal.drift - target_drift) / sigma
+        # Invert the target price map to recover the shifted Brownian path.
+        shifted_driver = (
+            np.log(prices / self.model["start_price"])
+            - (target_drift - sigma**2 / 2) * proposal.time_vec
+        ) / sigma
+        expected = np.exp(-theta * shifted_driver[..., -1] + theta**2 * proposal.t / 2)
+        np.testing.assert_allclose(weights, expected, rtol=2e-12, atol=1e-14)
+
+        # Rescaling both laws leaves the ratio unchanged but pushes both
+        # densities below the floating-point range.
+        scaled_proposal = self.make_proposal(sampler, initial_value=10_000)
+        scaled = FinancialOption(
+            sampler, proposal=scaled_proposal, **dict(self.model, start_price=10_000)
+        ).true_measure
+        with np.errstate(over="raise", under="ignore", divide="raise", invalid="raise"):
+            scaled_prices, scaled_weights = scaled(8, return_weights=True)
+            for measure in (scaled.target, scaled.proposal):
+                self.assertTrue(np.isfinite(measure._log_weight(scaled_prices)).all())
+                np.testing.assert_array_equal(measure._weight(scaled_prices), 0)
+        np.testing.assert_allclose(scaled_weights, expected, rtol=2e-12, atol=1e-14)
+
     def test_different_proposal_law_and_manual_weights(self):
         for replications in (None, 3):
             for call_put in ("CALL", "PUT"):
@@ -152,8 +213,14 @@ class TestFinancialOptionImportanceSampling(unittest.TestCase):
                             )
 
     def test_invalid_proposals(self):
+        class CertifiedGBMSubclass(GeometricBrownianMotion):
+            @property
+            def effective_range(self):
+                return np.tile([0.0, np.inf], (self.d, 1))
+
         sampler = DigitalNetB2(4, seed=7)
         invalid = [
+            ("subclass", CertifiedGBMSubclass(sampler), ParameterError, "built-in"),
             ("brownian", BrownianMotion(sampler), ParameterError, "standalone"),
             ("gaussian", Gaussian(sampler), ParameterError, "standalone"),
             ("composed", GeometricBrownianMotion(Uniform(sampler)), ParameterError, "standalone"),
