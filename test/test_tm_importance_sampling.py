@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 
@@ -6,6 +7,7 @@ from qmcpy import (
     BrownianMotion,
     DigitalNetB2,
     Gaussian,
+    GeometricBrownianMotion,
     ImportanceSampling,
     Kumaraswamy,
     Lebesgue,
@@ -15,6 +17,67 @@ from qmcpy.util import DimensionError, ParameterError
 
 
 class TestImportanceSampling(unittest.TestCase):
+
+    def test_gbm_price_samples_weights_and_replications(self):
+        for replications in (None, 3):
+            with self.subTest(replications=replications):
+                sampler = DigitalNetB2(4, seed=7, replications=replications)
+                target = GeometricBrownianMotion(
+                    sampler, initial_value=30, drift=0.05, diffusion=0.25
+                )
+                proposal = GeometricBrownianMotion(
+                    sampler, initial_value=30, drift=0.30, diffusion=0.25
+                )
+                importance = ImportanceSampling(target, proposal)
+                samples, weights = importance(16, return_weights=True)
+                self.assertEqual(weights.shape, samples.shape[:-1])
+                self.assertTrue(np.isfinite(weights).all())
+                np.testing.assert_allclose(
+                    weights, target._weight(samples) / proposal._weight(samples), rtol=2e-15
+                )
+                child = importance.spawn()[0]
+                self.assertIsInstance(child.target, GeometricBrownianMotion)
+                self.assertEqual(child.proposal.drift, 0.30)
+                self.assertTrue(np.isfinite(child(8, return_weights=True)[1]).all())
+                with self.assertRaisesRegex(ParameterError, "cannot be used as a sampler"):
+                    GeometricBrownianMotion(importance)
+                with self.assertRaisesRegex(ParameterError, "cannot be the target"):
+                    ImportanceSampling(importance, proposal)
+                with self.assertRaisesRegex(ParameterError, "cannot be the proposal"):
+                    ImportanceSampling(target, importance)
+
+
+    def test_gbm_weights_reject_unrepresentable_prices(self):
+        sampler = DigitalNetB2(4, seed=7)
+        target = GeometricBrownianMotion(sampler)
+        proposal = GeometricBrownianMotion(sampler, drift=-1000)
+        importance = ImportanceSampling(target, proposal)
+        prices = proposal(8)
+        self.assertTrue((prices[..., -1] == 0).all())
+        np.testing.assert_array_equal(importance(8), prices)
+        with self.assertRaisesRegex(ParameterError, "finite, positive proposal prices"):
+            importance(8, return_weights=True)
+
+    def test_gbm_weights_reject_numerically_singular_covariance(self):
+        sampler = DigitalNetB2(4, seed=7)
+        grid = dict(
+            decomp_type="BrownianBridge",
+            monitoring_times=[0.2, 0.2 + 1e-12, 0.7, 1.0],
+        )
+        target = GeometricBrownianMotion(sampler, **grid)
+        for lazy_load in (True, False):
+            with self.subTest(lazy_load=lazy_load):
+                proposal = GeometricBrownianMotion(
+                    sampler, drift=0.3, lazy_load=lazy_load, **grid
+                )
+                prices = proposal(8)
+                self.assertTrue((np.isfinite(prices) & (prices > 0)).all())
+                importance = ImportanceSampling(target, proposal)
+                np.testing.assert_array_equal(importance(8), prices)
+                with self.assertRaisesRegex(ParameterError, "covariance is numerically singular"):
+                    proposal._log_weight(prices)
+                with self.assertRaisesRegex(ParameterError, "covariance is numerically singular"):
+                    importance(8, return_weights=True)
 
     def test_sampling_delegates_to_proposal(self):
         proposal = Uniform(
@@ -69,9 +132,16 @@ class TestImportanceSampling(unittest.TestCase):
         )
         x = np.array([[0.1, 0.25], [0.5, 0.75], [0.9, 0.4]])
 
-        samples, importance_weights = (
-            importance_sampling._importance_sampling_transform_r(x)
-        )
+        # A similarly named method on another measure does not opt it in.
+        with (
+            patch.object(target, "_log_weight", create=True) as target_log_weight,
+            patch.object(proposal, "_log_weight", create=True) as proposal_log_weight,
+        ):
+            samples, importance_weights = (
+                importance_sampling._importance_sampling_transform_r(x)
+            )
+        target_log_weight.assert_not_called()
+        proposal_log_weight.assert_not_called()
         expected_samples, proposal_jacobians = (
             proposal._jacobian_transform_r(x, return_weights=True)
         )

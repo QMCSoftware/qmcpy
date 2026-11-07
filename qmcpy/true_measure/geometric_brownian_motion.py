@@ -13,6 +13,7 @@ from numpy import (
     log,
     ndarray,
 )
+import numpy as np
 from scipy.stats import multivariate_normal
 
 
@@ -23,7 +24,7 @@ class GeometricBrownianMotion(BrownianMotion):
     $$\mathrm{GBM}(t) = S_0 \exp[(\gamma - \sigma^2/2) t + \sigma
     \mathrm{BM}(t)]$$
 
-    where BM is a Brownian Motion drift $\gamma$ and diffusion $\sigma^2$.
+    where BM is standard Brownian motion with zero drift and unit diffusion.
 
     Examples:
         >>> gbm = GeometricBrownianMotion(DigitalNetB2(4,seed=7), t_final=2, drift=0.1, diffusion=0.2)
@@ -136,7 +137,7 @@ class GeometricBrownianMotion(BrownianMotion):
             # Compute everything immediately for backwards compatibility
             self.mean_gbm = self._compute_gbm_mean()
             self.covariance_gbm = self._compute_gbm_covariance()
-            self._setup_lognormal_distribution()
+            self._setup_lognormal_distribution(defer_rank_error=True)
 
     @property
     def mean_gbm(self):
@@ -164,7 +165,13 @@ class GeometricBrownianMotion(BrownianMotion):
 
     @property
     def log_mvn_scipy(self):
-        """Lazy-loaded scipy multivariate normal distribution."""
+        """Return the cached Gaussian distribution of log prices.
+
+        Raises:
+            ParameterError: If a positive, distinct monitoring grid has a
+                numerically singular covariance. Path sampling does not
+                require this density factorization.
+        """
         if self._log_mvn_scipy_cache is None:
             self._setup_lognormal_distribution()
         return self._log_mvn_scipy_cache
@@ -188,6 +195,28 @@ class GeometricBrownianMotion(BrownianMotion):
         exponent = (self.drift - 0.5 * self.diffusion) * self.time_vec + bm_samples
         samples = self.initial_value * exp(exponent)
         return samples
+
+    def _map_effective_range(self, input_range):
+        """Certify the positive-orthant envelope of a standalone GBM."""
+        if type(self) is not GeometricBrownianMotion or self.transform is not self:
+            return None
+        bounds = self._broadcast_box(input_range, self.d)
+        if bounds is None or not np.array_equal(
+            bounds, self._broadcast_box(self.domain, self.d)
+        ):
+            return None
+        if (
+            not np.isfinite([self.initial_value, self.drift, self.diffusion]).all()
+            or self.initial_value <= 0
+            or self.diffusion <= 0
+            or not np.isfinite(self.time_vec).all()
+            or self.time_vec[0] <= 0
+            or not (np.diff(self.time_vec) > 0).all()
+        ):
+            return None
+        # Distinct positive times make min(t_i, t_j) positive definite.
+        # Zero and infinity are the closed-envelope bounds, not attained prices.
+        return np.tile([0.0, np.inf], (self.d, 1))
 
     def _spawn(self, sampler, dimension):
         monitoring_times = None
@@ -271,9 +300,8 @@ class GeometricBrownianMotion(BrownianMotion):
 
         return validation_results
 
-    def _setup_lognormal_distribution(self):
-        """Setup scipy multivariate normal for the log-transformed variables.
-        """
+    def _setup_lognormal_distribution(self, *, defer_rank_error=False):
+        """Prepare the Gaussian log-price density when it is representable."""
         # Mean of log(S(t)/S0): (drift - 0.5*diffusion) * t
         log_mean = (self.drift - 0.5 * self.diffusion) * self.time_vec
 
@@ -281,9 +309,21 @@ class GeometricBrownianMotion(BrownianMotion):
         time_matrix = minimum.outer(self.time_vec, self.time_vec)
         log_cov = self.diffusion * time_matrix
 
-        self._log_mvn_scipy_cache = multivariate_normal(
-            mean=log_mean, cov=log_cov, allow_singular=True
-        )
+        # A strictly increasing positive grid defines a full-dimensional law.
+        # Do not silently replace its density with SciPy's pseudo-density if
+        # the covariance loses rank numerically. Preserve truly singular grids.
+        singular_grid = self.time_vec[0] <= 0 or np.any(np.diff(self.time_vec) <= 0)
+        try:
+            self._log_mvn_scipy_cache = multivariate_normal(
+                mean=log_mean, cov=log_cov, allow_singular=singular_grid
+            )
+        except np.linalg.LinAlgError as error:
+            if not defer_rank_error:
+                raise ParameterError(
+                    "GBM log-price covariance is numerically singular"
+                ) from error
+            # Eager setup must not prevent sampling. Leave the cache empty
+            # so an explicit density request reports the rank failure.
 
     def _weight(self, x: ndarray):
         """Compute PDF of multivariate log-normal distribution. For
@@ -291,24 +331,32 @@ class GeometricBrownianMotion(BrownianMotion):
         normal PDF.
 
         Args:
-            x (ndarray): GBM sample paths of shape (n_samples, n_timepoints)
+            x (ndarray): GBM price paths of shape (*batch_shape, d).
 
         Returns:
-            ndarray: PDF values for each sample path
+            ndarray: PDF values of shape batch_shape. Paths with any nonpositive
+                coordinate have density zero.
         """
-        if x.ndim == 1:
-            x = x.reshape(1, -1)
+        return np.exp(self._log_weight(x))
 
-        # Transform to log space: log(x/S0)
-        log_transformed = log(x / self.initial_value)
+    def _log_weight(self, x: ndarray) -> ndarray:
+        """Return the natural log of the density used by `_weight`.
 
-        # Get PDF of underlying multivariate normal
-        normal_pdf = self.log_mvn_scipy.pdf(log_transformed)
-
-        # Apply Jacobian transformation: divide by product of x values
-        jacobian = 1.0 / x.prod(axis=1)
-
-        return normal_pdf * jacobian
+        Preserve the input batch shape. Nonpositive paths have log density
+        minus infinity. Evaluate directly before the density can underflow.
+        """
+        x = np.asarray(x)
+        batch_shape = x.shape[:-1]
+        flat_x = x.reshape(-1, self.d)
+        log_weights = np.full(flat_x.shape[0], -np.inf)
+        positive = (flat_x > 0).all(axis=-1)
+        if positive.any():
+            prices = flat_x[positive]
+            log_weights[positive] = (
+                self.log_mvn_scipy.logpdf(log(prices / self.initial_value))
+                - log(prices).sum(axis=-1)
+            )
+        return log_weights.reshape(batch_shape)
 
     def gen_samples(
         self, n: Union[None, int] = None, n_min: Union[None, int] = None, n_max: Union[None, int] = None, return_weights: bool = False, warn: bool = True
@@ -324,5 +372,9 @@ class GeometricBrownianMotion(BrownianMotion):
 
         Returns:
             Union[ndarray, Tuple[ndarray, ndarray]]: GBM samples, optionally with weights if return_weights=True
+
+        Raises:
+            ParameterError: If weights are requested for a positive, distinct
+                monitoring grid with a numerically singular covariance.
         """
         return super().gen_samples(n=n, n_min=n_min, n_max=n_max, return_weights=return_weights, warn=warn)
