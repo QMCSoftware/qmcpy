@@ -602,7 +602,7 @@ class PyMCWrapper(AbstractTrueMeasure):
         # There does not seem to be a reliable way to determine the range, so we set it to [-inf, inf]
         lo = -np.inf
         hi = np.inf
-        self.range = np.array([[lo, hi]*sampler.d])
+        self.range = np.stack([np.array([lo, hi]) for _ in range(sampler.d)], axis=0)
 
         super(PyMCWrapper, self).__init__()
 

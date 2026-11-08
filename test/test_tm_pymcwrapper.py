@@ -187,5 +187,11 @@ class TestPyMC(unittest.TestCase):
                     all(spawn.transform != tm.transform for spawn in spawns)
                 )
 
+    def test_range_shape(self):
+        for model_dict in self.models:
+            with self.subTest(name=model_dict["name"]):
+                tm = self._make_pymcwrapper(model_dict)
+                self.assertEqual(tm.range.shape, (model_dict["dims"], 2))
+
 if __name__ == "__main__":
     unittest.main()
