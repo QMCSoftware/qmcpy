@@ -1,6 +1,5 @@
 import unittest
 import warnings
-import numpy as np
 from qmcpy import (
     CubQMCAmericanG,
     CubQMCNetG,
@@ -63,9 +62,9 @@ class TestCubQMCAmericanG(unittest.TestCase):
         sc1 = CubQMCNetG(ao, abs_tol=1.0, n_init=2**8, n_limit=2**10)
         with warnings.catch_warnings(record=True) as caught_warnings:
             warnings.simplefilter("always")
-            sc2 = CubQMCAmericanG(ao, abs_tol=1e-4, stopping_criterion=sc1)
+            CubQMCAmericanG(ao, abs_tol=1e-4, stopping_criterion=sc1)
             warning_messages = [str(w.message) for w in caught_warnings if issubclass(w.category, ParameterWarning)]
-            self.assertTrue(len(warning_messages) >= 1)
+            self.assertGreaterEqual(len(warning_messages), 1)
             self.assertTrue(any("Conflicting input values detected" in msg for msg in warning_messages))
 
     def test_iid_replications(self):

@@ -307,19 +307,6 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
 
         return solution, data
 
-        # Step 3: Attach training metadata and finalize
-        data.n_train = self.n_train
-        data.time_train = time_train
-        data.betas = self.integrand.betas
-        data.stopping_crit = self
-
-        self._set_elapsed_time(data, time() - t_start)
-        trace.iteration(data)
-        self._finalize_integration_data(data, time() - t_start)
-        trace.finalize()
-
-        return solution, data
-
     def set_tolerance(
         self,
         abs_tol: Union[None, float] = None,
