@@ -10,9 +10,11 @@ from ..discrete_distribution.abstract_discrete_distribution import (
 )
 from ..integrand.abstract_integrand import AbstractIntegrand
 from ..true_measure import GeometricBrownianMotion
-from ..util import ParameterError
+from ..util import ParameterError, ParameterWarning
 from typing import Union, Tuple, Any
 from time import time
+import warnings
+import numpy as np
 
 
 class CubQMCAmericanG(AbstractStoppingCriterion):
@@ -46,6 +48,7 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
         n_init: int = 2**10,
         n_limit: int = 2**30,
         n_train: int = 2**12,
+        training_discrete_distrib: Union[None, AbstractDiscreteDistribution] = None,
         stopping_criterion: Union[None, type, AbstractStoppingCriterion] = None,
         **kwargs: dict
     ) -> None:
@@ -58,7 +61,11 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
             n_init (int): Initial number of samples for pricing integration.
             n_limit (int): Maximum number of samples for pricing integration.
             n_train (int): Number of LSM training samples.
-            stopping_criterion (Union[None, type, AbstractStoppingCriterion]): Custom stopping criterion class or instance to use for pricing stage.
+            training_discrete_distrib (Union[None, AbstractDiscreteDistribution]): Discrete distribution
+                used to generate training paths for the LSM regression. If None, defaults to an
+                independent spawn of integrand.discrete_distrib.
+            stopping_criterion (Union[None, type, AbstractStoppingCriterion]): Custom stopping criterion
+                class or instance to use for pricing stage.
             **kwargs (dict): Extra keyword arguments passed to the pricing stopping criterion.
         """
         self.abs_tol = abs_tol
@@ -67,7 +74,7 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
         self.n_limit = n_limit
         self.n_train = int(n_train)
         if not (self.n_train > 0):
-            raise AssertionError("n_train must be a positive integer")
+            raise ParameterError("n_train must be a positive integer")
         self.stopping_criterion_custom = stopping_criterion
         self.inner_kwargs = kwargs
 
@@ -80,6 +87,36 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
                 "CubQMCAmericanG requires a FinancialOption with option='AMERICAN'"
             )
 
+        self.training_discrete_distrib = training_discrete_distrib
+        if self.training_discrete_distrib is not None:
+            if not isinstance(self.training_discrete_distrib, AbstractDiscreteDistribution):
+                raise ParameterError(
+                    "training_discrete_distrib must be an instance of AbstractDiscreteDistribution"
+                )
+            if self.training_discrete_distrib.d != self.integrand.d:
+                raise ParameterError(
+                    f"training_discrete_distrib dimension ({self.training_discrete_distrib.d}) "
+                    f"must match integrand dimension ({self.integrand.d})"
+                )
+
+        if isinstance(stopping_criterion, AbstractStoppingCriterion):
+            conflicting = []
+            for param in ["abs_tol", "rel_tol", "n_init", "n_limit"]:
+                if hasattr(stopping_criterion, param):
+                    sc_val = getattr(stopping_criterion, param)
+                    self_val = getattr(self, param)
+                    if sc_val != self_val:
+                        conflicting.append(
+                            f"{param} (CubQMCAmericanG: {self_val}, stopping_criterion: {sc_val})"
+                        )
+            if conflicting:
+                warnings.warn(
+                    "Conflicting input values detected between CubQMCAmericanG and the provided "
+                    f"stopping_criterion instance: {', '.join(conflicting)}. "
+                    "The stopping_criterion instance values will be used.",
+                    ParameterWarning,
+                )
+
         self.parameters = [
             "abs_tol",
             "rel_tol",
@@ -87,6 +124,8 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
             "n_limit",
             "n_train",
         ]
+        if self.training_discrete_distrib is not None:
+            self.parameters.append("training_discrete_distrib")
 
         super(CubQMCAmericanG, self).__init__(
             allowed_distribs=[AbstractDiscreteDistribution],
@@ -109,17 +148,30 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
                 return self.stopping_criterion_custom
 
         distrib = self.discrete_distrib
-        if distrib.replications > 1:
+        if isinstance(distrib, AbstractIIDDiscreteDistribution):
+            if not distrib.no_replications:
+                unrep = type(distrib)(dimension=distrib.d, seed=distrib._base_seed)
+                pricing_integrand = self.integrand._spawn(None, unrep)
+                pricing_integrand.betas = self.integrand.betas
+                return CubMCCLT(
+                    pricing_integrand,
+                    abs_tol=self.abs_tol,
+                    rel_tol=self.rel_tol,
+                    n_init=self.n_init,
+                    n_limit=self.n_limit,
+                    **self.inner_kwargs
+                )
+            else:
+                return CubMCCLT(
+                    self.integrand,
+                    abs_tol=self.abs_tol,
+                    rel_tol=self.rel_tol,
+                    n_init=self.n_init,
+                    n_limit=self.n_limit,
+                    **self.inner_kwargs
+                )
+        elif distrib.replications > 1:
             return CubQMCRepStudentT(
-                self.integrand,
-                abs_tol=self.abs_tol,
-                rel_tol=self.rel_tol,
-                n_init=self.n_init,
-                n_limit=self.n_limit,
-                **self.inner_kwargs
-            )
-        elif isinstance(distrib, AbstractIIDDiscreteDistribution):
-            return CubMCCLT(
                 self.integrand,
                 abs_tol=self.abs_tol,
                 rel_tol=self.rel_tol,
@@ -182,7 +234,8 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
         Train the Longstaff-Schwartz exercise policy and integrate the option payoff.
 
         Args:
-            resume (Union[None, object], optional): Not supported by this stopping criterion.
+            resume (Union[None, object]): Not supported by this stopping criterion.
+                Defaults to None.
 
         Returns:
             Tuple[float, Any]: Estimated American option price and integration data container.
@@ -194,7 +247,15 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
 
         # Step 1: LSM Policy Training Phase
         t_train_start = time()
-        training_sampler = self.discrete_distrib.spawn(1)[0]
+        if self.training_discrete_distrib is not None:
+            training_sampler = self.training_discrete_distrib
+        elif isinstance(self.discrete_distrib, AbstractIIDDiscreteDistribution):
+            training_sampler = type(self.discrete_distrib)(
+                dimension=self.discrete_distrib.d, seed=self.discrete_distrib._base_seed
+            )
+        else:
+            training_sampler = self.discrete_distrib.spawn(1)[0]
+
         training_gbm = GeometricBrownianMotion(
             training_sampler,
             t_final=self.integrand.t_final,
@@ -210,6 +271,41 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
         # Step 2: Frozen-Policy Pricing Phase via selected inner stopping criterion
         inner_sc = self._select_inner_stopping_criterion()
         solution, data = inner_sc.integrate()
+
+        # Check immediate exercise payoff at t=0
+        now = (
+            max(self.integrand.strike_price - self.integrand.start_price, 0.0)
+            if self.integrand.call_put == "PUT"
+            else max(self.integrand.start_price - self.integrand.strike_price, 0.0)
+        )
+        if now > solution:
+            solution = (
+                np.full_like(solution, now)
+                if isinstance(solution, np.ndarray)
+                else float(now)
+            )
+            data.solution = solution
+            if hasattr(data, "comb_bound_low"):
+                data.comb_bound_low = np.maximum(data.comb_bound_low, now)
+            if hasattr(data, "comb_bound_high"):
+                data.comb_bound_high = np.maximum(data.comb_bound_high, now)
+            if hasattr(data, "bound_low"):
+                data.bound_low = np.maximum(data.bound_low, now)
+            if hasattr(data, "bound_high"):
+                data.bound_high = np.maximum(data.bound_high, now)
+
+        # Step 3: Attach training metadata and finalize
+        data.n_train = self.n_train
+        data.time_train = time_train
+        data.betas = self.integrand.betas
+        data.stopping_crit = self
+
+        self._set_elapsed_time(data, time() - t_start)
+        trace.iteration(data)
+        self._finalize_integration_data(data, time() - t_start)
+        trace.finalize()
+
+        return solution, data
 
         # Step 3: Attach training metadata and finalize
         data.n_train = self.n_train
@@ -234,9 +330,12 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
         Set error tolerances for the stopping criterion.
 
         Args:
-            abs_tol (Union[None, float], optional): Absolute error tolerance.
-            rel_tol (Union[None, float], optional): Relative error tolerance.
-            rmse_tol (Union[None, float], optional): RMSE error tolerance (not supported).
+            abs_tol (Union[None, float]): Absolute error tolerance.
+                Defaults to None.
+            rel_tol (Union[None, float]): Relative error tolerance.
+                Defaults to None.
+            rmse_tol (Union[None, float]): RMSE error tolerance (not supported).
+                Defaults to None.
         """
         if rmse_tol is not None:
             raise ParameterError("rmse_tol not supported by this stopping criterion.")

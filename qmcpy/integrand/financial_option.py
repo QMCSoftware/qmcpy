@@ -452,10 +452,6 @@ class FinancialOption(AbstractIntegrand):
                 else self.payoff_digital_put
             )
         elif self.option == "AMERICAN":
-            if self.call_put == "CALL":
-                raise ParameterError("American options currently only support call_put='PUT'")
-            if self.level is not None:
-                raise ParameterError("American options do not support multilevel integration (level must be None)")
             self.payoff = self.payoff_american_put
             self.betas = None
         else:
