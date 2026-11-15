@@ -158,6 +158,15 @@ class CustomFun(AbstractIntegrand):
         return self.__g(t, *args, **kwargs)
 
     def bound_fun(self, bound_low: np.ndarray, bound_high: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """Compute bounds for quantities of interest obtained by `comb_func`.
+
+        Args:
+            bound_low (np.ndarray): lower bounds for quantities
+            bound_high (np.ndarray): upper bounds for quantities
+
+        Returns:
+            tuple[np.ndarray, np.ndarray]: Lower and upper bounds for quantities
+        """
         if self._comb_func == None:
             return super().bound_fun(bound_low, bound_high)
         elif self._bound_fun is None:

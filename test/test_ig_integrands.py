@@ -15,8 +15,8 @@ from qmcpy import (
     Linear0,
     Multimodal2d,
     Sin1d,
-    Uniform,
     stopping_criterion,
+    Uniform,
 )
 from qmcpy.util import ParameterError
 import numpy as np
