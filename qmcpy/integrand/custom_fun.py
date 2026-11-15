@@ -90,7 +90,11 @@ class CustomFun(AbstractIntegrand):
         array([3.83e-03, -6.78e-03, -1.56e-03, -5.65e-04])
     """
 
-    def __init__(self, true_measure: AbstractTrueMeasure, g: Callable, dimension_indv: tuple = (), parallel: Union[bool, int] = False) -> None:
+    def __init__(self, true_measure: AbstractTrueMeasure, g: Callable, dimension_indv: tuple = (),
+                 comb_func: Union[None, Callable[[np.ndarray], np.ndarray]] = None,
+                 dimension_comb: Union[None, tuple]=None,
+                 bound_fun: Union[None, Callable[[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]] = None,
+                 parallel: Union[bool, int] = False) -> None:
         """Initialize a CustomFun integrand.
 
         Args:
@@ -98,6 +102,15 @@ class CustomFun(AbstractIntegrand):
             g (Callable): A function handle.
             dimension_indv (tuple): Shape of individual solution outputs from
                 `g`.
+            comb_func (Union[None, Callable[[np.ndarray], np.ndarray]]): A function combining individual solutions from `g`
+                into quantities of interest. StoppingCriteria check convergence of this.
+                Default is identity function.
+            dimension_comb (Union[None, tuple]): shapes of outputs from comb_func. Default is `dimension_indv`.
+                Must be specified if `comb_func` is used.
+            bound_fun (Union[None, Callable[[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]]): function that
+                combines the upper and lower bounds on `g` to lower and upper bounds on quantities of interest defined by `comb_func`.
+                Default is identity functions. If `comb_func` is specified and `bound_fun` is not, `comb_func` is sampled to get approximate
+                bounds. If specified, `bound_func` is used.
             parallel (Union[bool, int]): Parallelization flag.
 
                 - When `parallel = 0` or `parallel = 1` then function evaluation is done in serial fashion.
@@ -114,9 +127,20 @@ class CustomFun(AbstractIntegrand):
         self.true_measure = true_measure
         self.sampler = self.true_measure
         self.__g = g
+        self._comb_func = comb_func
+        self._bound_fun = bound_fun
+        if comb_func is None:
+            dimension_comb = dimension_indv
+            self.combs = None
+        elif dimension_comb is None:
+            raise ValueError("output dimension `dimension_comb` must be specified for non identity `comb_func`")
+        else:
+            # cache combinations for individual outputs we need later for comb_func
+            dimension_comb = dimension_comb
+            self.combs = None
         super(CustomFun, self).__init__(
             dimension_indv=dimension_indv,
-            dimension_comb=dimension_indv,
+            dimension_comb=dimension_comb,
             parallel=parallel,
         )
 
@@ -133,10 +157,29 @@ class CustomFun(AbstractIntegrand):
         """
         return self.__g(t, *args, **kwargs)
 
+    def bound_fun(self, bound_low: np.ndarray, bound_high: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        if self._comb_func == None:
+            return super().bound_fun(bound_low, bound_high)
+        elif self._bound_fun is None:
+            # TODO: allow specifying tolerance, stopping criteria etc?
+            # sample in the space [bound_low, bound_high]^N to find approximate bounds
+            uniform_sampler = Uniform(DigitalNetB2(self.d_comb[0]), bound_low, bound_high)
+            uniform_samples: np.ndarray = uniform_sampler(2**12, return_weights=False)
+            comb_samples = self._comb_func(uniform_samples.T) # [d, num_samples]
+            print(f"comb_samples.shape={comb_samples.shape}")
+            # take min and max
+            approx_min, approx_max = np.min(comb_samples, axis=1), np.max(comb_samples, axis=1)
+            return approx_min, approx_max
+        else:
+            return self._bound_fun(bound_low, bound_high)
+
     def _spawn(self, level, sampler):
         return CustomFun(
             true_measure=sampler,
             g=self.__g,
             dimension_indv=self.d_indv,
+            comb_func=self._comb_func,
+            dimension_comb=self.d_comb,
+            bound_fun=self.bound_fun,
             parallel=self.parallel,
         )
