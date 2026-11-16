@@ -83,6 +83,7 @@ nav:
         - SciPyWrapper dependence and Custom distributions: demos/scipywrapper_dependence_custom/scipywrapper_demo.ipynb
         - ProductMeasure: demos/product_measure.ipynb
         - Mixed Distributions: demos/mixed_distributions.ipynb
+        - Mixed Distributions Blog Analysis: demos/mixed_distributions_blog_analysis.ipynb
         - Acceptance-Rejection Sampling: demos/acceptance_rejection.ipynb
         - Copula TrueMeasure Examples: demos/copula_examples.ipynb
         - Cube-to-Simplex Transforms and SimplexUniform: demos/simplex_uniform.ipynb
