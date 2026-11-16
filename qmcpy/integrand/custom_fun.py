@@ -161,8 +161,8 @@ class CustomFun(AbstractIntegrand):
         """Compute bounds for quantities of interest obtained by `comb_func`.
 
         Args:
-            bound_low (np.ndarray): lower bounds for quantities
-            bound_high (np.ndarray): upper bounds for quantities
+            bound_low (np.ndarray): lower bounds for integrands
+            bound_high (np.ndarray): upper bounds for integrands
 
         Returns:
             tuple[np.ndarray, np.ndarray]: Lower and upper bounds for quantities

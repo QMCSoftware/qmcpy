@@ -107,20 +107,27 @@ class _IterationHistoryTable(object):
         return {column: list(values) for column, values in self._columns.items()}
 
 
-def _safe_get_first_element(obj):
+def get_nonconvergent_index(data) -> int:
+    some_error = np.stack([getattr(data, err_col) for err_col in ["bound_diff", "comb_bound_diff", "bound_half_width"] if hasattr(data, err_col)])
+    tols = np.array([getattr(data, tol_col) for tol_col in ["abs_tol", "rmse_tol"] if hasattr(data, tol_col) and getattr(data, tol_col) is not None])
+    max_errors = np.max(some_error, 0) # reduce to flat error vector
+    max_tol = np.max(tols)
+    return int(np.argmax(max_errors/max_tol)) # get the relevant index to display
+
+def _safe_getindex(obj, i):
     try:
         if isinstance(obj, (list, tuple, np.ndarray)) and obj is not None:
-            if hasattr(obj, "shape") and obj.shape == ():
-                return obj
-            if len(obj) > 0:
-                return obj[0]
+            if isinstance(obj, np.ndarray) and np.prod(obj.shape) > i:
+                return obj.ravel()[i]
+            if len(obj) > i:
+                return obj[i]
         return obj
     except (TypeError, AttributeError):
         return obj
 
 
 def _positive_float(value):
-    value = _safe_get_first_element(value)
+    value = _safe_getindex(value, 0)
     if value is None:
         return None
     try:
@@ -138,50 +145,52 @@ def _extract_diagnostic_row(data):
     iter_count = getattr(data, "_iter_count", None)
     n_min = getattr(data, "n_min", None)
     n_total = getattr(data, "n_total", None)
+    # index of non convergent integral
+    ind = get_nonconvergent_index(data)
     return {
         "iter": int(iter_count) if iter_count is not None else None,
-        "solution": _safe_get_first_element(getattr(data, "solution", None)),
-        "abs_tol": _safe_get_first_element(getattr(data, "abs_tol", None)),
-        "bound_diff": _safe_get_first_element(getattr(data, "bound_diff", None)),
-        "comb_bound_diff": _safe_get_first_element(
-            getattr(data, "comb_bound_diff", None)
+        "solution": _safe_getindex(getattr(data, "solution", None), ind),
+        "abs_tol": _safe_getindex(getattr(data, "abs_tol", None), ind),
+        "bound_diff": _safe_getindex(getattr(data, "bound_diff", None), ind),
+        "comb_bound_diff": _safe_getindex(
+            getattr(data, "comb_bound_diff", None), ind
         ),
-        "bound_half_width": _safe_get_first_element(
-            getattr(data, "bound_half_width", None)
+        "bound_half_width": _safe_getindex(
+            getattr(data, "bound_half_width", None), ind
         ),
-        "bias_estimate": _safe_get_first_element(
-            getattr(data, "bias_estimate", None)
+        "bias_estimate": _safe_getindex(
+            getattr(data, "bias_estimate", None), ind
         ),
-        "rmse_estimate": _safe_get_first_element(
-            getattr(data, "rmse_estimate", None)
+        "rmse_estimate": _safe_getindex(
+            getattr(data, "rmse_estimate", None), ind
         ),
-        "rmse_tol": _safe_get_first_element(getattr(data, "rmse_tol", None)),
+        "rmse_tol": _safe_getindex(getattr(data, "rmse_tol", None), ind),
         "n_min": int(n_min) if n_min is not None else None,
         "n_total": int(n_total) if n_total is not None else None,
-        "m": int(_safe_get_first_element(m)) if m is not None else None,
+        "m": int(_safe_getindex(m, 0)) if m is not None else None,
         "xfull.shape": getattr(xfull, "shape", None),
-        "elapsed_time": _safe_get_first_element(
-            getattr(data, "elapsed_time", getattr(data, "time_integrate_total", None))
+        "elapsed_time": _safe_getindex(
+            getattr(data, "elapsed_time", getattr(data, "time_integrate_total", None)), ind
         ),
     }
 
 
-def _fill_row_tolerances_from_stopping_criterion(row, stopping_criterion):
+def _fill_row_tolerances_from_stopping_criterion(data, stopping_criterion):
     if stopping_criterion is None:
-        return row
-    if row.get("abs_tol") is None:
-        row["abs_tol"] = _safe_get_first_element(
+        return data
+    if getattr(data, "abs_tol", None) is None:
+        setattr(data, "abs_tol",
             getattr(stopping_criterion, "abs_tol", None)
         )
-    if row.get("rmse_tol") is None:
-        row["rmse_tol"] = _safe_get_first_element(
+    if getattr(data, "rmse_tol", None) is None:
+        setattr(data, "rmse_tol", 
             getattr(
                 stopping_criterion,
                 "target_rmse_tol",
                 getattr(stopping_criterion, "rmse_tol", None),
             )
         )
-    return row
+    return data
 
 
 def _visible_columns_from_row(row, include_n_min=False):
@@ -605,10 +614,10 @@ class _IterationTraceLogger(object):
             data._iter_count = None
         if step_value is not None:
             data.m = int(step_value)
-        row = _extract_diagnostic_row(data)
         row = _fill_row_tolerances_from_stopping_criterion(
-            row, self.stopping_criterion
+            data, self.stopping_criterion
         )
+        row = _extract_diagnostic_row(data)
         visible_columns = self._get_visible_columns(data, row=row)
         printed = stage != "ITER" or not self._would_be_throttled(row["iter"])
         history_index = None
