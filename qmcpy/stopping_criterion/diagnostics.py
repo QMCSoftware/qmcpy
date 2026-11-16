@@ -614,7 +614,7 @@ class _IterationTraceLogger(object):
             data._iter_count = None
         if step_value is not None:
             data.m = int(step_value)
-        row = _fill_row_tolerances_from_stopping_criterion(
+        data = _fill_row_tolerances_from_stopping_criterion(
             data, self.stopping_criterion
         )
         row = _extract_diagnostic_row(data)
