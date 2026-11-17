@@ -108,10 +108,12 @@ class _IterationHistoryTable(object):
 
 
 def get_nonconvergent_index(data) -> int:
-    some_error = np.stack([getattr(data, err_col) for err_col in ["bound_diff", "comb_bound_diff", "bound_half_width"] if hasattr(data, err_col)])
+    cond = lambda data, col: hasattr(data, col) and getattr(data, col) is not None
+    some_error = np.stack([getattr(data, err_col) for err_col in ["bound_diff", "comb_bound_diff", "bound_half_width", "rmse_estimate"] if cond(data, err_col)])
     tols = np.array([getattr(data, tol_col) for tol_col in ["abs_tol", "rmse_tol"] if hasattr(data, tol_col) and getattr(data, tol_col) is not None])
     max_errors = np.max(some_error, 0) # reduce to flat error vector
     max_tol = np.max(tols)
+    max_tol = np.where(max_tol == 0, 1e-6, max_tol) # avoid divide by zero
     return int(np.argmax(max_errors/max_tol)) # get the relevant index to display
 
 def _safe_getindex(obj, i):
@@ -175,7 +177,7 @@ def _extract_diagnostic_row(data):
     }
 
 
-def _fill_row_tolerances_from_stopping_criterion(data, stopping_criterion):
+def _fill_data_from_stopping_criterion(data, stopping_criterion):
     if stopping_criterion is None:
         return data
     if getattr(data, "abs_tol", None) is None:
@@ -190,6 +192,9 @@ def _fill_row_tolerances_from_stopping_criterion(data, stopping_criterion):
                 getattr(stopping_criterion, "rmse_tol", None),
             )
         )
+    for attr in ["bound_diff", "comb_bound_diff", "bound_half_width", "rmse_estimate"]:
+        if getattr(data, attr, None) is None and hasattr(stopping_criterion, attr):
+            setattr(data, attr, getattr(stopping_criterion, attr))
     return data
 
 
@@ -614,9 +619,6 @@ class _IterationTraceLogger(object):
             data._iter_count = None
         if step_value is not None:
             data.m = int(step_value)
-        data = _fill_row_tolerances_from_stopping_criterion(
-            data, self.stopping_criterion
-        )
         row = _extract_diagnostic_row(data)
         visible_columns = self._get_visible_columns(data, row=row)
         printed = stage != "ITER" or not self._would_be_throttled(row["iter"])
@@ -705,6 +707,7 @@ class _IterationTraceLogger(object):
         Returns:
             None
         """
+        data = _fill_data_from_stopping_criterion(data, self.stopping_criterion)
         current_signature = self._state_signature(data)
         if (
             self.pending_resume_signature is not None
