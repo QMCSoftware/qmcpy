@@ -107,7 +107,7 @@ class _IterationHistoryTable(object):
         return {column: list(values) for column, values in self._columns.items()}
 
 
-def get_nonconvergent_index(data) -> int:
+def _get_nonconvergent_index(data) -> int:
     cond = lambda data, col: hasattr(data, col) and getattr(data, col) is not None
     some_error = np.stack([getattr(data, err_col) for err_col in ["bound_diff", "comb_bound_diff", "bound_half_width", "rmse_estimate"] if cond(data, err_col)])
     tols = np.array([getattr(data, tol_col) for tol_col in ["abs_tol", "rmse_tol"] if hasattr(data, tol_col) and getattr(data, tol_col) is not None])
@@ -148,7 +148,7 @@ def _extract_diagnostic_row(data):
     n_min = getattr(data, "n_min", None)
     n_total = getattr(data, "n_total", None)
     # index of non convergent integral
-    ind = get_nonconvergent_index(data)
+    ind = _get_nonconvergent_index(data)
     return {
         "iter": int(iter_count) if iter_count is not None else None,
         "solution": _safe_getindex(getattr(data, "solution", None), ind),
@@ -185,7 +185,7 @@ def _fill_data_from_stopping_criterion(data, stopping_criterion):
             getattr(stopping_criterion, "abs_tol", None)
         )
     if getattr(data, "rmse_tol", None) is None:
-        setattr(data, "rmse_tol", 
+        setattr(data, "rmse_tol",
             getattr(
                 stopping_criterion,
                 "target_rmse_tol",

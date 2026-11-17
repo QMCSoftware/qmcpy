@@ -1129,7 +1129,7 @@ class TestCubMLMCBiasConvergencePaths(unittest.TestCase):
         call_count = [0]
 
         def patched_rmse(data):
-            call_count[0] += 1 
+            call_count[0] += 1
             # first call is for printing, second call on integration start
             # First/second call: force non-convergence -> _add_level fires (line 302)
             if call_count[0] <= 2:
