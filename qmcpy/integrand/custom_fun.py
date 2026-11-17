@@ -131,13 +131,8 @@ class CustomFun(AbstractIntegrand):
         self._bound_fun = bound_fun
         if comb_func is None:
             dimension_comb = dimension_indv
-            self.combs = None
         elif dimension_comb is None:
             raise ValueError("output dimension `dimension_comb` must be specified for non identity `comb_func`")
-        else:
-            # cache combinations for individual outputs we need later for comb_func
-            dimension_comb = dimension_comb
-            self.combs = None
         super(CustomFun, self).__init__(
             dimension_indv=dimension_indv,
             dimension_comb=dimension_comb,
@@ -167,7 +162,7 @@ class CustomFun(AbstractIntegrand):
         Returns:
             tuple[np.ndarray, np.ndarray]: Lower and upper bounds for quantities
         """
-        if self._comb_func == None:
+        if self._comb_func is None:
             return super().bound_fun(bound_low, bound_high)
         elif self._bound_fun is None:
             # TODO: allow specifying tolerance, stopping criteria etc?
