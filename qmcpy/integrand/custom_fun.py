@@ -91,9 +91,10 @@ class CustomFun(AbstractIntegrand):
     """
 
     def __init__(self, true_measure: AbstractTrueMeasure, g: Callable, dimension_indv: tuple = (),
-                 comb_func: Union[None, Callable[[np.ndarray], np.ndarray]] = None,
-                 dimension_comb: Union[None, tuple]=None,
                  bound_fun: Union[None, Callable[[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]] = None,
+                 dimension_comb: Union[None, tuple]=None,
+                 dependency: Union[None, Callable[[np.ndarray], np.ndarray]] = None,
+                 comb_func: Union[None, Callable[[np.ndarray], np.ndarray]] = None,
                  parallel: Union[bool, int] = False) -> None:
         """Initialize a CustomFun integrand.
 
@@ -102,15 +103,18 @@ class CustomFun(AbstractIntegrand):
             g (Callable): A function handle.
             dimension_indv (tuple): Shape of individual solution outputs from
                 `g`.
+            bound_fun (Union[None, Callable[[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]]): function that
+                combines the upper and lower bounds on `g` to lower and upper bounds on quantities of interest.
+                Default is identity functions so that the integrands themselves are the quantities of interest.
+                If `comb_func` is specified and `bound_fun` is not, `comb_func` is sampled to get approximate
+                bounds.
+            dimension_comb (Union[None, tuple]): shapes of outputs from comb_func. Default is `dimension_indv`.
+                Must be specified if `comb_func` is used.
+            dependency (Union[None, Callable[[np.ndarray], np.ndarray]]): Function defining how convergence of combined integrands is
+                related to convergence of the underlying integrands. See `AbstractIntegrand.dependency`
             comb_func (Union[None, Callable[[np.ndarray], np.ndarray]]): A function combining individual solutions from `g`
                 into quantities of interest. StoppingCriteria check convergence of this.
                 Default is identity function.
-            dimension_comb (Union[None, tuple]): shapes of outputs from comb_func. Default is `dimension_indv`.
-                Must be specified if `comb_func` is used.
-            bound_fun (Union[None, Callable[[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]]): function that
-                combines the upper and lower bounds on `g` to lower and upper bounds on quantities of interest defined by `comb_func`.
-                Default is identity functions. If `comb_func` is specified and `bound_fun` is not, `comb_func` is sampled to get approximate
-                bounds. If specified, `bound_func` is used.
             parallel (Union[bool, int]): Parallelization flag.
 
                 - When `parallel = 0` or `parallel = 1` then function evaluation is done in serial fashion.
@@ -133,6 +137,7 @@ class CustomFun(AbstractIntegrand):
             dimension_comb = dimension_indv
         elif dimension_comb is None:
             raise ValueError("output dimension `dimension_comb` must be specified for non identity `comb_func`")
+        self._dependency_fun = dependency
         super(CustomFun, self).__init__(
             dimension_indv=dimension_indv,
             dimension_comb=dimension_comb,
@@ -162,20 +167,45 @@ class CustomFun(AbstractIntegrand):
         Returns:
             tuple[np.ndarray, np.ndarray]: Lower and upper bounds for quantities
         """
-        if self._comb_func is None:
+        if self._comb_func is None and self._bound_fun is None:
             return super().bound_fun(bound_low, bound_high)
-        elif self._bound_fun is None:
+        elif (self._bound_fun is None) and (self._comb_func is not None):
             # TODO: allow specifying tolerance, stopping criteria etc?
             # sample in the space [bound_low, bound_high]^N to find approximate bounds
             uniform_sampler = Uniform(DigitalNetB2(self.d_comb[0]), bound_low, bound_high)
             uniform_samples: np.ndarray = uniform_sampler(2**12, return_weights=False)
             comb_samples = self._comb_func(uniform_samples.T) # [d, num_samples]
-            print(f"comb_samples.shape={comb_samples.shape}")
             # take min and max
             approx_min, approx_max = np.min(comb_samples, axis=1), np.max(comb_samples, axis=1)
             return approx_min, approx_max
-        else:
+        elif self._bound_fun is not None:
             return self._bound_fun(bound_low, bound_high)
+
+    def dependency(self, is_converged: np.ndarray) -> np.ndarray:
+        """Takes a vector of indicators of whether of not the error bound is
+        satisfied for combined integrands and returns flags for individual
+        integrands.
+
+        For example, if we are taking the ratio of 2 individual integrands,
+        then getting `is_converged=True` means the ratio has been
+        approximated to within the tolerance, so the dependency function should
+        return `indv_flags=[True,True]` indicating that both the numerator and
+        denominator integrands have converged.
+
+        The default behavior is to keep calculating all integrals until all
+        combined integrands have converged.
+
+        Args:
+            is_converged (np.ndarray): Flags of shape `integrand.d_comb`
+                indicating whether the combined outputs are converged.
+
+        Returns:
+            np.ndarray: Flags of shape `integrand.d_indv` indicating True where the individual
+                integrands are converged.
+        """
+        if self._dependency_fun is not None:
+            return self._dependency_fun(is_converged)
+        return super().dependency(is_converged)
 
     def _spawn(self, level, sampler):
         return CustomFun(
