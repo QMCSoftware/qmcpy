@@ -25,6 +25,7 @@ _ITERATION_HISTORY_COLUMNS = (
     "bias_estimate",
     "rmse_estimate",
     "rmse_tol",
+    "non_conv_ind",
     "n_min",
     "n_total",
     "m",
@@ -82,6 +83,7 @@ class _IterationHistoryTable(object):
         self._columns["bias_estimate"].append(row.get("bias_estimate"))
         self._columns["rmse_estimate"].append(row.get("rmse_estimate"))
         self._columns["rmse_tol"].append(row.get("rmse_tol"))
+        self._columns["non_conv_ind"].append(row.get("non_conv_ind"))
         self._columns["n_min"].append(row.get("n_min"))
         self._columns["n_total"].append(row.get("n_total"))
         self._columns["m"].append(row.get("m"))
@@ -167,6 +169,7 @@ def _extract_diagnostic_row(data):
             getattr(data, "rmse_estimate", None), ind
         ),
         "rmse_tol": _safe_getindex(getattr(data, "rmse_tol", None), ind),
+        "non_conv_ind": ind,
         "n_min": int(n_min) if n_min is not None else None,
         "n_total": int(n_total) if n_total is not None else None,
         "m": int(_safe_getindex(m, 0)) if m is not None else None,
@@ -212,6 +215,8 @@ def _visible_columns_from_row(row, include_n_min=False):
         visible_columns.append("rmse_estimate")
     if row["rmse_tol"] is not None:
         visible_columns.append("rmse_tol")
+    if row["non_conv_ind"] is not None:
+        visible_columns.append("non_conv_ind")
     if include_n_min or row["n_min"] is not None:
         visible_columns.append("n_min")
     visible_columns.append("n_total")
@@ -260,6 +265,7 @@ def _build_history_data(history, index, stopping_criterion=None):
         if row["rmse_tol"] is not None
         else context.get("rmse_tol", context.get("target_rmse_tol"))
     )
+    data.non_conv_index = row["non_conv_ind"]
     data.n_min = row["n_min"]
     data.n_total = row["n_total"]
     data.m = row["m"]
@@ -331,6 +337,7 @@ def _format_diagnostic_display_values(label, data, row=None):
         "bias_estimate": _format_bound_text(row["bias_estimate"]),
         "rmse_estimate": _format_bound_text(row["rmse_estimate"]),
         "rmse_tol": _format_bound_text(row["rmse_tol"]),
+        "non_conv_ind": "None" if row["non_conv_ind"] is None else str(int(row["non_conv_ind"])),
         "n_min": "None" if row["n_min"] is None else str(int(row["n_min"])),
         "n_total": "None" if row["n_total"] is None else str(int(row["n_total"])),
         "elapsed_time": _format_bound_text(row.get("elapsed_time")),
@@ -351,6 +358,7 @@ def _diagnostic_column_widths(solution_width):
         "bias_estimate": 15,
         "rmse_estimate": 15,
         "rmse_tol": 15,
+        "non_conv_ind": 15,
         "n_min": 10,
         "n_total": 10,
         "elapsed_time": 15,

@@ -166,7 +166,8 @@ class TestAbstractStoppingCriterion(unittest.TestCase):
     def test_print_diagnostic_missing_values(self):
         data = type("Data", (), {"solution": float("nan"), "xfull": None,
                                 "abs_tol": 1e-3,
-                                "bound_diff": np.array([1e-5])
+                                "bound_diff": np.array([1e-5]),
+                                "non_conv_ind": 0,
                                  })()
         stream = io.StringIO()
         with redirect_stdout(stream):
@@ -260,7 +261,8 @@ class TestAbstractStoppingCriterion(unittest.TestCase):
                 "m": 13,
                 "xfull": np.zeros((16, 2)),
                 "abs_tol": 1e-3,
-                "bound_diff": np.array([1e-5])
+                "bound_diff": np.array([1e-5]),
+                "non_conv_ind": 0,
             },
         )()
         stream = io.StringIO()
@@ -271,9 +273,9 @@ class TestAbstractStoppingCriterion(unittest.TestCase):
             data.xfull = np.zeros((20, 2))
             logger.iteration(data, step_value=14)
         output = stream.getvalue()
-        self.assertRegex(output, r"RESUME\s+6\s+1\.2500000\s+1\.000e-05\s+8\s+16\s+13")
+        self.assertRegex(output, r"RESUME\s+6\s+1\.2500000\s+1\.000e-05\s+0\s+8\s+16\s+13")
         self.assertNotIn("RESUME       None", output)
-        self.assertRegex(output, r"ITER\s+7\s+1\.2500000\s+1\.000e-05\s+8\s+20\s+14")
+        self.assertRegex(output, r"ITER\s+7\s+1\.2500000\s+1\.000e-05\s+0\s+8\s+20\s+14")
 
     def test_trace_history_marks_flushed_rows(self):
         logger = _IterationTraceLogger(
@@ -297,7 +299,8 @@ class TestAbstractStoppingCriterion(unittest.TestCase):
                 "m": 7,
                 "xfull": np.zeros((64, 2)),
                 "abs_tol": 1e-3,
-                "bound_diff": np.array([1e-5])
+                "bound_diff": np.array([1e-5]),
+                "non_conv_ind": 0,
             },
         )()
         with redirect_stdout(io.StringIO()):
@@ -311,7 +314,7 @@ class TestAbstractStoppingCriterion(unittest.TestCase):
         self.assertTrue(logger.history["printed"][0])
         self.assertEqual(
             logger.history.visible_columns,
-            ("stage", "iter", "solution", "bound_diff", "n_total", "m", "xfull.shape"),
+            ("stage", "iter", "solution", "bound_diff", "non_conv_ind", "n_total", "m", "xfull.shape"),
         )
 
     def test_prepare_resume_data_keeps_history(self):
@@ -2567,7 +2570,7 @@ class TestDiagnosticsOptionalColumns(unittest.TestCase):
         """emit() with increment=False, iter_value=None sets data._iter_count=None."""
         logger = self._make_logger()
         data = type("Data", (), {"solution": 1.0, "n_total": 10,
-                                 "bound_diff": 1e-3, "abs_tol": 1e-2})()
+                                 "bound_diff": 1e-3, "abs_tol": 1e-2, "non_conv_ind": 0})()
         stream = io.StringIO()
         with redirect_stdout(stream):
             logger.emit("START", data, increment=False, iter_value=None)
@@ -2623,7 +2626,7 @@ class TestDiagnosticsOptionalColumns(unittest.TestCase):
         # drop_empty_columns=True removes columns that are all NaN
         history = _IterationHistoryTable()
         history._append("ITER",
-                        {"iter": 1, "solution": 1.0, "n_total": 16, "bias_estimate": None},
+                        {"iter": 1, "solution": 1.0, "n_total": 16, "bias_estimate": None, "non_conv_ind": 0},
                         visible_columns=("stage", "iter", "solution", "n_total", "bias_estimate"),
                         printed=True,
                         )
