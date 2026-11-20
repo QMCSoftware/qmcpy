@@ -1,0 +1,7 @@
+#!/bin/sh
+# Runs before `git push` completes; a nonzero exit here aborts the push.
+# Not active until you opt in once per clone: git config core.hooksPath .githooks
+# (git won't auto-enable hooks from a cloned repo for security reasons, so
+# every contributor who wants this needs to run that command themselves.)
+
+make prepush
