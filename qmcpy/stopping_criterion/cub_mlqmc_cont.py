@@ -25,13 +25,13 @@ class CubMLQMCCont(AbstractCubMLQMC):
         >>> solution,data = sc.integrate()
         >>> data
         Data (Data)
-            solution        1.784
-            n_total         4718592
+            solution        1.785
+            n_total         5242880
             levels          2^(2)
-            n_level         [65536 32768 32768 16384]
-            mean_level      [1.718 0.051 0.012 0.003]
-            var_level       [1.169e-08 2.569e-08 1.850e-08 5.209e-08]
-            bias_estimate   2.78e-04
+            n_level         [65536 32768 32768 16384 16384]
+            mean_level      [1.718e+00 5.058e-02 1.243e-02 3.174e-03 7.981e-04]
+            var_level       [1.169e-08 2.569e-08 1.850e-08 5.209e-08 2.853e-08]
+            bias_estimate   0.001
             time_integrate  ...
         CubMLQMCCont (AbstractStoppingCriterion)
             rmse_tol        3.88e-04
@@ -43,7 +43,7 @@ class CubMLQMCCont(AbstractCubMLQMC):
             n_tols          10
             inflate         1.668
             theta_init      2^(-1)
-            theta           2^(-3)
+            theta           0.030
         FinancialOption (AbstractIntegrand)
             option          ASIAN
             call_put        CALL

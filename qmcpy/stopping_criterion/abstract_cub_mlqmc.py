@@ -183,7 +183,7 @@ class AbstractCubMLQMC(AbstractStoppingCriterion):
         y[1] = np.log2(abs(data.mean_level_reps[data.levels - 1].mean()))
         x = np.linalg.lstsq(A, y, rcond=None)[0]
         alpha = max(0.5, -x[0])
-        data.bias_estimate = 2 ** (x[1] + data.levels * x[0]) / (2**alpha - 1)
+        data.bias_estimate = 2 ** (x[1] + (data.levels - 1) * x[0]) / (2**alpha - 1)
 
     def _add_level(self, data):
         # Add another level to relevant attributes.
