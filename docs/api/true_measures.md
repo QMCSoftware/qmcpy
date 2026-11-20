@@ -116,6 +116,10 @@ jupyter:
 
 ::: qmcpy.true_measure.acceptance_rejection.AcceptanceRejectionReal
 
+## `PyMCWrapper`
+
+::: qmcpy.true_measure.pymc_wrapper.PyMCWrapper
+
 ## UML Specific
 
 ![](./umls/true_measure_specific.svg)

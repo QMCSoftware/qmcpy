@@ -75,6 +75,10 @@ gpytorch = [
 botorch = [
     "botorch >= 0.10.0, <= 1.17.0", # some issue with gpytorch == 1.15.2, see qmcpy/util/exact_gpytorch_regression_model.py, see # https://github.com/cornellius-gp/gpytorch/issues/2736
     ]
+pymc = [
+    "pymc >= 6.0.1",
+    "pytensor >= 3.0.4"
+]
 umbridge = [
     "umbridge >= 1.2.1",
     ]
@@ -126,6 +130,10 @@ test_gpytorch = [
 test_botorch = [
     "botorch >= 0.10.0, <= 1.17.0", # some issue with gpytorch == 1.15.2, see qmcpy/util/exact_gpytorch_regression_model.py, see # https://github.com/cornellius-gp/gpytorch/issues/2736
     ]
+test_pymc = [
+    "pymc >= 6.0.1",
+    "pytensor >= 3.0.4"
+]
 test_umbridge = [
     "umbridge >= 1.2.4",
     ]
@@ -134,7 +142,7 @@ test_mpmc = [
     "torch-geometric >= 2.6.1",
     ]
 docs = [  # brew install weasyprint
-    "qmcpy[test,test_torch,test_gpytorch,test_botorch,test_umbridge]",
+    "qmcpy[test,test_torch,test_gpytorch,test_botorch,test_umbridge,test_pymc]",
     "nbval >= 0.10.0",
     "attrs >= 21.0.0",
     "pyyaml >= 6.0",
@@ -156,7 +164,7 @@ docs = [  # brew install weasyprint
     "pydoclint >= 0.5.0",
 ]
 dev = [ # brew install weasyprint
-    "qmcpy[docs,test,torch,gpytorch,botorch,umbridge,mpmc]",
+    "qmcpy[docs,test,torch,gpytorch,botorch,pymc,umbridge,mpmc]",
     "jupyterlab >= 4.0.0",
     "jupyterlab_execute_time >= 3.2.0",
     "ipynbname >= 2025.8.0.0",
