@@ -295,6 +295,7 @@ class CubMLQMCCont(AbstractCubMLQMC):
                 )
             if trace is not None:
                 data.rmse_tol = step_tol
+                data.rmse_estimate = self._rmse(data)
                 trace.iteration(data, step_value=int(data.levels))
             if record_snapshots:
                 data.rmse_tol = step_tol
@@ -340,6 +341,7 @@ class CubMLQMCCont(AbstractCubMLQMC):
                 self._update_theta(data, step_tol)
 
             # Check for convergence
+            data.rmse_estimate = self._rmse(data)
             converged = self._rmse(data) < step_tol
             if not converged:
                 if data.levels == self.levels_max:

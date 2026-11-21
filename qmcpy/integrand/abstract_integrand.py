@@ -341,30 +341,32 @@ class AbstractIntegrand(object):
             )
         return bound_low, bound_high
 
-    def dependency(self, comb_flags: np.ndarray) -> np.ndarray:
-        """Takes a vector of indicators of weather of not the error bound is
+    def dependency(self, is_converged: np.ndarray) -> np.ndarray:
+        """Takes a vector of indicators of whether of not the error bound is
         satisfied for combined integrands and returns flags for individual
         integrands.
 
         For example, if we are taking the ratio of 2 individual integrands,
-        then getting `comb_flags=True` means the ratio has not been
+        then getting `is_converged=True` means the ratio has been
         approximated to within the tolerance, so the dependency function should
         return `indv_flags=[True,True]` indicating that both the numerator and
-        denominator integrands need to be better approximated.
+        denominator integrands have converged.
+
+        The default behavior is to keep calculating all integrals until all
+        combined integrands have converged.
 
         Args:
-            comb_flags (np.ndarray): Flags of shape `integrand.d_comb`
-                indicating whether the combined outputs are insufficiently
-                approximated.
+            is_converged (np.ndarray): Flags of shape `integrand.d_comb`
+                indicating whether the combined outputs are converged.
 
         Returns:
-            np.ndarray: Flags of shape `integrand.d_indv` indicating whether the individual
-                integrands require additional sampling.
+            np.ndarray: Flags of shape `integrand.d_indv` indicating True where the individual
+                integrands are converged.
         """
         return (
-            comb_flags
+            is_converged
             if self.d_indv == self.d_comb
-            else np.tile((comb_flags == False).any(), self.d_indv)
+            else np.tile(is_converged.all(), self.d_indv)
         )
 
     def spawn(self, levels: np.ndarray) -> list:

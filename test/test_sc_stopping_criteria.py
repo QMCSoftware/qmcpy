@@ -145,11 +145,16 @@ class TestAbstractStoppingCriterion(unittest.TestCase):
                 "n_total": 16,
                 "n_min": None,
                 "xfull": np.zeros((2, 3)),
+                "abs_tol": 1e-3,
+                "bound_diff": np.array([1e-5])
             },
         )()
         stream = io.StringIO()
         with redirect_stdout(stream):
-            _print_diagnostic("resume", data, table_header=True)
+            _print_diagnostic("resume", data, table_header=True,
+                              visible_columns = ("stage", "iter", "solution",
+                                                 "n_min", "n_total", "m",
+                                                 "xfull.shape"))
         output = stream.getvalue()
         self.assertIn("stage", output)
         self.assertIn("iter", output)
@@ -159,7 +164,11 @@ class TestAbstractStoppingCriterion(unittest.TestCase):
         self.assertRegex(output, r"resume\s+2\s+1\.2500000\s+None\s+16\s+4")
 
     def test_print_diagnostic_missing_values(self):
-        data = type("Data", (), {"solution": float("nan"), "xfull": None})()
+        data = type("Data", (), {"solution": float("nan"), "xfull": None,
+                                "abs_tol": 1e-3,
+                                "bound_diff": np.array([1e-5]),
+                                "non_conv_ind": 0,
+                                 })()
         stream = io.StringIO()
         with redirect_stdout(stream):
             _print_diagnostic("start", data)
@@ -179,16 +188,24 @@ class TestAbstractStoppingCriterion(unittest.TestCase):
                 "n_total": 16,
                 "n_min": None,
                 "xfull": np.zeros((2, 3)),
+                "abs_tol": 1e-3,
+                "bound_diff": np.array([1e-5])
             },
         )()
         throttled = io.StringIO()
         with redirect_stdout(throttled):
-            _print_diagnostic("ITER", data, verbose=False)
+            _print_diagnostic("ITER", data, verbose=False,
+                              visible_columns = ("stage", "iter", "solution",
+                                                 "n_min", "n_total", "m")
+                              )
         self.assertEqual(throttled.getvalue(), "")
 
         unthrottled = io.StringIO()
         with redirect_stdout(unthrottled):
-            _print_diagnostic("ITER", data, verbose=True)
+            _print_diagnostic("ITER", data, verbose=True,
+                              visible_columns = ("stage", "iter", "solution",
+                                                 "n_min", "n_total", "m")
+                              )
         output = unthrottled.getvalue()
         self.assertIn("ITER", output)
         self.assertIn("1.2500000", output)
@@ -202,6 +219,8 @@ class TestAbstractStoppingCriterion(unittest.TestCase):
                 "_iter_count": 1,
                 "solution": [1.25],
                 "n_total": 16,
+                "abs_tol": 1e-3,
+                "bound_diff": np.array([1e-5])
             },
         )()
         stream = io.StringIO()
@@ -241,6 +260,9 @@ class TestAbstractStoppingCriterion(unittest.TestCase):
                 "n_min": 8,
                 "m": 13,
                 "xfull": np.zeros((16, 2)),
+                "abs_tol": 1e-3,
+                "bound_diff": np.array([1e-5]),
+                "non_conv_ind": 0,
             },
         )()
         stream = io.StringIO()
@@ -251,9 +273,9 @@ class TestAbstractStoppingCriterion(unittest.TestCase):
             data.xfull = np.zeros((20, 2))
             logger.iteration(data, step_value=14)
         output = stream.getvalue()
-        self.assertRegex(output, r"RESUME\s+6\s+1\.2500000\s+8\s+16\s+13")
+        self.assertRegex(output, r"RESUME\s+6\s+1\.2500000\s+1\.000e-05\s+0\s+8\s+16\s+13")
         self.assertNotIn("RESUME       None", output)
-        self.assertRegex(output, r"ITER\s+7\s+1\.2500000\s+8\s+20\s+14")
+        self.assertRegex(output, r"ITER\s+7\s+1\.2500000\s+1\.000e-05\s+0\s+8\s+20\s+14")
 
     def test_trace_history_marks_flushed_rows(self):
         logger = _IterationTraceLogger(
@@ -276,6 +298,9 @@ class TestAbstractStoppingCriterion(unittest.TestCase):
                 "n_total": 64,
                 "m": 7,
                 "xfull": np.zeros((64, 2)),
+                "abs_tol": 1e-3,
+                "bound_diff": np.array([1e-5]),
+                "non_conv_ind": 0,
             },
         )()
         with redirect_stdout(io.StringIO()):
@@ -289,7 +314,7 @@ class TestAbstractStoppingCriterion(unittest.TestCase):
         self.assertTrue(logger.history["printed"][0])
         self.assertEqual(
             logger.history.visible_columns,
-            ("stage", "iter", "solution", "n_total", "m", "xfull.shape"),
+            ("stage", "iter", "solution", "bound_diff", "non_conv_ind", "n_total", "m", "xfull.shape"),
         )
 
     def test_prepare_resume_data_keeps_history(self):
@@ -1108,8 +1133,9 @@ class TestCubMLMCBiasConvergencePaths(unittest.TestCase):
 
         def patched_rmse(data):
             call_count[0] += 1
-            # First call: force non-convergence -> _add_level fires (line 302)
-            if call_count[0] <= 1:
+            # first call is for printing, second call on integration start
+            # First/second call: force non-convergence -> _add_level fires (line 302)
+            if call_count[0] <= 2:
                 return sc.target_rmse_tol * 3.0
             # Subsequent calls: converge
             return sc.target_rmse_tol * 0.3
@@ -1695,7 +1721,9 @@ class TestResumeFeature(unittest.TestCase):
         for label, stopping_criterion, integrand_factory, expected_levels in cases:
             with self.subTest(stopping_criterion=label):
                 sc = stopping_criterion(integrand_factory(), abs_tol=0.2, rmse_tol=0.1)
-                data = type("ResumeData", (), {"solution": 0.0, "levels": 5})()
+                data = type("ResumeData", (), {"solution": 0.0, "levels": 5,
+                                               "abs_tol": 1e-3,
+                                               "rmse_estimate": 1e-5})()
                 captured = {}
 
                 def fake_integrate(resume_data, skip_level_reset=False, step_tol=None):
@@ -2485,6 +2513,7 @@ class TestDiagnosticsOptionalColumns(unittest.TestCase):
                 "solution": 1.23456789,
                 "n_total": 64,
                 "abs_tol": 0.001,
+                "comb_bound_diff": np.array(1e-2),
             },
         )()
         stream = io.StringIO()
@@ -2504,10 +2533,10 @@ class TestDiagnosticsOptionalColumns(unittest.TestCase):
                 "n_total": 64,
                 "bound_diff": 0.05,
                 "bias_estimate": float("nan"),
-                "comb_bound_diff": None,
-                "bound_half_width": None,
-                "rmse_estimate": None,
-                "rmse_tol": None,
+                "comb_bound_diff": 1e-3,
+                "bound_half_width": 1e-4,
+                "rmse_estimate": 1e-3,
+                "rmse_tol": 1e-2,
             },
         )()
         stream = io.StringIO()
@@ -2526,7 +2555,9 @@ class TestDiagnosticsOptionalColumns(unittest.TestCase):
                 "_iter_count": 1,
                 "solution": 1.0,
                 "n_total": 64,
-                "bound_diff": "non-numeric",
+                "bound_diff": 1e-2,
+                "abs_tol": 1e-3,
+                "bias_estimate": "non-numeric",
             },
         )()
         stream = io.StringIO()
@@ -2538,7 +2569,8 @@ class TestDiagnosticsOptionalColumns(unittest.TestCase):
     def test_emit_without_iter_sets_none(self):
         """emit() with increment=False, iter_value=None sets data._iter_count=None."""
         logger = self._make_logger()
-        data = type("Data", (), {"solution": 1.0, "n_total": 10})()
+        data = type("Data", (), {"solution": 1.0, "n_total": 10,
+                                 "bound_diff": 1e-3, "abs_tol": 1e-2, "non_conv_ind": 0})()
         stream = io.StringIO()
         with redirect_stdout(stream):
             logger.emit("START", data, increment=False, iter_value=None)
@@ -2546,7 +2578,8 @@ class TestDiagnosticsOptionalColumns(unittest.TestCase):
 
     def test_trace_print_false_suppresses_stdout(self):
         logger = self._make_logger(print_live=False)
-        data = type("Data", (), {"solution": 1.0, "n_total": 10})()
+        data = type("Data", (), {"solution": 1.0, "n_total": 10,
+                                 "comb_bound_diff": np.array(1e-2), "abs_tol": 1e-2})()
         stream = io.StringIO()
         with redirect_stdout(stream):
             logger.iteration(data)
@@ -2566,7 +2599,8 @@ class TestDiagnosticsOptionalColumns(unittest.TestCase):
             },
         )()
         logger = _IterationTraceLogger(sc)
-        data = type("Data", (), {"solution": 1.0, "n_total": 10})()
+        data = type("Data", (), {"solution": 1.0, "n_total": 10,
+                                 "comb_bound_diff": np.array(1e-2), "abs_tol": 1e-3})()
         with redirect_stdout(io.StringIO()):
             logger.iteration(data)
         self.assertEqual(logger.history["abs_tol"][0], 1e-3)
@@ -2580,6 +2614,8 @@ class TestDiagnosticsOptionalColumns(unittest.TestCase):
             {"_iter_count": object(),  # cannot be converted to int
                 "solution": 1.0,
                 "n_total": 10,
+                "comb_bound_diff": np.array(1e-2),
+                "abs_tol": 1e-2,
             },
         )()
         stream = io.StringIO()
@@ -2590,7 +2626,7 @@ class TestDiagnosticsOptionalColumns(unittest.TestCase):
         # drop_empty_columns=True removes columns that are all NaN
         history = _IterationHistoryTable()
         history._append("ITER",
-                        {"iter": 1, "solution": 1.0, "n_total": 16, "bias_estimate": None},
+                        {"iter": 1, "solution": 1.0, "n_total": 16, "bias_estimate": None, "non_conv_ind": 0},
                         visible_columns=("stage", "iter", "solution", "n_total", "bias_estimate"),
                         printed=True,
                         )

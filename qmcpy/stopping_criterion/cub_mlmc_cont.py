@@ -212,6 +212,7 @@ class CubMLMCCont(AbstractCubMLMC):
                 trace.resume(checkpoint, step_value=int(checkpoint.levels + 1))
             if replay_snapshots is not None:
                 for snapshot in replay_snapshots:
+                    snapshot.rmse_estimate = self._rmse(snapshot) # fill in rmse estimate
                     trace.iteration(snapshot, step_value=int(snapshot.levels + 1))
                 if replay_snapshots and trace.enabled:
                     data._iter_count = trace.iter_count
@@ -356,6 +357,7 @@ class CubMLMCCont(AbstractCubMLMC):
                 self._set_elapsed_time(
                     data, time() - t_start, resume_provenance=resume_provenance
                 )
+            data.rmse_estimate = self._rmse(data) # fill in rmse estimate
             trace.iteration(data, step_value=int(data.levels + 1))
         if record_snapshots and warmup_drew:
             data.rmse_tol = step_tol
@@ -435,7 +437,8 @@ class CubMLMCCont(AbstractCubMLMC):
                 snapshots.append(copy.deepcopy(data))
 
             # Check for convergence
-            converged = self._rmse(data) < step_tol
+            data.rmse_estimate = self._rmse(data) # fill in rmse estimate
+            converged = data.rmse_estimate < step_tol
             if not converged:
                 if data.levels == self.levels_max:
                     warnings.warn(
