@@ -89,7 +89,7 @@ class TriangularVanDerCorput(AbstractLDDiscreteDistribution):
 
         return (A + B + C) / 3
 
-    def _gen_samples(self, n_min, n_max, return_binary=False, warn=True):
+    def _gen_samples(self, n_min, n_max, return_binary, warn):
         if return_binary:
             raise ParameterError("TriangularVanDerCorput does not support return_binary")
             #after adding randomization add a warning about origin?
