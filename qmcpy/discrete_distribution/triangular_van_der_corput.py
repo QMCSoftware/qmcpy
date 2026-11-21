@@ -28,7 +28,7 @@ class TriangularVanDerCorput(AbstractLDDiscreteDistribution):
 
     def __init__(
         self,
-        dimension: int = 2,
+        dimension: Union[int, np.ndarray] = 2,
         replications: Union[None, int] = None,
         seed: Union[None, int, np.random.SeedSequence] = None,
     ) -> None:
