@@ -25,6 +25,15 @@ This file is a concise entry point for coding agents. It does not replace the re
 - Before changing machines or handing work to another collaborator, push a coherent feature-branch state and update the issue or pull request with the remaining work, validation completed, and any unresolved questions. Do not leave the only copy of active work on one machine.
 - Do not edit the same feature branch concurrently on multiple machines or with multiple collaborators. Use separate issue-linked branches for genuinely parallel work and combine them through reviewable pull requests.
 
+## Kernel and discrepancy collaboration
+
+For the kernel/discrepancy work coordinated by Fred Hickernell and Laasya
+(`Laasya-73`), read `docs/kernel-discrepancy-design.md`
+and [issue #646](https://github.com/QMCSoftware/qmcpy/issues/646) before editing.
+The document records the design and unresolved decisions; the issue and linked
+pull requests hold work ownership, current handoff, and validation evidence.
+Treat proposed interfaces as unapproved until the collaborators record agreement.
+
 ## Validation and generated content
 
 - Run the smallest relevant checks described in the contributor guides, plus broader tests when the change affects shared behavior.

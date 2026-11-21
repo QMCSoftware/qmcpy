@@ -70,6 +70,9 @@ coverage-data/*
 *.bak*
 *.syn*.gz
 *.pdf
+# Requested paper copies supporting the kernel/discrepancy collaboration.
+!docs/references/jagadeeswaran-hickernell-2019-lattice.pdf
+!docs/references/jagadeeswaran-hickernell-2022-sobol.pdf
 *.log
 *.fls
 *.fdb_latexmk
