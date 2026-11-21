@@ -379,14 +379,14 @@ class TestCustomVector(unittest.TestCase):
         with self.assertRaises(ValueError):
             CustomFun(self.true_measure, self.integrands,
                     dimension_indv=(5,),
-                    comb_func=self.comb_func,
+                    comb_fun=self.comb_func,
                     dimension_comb=None,
                     bound_fun=self.bound_fun)
 
     def test_spawn(self):
         integrand = CustomFun(self.true_measure, self.integrands,
                         dimension_indv=(5,),
-                        comb_func=self.comb_func,
+                        comb_fun=self.comb_func,
                         dimension_comb=(5,),
                         bound_fun=self.bound_fun)
         spawned = integrand.spawn(np.arange(5))
@@ -398,12 +398,12 @@ class TestCustomVector(unittest.TestCase):
         """
         integrand_exact_bounds = CustomFun(self.true_measure, self.integrands,
                                     dimension_indv=(5,),
-                                    comb_func=self.comb_func,
+                                    comb_fun=self.comb_func,
                                     dimension_comb=(5,),
                                     bound_fun=self.bound_fun)
         integrand_approx_bounds = CustomFun(self.true_measure, self.integrands,
                                     dimension_indv=(5,),
-                                    comb_func=self.comb_func,
+                                    comb_fun=self.comb_func,
                                     dimension_comb=(5,))
         integrands = integrand_exact_bounds(2**12)
         n_replications = integrands.shape[1]
@@ -422,7 +422,7 @@ class TestCustomVector(unittest.TestCase):
         """ tests to verify integration results against analytical integrals"""
         integrand = CustomFun(self.true_measure_e2e, self.integrands,
                         dimension_indv=(5,),
-                        comb_func=self.comb_func,
+                        comb_fun=self.comb_func,
                         dimension_comb=(5,),
                         bound_fun=self.bound_fun)
         sr = stopping_criterion.CubQMCDigitalNetB2G(integrand, 1e-5, 1e-5)
