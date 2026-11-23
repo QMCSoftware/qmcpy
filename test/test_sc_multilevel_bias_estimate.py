@@ -6,6 +6,10 @@ extrapolated to level L+1 before summing the tail, so they returned
 Y_L 2^{-alpha} / (2^alpha - 1), which is too small by a factor of 2^alpha. That
 under-estimate made CubMLQMCCont and CubMLMCCont stop at too coarse a level and
 miss the requested tolerance.
+
+The remaining-error formula is the one in Giles (2015), Multilevel Monte Carlo
+methods, Acta Numerica 24, Sec. 3.1, and Giles (2008), Operations Research 56(3),
+Sec. 4.2 (the bias estimate preceding eq. (10)).
 """
 
 import unittest
@@ -13,7 +17,18 @@ from types import SimpleNamespace
 
 import numpy as np
 
-from qmcpy import CubMLMCCont, CubMLQMC, DigitalNetB2, FinancialOption, IIDStdUniform
+from qmcpy import (
+    CubMLMC,
+    CubMLMCCont,
+    CubMLQMC,
+    CubMLQMCCont,
+    DigitalNetB2,
+    FinancialOption,
+    IIDStdUniform,
+)
+
+SEED = 1
+ASIAN_GEOMETRIC = dict(option="ASIAN", asian_mean="GEOMETRIC")
 
 
 class MultilevelBiasEstimateTest(unittest.TestCase):
@@ -42,6 +57,42 @@ class MultilevelBiasEstimateTest(unittest.TestCase):
                 data = SimpleNamespace(sum_level=np.vstack([means * n_level, means**2 * n_level]), n_level=n_level)
                 expected = means[-1] / (2**alpha - 1)
                 self.assertAlmostEqual(float(sc._bias(data, levels - 1)), expected, places=12)
+
+
+class MultilevelExactSolutionTest(unittest.TestCase):
+    """Fixed-seed check of each multilevel criterion against the exact price.
+
+    The geometric Asian call has a closed-form price in the infinite-dimensional
+    (continuous monitoring) limit, ``FinancialOption.get_exact_value_inf_dim``,
+    which is the quantity the multilevel estimators converge to. With SEED = 1,
+    CubMLMCCont (err/tol 1.51) and CubMLQMCCont (err/tol 2.53) miss the tolerance
+    before the bias fix; all four criteria meet it after the fix.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        fo = FinancialOption(IIDStdUniform(seed=SEED), **ASIAN_GEOMETRIC)
+        cls.exact = float(fo.get_exact_value_inf_dim())
+
+    def _check(self, sc, abs_tol):
+        solution, _ = sc.integrate()
+        self.assertLess(abs(float(solution) - self.exact), abs_tol)
+
+    def test_cub_mlmc(self):
+        fo = FinancialOption(IIDStdUniform(seed=SEED), **ASIAN_GEOMETRIC)
+        self._check(CubMLMC(fo, abs_tol=5e-3), 5e-3)
+
+    def test_cub_mlmc_cont(self):
+        fo = FinancialOption(IIDStdUniform(seed=SEED), **ASIAN_GEOMETRIC)
+        self._check(CubMLMCCont(fo, abs_tol=5e-3), 5e-3)
+
+    def test_cub_mlqmc(self):
+        fo = FinancialOption(DigitalNetB2(seed=SEED, replications=32), **ASIAN_GEOMETRIC)
+        self._check(CubMLQMC(fo, abs_tol=3e-3), 3e-3)
+
+    def test_cub_mlqmc_cont(self):
+        fo = FinancialOption(DigitalNetB2(seed=SEED, replications=32), **ASIAN_GEOMETRIC)
+        self._check(CubMLQMCCont(fo, abs_tol=3e-3), 3e-3)
 
 
 if __name__ == "__main__":
