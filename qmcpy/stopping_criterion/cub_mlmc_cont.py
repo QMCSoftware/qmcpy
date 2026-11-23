@@ -25,15 +25,15 @@ class CubMLMCCont(AbstractCubMLMC):
         >>> solution,data = sc.integrate()
         >>> data
         Data (Data)
-            solution        1.771
-            n_total         1480870
+            solution        1.780
+            n_total         2766187
             levels          3
-            n_level         [1145480  230538  104852]
-            mean_level      [1.71  0.048 0.013]
-            var_level       [21.819  1.766  0.451]
+            n_level         [2173209  436681  156297]
+            mean_level      [1.714 0.053 0.013]
+            var_level       [21.797  1.763  0.452]
             cost_per_sample [2. 4. 8.]
-            alpha           1.868
-            beta            1.969
+            alpha           2.035
+            beta            1.963
             gamma           ...
             time_integrate  ...
         CubMLMCCont (AbstractStoppingCriterion)
@@ -44,7 +44,7 @@ class CubMLMCCont(AbstractCubMLMC):
             n_tols          10
             inflate         1.668
             theta_init      2^(-1)
-            theta           0.051
+            theta           2^(-1)
         FinancialOption (AbstractIntegrand)
             option          ASIAN
             call_put        CALL
@@ -481,4 +481,4 @@ class CubMLMCCont(AbstractCubMLMC):
         y = np.log2(abs(mean_level[level - 1 : level + 1]))
         x = np.linalg.lstsq(A, y, rcond=None)[0]
         alpha = max(0.5, -x[0])
-        return 2 ** (x[1] + (level + 1) * x[0]) / (2**alpha - 1)
+        return 2 ** (x[1] + level * x[0]) / (2**alpha - 1)
