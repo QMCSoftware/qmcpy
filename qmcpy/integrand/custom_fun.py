@@ -184,7 +184,7 @@ class CustomFun(AbstractIntegrand):
         elif (self._bound_fun is None) and (self._comb_func is not None):
             # TODO: allow specifying tolerance, stopping criteria etc?
             # sample in the space [bound_low, bound_high]^N to find approximate bounds
-            uniform_sampler = Uniform(DigitalNetB2(self.d_comb[0]), bound_low, bound_high)
+            uniform_sampler = Uniform(DigitalNetB2(self.d_indv[0]), bound_low, bound_high)
             uniform_samples: np.ndarray = uniform_sampler(self.comb_fun_n_samples, return_weights=False)
             comb_samples = self._comb_func(uniform_samples.T) # [d, num_samples]
             # take min and max

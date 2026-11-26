@@ -351,7 +351,7 @@ class TestCustomVector(unittest.TestCase):
             var1 = ys[3] - mean1**2
             cov = ys[4] - mean0 * mean1
             corr = cov / np.sqrt(var0*var1)
-            return np.stack([mean0, mean1, var0, var1, corr])
+            return np.stack([mean0, var1, corr]) # return subset so that d_indv != d_comb
         self.comb_func = comb_func
 
         # compute bounds on combinations
@@ -368,8 +368,8 @@ class TestCustomVector(unittest.TestCase):
             cov_lb = ymin[4] - mean0_ub * mean1_ub
             corr_ub = cov_ub/np.sqrt(var0_lb*var1_lb)
             corr_lb = cov_lb/np.sqrt(var0_ub*var1_ub)
-            lower_bounds = np.stack([mean0_lb, mean1_lb, var0_lb, var1_lb, corr_lb])
-            upper_bounds = np.stack([mean0_ub, mean1_ub, var0_ub, var1_ub, corr_ub])
+            lower_bounds = np.stack([mean0_lb, var1_lb, corr_lb]) # return subset to test case of d_indv != d_comb
+            upper_bounds = np.stack([mean0_ub, var1_ub, corr_ub]) # return subset to test case of d_indv != d_comb
             return lower_bounds, upper_bounds
         self.bound_fun = bound_fun
 
@@ -387,7 +387,7 @@ class TestCustomVector(unittest.TestCase):
         integrand = CustomFun(self.true_measure, self.integrands,
                         dimension_indv=(5,),
                         comb_fun=self.comb_func,
-                        dimension_comb=(5,),
+                        dimension_comb=(3,),
                         bound_fun=self.bound_fun)
         spawned = integrand.spawn(np.arange(5))
         self.assertIsInstance(spawned, list)
@@ -399,12 +399,12 @@ class TestCustomVector(unittest.TestCase):
         integrand_exact_bounds = CustomFun(self.true_measure, self.integrands,
                                     dimension_indv=(5,),
                                     comb_fun=self.comb_func,
-                                    dimension_comb=(5,),
+                                    dimension_comb=(3,),
                                     bound_fun=self.bound_fun)
         integrand_approx_bounds = CustomFun(self.true_measure, self.integrands,
                                     dimension_indv=(5,),
                                     comb_fun=self.comb_func,
-                                    dimension_comb=(5,))
+                                    dimension_comb=(3,))
         integrands = integrand_exact_bounds(2**12)
         n_replications = integrands.shape[1]
         means = integrands.mean(-1)
@@ -423,11 +423,11 @@ class TestCustomVector(unittest.TestCase):
         integrand = CustomFun(self.true_measure_e2e, self.integrands,
                         dimension_indv=(5,),
                         comb_fun=self.comb_func,
-                        dimension_comb=(5,),
+                        dimension_comb=(3,),
                         bound_fun=self.bound_fun)
         sr = stopping_criterion.CubQMCDigitalNetB2G(integrand, 1e-5, 1e-5)
         results, data = sr.integrate()
-        np.testing.assert_allclose(results, np.array([0,0,1,1,0]), 1e-4, 1e-4)
+        np.testing.assert_allclose(results, np.array([0,1,0]), 1e-4, 1e-4)
 
 class TestBayesianLRCoeffs(unittest.TestCase):
     """Tests for BayesianLRCoeffs methods not covered by unit tests."""
