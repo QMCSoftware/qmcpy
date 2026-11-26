@@ -183,18 +183,16 @@ def _extract_diagnostic_row(data):
 def _fill_data_from_stopping_criterion(data, stopping_criterion):
     if stopping_criterion is None:
         return data
-    if getattr(data, "abs_tol", None) is None:
-        setattr(data, "abs_tol",
-            getattr(stopping_criterion, "abs_tol", None)
+    setattr(data, "abs_tol",
+        getattr(stopping_criterion, "abs_tol", None)
+    )
+    setattr(data, "rmse_tol",
+        getattr(
+            stopping_criterion,
+            "target_rmse_tol",
+            getattr(stopping_criterion, "rmse_tol", None),
         )
-    if getattr(data, "rmse_tol", None) is None:
-        setattr(data, "rmse_tol",
-            getattr(
-                stopping_criterion,
-                "target_rmse_tol",
-                getattr(stopping_criterion, "rmse_tol", None),
-            )
-        )
+    )
     for attr in ["bound_diff", "comb_bound_diff", "bound_half_width", "rmse_estimate"]:
         if getattr(data, attr, None) is None and hasattr(stopping_criterion, attr):
             setattr(data, attr, getattr(stopping_criterion, attr))
@@ -615,6 +613,7 @@ class _IterationTraceLogger(object):
         Returns:
             None
         """
+        data = _fill_data_from_stopping_criterion(data, self.stopping_criterion)
         if not self.enabled:
             return
         self._print_header_once()
@@ -715,7 +714,6 @@ class _IterationTraceLogger(object):
         Returns:
             None
         """
-        data = _fill_data_from_stopping_criterion(data, self.stopping_criterion)
         current_signature = self._state_signature(data)
         if (
             self.pending_resume_signature is not None
