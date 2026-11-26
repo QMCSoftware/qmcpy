@@ -9,7 +9,7 @@ from ..discrete_distribution import DigitalNetB2
 
 import numpy as np
 import warnings
-from copy import copy
+from copy import copy, deepcopy
 
 import pymc
 import pytensor
@@ -651,4 +651,7 @@ class PyMCWrapper(AbstractTrueMeasure):
         """
         # TODO: check if we can reuse the compiled functions and only change sampler
         # this will involve adding a constructor
-        return PyMCWrapper(sampler, self.model, self.unconstrained_samples)
+        # avoid rv reorderings, only change the sampler
+        spawned = deepcopy(self)
+        spawned._parse_sampler(sampler)
+        return spawned
