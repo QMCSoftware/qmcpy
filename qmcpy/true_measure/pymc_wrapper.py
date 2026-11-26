@@ -27,8 +27,11 @@ from pymc.pytensorf import PointFunc, replace_vars_in_graphs, Function
 from pymc.model.transform.conditioning import remove_value_transforms
 from pymc import Model
 
-if not (int(pymc.__version__.split('.')[0]) == 6): # backends matter here
-    raise AssertionError(f"PyMC{pymc.__version__} unsupported. PyMCWrapper supports running models in PyMC6")
+if int(pymc.__version__.split('.')[0]) != 6:
+    raise ImportError(
+        f"PyMC {pymc.__version__} is unsupported; PyMCWrapper requires PyMC 6.",
+        name="pymc",
+    )
 ###### based on `observe` from pymc model/transform/conditioning
 
 def hide( ## tongue in cheek, opposite of `observe`
@@ -386,7 +389,6 @@ def compile_vectorized_logp(
         Returns:
             logp (Union[PointFunc, Function]): compiled vectorized logp function
         """
-        pytensor.config.on_unused_input = 'warn'
         compile_kwargs.setdefault("on_unused_input", "ignore")
         logp_graph = model.logp(vars=model.value_vars, jacobian=jacobian, sum=sum)
         # use `vectorize_graph` to convert the input shapes to (None,*old_shape) to automatically vectorize the calculations
