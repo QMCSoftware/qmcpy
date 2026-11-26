@@ -152,6 +152,38 @@ class TestCubQMCAmericanG(unittest.TestCase):
         solution, data = sc.integrate()
         self.assertTrue(5.5 < solution < 6.5)
 
+    def test_mismatched_integrand_rejection(self):
+        opt1 = FinancialOption(Sobol(self.d, seed=7), option="AMERICAN", call_put="PUT", **self.opt_params)
+        opt2 = FinancialOption(Sobol(self.d + 1, seed=7), option="AMERICAN", call_put="PUT", **self.opt_params)
+        sc_other = CubQMCNetG(opt2, abs_tol=1.0, n_init=2**8, n_limit=2**10)
+        with self.assertRaises(ParameterError):
+            CubQMCAmericanG(opt1, stopping_criterion=sc_other)
+
+    def test_tolerance_forwarding_to_custom_criterion(self):
+        opt = FinancialOption(Sobol(self.d, seed=7), option="AMERICAN", call_put="PUT", **self.opt_params)
+        sc_inner = CubQMCNetG(opt, abs_tol=1.0, rel_tol=0.0, n_init=2**8, n_limit=2**10)
+        sc_wrapper = CubQMCAmericanG(opt, abs_tol=1.0, rel_tol=0.0, stopping_criterion=sc_inner)
+        sc_wrapper.set_tolerance(abs_tol=0.01, rel_tol=0.05)
+        self.assertEqual(sc_wrapper.abs_tol, 0.01)
+        self.assertEqual(sc_wrapper.rel_tol, 0.05)
+        self.assertEqual(sc_inner.abs_tol, 0.01)
+        self.assertEqual(sc_inner.rel_tol, 0.05)
+
+    def test_lattice_order_check(self):
+        # Lattice with order='LINEAR' should not select CubQMCLatticeG,
+        # but fall through to CubQMCRepStudentT with replications
+        opt = FinancialOption(Lattice(self.d, seed=7, order="LINEAR"), option="AMERICAN", call_put="PUT", **self.opt_params)
+        sc = CubQMCAmericanG(opt, abs_tol=0.2, n_train=64, n_init=64, n_limit=256)
+        inner_sc = sc._select_inner_stopping_criterion()
+        self.assertIsInstance(inner_sc, CubQMCRepStudentT)
+
+    def test_pricing_sampler_preserved_in_data(self):
+        # When using Halton with replications=1, pricing integrand is replicated with replications=32
+        opt = FinancialOption(Halton(self.d, seed=7, replications=1), option="AMERICAN", call_put="PUT", **self.opt_params)
+        sc = CubQMCAmericanG(opt, abs_tol=1.0, n_train=64, n_init=64, n_limit=256)
+        _, data = sc.integrate()
+        self.assertEqual(data.discrete_distrib.replications, 32)
+
 
 if __name__ == "__main__":
     unittest.main()

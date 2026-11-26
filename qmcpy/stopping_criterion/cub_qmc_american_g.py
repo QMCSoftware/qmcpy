@@ -100,6 +100,11 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
                 )
 
         if isinstance(stopping_criterion, AbstractStoppingCriterion):
+            if stopping_criterion.integrand is not self.integrand:
+                raise ParameterError(
+                    "stopping_criterion instance must use the same integrand; "
+                    "pass a stopping criterion class to create a new instance"
+                )
             conflicting = []
             for param in ["abs_tol", "rel_tol", "n_init", "n_limit"]:
                 if hasattr(stopping_criterion, param):
@@ -144,7 +149,11 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
                     **self.inner_kwargs
                 )
             else:
-                self.stopping_criterion_custom.integrand = self.integrand
+                if self.stopping_criterion_custom.integrand is not self.integrand:
+                    raise ParameterError(
+                        "stopping_criterion instance must use the same integrand; "
+                        "pass a stopping criterion class to create a new instance"
+                    )
                 return self.stopping_criterion_custom
 
         distrib = self.discrete_distrib
@@ -192,7 +201,11 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
                 n_limit=self.n_limit,
                 **self.inner_kwargs
             )
-        elif isinstance(distrib, Lattice) and distrib.no_replications:
+        elif (
+            isinstance(distrib, Lattice)
+            and distrib.order == "RADICAL INVERSE"
+            and distrib.no_replications
+        ):
             return CubQMCLatticeG(
                 self.integrand,
                 abs_tol=self.abs_tol,
@@ -251,7 +264,8 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
             training_sampler = self.training_discrete_distrib
         elif isinstance(self.discrete_distrib, AbstractIIDDiscreteDistribution):
             training_sampler = type(self.discrete_distrib)(
-                dimension=self.discrete_distrib.d, seed=self.discrete_distrib._base_seed
+                dimension=self.discrete_distrib.d,
+                seed=self.discrete_distrib._base_seed.spawn(1)[0],
             )
         else:
             training_sampler = self.discrete_distrib.spawn(1)[0]
@@ -302,7 +316,9 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
 
         self._set_elapsed_time(data, time() - t_start)
         trace.iteration(data)
+        pricing_objects = (data.integrand, data.true_measure, data.discrete_distrib)
         self._finalize_integration_data(data, time() - t_start)
+        data.integrand, data.true_measure, data.discrete_distrib = pricing_objects
         trace.finalize()
 
         return solution, data
@@ -330,3 +346,7 @@ class CubQMCAmericanG(AbstractStoppingCriterion):
             self.abs_tol = abs_tol
         if rel_tol is not None:
             self.rel_tol = rel_tol
+        if isinstance(self.stopping_criterion_custom, AbstractStoppingCriterion):
+            self.stopping_criterion_custom.set_tolerance(
+                abs_tol=abs_tol, rel_tol=rel_tol
+            )

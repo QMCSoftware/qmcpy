@@ -79,6 +79,52 @@ class TestFinancialOptionAmerican(unittest.TestCase):
         np.testing.assert_allclose(g_vals, payoff_vals)
         self.assertFalse(np.allclose(g_vals, payoff_vals * opt.discount_factor))
 
+    def test_early_exercise_deterministic_paths(self):
+        # 3 monitoring steps: t1, t2, t3
+        sampler = Sobol(3, seed=7)
+        opt = FinancialOption(sampler, option="AMERICAN", call_put="PUT", strike_price=100.0, start_price=100.0, interest_rate=0.05, volatility=0.2, t_final=1.0)
+        t_vec = opt.true_measure.time_vec
+        t1, t2, t3 = t_vec[0], t_vec[1], t_vec[2]
+        r = 0.05
+
+        # Prescribe regression coefficients so that continuation values are known constants:
+        # Step 0 (t1): c_hat = 20.0
+        # Step 1 (t2): c_hat = 10.0
+        opt.betas = [np.array([20.0, 0.0, 0.0, 0.0]), np.array([10.0, 0.0, 0.0, 0.0])]
+
+        # Construct deterministic paths:
+        # Path 0: S=[60, 90, 95] -> At t1, v_imm=(100-60)*exp(-r*t1) ~ 39.34 > 20.0 -> Exercises at t1
+        # Path 1: S=[85, 80, 90] -> At t1, v_imm=(100-85)*exp(-r*t1) ~ 14.75 < 20.0 -> Continues to t2
+        #                           At t2, v_imm=(100-80)*exp(-r*t2) ~ 19.34 > 10.0 -> Exercises at t2
+        # Path 2: S=[110, 110, 80] -> OTM at t1 & t2 -> Exercises at maturity t3 with payoff (100-80)*exp(-r*t3)
+        # Path 3: S=[110, 110, 110] -> OTM at all steps -> Payoff is 0.0
+        test_paths = np.array([
+            [60.0, 90.0, 95.0],
+            [85.0, 80.0, 90.0],
+            [110.0, 110.0, 80.0],
+            [110.0, 110.0, 110.0],
+        ])
+
+        payoffs = opt.payoff_american_put(test_paths)
+        expected = np.array([
+            (100.0 - 60.0) * np.exp(-r * t1),
+            (100.0 - 80.0) * np.exp(-r * t2),
+            (100.0 - 80.0) * np.exp(-r * t3),
+            0.0,
+        ])
+        np.testing.assert_allclose(payoffs, expected)
+
+    def test_backward_induction_cash_flow_update(self):
+        # Verify backward induction updates cash flow vector upon early exercise
+        sampler = Sobol(2, seed=7)
+        opt = FinancialOption(sampler, option="AMERICAN", call_put="PUT", strike_price=100.0, start_price=100.0, interest_rate=0.05, volatility=0.2, t_final=1.0)
+        # 10 paths where terminal payoff at t2 is 0 (S=120) but path 0 is deep ITM at t1 (S=50)
+        paths = np.ones((10, 2)) * 120.0
+        paths[0, 0] = 50.0  # Deep ITM at step 0
+        betas = opt.train_american_policy(paths)
+        self.assertEqual(len(betas), 1)
+        self.assertIsNotNone(betas[0])
+
 
 if __name__ == "__main__":
     unittest.main()
