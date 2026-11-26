@@ -422,7 +422,7 @@ class TestCustomVector(unittest.TestCase):
                                     dimension_indv=(5,),
                                     comb_fun=self.comb_func,
                                     dimension_comb=(3,))
-        integrands = integrand_exact_bounds(2**12)
+        integrands = integrand_exact_bounds(2**20)
         n_replications = integrands.shape[1]
         means = integrands.mean(-1)
         mean = means.mean(-1)
@@ -432,8 +432,8 @@ class TestCustomVector(unittest.TestCase):
         exact_bounds_lb, exact_bounds_ub = integrand_exact_bounds.bound_fun(integrands_lb, integrands_ub)
         approx_bounds_lb, approx_bounds_ub = integrand_approx_bounds.bound_fun(integrands_lb, integrands_ub)
 
-        np.testing.assert_allclose(exact_bounds_lb, approx_bounds_lb, rtol=1e-5, atol=1e-6)
-        np.testing.assert_allclose(exact_bounds_ub, approx_bounds_ub, rtol=1e-5, atol=1e-6)
+        np.testing.assert_allclose(exact_bounds_lb, approx_bounds_lb, atol=1e-6)
+        np.testing.assert_allclose(exact_bounds_ub, approx_bounds_ub, atol=1e-6)
 
     def test_results_e2e(self):
         """ tests to verify integration results against analytical integrals"""
