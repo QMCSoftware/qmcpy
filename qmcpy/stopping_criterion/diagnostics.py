@@ -183,16 +183,18 @@ def _extract_diagnostic_row(data):
 def _fill_data_from_stopping_criterion(data, stopping_criterion):
     if stopping_criterion is None:
         return data
-    setattr(data, "abs_tol",
-        getattr(stopping_criterion, "abs_tol", None)
-    )
-    setattr(data, "rmse_tol",
-        getattr(
-            stopping_criterion,
-            "target_rmse_tol",
-            getattr(stopping_criterion, "rmse_tol", None),
+    if hasattr(stopping_criterion, "abs_tol"):
+        setattr(data, "abs_tol",
+            getattr(stopping_criterion, "abs_tol")
         )
-    )
+    if hasattr(stopping_criterion, "rmse_tol"):
+        setattr(data, "rmse_tol",
+            getattr(
+                stopping_criterion,
+                "target_rmse_tol",
+                getattr(stopping_criterion, "rmse_tol"),
+            )
+        )
     for attr in ["bound_diff", "comb_bound_diff", "bound_half_width", "rmse_estimate"]:
         if getattr(data, attr, None) is None and hasattr(stopping_criterion, attr):
             setattr(data, attr, getattr(stopping_criterion, attr))
