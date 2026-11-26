@@ -28,6 +28,10 @@ jupyter:
 
 ::: qmcpy.discrete_distribution.korobov.KorobovLattice
 
+## `lattice_vector_wssd_search`
+
+::: qmcpy.discrete_distribution.lattice.lattice_vector_wssd_search.lattice_vector_wssd_search
+
 ## `Halton`
 
 ::: qmcpy.discrete_distribution.digital_net_any_bases.halton.Halton
@@ -51,6 +55,10 @@ jupyter:
 ## `LatinHypercube`
 
 ::: qmcpy.discrete_distribution.latin_hypercube.LatinHypercube
+
+## `kronecker_vector_search_mobius_transform`
+
+::: qmcpy.discrete_distribution.kronecker.kronecker_search_methods.kronecker_vector_search_mobius_transform
 
 ## `DummySampler`
 

@@ -1,6 +1,37 @@
 import torch
 from torch import nn
-from torch_geometric.nn import MessagePassing, InstanceNorm, radius_graph
+from torch_geometric.nn import MessagePassing, InstanceNorm
+
+try:
+    from torch_geometric.nn import radius_graph as _tg_radius_graph
+except Exception:  # torch_geometric built without the pooling ops
+    _tg_radius_graph = None
+
+_tg_radius_graph_ok = _tg_radius_graph is not None
+
+
+def radius_graph(x, r, batch=None, loop=False):
+    """Edges between points within distance ``r`` (per batch), shaped ``[2, E]``.
+
+    Uses torch_geometric's compiled ``radius_graph`` when its backend is present
+    and working, otherwise a native ``torch.cdist`` fallback so MPMC runs
+    without ``pyg_lib`` / ``torch_cluster`` (and on platforms where their
+    compiled ops -- e.g. ``torch.ops.pyg.radius`` on Windows -- fail to load).
+    """
+    global _tg_radius_graph_ok
+    if _tg_radius_graph_ok:
+        try:
+            return _tg_radius_graph(x, r=r, batch=batch, loop=loop)
+        except (ImportError, AttributeError, RuntimeError, OSError):
+            _tg_radius_graph_ok = False  # backend missing/broken -- use native from now on
+    dist = torch.cdist(x, x)
+    mask = dist <= r
+    if batch is not None:
+        mask = mask & (batch.view(-1, 1) == batch.view(1, -1))
+    if not loop:
+        mask = mask & ~torch.eye(mask.size(0), dtype=torch.bool, device=mask.device)
+    row, col = mask.nonzero(as_tuple=True)
+    return torch.stack([row, col], dim=0)
 
 from .utils import (
     L2star, L2ctr, L2ext, L2per, L2sym, L2mix,

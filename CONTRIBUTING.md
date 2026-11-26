@@ -60,7 +60,7 @@ While `dev` contains the most complete set of install dependencies, a number of 
 pip install -e ".[dev]"
 ~~~
 
-The `dev` extra includes QMCPy's PyPI-hosted MPMC dependencies. MPMC additionally requires a platform-specific `pyg_lib` wheel that is not available from PyPI. After installing `dev`, let the QMCPy installer select the wheel page matching the installed PyTorch build:
+The `dev` extra includes QMCPy's PyPI-hosted MPMC dependencies. The optional `pyg_lib` accelerator uses platform-specific wheels that are not available from PyPI. MPMC can run without it using a native PyTorch radius-graph fallback. After installing `dev`, the QMCPy installer can select the wheel page matching the installed PyTorch build; it warns and continues if neither a wheel nor a source build is available:
 
 ~~~bash
 qmcpy-install-mpmc

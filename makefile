@@ -7,7 +7,7 @@ PYTEST_XDIST ?= $(shell $(PYTHON) scripts/pytest_xdist.py 2>/dev/null)
 PYTEST ?=
 SMOKE_CODE_CELLS ?= 2
 WITH_MPMC ?= 0
-HAS_MPMC ?= $(shell $(PYTHON) -c "import importlib.util; mods=('torch','pyg_lib','torch_geometric'); print(int(all(importlib.util.find_spec(m) is not None for m in mods)))" 2>/dev/null || echo 0)
+HAS_MPMC ?= $(shell $(PYTHON) -c "import importlib.util; mods=('torch','torch_geometric'); print(int(all(importlib.util.find_spec(m) is not None for m in mods)))" 2>/dev/null || echo 0)
 
 # set environment variable for documentation
 export JUPYTER_PLATFORM_DIRS=1

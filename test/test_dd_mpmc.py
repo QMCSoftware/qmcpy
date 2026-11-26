@@ -7,7 +7,6 @@ import numpy as np
 import pytest
 
 torch = pytest.importorskip("torch")
-pytest.importorskip("pyg_lib")
 pytest.importorskip("torch_geometric")
 
 from qmcpy import MPMC, MPMC_net, mpmc_utils

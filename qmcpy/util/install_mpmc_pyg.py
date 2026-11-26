@@ -7,6 +7,7 @@ import sys
 
 
 PYG_LIB_REQUIREMENT = "pyg_lib>=0.6.0"
+PYG_LIB_SOURCE = "git+https://github.com/pyg-team/pyg-lib.git@0.8.0"
 TORCH_GEOMETRIC_REQUIREMENT = "torch-geometric>=2.6.1"
 
 
@@ -59,7 +60,13 @@ def wheel_urls(torch_version, accelerator):
 
 
 def main(torch_module=None):
-    """Install PyG dependencies that cannot be resolved from PyPI alone."""
+    """Install the PyG dependencies MPMC needs beyond what PyPI resolves.
+
+    ``torch-geometric`` is required and comes from PyPI.  ``pyg_lib`` is only an
+    optional accelerator -- MPMC and ``torch-geometric`` run without it -- so
+    when no wheel exists for this torch build and the source build fails, we
+    warn and carry on instead of aborting the install.
+    """
     if torch_module is None:
         try:
             torch_module = importlib.import_module("torch")
@@ -79,7 +86,18 @@ def main(torch_module=None):
         TORCH_GEOMETRIC_REQUIREMENT,
     )
 
-    last_error = None
+    if not _install_pyg_lib(torch_module):
+        print(
+            "WARNING: could not install the optional pyg_lib accelerator for "
+            f"torch {torch_module.__version__} "
+            f"({accelerator_tag(torch_module)}); MPMC falls back to "
+            "torch-geometric's native (slower) scatter path.",
+            flush=True,
+        )
+
+
+def _install_pyg_lib(torch_module):
+    """Best-effort pyg_lib install; return True on success, False otherwise."""
     accelerator = accelerator_tag(torch_module)
     for wheel_url in wheel_urls(torch_module.__version__, accelerator):
         print(f"Trying pyg_lib wheels from {wheel_url}", flush=True)
@@ -96,15 +114,27 @@ def main(torch_module=None):
                 "--find-links",
                 wheel_url,
             )
-            return
-        except subprocess.CalledProcessError as error:
-            last_error = error
+            return True
+        except subprocess.CalledProcessError:
+            pass
 
-    raise RuntimeError(
-        f"Unable to install pyg_lib for torch {torch_module.__version__} "
-        f"({accelerator}). "
-        "PyG wheels at https://data.pyg.org/whl/ may not support this build."
-    ) from last_error
+    print(
+        "Pre-built pyg_lib wheels were unavailable; trying the official "
+        "source release",
+        flush=True,
+    )
+    try:
+        run(
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "--no-build-isolation",
+            PYG_LIB_SOURCE,
+        )
+        return True
+    except subprocess.CalledProcessError:
+        return False
 
 
 if __name__ == "__main__":

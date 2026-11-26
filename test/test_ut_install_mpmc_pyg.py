@@ -1,7 +1,9 @@
 """Tests for the platform-specific MPMC dependency installer."""
 
+import io
 import subprocess
 import unittest
+from contextlib import redirect_stdout
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -77,15 +79,37 @@ class TestInstallMPMCPyG(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, r"install 'qmcpy\[mpmc\]'"):
                 install_mpmc_pyg.main()
 
-    def test_main_reports_missing_wheel(self):
-        """Exhausting candidate wheel pages reports the build that failed."""
-        def fail_pyg_lib(*args):
-            if "pyg_lib>=0.6.0" in args:
+    def test_main_falls_back_to_official_source_release(self):
+        """A wheel-index outage falls back to PyG's pinned source release."""
+        calls = []
+
+        def fake_run(*args):
+            calls.append(args)
+            if install_mpmc_pyg.PYG_LIB_REQUIREMENT in args:
                 raise subprocess.CalledProcessError(1, args)
 
+        with patch.object(install_mpmc_pyg, "run", fake_run):
+            install_mpmc_pyg.main(_torch())
+
+        self.assertEqual(len(calls), 4)
+        self.assertIn("--no-build-isolation", calls[-1])
+        self.assertEqual(calls[-1][-1], install_mpmc_pyg.PYG_LIB_SOURCE)
+
+    def test_main_warns_when_pyg_lib_unavailable(self):
+        """When every optional accelerator install fails, warn and return."""
+        def fail_pyg_lib(*args):
+            if (
+                install_mpmc_pyg.PYG_LIB_REQUIREMENT in args
+                or install_mpmc_pyg.PYG_LIB_SOURCE in args
+            ):
+                raise subprocess.CalledProcessError(1, args)
+
+        output = io.StringIO()
         with patch.object(install_mpmc_pyg, "run", fail_pyg_lib):
-            with self.assertRaisesRegex(RuntimeError, r"torch 2\.12\.1\+cpu \(cpu\)"):
+            with redirect_stdout(output):
                 install_mpmc_pyg.main(_torch())
+
+        self.assertIn("could not install the optional pyg_lib", output.getvalue())
 
 
 if __name__ == "__main__":
