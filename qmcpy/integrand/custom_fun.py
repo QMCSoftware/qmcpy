@@ -93,12 +93,12 @@ class CustomFun(AbstractIntegrand):
     """
 
     def __init__(self, true_measure: AbstractTrueMeasure, g: Callable, dimension_indv: tuple = (),
-                 dimension_comb: Union[None, tuple]=None,
+                 parallel: Union[bool, int] = False, *,
+                 dimension_comb: Union[None, tuple] = None,
                  bound_fun: Union[None, Callable[[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]] = None,
                  dependency: Union[None, Callable[[np.ndarray], np.ndarray]] = None,
                  comb_fun: Union[None, Callable[[np.ndarray], np.ndarray]] = None,
-                 comb_fun_n_samples: int = 2**12,
-                 parallel: Union[bool, int] = False) -> None:
+                 comb_fun_n_samples: int = 2**12) -> None:
         """Initialize a CustomFun integrand.
 
         Args:
@@ -226,6 +226,8 @@ class CustomFun(AbstractIntegrand):
             dimension_indv=self.d_indv,
             comb_fun=self._comb_func,
             dimension_comb=self.d_comb,
-            bound_fun=self.bound_fun,
+            bound_fun=self._bound_fun,
+            dependency=self._dependency_fun,
+            comb_fun_n_samples=self.comb_fun_n_samples,
             parallel=self.parallel,
         )
