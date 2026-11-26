@@ -360,12 +360,30 @@ class TestCustomVector(unittest.TestCase):
             mean0_lb = ymin[0]
             mean1_ub = ymax[1]
             mean1_lb = ymin[1]
-            var0_ub = ymax[2] - mean0_lb**2
-            var0_lb = ymin[2] - mean0_ub**2
-            var1_ub = ymax[3] - mean1_lb**2
-            var1_lb = ymin[3] - mean1_ub**2
-            cov_ub = ymax[4] - mean0_lb * mean1_lb
+            # upper bound explanation
+            # if mean_ub > 0 and mean_lb < 0, then mean = 0 value gives the maximum for variance.
+            # if they are both the same sign, then use the one with minimum magnitude (closest to zero) to get the upper bound
+            # in any case, the variance cannot be negative, so take maximum with 0
+            var0_ub = np.max(ymax[2] - np.minimum(np.square(mean0_lb), np.square(mean0_ub)) * np.where(mean0_ub * mean0_lb < 0, 0, 1), 0)
+            var1_ub = np.max(ymax[3] - np.minimum(np.square(mean1_lb), np.square(mean1_ub)) * np.where(mean1_ub * mean1_lb < 0, 0, 1), 0)
+            # here take the combination with minimum value, giving the upper bound
+            cov_ub = ymax[4] - np.min(np.array([mean0_lb * mean1_lb,
+                                                mean0_lb * mean1_ub,
+                                                mean0_ub * mean1_lb,
+                                                mean0_ub * mean1_ub]))
+
+            # lower bound explanation
+            # use mean in interval with maximum magnitude to get the lower bound
+            # in any case, the variance cannot be negative, so take maximum with 0
+            var0_lb = np.max(ymin[2] - np.maximum(np.square(mean0_lb), np.square(mean0_ub)), 0)
+            var1_lb = np.max(ymin[3] - np.maximum(np.square(mean1_lb), np.square(mean1_ub)), 0)
             cov_lb = ymin[4] - mean0_ub * mean1_ub
+            # here take the combination with maximum value, giving the lower bound
+            cov_ub = ymax[4] - np.max(np.array([mean0_lb * mean1_lb,
+                                                mean0_lb * mean1_ub,
+                                                mean0_ub * mean1_lb,
+                                                mean0_ub * mean1_ub]))
+
             corr_ub = cov_ub/np.sqrt(var0_lb*var1_lb)
             corr_lb = cov_lb/np.sqrt(var0_ub*var1_ub)
             lower_bounds = np.stack([mean0_lb, var1_lb, corr_lb]) # return subset to test case of d_indv != d_comb
