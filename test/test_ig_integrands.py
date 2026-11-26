@@ -377,9 +377,8 @@ class TestCustomVector(unittest.TestCase):
             # in any case, the variance cannot be negative, so take maximum with 0
             var0_lb = np.max(ymin[2] - np.maximum(np.square(mean0_lb), np.square(mean0_ub)), 0)
             var1_lb = np.max(ymin[3] - np.maximum(np.square(mean1_lb), np.square(mean1_ub)), 0)
-            cov_lb = ymin[4] - mean0_ub * mean1_ub
             # here take the combination with maximum value, giving the lower bound
-            cov_ub = ymax[4] - np.max(np.array([mean0_lb * mean1_lb,
+            cov_lb = ymax[4] - np.max(np.array([mean0_lb * mean1_lb,
                                                 mean0_lb * mean1_ub,
                                                 mean0_ub * mean1_lb,
                                                 mean0_ub * mean1_ub]))
