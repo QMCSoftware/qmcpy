@@ -14,6 +14,7 @@ SUPPORTED_SUFFIXES = {".md", ".ipynb"}
 FENCE_RE = re.compile(r"^\s*([`~]{3,})")
 LIST_RE = re.compile(r"^\s*(?:[-+*]|\d+[.)])\s+")
 REFERENCE_DEF_RE = re.compile(r"^\s*\[[^\]]+\]:\s+\S")
+IEEE_REFERENCE_RE = re.compile(r"^\s*\[\d+\]\s")
 SETEXT_RE = re.compile(r"^\s{0,3}(?:=+|-+)\s*$")
 HR_RE = re.compile(r"^\s{0,3}(?:[-*_]\s*){3,}$")
 LATEX_ENV_BEGIN_RE = re.compile(r"^\s*\\begin\{([A-Za-z*]+)\}")
@@ -250,6 +251,17 @@ def unwrap_markdown_text(text: str, *, preserve_latex: bool = False) -> str:
         if list_match and not HR_RE.match(line) and (
             active_list_item or not indented_as_code
         ):
+            flush_paragraph()
+            paragraph.append(line)
+            continue
+
+        # An IEEE-style reference marker ([1], [2], ...) always starts a new
+        # entry, even with no blank line separating it from the previous
+        # entry -- without this, two adjacent references with no blank line
+        # between them get joined into one run-on paragraph (see
+        # check_ref_style.py's own parser, which recognizes the same marker
+        # shape without requiring a blank line either).
+        if IEEE_REFERENCE_RE.match(line) and not indented_as_code:
             flush_paragraph()
             paragraph.append(line)
             continue

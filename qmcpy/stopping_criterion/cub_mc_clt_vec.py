@@ -11,7 +11,7 @@ from ..integrand import Keister, BoxIntegral, CustomFun, Genz, SensitivityIndice
 from ..util import MaxSamplesWarning, ParameterWarning, ParameterError
 import numpy as np
 from time import time
-from scipy.stats import norm
+from scipy.special import ndtri
 import warnings
 
 
@@ -241,7 +241,7 @@ class CubMCCLTVec(AbstractStoppingCriterion):
             np.full(self.integrand.d_comb, self.alpha)
         )
         self.set_tolerance(abs_tol, rel_tol)
-        self.z_star = -norm.ppf(self.alphas_indv / 2)
+        self.z_star = -ndtri(self.alphas_indv / 2)
 
     def _validate_resume(self, data):
         self._validate_resume_data(data, required_fields=self._RESUME_REQUIRED_FIELDS)
@@ -302,7 +302,7 @@ class CubMCCLTVec(AbstractStoppingCriterion):
             data.n_min = 0
             data.n_max = self.n_init
             data.solution_indv = np.tile(np.nan, self.integrand.d_indv)
-            data.xfull = np.empty((0, self.integrand.d))
+            data.xfull = np.empty((0, self.discrete_distrib.d))
             data.yfull = np.empty(self.integrand.d_indv + (0,))
         first_resume_iter = resume is not None
         while True:

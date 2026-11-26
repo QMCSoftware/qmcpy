@@ -24,6 +24,10 @@ jupyter:
 
 ::: qmcpy.true_measure.product_measure.ProductMeasure
 
+## `Mixture`
+
+::: qmcpy.true_measure.mixture.Mixture
+
 ## `StudentT`
 
 ::: qmcpy.true_measure.student_t.StudentT
@@ -35,6 +39,10 @@ jupyter:
 ## `UniformTriangle`
 
 ::: qmcpy.true_measure.uniform_triangle.UniformTriangle
+
+## `SimplexUniform`
+
+::: qmcpy.true_measure.simplex_uniform.SimplexUniform
 
 ## `ZeroInflatedExpUniform`
 

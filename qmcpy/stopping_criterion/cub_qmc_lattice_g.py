@@ -2,8 +2,7 @@ from ..integrand.abstract_integrand import AbstractIntegrand
 from typing import Union, Callable
 from .abstract_cub_qmc_ld_g import AbstractCubQMCLDG, _default_fudge
 from ..discrete_distribution import Lattice
-from ..true_measure import Gaussian, Uniform
-from ..integrand import Keister, BoxIntegral, CustomFun
+from ..integrand import Keister, BoxIntegral
 from ..integrand.genz import Genz
 from ..integrand.sensitivity_indices import SensitivityIndices
 from ..fast_transform import fftbr, omega_fftbr

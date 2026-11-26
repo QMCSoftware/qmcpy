@@ -13,6 +13,7 @@ from qmcpy import (
     FinancialOption,
     Gaussian,
     IIDStdUniform,
+    ImportanceSampling,
     Keister,
     Lattice,
     Lebesgue,
@@ -50,8 +51,15 @@ class IntegrationExampleTest(unittest.TestCase):
     def test_lebesgue_bounded_measure(self):
         """Mathematica: Integrate[x^3 y^3, {x, 1, 3}, {y, 3, 6}]"""
         abs_tol = 1
-        true_measure = Lebesgue(
-            Uniform(DigitalNetB2(2, seed=7), lower_bound=[1, 3], upper_bound=[3, 6])
+        proposal = Uniform(
+            DigitalNetB2(2, seed=7),
+            lower_bound=[1, 3],
+            upper_bound=[3, 6],
+        )
+        target = Lebesgue(proposal)
+        true_measure = ImportanceSampling(
+            target=target,
+            proposal=proposal,
         )
         myfunc = lambda x: (x.prod(1)) ** 3
         integrand = CustomFun(true_measure, myfunc)
@@ -61,23 +69,35 @@ class IntegrationExampleTest(unittest.TestCase):
 
     def test_lebesgue_inf_measure(self):
         abs_tol = 0.1
-        true_measure = Lebesgue(Gaussian(Lattice(1, seed=7)))
+        proposal = Gaussian(Lattice(1, seed=7))
+        target = Lebesgue(proposal)
+        true_measure = ImportanceSampling(
+            target=target,
+            proposal=proposal,
+        )
         myfunc = lambda x: np.exp(-(x**2)).sum(1)
         integrand = CustomFun(true_measure, myfunc)
         solution, data = CubQMCLatticeG(integrand, abs_tol=abs_tol).integrate()
         true_value = np.sqrt(np.pi)
-        self.assertTrue(abs(solution - solution) < abs_tol)
+        self.assertLess(abs(solution - true_value), abs_tol)
 
     def test_lebesgue_inf_measure_2d(self):
         abs_tol = 0.1
-        true_measure = Lebesgue(
-            Gaussian(Lattice(2, replications=32, seed=7), mean=1, covariance=2)
+        proposal = Gaussian(
+            Lattice(2, replications=32, seed=7),
+            mean=1,
+            covariance=2,
+        )
+        target = Lebesgue(proposal)
+        true_measure = ImportanceSampling(
+            target=target,
+            proposal=proposal,
         )
         myfunc = lambda x: np.exp(-(x**2)).prod(-1)
         integrand = CustomFun(true_measure, myfunc)
         solution, data = CubQMCCLT(integrand, abs_tol=abs_tol).integrate()
         true_value = np.pi
-        self.assertTrue(abs(solution - solution) < abs_tol)
+        self.assertLess(abs(solution - true_value), abs_tol)
 
     def test_uniform_measure(self):
         """Mathematica: Integrate[(x^3 y^3)/6, {x, 1, 3}, {y, 3, 6}]"""

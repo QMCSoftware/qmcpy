@@ -1,11 +1,11 @@
-from .abstract_true_measure import AbstractTrueMeasure
+from .abstract_true_measure import AbstractTrueMeasure, _clip_unit_interval
 from ..util import DimensionError, ParameterError
 from ..discrete_distribution import DigitalNetB2
 from ..discrete_distribution.abstract_discrete_distribution import (
     AbstractDiscreteDistribution,
 )
 import numpy as np
-from numpy.linalg import cholesky, slogdet
+from numpy.linalg import cholesky
 from scipy.special import ndtri
 from scipy.stats import multivariate_normal
 from scipy.linalg import eigh
@@ -171,9 +171,28 @@ class Gaussian(AbstractTrueMeasure):
         self._mvn_scipy_cache = value
 
     def _transform(self, x):
+        x = _clip_unit_interval(x)
         # Keep the inverse CDF and accumulation in at least double precision.
         transformed = ndtri(np.asarray(x, dtype=np.float64)) @ self.a.T
         return transformed + self.mu
+
+    def _map_effective_range(self, input_range):
+        # Gaussian subclasses may implement non-Gaussian or non-coordinatewise
+        # transforms, so only certify the exact Gaussian class here.
+        if type(self) is not Gaussian:
+            return None
+        bounds = self._broadcast_box(input_range, self.d)
+        if bounds is None:
+            return None
+        full_domain = self._broadcast_box(self.domain, self.d)
+        if np.array_equal(bounds, full_domain):
+            if np.linalg.matrix_rank(self.sigma) == self.d:
+                return self.range
+            return None
+        if self.d != 1:
+            return None
+        mapped = self.mu[0] + ndtri(bounds[0]) * self.a[0, 0]
+        return np.array([[np.min(mapped), np.max(mapped)]])
 
     def _weight(self, t):
         return self.mvn_scipy.pdf(t)

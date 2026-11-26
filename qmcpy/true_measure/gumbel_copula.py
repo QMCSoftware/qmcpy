@@ -34,6 +34,11 @@ class GumbelCopula(AbstractCopula):
         >>> marginals = [stats.expon(), stats.gamma(a=3)]
         >>> tm = GumbelCopula(sampler, marginals=marginals, theta=2.0)
         >>> x = tm(4)
+        >>> np.round(x, 7)
+        array([[1.278781 , 5.1092684],
+               [0.1784756, 1.5853286],
+               [4.3247056, 3.8952657],
+               [0.5613588, 2.5535638]])
         >>> x.shape
         (4, 2)
         >>> bool(np.isfinite(x).all())
@@ -43,6 +48,9 @@ class GumbelCopula(AbstractCopula):
             marginals       [<...rv_continuous_frozen object at ...>
                              <...rv_continuous_frozen object at ...>]
             theta           2^(1)
+
+        With independent replications:
+
         >>> rep_marginals = [stats.expon(), stats.gamma(a=3), stats.beta(a=2, b=5)]
         >>> rep_tm = GumbelCopula(
         ...     DigitalNetB2(3, seed=7, replications=2),
@@ -50,10 +58,23 @@ class GumbelCopula(AbstractCopula):
         ...     theta=2.0,
         ... )
         >>> samples = rep_tm(4)
+        >>> np.round(samples, 7)
+        array([[[0.2830697, 1.2139004, 0.2257962],
+                [1.144224 , 3.6967731, 0.3358936],
+                [0.6566196, 3.4793648, 0.1575974],
+                [2.4699777, 4.1890628, 0.5075038]],
+        <BLANKLINE>
+               [[0.5956012, 3.6832704, 0.2849156],
+                [0.7686452, 1.0915741, 0.125306 ],
+                [0.2641497, 1.4532798, 0.0617934],
+                [1.3981935, 3.8564252, 0.4514188]]])
         >>> samples.shape
         (2, 4, 3)
         >>> bool(np.isfinite(samples).all())
         True
+
+        Additional dimension and parameter checks:
+
         >>> GumbelCopula(DigitalNetB2(3, seed=7), marginals=[stats.uniform()] * 3, theta=2.0)(4).shape
         (4, 3)
         >>> independent_tm = GumbelCopula(DigitalNetB2(2, seed=7), marginals=[stats.uniform(), stats.uniform()], theta=1.0)

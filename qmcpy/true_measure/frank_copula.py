@@ -56,6 +56,11 @@ class FrankCopula(AbstractCopula):
         >>> marginals = [stats.norm(), stats.gamma(a=3), stats.expon()]
         >>> tm = FrankCopula(sampler, marginals=marginals, theta=5.0)
         >>> x = tm(4)
+        >>> np.round(x, 7)
+        array([[ 0.3389472,  4.3853793,  1.6178726],
+               [-0.8788202,  1.308997 ,  0.2446446],
+               [ 1.2691962,  3.0170409,  0.3050769],
+               [-0.1108689,  2.9980151,  1.4399646]])
         >>> x.shape
         (4, 3)
         >>> bool(np.isfinite(x).all())
@@ -66,16 +71,32 @@ class FrankCopula(AbstractCopula):
                              <...rv_continuous_frozen object at ...>
                              <...rv_continuous_frozen object at ...>]
             theta           5
+
+        With independent replications:
+
         >>> rep_tm = FrankCopula(
         ...     DigitalNetB2(3, seed=7, replications=2),
         ...     marginals=marginals,
         ...     theta=5.0,
         ... )
         >>> samples = rep_tm(4)
+        >>> np.round(samples, 7)
+        array([[[-0.6854412,  1.1626269,  0.464975 ],
+                [ 0.4719788,  3.9339683,  1.1504467],
+                [-0.0466438,  3.6677588,  0.3182755],
+                [ 1.3748644,  3.6026579,  2.2524449]],
+        <BLANKLINE>
+               [[-0.1287723,  3.9084874,  0.8467163],
+                [ 0.0912656,  1.1073905,  0.1681206],
+                [-0.7318128,  1.4007804,  0.035675 ],
+                [ 0.683825 ,  4.0288368,  2.1463867]]])
         >>> samples.shape
         (2, 4, 3)
         >>> bool(np.isfinite(samples).all())
         True
+
+        Additional dimension and parameter checks:
+
         >>> neg_tm = FrankCopula(DigitalNetB2(2, seed=7), marginals=[stats.uniform(), stats.uniform()], theta=-2.0)
         >>> neg_samples = neg_tm(4)
         >>> neg_samples.shape

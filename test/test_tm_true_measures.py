@@ -1,6 +1,8 @@
 from qmcpy import (
+    AbstractTrueMeasure,
     BernoulliCont,
     BrownianMotion,
+    CubQMCCLT,
     CustomFun,
     DigitalNetB2,
     Gaussian,
@@ -12,17 +14,20 @@ from qmcpy import (
     Lattice,
     Lebesgue,
     MaternGP,
+    SciPyWrapper,
+    SimplexUniform,
+    StudentT,
     Uniform,
     ZeroInflatedExpUniform,
 )
-from qmcpy.util import DimensionError, ParameterError
+from qmcpy.util import DimensionError, ParameterError, ParameterWarning
 import numpy as np
+import re
 import scipy.stats
 from scipy.sparse import issparse
 import unittest
 import warnings
 from qmcpy.true_measure.uniform_triangle import UniformTriangle, _UniformTriangleAdapter
-from qmcpy import SciPyWrapper
 
 
 def dense_covariance(covariance):
@@ -43,6 +48,445 @@ def assert_sample_mean_and_covariance(measure):
 
 class TestTrueMeasure(unittest.TestCase):
     """General tests for TrueMeasures"""
+
+    def test_range_in_domain(self):
+        cases = [
+            ("exact equality", [[0, 1]], [[0, 1]], True),
+            ("strict finite inclusion", [[0.25, 0.75]], [[0, 1]], True),
+            (
+                "compatible unbounded interval",
+                [[-np.inf, np.inf]],
+                [[-np.inf, np.inf]],
+                True,
+            ),
+            ("infinite domain", [[-5, 5]], [[-np.inf, np.inf]], True),
+            ("positive half-line", [[1, 3]], [[0, np.inf]], True),
+            ("lower-bound failure", [[-0.1, 0.75]], [[0, 1]], False),
+            ("upper-bound failure", [[0.25, 1.1]], [[0, 1]], False),
+            (
+                "multidimensional box",
+                [[0.1, 0.8], [0.2, 0.9]],
+                [[0, 1], [0, 1]],
+                True,
+            ),
+            (
+                "failure in one coordinate",
+                [[0.1, 0.8], [0.2, 1.1]],
+                [[0, 1], [0, 1]],
+                False,
+            ),
+            (
+                "broadcast domain",
+                [[0.1, 0.8], [0.2, 0.9]],
+                [[0, 1]],
+                True,
+            ),
+            (
+                "broadcast transform range",
+                [[0.25, 0.75]],
+                [[0, 1], [-1, 2]],
+                True,
+            ),
+            (
+                "non-broadcastable rows",
+                [[0.1, 0.8], [0.2, 0.9]],
+                [[0, 1], [0, 1], [0, 1]],
+                False,
+            ),
+        ]
+
+        for name, transform_range, domain, expected in cases:
+            with self.subTest(name=name):
+                self.assertIs(
+                    AbstractTrueMeasure._range_in_domain(transform_range, domain),
+                    expected,
+                )
+
+    def test_range_in_domain_rejects_invalid_bounds(self):
+        invalid_cases = [
+            ("one-dimensional range", [0, 1], [[0, 1]]),
+            ("three-column range", [[0, 0.5, 1]], [[0, 1]]),
+            ("ragged range", [[0, 1], [0, 0.5, 1]], [[0, 1]]),
+            ("one-dimensional domain", [[0, 1]], [0, 1]),
+            ("three-column domain", [[0, 1]], [[0, 0.5, 1]]),
+            (
+                "reversed transform range",
+                np.array([[0.8, 0.2]]),
+                np.array([[0.0, 1.0]]),
+            ),
+            ("reversed domain", [[0, 1]], [[0.8, 0.2]]),
+            (
+                "reversed multidimensional transform range",
+                [[0.1, 0.8], [0.9, 0.2]],
+                [[0, 1], [0, 1]],
+            ),
+            (
+                "reversed multidimensional domain",
+                [[0.1, 0.8], [0.2, 0.9]],
+                [[0, 1], [0.9, 0.2]],
+            ),
+            ("empty transform range", np.empty((0, 2)), [[0, 1]]),
+            ("empty domain", [[0, 1]], np.empty((0, 2))),
+            (
+                "string bounds",
+                np.array([["a", "z"]]),
+                np.array([["a", "z"]]),
+            ),
+            (
+                "object bounds",
+                np.array([[0, 1]], dtype=object),
+                np.array([[0, 1]], dtype=object),
+            ),
+            ("complex bounds", [[0 + 0j, 1 + 0j]], [[0 + 0j, 1 + 0j]]),
+            ("boolean bounds", [[False, True]], [[False, True]]),
+            ("NaN transform range", [[np.nan, 1]], [[0, 1]]),
+            ("NaN domain", [[0, 1]], [[np.nan, 1]]),
+        ]
+
+        for name, transform_range, domain in invalid_cases:
+            with self.subTest(name=name):
+                self.assertIs(
+                    AbstractTrueMeasure._range_in_domain(transform_range, domain),
+                    False,
+                )
+
+    def test_strict_range_in_domain_chain(self):
+        inner = Uniform(
+            DigitalNetB2(1, seed=7), lower_bound=0.25, upper_bound=0.75
+        )
+        outer = Kumaraswamy(inner)
+
+        self.assertFalse(outer.sub_compatibility_error)
+        samples = outer.gen_samples(8)
+        self.assertEqual(samples.shape, (8, 1))
+        self.assertTrue(np.isfinite(samples).all())
+
+    def test_multidimensional_range_in_domain_chain_broadcasts(self):
+        inner = Uniform(
+            DigitalNetB2(2, seed=7),
+            lower_bound=[0.1, 0.2],
+            upper_bound=[0.8, 0.9],
+        )
+        outer = Kumaraswamy(inner)
+
+        self.assertFalse(outer.sub_compatibility_error)
+        samples = outer.gen_samples(8)
+        self.assertEqual(samples.shape, (8, 2))
+        self.assertTrue(np.isfinite(samples).all())
+
+    def test_recursive_transform_applies_each_layer(self):
+        # This records current recursive execution only; it does not assert
+        # correctness of nominal range or moment metadata.
+        points = np.array([[0.1], [0.25], [0.5], [0.75], [0.9]])
+
+        uniform_inner = Uniform(
+            DigitalNetB2(1, seed=7), lower_bound=0.25, upper_bound=0.75
+        )
+        uniform_outer = Uniform(
+            uniform_inner, lower_bound=0.25, upper_bound=0.75
+        )
+
+        kumaraswamy_inner = Uniform(
+            DigitalNetB2(1, seed=7), lower_bound=0.25, upper_bound=0.75
+        )
+        kumaraswamy_outer = Kumaraswamy(kumaraswamy_inner)
+
+        gaussian_inner = Uniform(
+            DigitalNetB2(1, seed=7), lower_bound=0.25, upper_bound=0.75
+        )
+        gaussian_outer = Gaussian(gaussian_inner)
+
+        bernoulli_inner = BernoulliCont(DigitalNetB2(1, seed=7), lam=0.9)
+        bernoulli_outer = Kumaraswamy(bernoulli_inner, a=2.0, b=2.0)
+
+        cases = [
+            ("1(a) Uniform -> Uniform", uniform_inner, uniform_outer),
+            (
+                "1(b) Uniform -> Kumaraswamy",
+                kumaraswamy_inner,
+                kumaraswamy_outer,
+            ),
+            ("1(c) Uniform -> Gaussian", gaussian_inner, gaussian_outer),
+            (
+                "1(d) BernoulliCont -> Kumaraswamy",
+                bernoulli_inner,
+                bernoulli_outer,
+            ),
+        ]
+
+        for name, inner, outer in cases:
+            with self.subTest(name=name):
+                transformed = outer._jacobian_transform_r(
+                    points, return_weights=False
+                )
+                expected = outer._transform(inner._transform(points))
+                np.testing.assert_allclose(transformed, expected)
+
+                if name.startswith("1(a)"):
+                    np.testing.assert_allclose(
+                        transformed, 0.375 + 0.25 * points
+                    )
+                if name.startswith("1(d)"):
+                    np.testing.assert_array_equal(inner.range, outer.domain)
+
+    def test_effective_range_preserves_local_range_for_supported_chains(self):
+        points = np.array([[0.1], [0.25], [0.5], [0.75], [0.9]])
+        inner = Uniform(
+            DigitalNetB2(1, seed=7), lower_bound=0.25, upper_bound=0.75
+        )
+
+        uniform_outer = Uniform(
+            inner, lower_bound=0.25, upper_bound=0.75
+        )
+        np.testing.assert_array_equal(uniform_outer.range, [[0.25, 0.75]])
+        np.testing.assert_allclose(
+            uniform_outer.effective_range, [[0.375, 0.625]]
+        )
+        np.testing.assert_allclose(
+            uniform_outer._jacobian_transform_r(points, False),
+            0.375 + 0.25 * points,
+        )
+
+        kumaraswamy_outer = Kumaraswamy(inner, a=2.0, b=3.0)
+        np.testing.assert_array_equal(kumaraswamy_outer.range, [[0, 1]])
+        expected_kumaraswamy = kumaraswamy_outer._transform(
+            np.array([[0.25], [0.75]])
+        ).T
+        np.testing.assert_allclose(
+            kumaraswamy_outer.effective_range, expected_kumaraswamy
+        )
+
+        gaussian_outer = Gaussian(inner)
+        np.testing.assert_array_equal(
+            gaussian_outer.range, [[-np.inf, np.inf]]
+        )
+        np.testing.assert_allclose(
+            gaussian_outer.effective_range,
+            [scipy.stats.norm.ppf([0.25, 0.75])],
+        )
+        self.assertFalse(gaussian_outer.effective_range.flags.writeable)
+        with self.assertRaises(ValueError):
+            gaussian_outer.effective_range[0, 0] = 0
+
+    def test_effective_range_propagates_through_three_layers(self):
+        inner = Uniform(
+            DigitalNetB2(1, seed=7), lower_bound=0.25, upper_bound=0.75
+        )
+        middle = Uniform(inner, lower_bound=0.25, upper_bound=0.75)
+        outer = Kumaraswamy(middle, a=2.0, b=3.0)
+
+        expected = outer._transform(np.array([[0.375], [0.625]])).T
+        np.testing.assert_allclose(middle.effective_range, [[0.375, 0.625]])
+        np.testing.assert_allclose(outer.effective_range, expected)
+
+    def test_effective_range_avoids_false_rejection(self):
+        restricted_uniform = Uniform(
+            DigitalNetB2(1, seed=7), lower_bound=0.5, upper_bound=0.75
+        )
+        gaussian = Gaussian(restricted_uniform)
+        outer = Kumaraswamy(gaussian)
+
+        np.testing.assert_array_equal(gaussian.range, [[-np.inf, np.inf]])
+        np.testing.assert_allclose(
+            gaussian.effective_range,
+            [[0.0, scipy.stats.norm.ppf(0.75)]],
+        )
+        self.assertFalse(outer.sub_compatibility_error)
+        self.assertTrue(np.isfinite(outer.gen_samples(8)).all())
+
+    def test_unknown_effective_range_is_deferred_and_cannot_be_extended(self):
+        restricted_uniform = Uniform(
+            DigitalNetB2(2, seed=7), lower_bound=0.25, upper_bound=0.75
+        )
+        gaussian = Gaussian(
+            restricted_uniform,
+            covariance=[[1.0, 0.5], [0.5, 1.0]],
+        )
+        outer = Kumaraswamy(gaussian)
+
+        self.assertIsNone(gaussian.effective_range)
+        self.assertTrue(outer.sub_compatibility_error)
+        with self.assertRaisesRegex(
+            ParameterError,
+            "sub-transform effective range cannot be established",
+        ):
+            outer.gen_samples(8)
+        with self.assertRaisesRegex(
+            ParameterError,
+            "nested sub-transform effective range cannot be established",
+        ):
+            Kumaraswamy(outer)
+
+    def test_scipy_wrapper_effective_range_is_unknown_in_recursive_chain(self):
+        scipy_wrapper = SciPyWrapper(
+            DigitalNetB2(2, seed=7),
+            [scipy.stats.triang(c=0.1), scipy.stats.uniform()],
+        )
+        kumaraswamy = Kumaraswamy(scipy_wrapper)
+
+        self.assertIsNone(scipy_wrapper.effective_range)
+        self.assertIsNone(kumaraswamy.effective_range)
+        with self.assertRaisesRegex(
+            ParameterError,
+            "sub-transform effective range cannot be established",
+        ):
+            kumaraswamy.gen_samples(8)
+        with self.assertRaisesRegex(
+            ParameterError,
+            "nested sub-transform effective range cannot be established",
+        ):
+            Uniform(kumaraswamy)
+
+    def test_effective_range_spawn_recomputes_supported_chain(self):
+        measure = Kumaraswamy(
+            Uniform(
+                DigitalNetB2(1, seed=7),
+                lower_bound=0.25,
+                upper_bound=0.75,
+            ),
+            a=2.0,
+            b=3.0,
+        )
+
+        spawned = measure.spawn(s=2, dimensions=[1, 2])
+
+        np.testing.assert_allclose(
+            spawned[0].effective_range, measure.effective_range
+        )
+        np.testing.assert_allclose(
+            spawned[1].effective_range,
+            np.tile(measure.effective_range, (2, 1)),
+        )
+
+    def test_exact_marginal_effective_ranges(self):
+        bernoulli = BernoulliCont(DigitalNetB2(1, seed=7), lam=0.9)
+        johnsons_su = JohnsonsSU(DigitalNetB2(1, seed=7))
+
+        np.testing.assert_allclose(bernoulli.effective_range, [[0.0, 1.0]])
+        np.testing.assert_array_equal(
+            johnsons_su.effective_range, [[-np.inf, np.inf]]
+        )
+
+    def test_unrandomized_inverse_cdf_paths_are_finite(self):
+        cases = [
+            (
+                "JohnsonsSU",
+                JohnsonsSU(DigitalNetB2(1, randomize="FALSE")),
+            ),
+            (
+                "BrownianMotion BrownianBridge",
+                BrownianMotion(
+                    DigitalNetB2(2, randomize="FALSE"),
+                    decomp_type="BROWNIANBRIDGE",
+                ),
+            ),
+            (
+                "SciPyWrapper marginal",
+                SciPyWrapper(
+                    DigitalNetB2(1, randomize="FALSE"),
+                    scipy.stats.norm(),
+                ),
+            ),
+            (
+                "SciPyWrapper MVN",
+                SciPyWrapper(
+                    DigitalNetB2(2, randomize="FALSE"),
+                    scipy.stats.multivariate_normal(
+                        mean=[0.0, 0.0],
+                        cov=[[1.0, 0.5], [0.5, 1.0]],
+                    ),
+                ),
+            ),
+            (
+                "StudentT",
+                StudentT(
+                    DigitalNetB2(2, randomize="FALSE"),
+                    loc=[0.0, 0.0],
+                    shape=[[1.0, 0.25], [0.25, 1.0]],
+                    df=5,
+                ),
+            ),
+        ]
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", ParameterWarning)
+            for name, measure in cases:
+                with self.subTest(name=name):
+                    samples = measure.gen_samples(2)
+                    self.assertTrue(np.isfinite(samples).all())
+
+    def test_inverse_cdf_clipping_preserves_interior_values(self):
+        endpoints_1d = np.array([[0.0], [1.0]])
+        points_1d = np.array([[0.1], [0.25], [0.5], [0.75], [0.9]])
+
+        johnsons_su = JohnsonsSU(DigitalNetB2(1, seed=7))
+        self.assertTrue(np.isfinite(johnsons_su._transform(endpoints_1d)).all())
+        johnsons_expected = johnsons_su._lam * np.sinh(
+            (scipy.stats.norm.ppf(points_1d) - johnsons_su._gamma)
+            / johnsons_su._delta
+        ) + johnsons_su._xi
+        np.testing.assert_allclose(
+            johnsons_su._transform(points_1d),
+            johnsons_expected,
+            rtol=0,
+            atol=0,
+        )
+
+        scipy_wrapper = SciPyWrapper(DigitalNetB2(1, seed=7), scipy.stats.norm())
+        self.assertTrue(np.isfinite(scipy_wrapper._transform(endpoints_1d)).all())
+        np.testing.assert_allclose(
+            scipy_wrapper._transform(points_1d),
+            scipy.stats.norm.ppf(points_1d),
+            rtol=0,
+            atol=0,
+        )
+
+        points_2d = np.array(
+            [[0.1, 0.25], [0.25, 0.5], [0.5, 0.75], [0.75, 0.9]]
+        )
+        brownian_bridge = BrownianMotion(
+            DigitalNetB2(2, seed=7),
+            decomp_type="BROWNIANBRIDGE",
+        )
+        endpoints_2d = np.array([[0.0, 0.0], [1.0, 1.0]])
+        self.assertTrue(
+            np.isfinite(brownian_bridge._transform(endpoints_2d)).all()
+        )
+        bridge_normals = scipy.stats.norm.ppf(points_2d)
+        bridge_expected = (
+            brownian_bridge.drift_time_vec_plus_init
+            + np.sqrt(brownian_bridge.diffusion)
+            * brownian_bridge._bridge_transform(bridge_normals)
+        )[..., brownian_bridge._output_order]
+        np.testing.assert_allclose(
+            brownian_bridge._transform(points_2d),
+            bridge_expected,
+            rtol=0,
+            atol=0,
+        )
+
+    def test_out_of_domain_chain_preserves_deferred_errors(self):
+        inner = Uniform(
+            DigitalNetB2(1, seed=7), lower_bound=-0.1, upper_bound=0.75
+        )
+        incompatible = Kumaraswamy(inner)
+
+        self.assertTrue(incompatible.sub_compatibility_error)
+        with self.assertRaisesRegex(
+            ParameterError,
+            re.escape(
+                "The sub-transform effective range must be contained within the transform domain."
+            ),
+        ):
+            incompatible.gen_samples(8)
+
+        with self.assertRaisesRegex(
+            ParameterError,
+            re.escape(
+                "The nested sub-transform effective range must be contained within its transform domain."
+            ),
+        ):
+            Kumaraswamy(incompatible)
 
     def test_abstract_methods(self):
         d = 2
@@ -383,6 +827,34 @@ class TestUniform(unittest.TestCase):
         )
         np.testing.assert_allclose(dense_covariance(spawn.covariance), 3.0 * np.eye(4))
 
+    def test_weight_is_zero_outside_support(self):
+        uniform = Uniform(DigitalNetB2(1, seed=7), 0.25, 0.75)
+        points = np.array([[0.1], [0.25], [0.3], [0.5], [0.75], [0.9]])
+
+        np.testing.assert_allclose(
+            uniform._weight(points),
+            [0.0, 2.0, 2.0, 2.0, 2.0, 0.0],
+        )
+
+    def test_weight_support_mask_handles_dimensions_and_batches(self):
+        uniform = Uniform(
+            DigitalNetB2(2, seed=7),
+            lower_bound=[0.0, -1.0],
+            upper_bound=[1.0, 1.0],
+        )
+        points = np.array(
+            [
+                [[0.0, -1.0], [0.5, 0.0], [1.0, 1.0]],
+                [[-0.1, 0.0], [0.5, 1.1], [0.5, 0.0]],
+            ]
+        )
+
+        weights = uniform._weight(points)
+
+        self.assertEqual(weights.shape, (2, 3))
+        np.testing.assert_allclose(weights, [[0.5, 0.5, 0.5], [0.0, 0.0, 0.5]])
+        self.assertTrue(np.all(weights >= 0))
+
 
 class TestKumaraswamy(unittest.TestCase):
     def test_sample_mean_and_covariance(self):
@@ -438,6 +910,36 @@ class TestKumaraswamy(unittest.TestCase):
         np.testing.assert_allclose(
             dense_covariance(kumaraswamy.covariance), np.diag(expected_variance)
         )
+
+    def test_weight_is_zero_outside_support(self):
+        kumaraswamy = Kumaraswamy(DigitalNetB2(1, seed=7), a=2, b=2)
+        points = np.array([[-0.5], [0.0], [0.5], [1.0], [1.5]])
+
+        weights = kumaraswamy._weight(points)
+
+        np.testing.assert_allclose(weights, [0.0, 0.0, 1.5, 0.0, 0.0])
+        self.assertTrue(np.all(weights >= 0))
+
+        singular_boundaries = Kumaraswamy(
+            DigitalNetB2(1, seed=7), a=0.5, b=0.5
+        )._weight(np.array([[0.0], [1.0]]))
+        self.assertTrue(np.isposinf(singular_boundaries).all())
+
+    def test_weight_support_mask_handles_dimensions_and_batches(self):
+        kumaraswamy = Kumaraswamy(DigitalNetB2(2, seed=7), a=2, b=2)
+        points = np.array(
+            [
+                [[0.5, 0.5], [0.25, 0.75]],
+                [[-0.1, 0.5], [0.5, 1.1]],
+            ]
+        )
+
+        weights = kumaraswamy._weight(points)
+
+        self.assertEqual(weights.shape, (2, 2))
+        np.testing.assert_allclose(weights[0], [2.25, 1.23046875])
+        np.testing.assert_allclose(weights[1], [0.0, 0.0])
+        self.assertTrue(np.all(weights >= 0))
 
     def test_spawn_recomputes_moment_attributes(self):
         kumaraswamy = Kumaraswamy(
@@ -638,6 +1140,45 @@ class TestZeroInflatedExpUniform(unittest.TestCase):
             self.assertNotIn(parameter, tm.parameters)
 
 
+class TestBernoulliCont(unittest.TestCase):
+    def test_weight_is_zero_outside_support(self):
+        lam = 0.9
+        bernoulli = BernoulliCont(DigitalNetB2(1, seed=7), lam=lam)
+        points = np.array([[-0.1], [0.0], [0.5], [1.0], [1.1]])
+
+        weights = bernoulli._weight(points)
+        normalizer = 2 * np.arctanh(1 - 2 * lam) / (1 - 2 * lam)
+        expected_in_support = (
+            normalizer
+            * lam ** points[1:4, 0]
+            * (1 - lam) ** (1 - points[1:4, 0])
+        )
+
+        np.testing.assert_allclose(weights[[0, 4]], 0.0)
+        np.testing.assert_allclose(weights[1:4], expected_in_support)
+        self.assertTrue(np.all(weights >= 0))
+
+    def test_weight_support_mask_handles_dimensions_and_batches(self):
+        bernoulli = BernoulliCont(
+            DigitalNetB2(2, seed=7),
+            lam=[0.9, 0.8],
+        )
+        points = np.array(
+            [
+                [[0.0, 0.0], [0.5, 0.5], [1.0, 1.0]],
+                [[-0.1, 0.5], [0.5, 1.1], [0.25, 0.75]],
+            ]
+        )
+
+        weights = bernoulli._weight(points)
+
+        self.assertEqual(weights.shape, (2, 3))
+        self.assertTrue(np.all(weights[0] > 0))
+        np.testing.assert_allclose(weights[1, :2], 0.0)
+        self.assertGreater(weights[1, 2], 0.0)
+        self.assertTrue(np.all(weights >= 0))
+
+
 class TestUniformTriangle(unittest.TestCase):
     """Tests for UniformTriangle and _UniformTriangleAdapter."""
 
@@ -690,6 +1231,410 @@ class TestUniformTriangle(unittest.TestCase):
         self.assertEqual(lp.shape, (5,))
 
 
+class TestSimplexTransforms(unittest.TestCase):
+    """Unit tests for the direct SimplexUniform transforms."""
+
+    def test_drop_examples_1d_to_4d(self):
+        examples = {
+            1: (np.array([0.3]), np.array([[0.3]])),
+            2: (np.array([[0.3, 0.7], [0.8, 0.4]]), np.array([[0.3, 0.7]])),
+            3: (np.array([[0.1, 0.4, 0.9], [0.6, 0.2, 0.8]]), np.array([[0.1, 0.4, 0.9]])),
+            4: (np.array([[0.1, 0.2, 0.3, 0.4], [0.2, 0.1, 0.3, 0.4]]), np.array([[0.1, 0.2, 0.3, 0.4]])),
+        }
+        for dim, (points, expected) in examples.items():
+            with self.subTest(dimension=dim):
+                result = SimplexUniform.drop(points)
+                np.testing.assert_allclose(result, expected)
+
+    def test_sort_examples_1d_to_4d(self):
+        examples = {
+            1: (np.array([0.8]), np.array([[0.8]])),
+            2: (np.array([[0.8, 0.4], [0.3, 0.7]]), np.array([[0.4, 0.8], [0.3, 0.7]])),
+            3: (np.array([[0.7, 0.2, 0.9], [0.6, 0.2, 0.8]]), np.array([[0.2, 0.7, 0.9], [0.2, 0.6, 0.8]])),
+            4: (np.array([[0.9, 0.1, 0.4, 0.2], [0.2, 0.1, 0.3, 0.4]]), np.array([[0.1, 0.2, 0.4, 0.9], [ 0.1, 0.2, 0.3, 0.4]])),
+        }
+        for dim, (points, expected) in examples.items():
+            with self.subTest(dimension=dim):
+                result = SimplexUniform.sort(points)
+                np.testing.assert_allclose(result, expected)
+
+    def test_root_examples_1d_to_4d(self):
+        examples = {
+            1: (np.array([0.8]), np.array([[0.8]])),
+            2: (np.array([[0.8, 0.4], [0.3, 0.7]]),
+                np.array([[0.50596443, 0.63245553], [0.25099801, 0.83666003]])),
+            3: (np.array([[0.7, 0.2, 0.9], [0.6, 0.2, 0.8]]),
+                np.array([[0.30224599, 0.43177998, 0.96548938], [0.2490938, 0.41515633, 0.92831777]])),
+            4: (np.array([[0.9, 0.1, 0.4, 0.2], [0.2, 0.1, 0.3, 0.4]]),
+                np.array([[0.14023401, 0.15581556, 0.49273207, 0.6687403], [0.03367069, 0.16835347, 0.53238043, 0.79527073]])),
+        }
+        for dim, (points, expected) in examples.items():
+            with self.subTest(dimension=dim):
+                result = SimplexUniform.root(points)
+                np.testing.assert_allclose(result, expected, atol=1e-8)
+        # Pillards & Cools (2005), Sec. 2.5, and Pillards (2006), Sec. 4.3.5.
+        np.testing.assert_allclose(SimplexUniform.root(np.array([0.5, 0.01])), [[0.05, 0.1]])
+        np.testing.assert_allclose(SimplexUniform.root(np.array([0.5, 0.99])), [[0.497494, 0.994987]], atol=1e-6)
+
+    def test_mirror_examples_1d_to_4d(self):
+        examples = {
+            1: (np.array([0.8]), np.array([[0.8]])),
+            2: (np.array([[0.8, 0.4], [0.3, 0.7]]), np.array([[0.2, 0.6], [0.3, 0.7]])),
+            3: (np.array([[0.7, 0.2, 0.9], [0.6, 0.2, 0.8]]), np.array([[0.2, 0.7, 0.9], [0.2, 0.6, 0.8]])),
+        }
+        for dim, (points, expected) in examples.items():
+            with self.subTest(dimension=dim):
+                result = SimplexUniform.mirror(points)
+                np.testing.assert_allclose(result, expected)
+        with self.subTest(dimension=4), self.assertRaises(NotImplementedError):
+            SimplexUniform.mirror(np.array([[0.9, 0.1, 0.4, 0.2]]))
+
+    def test_origami_examples_1d_to_4d(self):
+        examples = {
+            1: (np.array([0.8]), np.array([[0.8]])),
+            2: (np.array([[0.8, 0.4], [0.3, 0.7]]), np.array([[0.4, 0.8], [0.2, 0.8]])),
+            3: (np.array([[0.7, 0.2, 0.9], [0.6, 0.2, 0.8]]), np.array([[0.2, 0.7, 0.9], [0.2, 0.6, 0.8]])),
+            4: (np.array([[0.9, 0.1, 0.4, 0.2], [0.2, 0.1, 0.3, 0.4]]), np.array([[0.2, 0.4, 0.4, 0.6], [0.1, 0.2, 0.3, 0.4]])),
+        }
+        for dim, (points, expected) in examples.items():
+            with self.subTest(dimension=dim):
+                result = SimplexUniform.origami(points, base=2, depth=1)
+                np.testing.assert_allclose(result, expected)
+        # depth=0 has no coarser scale above the base grid, i.e. plain Sort.
+        np.testing.assert_allclose(
+            SimplexUniform.origami(points, base=2, depth=0), SimplexUniform.sort(points)
+        )
+
+    def test_shift_examples_1d_to_4d(self):
+        # This locks in Pillards's 2006 generalized I^d -> K_d -> T_d map.
+        # In particular, the original 2005 two-dimensional Shift would map
+        # (0.8, 0.4) to (0.5, 0.7), rather than (0.6, 0.8) below.
+        examples = {
+            1: (np.array([0.8]), np.array([[0.8]])),
+            2: (np.array([[0.8, 0.4], [0.3, 0.7]]), np.array([[0.6, 0.8], [0.15, 0.7]])),
+            3: (np.array([[0.7, 0.2, 0.9], [0.6, 0.2, 0.8]]),
+                np.array([[0.31666667, 0.38333333, 0.9], [0.26666667, 0.33333333, 0.8]])),
+            4: (np.array([[0.9, 0.1, 0.4, 0.2], [0.2, 0.1, 0.3, 0.4]]),
+                np.array([[0.65833333, 0.68333333, 0.84166667, 0.9], [0.05833333, 0.08333333, 0.19166667, 0.4]])),
+        }
+        for dim, (points, expected) in examples.items():
+            with self.subTest(dimension=dim):
+                result = SimplexUniform.shift(points)
+                np.testing.assert_allclose(result, expected, atol=1e-8)
+
+    def test_transforms_stay_in_simplex(self):
+        # Broader than the fixed 1D-4D examples above: random points across more
+        # dimensions should always come out ascending and within [0, 1).
+        rng = np.random.default_rng(0)
+        for dim in range(1, 6):
+            points = rng.random((50, dim))
+            for name, kwargs in [("root", {}), ("shift", {}), ("origami", {"base": 3, "depth": 2})]:
+                with self.subTest(dimension=dim, transform=name):
+                    result = getattr(SimplexUniform, name)(points, **kwargs)
+                    self.assertTrue(np.all((result >= 0) & (result < 1)))
+                    self.assertTrue(np.all(result[:, :-1] <= result[:, 1:] + 1e-12))
+            if dim <= 3:
+                with self.subTest(dimension=dim, transform="mirror"):
+                    result = SimplexUniform.mirror(points)
+                    self.assertTrue(np.all((result >= 0) & (result < 1)))
+                    self.assertTrue(np.all(result[:, :-1] <= result[:, 1:] + 1e-12))
+
+    def test_replicated_points_use_last_axis(self):
+        points = DigitalNetB2(3, seed=7, replications=2).gen_samples(4)
+        for name, kwargs in [
+            ("sort", {}),
+            ("root", {}),
+            ("mirror", {}),
+            ("origami", {"base": 2, "depth": 1}),
+            ("shift", {}),
+        ]:
+            with self.subTest(transform=name):
+                result = getattr(SimplexUniform, name)(points, **kwargs)
+                self.assertEqual(result.shape, points.shape)
+                self.assertTrue(
+                    np.all(result[..., :-1] <= result[..., 1:] + 1e-12)
+                )
+
+        mask = np.all(points[..., :-1] <= points[..., 1:], axis=-1)
+        expected = points.reshape(-1, 3)[mask.reshape(-1)]
+        np.testing.assert_allclose(SimplexUniform.drop(points), expected)
+
+    def test_input_and_domain_validation(self):
+        for case, points in (
+            ("scalar", np.array(0.5)),
+            ("empty final axis", np.empty((2, 0))),
+            ("nonnumeric value", np.array([["x", "y"]])),
+            ("outside unit cube", np.array([[1.1, 0.2]])),
+            ("nonfinite value", np.array([[np.nan, 0.2]])),
+            ("complex value", np.array([[0.1 + 0.2j, 0.2]])),
+            ("complex dtype with real values", np.array([[0.1, 0.2]], dtype=complex)),
+        ):
+            with self.subTest(case=case), self.assertRaises(ParameterError):
+                SimplexUniform.root(points)
+        with self.assertRaises(ParameterError):
+            SimplexUniform.origami(np.array([[0.1, 0.2]]), base=1)
+        with self.assertRaises(ParameterError):
+            SimplexUniform.origami(np.array([[0.1, 0.2]]), depth=-1)
+
+    def test_uniform_simplex_moments(self):
+        rng = np.random.default_rng(0)
+        n, dim = 2**16, 4
+        points = rng.random((n, dim))
+        expected = np.arange(1, dim + 1) / (dim + 1)
+        variances = (
+            np.arange(1, dim + 1)
+            * np.arange(dim, 0, -1)
+            / ((dim + 1) ** 2 * (dim + 2))
+        )
+        for name in ("sort", "root", "shift", "origami"):
+            with self.subTest(transform=name):
+                result = getattr(SimplexUniform, name)(points)
+                z_scores = np.abs(result.mean(axis=0) - expected) / np.sqrt(
+                    variances / n
+                )
+                self.assertLess(np.max(z_scores), 4)
+
+
+class TestSimplexUniform(unittest.TestCase):
+    """Tests for SimplexUniform."""
+
+    def test_basic_usage(self):
+        tm = SimplexUniform(DigitalNetB2(4, seed=7))
+        x = tm(8)
+        self.assertEqual(x.shape, (8, 4))
+        self.assertTrue(np.all(x >= -1e-12))
+        self.assertTrue(np.all(x.sum(axis=-1) <= 1 + 1e-12))
+
+    def test_effective_range_supports_composition(self):
+        simplex = SimplexUniform(DigitalNetB2(3, seed=7))
+        np.testing.assert_array_equal(
+            simplex.effective_range, np.tile([0.0, 1.0], (3, 1))
+        )
+        composed = Uniform(simplex, lower_bound=0.25, upper_bound=0.75)
+        samples = composed(8)
+        self.assertTrue(np.all((samples >= 0.25) & (samples <= 0.75)))
+
+        restricted = SimplexUniform(
+            Uniform(DigitalNetB2(3, seed=7), lower_bound=0.25, upper_bound=0.75)
+        )
+        self.assertIsNone(restricted.effective_range)
+
+    def test_defaults(self):
+        tm = SimplexUniform(DigitalNetB2(3, seed=7))
+        self.assertEqual(tm.transform_method, "root")
+        self.assertEqual(tm.simplex_type, "corner")
+
+    def test_all_methods_run(self):
+        for method in ("root", "sort", "shift", "origami"):
+            tm = SimplexUniform(DigitalNetB2(3, seed=7), transform_method=method)
+            x = tm(8)
+            self.assertEqual(x.shape, (8, 3))
+            self.assertTrue(np.all(x >= -1e-12))
+            self.assertTrue(np.all(x.sum(axis=-1) <= 1 + 1e-12))
+
+    def test_mirror_warns_and_dimension_limit(self):
+        # 'mirror' folds a symmetric point set (e.g. a lattice) onto itself,
+        # so it's accepted but warns; the direct transform still rejects
+        # dimension > 3 (at transform time, not construction).
+        with self.assertWarns(UserWarning):
+            tm = SimplexUniform(DigitalNetB2(3, seed=7), transform_method="mirror")
+        x = tm(8)
+        self.assertEqual(x.shape, (8, 3))
+        self.assertTrue(np.all(x >= -1e-12))
+        self.assertTrue(np.all(x.sum(axis=-1) <= 1 + 1e-12))
+        with self.assertWarns(UserWarning):
+            ordered_tm = SimplexUniform(
+                DigitalNetB2(3, seed=7),
+                transform_method="mirror",
+                simplex_type="ordered",
+            )
+        ordered = ordered_tm(8)
+        self.assertTrue(np.all(np.diff(ordered, axis=-1) >= -1e-12))
+        with self.assertWarns(UserWarning):
+            tm4 = SimplexUniform(DigitalNetB2(4, seed=7), transform_method="mirror")
+        with self.assertRaises(NotImplementedError):
+            tm4(8)
+
+    def test_origami_boundary_point_stays_nonnegative(self):
+        # A coordinate exactly at the cube's upper boundary used to floor into an
+        # out-of-range grid cell, leaving the result unsorted and the later gap
+        # difference negative.
+        w = SimplexUniform.transform_points(np.array([[1.0, 0.0]]), "origami")
+        np.testing.assert_allclose(w, [[0.5, 0.0]])
+        self.assertTrue(np.all(w >= 0))
+        continuous = SimplexUniform.transform_points(np.array([[1.0 - 1e-9, 0.0]]), "origami")
+        np.testing.assert_allclose(w, continuous, atol=1e-6)
+
+    def test_ordered(self):
+        for method in ("root", "sort", "shift", "origami"):
+            with self.subTest(transform_method=method):
+                tm = SimplexUniform(
+                    DigitalNetB2(3, seed=7, replications=2),
+                    transform_method=method,
+                    simplex_type="ordered",
+                )
+                x = tm(8)
+                self.assertEqual(x.shape, (2, 8, 3))
+                self.assertTrue(np.all((x >= 0) & (x <= 1)))
+                self.assertTrue(np.all(np.diff(x, axis=-1) >= -1e-12))
+
+    def test_transform_types(self):
+        cube = DigitalNetB2(3, seed=7, replications=2)(8)
+        direct = SimplexUniform.root(cube)
+        ordered = SimplexUniform.transform_points(
+            cube, transform_method="root", simplex_type="ordered"
+        )
+        corner = SimplexUniform.transform_points(
+            cube, transform_method="root", simplex_type="corner"
+        )
+        np.testing.assert_allclose(direct, ordered, atol=0, rtol=0)
+        np.testing.assert_allclose(
+            corner, np.diff(ordered, axis=-1, prepend=0), atol=0, rtol=0
+        )
+
+    def test_moments_match_dirichlet_theory(self):
+        d = 3
+        tm = SimplexUniform(DigitalNetB2(d, seed=7))
+        theo_mean = 1 / (d + 1)
+        theo_var = d / ((d + 1) ** 2 * (d + 2))
+        theo_cov = -1 / ((d + 1) ** 2 * (d + 2))
+        np.testing.assert_allclose(tm.mean, theo_mean)
+        np.testing.assert_allclose(tm.variance, theo_var)
+        np.testing.assert_allclose(tm.standard_deviation, theo_var ** 0.5)
+        expected_cov = np.full((d, d), theo_cov)
+        np.fill_diagonal(expected_cov, theo_var)
+        np.testing.assert_allclose(dense_covariance(tm.covariance), expected_cov)
+        for name in ("mean", "variance", "standard_deviation", "covariance"):
+            self.assertIn(name, tm.parameters)
+        with self.assertRaises(ValueError):
+            tm._mean[0] = 99
+        spawned = tm.spawn(s=1, dimensions=[5])[0]
+        d2 = 5
+        np.testing.assert_allclose(spawned.mean, 1 / (d2 + 1))
+        np.testing.assert_allclose(spawned.variance, d2 / ((d2 + 1) ** 2 * (d2 + 2)))
+
+    def test_ordered_moments(self):
+        d = 4
+        tm = SimplexUniform(DigitalNetB2(d, seed=7), simplex_type="ordered")
+        indices = np.arange(1, d + 1)
+        denominator = (d + 1) ** 2 * (d + 2)
+        expected_mean = indices / (d + 1)
+        expected_variance = indices * (d - indices + 1) / denominator
+        expected_covariance = (
+            np.minimum.outer(indices, indices)
+            * (d - np.maximum.outer(indices, indices) + 1)
+            / denominator
+        )
+        np.testing.assert_allclose(tm.mean, expected_mean)
+        np.testing.assert_allclose(tm.variance, expected_variance)
+        np.testing.assert_allclose(
+            tm.standard_deviation, np.sqrt(expected_variance)
+        )
+        np.testing.assert_allclose(
+            dense_covariance(tm.covariance), expected_covariance
+        )
+
+    def test_invalid_options(self):
+        # 'drop' rejects rather than mapping 1:1, so it does not fit the
+        # _transform/_weight contract at all.
+        with self.assertRaises(ParameterError):
+            SimplexUniform(DigitalNetB2(3, seed=7), transform_method="drop")
+        with self.assertRaises(ParameterError):
+            SimplexUniform(DigitalNetB2(3, seed=7), simplex_type="probability")
+        with self.assertRaises(ParameterError):
+            SimplexUniform.transform_points(
+                np.array([[0.25, 0.75]]), simplex_type="probability"
+            )
+
+    def test_uniform_on_simplex(self):
+        # Appending 1-sum(w) makes w the first d of d+1 Dirichlet(1,...,1)
+        # weights, each with mean 1/(d+1) (exchangeable, so every coordinate
+        # shares the same mean, unlike the old ordered-simplex output). Check
+        # every dimension-general method end to end; mirror is limited to d<=3.
+        d = 4
+        theory = 1 / (d + 1)
+        for method in ("root", "sort", "shift", "origami"):
+            with self.subTest(transform_method=method):
+                tm = SimplexUniform(
+                    DigitalNetB2(d, seed=7, replications=16),
+                    transform_method=method,
+                )
+                x = tm(2**10)
+                np.testing.assert_allclose(
+                    x.mean(axis=(0, 1)), np.full(d, theory), atol=0.02
+                )
+
+    def test_second_moment_weights(self):
+        # Catches a wrong joint shape (e.g. right marginals, wrong covariance)
+        # that a first-moment-only check would miss. For w ~ Dirichlet(1,...,1)
+        # with d+1 categories, E[w_i^2] = 2 / ((d+1)(d+2)) for every i.
+        d = 4
+        tm = SimplexUniform(DigitalNetB2(d, seed=7, replications=16))
+        x = tm(2**10)
+        theory = 2 / ((d + 1) * (d + 2))
+        np.testing.assert_allclose((x**2).mean(), theory, atol=0.01)
+
+    def test_weight_is_constant_density(self):
+        d = 4
+        tm = SimplexUniform(DigitalNetB2(d, seed=7))
+        x = tm(8)
+        density = tm._weight(x)
+        np.testing.assert_allclose(density, 24.0)  # d! = 1 / Vol(T_d)
+        _, jacobian = tm(8, return_weights=True)
+        np.testing.assert_allclose(jacobian, 1 / 24.0)
+
+    def test_weight_off_support(self):
+        # _weight must vanish off K_d, not stay a constant d! Direct construction
+        # never exercises this (self-generated points are always on-support); composition does.
+        d = 2
+        tm = SimplexUniform(DigitalNetB2(d, seed=7))
+        off_support = np.array([[0.8, 0.5], [-0.1, 0.8], [0.2, 1.2]])  # sum>1, <0, sum>1
+        np.testing.assert_allclose(tm._weight(off_support), 0.0)
+        on_support = np.array([[0.2, 0.3], [0.0, 0.0], [0.5, 0.5]])  # sum<1, sum<1, sum==1
+        np.testing.assert_allclose(tm._weight(on_support), 2.0)  # unchanged: d! = 2! = 2
+        composed = SimplexUniform(Uniform(DigitalNetB2(d, seed=7)))
+        mean = CustomFun(composed, lambda x: np.ones(x.shape[:-1]))(2**12).mean()
+        self.assertAlmostEqual(mean, 1.0, delta=0.05)  # any true measure integrates to 1
+
+    def test_ordered_support(self):
+        tm = SimplexUniform(DigitalNetB2(2, seed=7), simplex_type="ordered")
+        on_support = np.array([[0.2, 0.3], [0.0, 1.0], [0.5, 0.5]])
+        off_support = np.array([[0.3, 0.2], [-0.1, 0.8], [0.2, 1.2]])
+        np.testing.assert_allclose(tm._weight(on_support), 2.0)
+        np.testing.assert_allclose(tm._weight(off_support), 0.0)
+
+    def test_density_overflow(self):
+        # d! overflows float64 above d=170; must surface as ParameterError, not OverflowError.
+        self.assertEqual(SimplexUniform(DigitalNetB2(170, seed=7))(2).shape, (2, 170))
+        with self.assertRaises(ParameterError):
+            SimplexUniform(DigitalNetB2(171, seed=7))
+
+    def test_spawn(self):
+        tm = SimplexUniform(
+            DigitalNetB2(3, seed=7),
+            transform_method="shift",
+            simplex_type="ordered",
+        )
+        spawns = tm.spawn(s=2)
+        self.assertEqual(len(spawns), 2)
+        self.assertTrue(all(isinstance(s, SimplexUniform) for s in spawns))
+        self.assertTrue(all(s.transform_method == "shift" for s in spawns))
+        self.assertTrue(all(s.simplex_type == "ordered" for s in spawns))
+        self.assertEqual(spawns[0](4).shape, (4, 3))
+
+    def test_integration_exact_value(self):
+        # E[sum(w)] = d/(d+1) (d of the d+1 Dirichlet(1,...,1) weights, each
+        # with mean 1/(d+1)); verify a real QMC integration (not just
+        # sampling) reproduces it: the actual point of making this a
+        # TrueMeasure instead of a standalone transform.
+        d = 3
+        tm = SimplexUniform(DigitalNetB2(d, seed=11, replications=16), transform_method="root")
+        integrand = CustomFun(tm, lambda x: x.sum(axis=-1))
+        solution, _ = CubQMCCLT(integrand, abs_tol=1e-3).integrate()
+        exact = d / (d + 1)
+        self.assertAlmostEqual(solution, exact, delta=5e-3)
+
+
 class TestGaussian(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures with fixed seeds for reproducibility."""
@@ -703,6 +1648,36 @@ class TestGaussian(unittest.TestCase):
         )
 
         assert_sample_mean_and_covariance(gaussian)
+
+    def test_transform_clips_unit_interval_endpoints(self):
+        gaussian = Gaussian(DigitalNetB2(1, seed=7))
+        endpoints = gaussian._transform(np.array([[0.0], [1.0]]))
+        interior = np.array([[0.25], [0.5], [0.75]])
+
+        self.assertTrue(np.isfinite(endpoints).all())
+        np.testing.assert_allclose(
+            gaussian._transform(interior),
+            scipy.stats.norm.ppf(interior),
+            rtol=0,
+            atol=0,
+        )
+
+    def test_unrandomized_direct_and_composed_samples_are_finite(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", ParameterWarning)
+            direct = Gaussian(
+                DigitalNetB2(1, randomize="FALSE")
+            ).gen_samples(2)
+            composed = Gaussian(
+                Uniform(
+                    DigitalNetB2(1, randomize="FALSE"),
+                    0.0,
+                    0.75,
+                )
+            ).gen_samples(2)
+
+        self.assertTrue(np.isfinite(direct).all())
+        self.assertTrue(np.isfinite(composed).all())
 
     def test_gaussian_basic_output_reproducibility(self):
         """Test that basic Gaussian sample generation produces expected values with fixed seed."""
@@ -1175,6 +2150,111 @@ class TestBrownianMotion(unittest.TestCase):
             err_msg="4 evenly spaced custom times should match van der Corput ordering"
         )
 
+    def test_brownian_bridge_chronological_grid_is_sequential(self):
+        """An increasing monitoring_times grid with bridge_vdc_gray_ordering=False gives every
+        point exactly one (left) anchor, collapsing Owen's bisection tree into a linear chain
+        (each depth level holds a single index). _bridge_transform must fall back to the
+        original scalar per-dimension loop for this case (see _bridge_max_level_size /
+        _BRIDGE_LEVEL_BATCH_MIN in brownian_motion.py) rather than pay vectorization overhead
+        for zero batching benefit -- this pins the *result*, independent of that internal
+        implementation choice, against the closed-form sequential Brownian increment
+        construction the chain degenerates to: W(s_j) = W(s_{j-1}) + sqrt(s_j - s_{j-1}) * Z_j.
+        """
+        d, n = 16, 4
+        t = np.linspace(1 / d, 1.0, d)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            bm = BrownianMotion(
+                DigitalNetB2(d, seed=self.seed),
+                decomp_type="BrownianBridge", monitoring_times=t, bridge_vdc_gray_ordering=False
+            )
+        self.assertEqual([len(level) for level in bm._bridge_levels], [1] * d)
+        self.assertEqual(bm._bridge_max_level_size, 1)
+
+        u = DigitalNetB2(d, seed=self.seed).gen_samples(n)
+        automated = bm._transform(u)
+
+        z = scipy.stats.norm.ppf(u)
+        increments = np.diff(np.r_[0.0, bm.time_vec])
+        expected = np.cumsum(np.sqrt(increments) * z, axis=-1)
+
+        np.testing.assert_array_almost_equal(
+            expected, automated, decimal=10,
+            err_msg="chronological BrownianBridge grid should match sequential increment construction"
+        )
+
+    def test_brownian_bridge_large_d_matches_reference_loop(self):
+        """At d=16 (default van der Corput ordering, levels [1,1,2,4,8]) _bridge_max_level_size
+        lands exactly on the _BRIDGE_LEVEL_BATCH_MIN boundary; at d=64 it's comfortably past it.
+        Either way, _bridge_transform's level-batched path mixes vectorized levels (size >=
+        _BRIDGE_LEVEL_BATCH_MIN) with per-level scalar fallback for the smaller early-depth
+        levels. Check both branches together, at both d, against a direct, unoptimized
+        transcription of Owen's Algorithm 6.2."""
+        n = 4
+        for d, expected_max_level_size in [(16, 8), (64, 32)]:
+            bm = BrownianMotion(DigitalNetB2(d, seed=self.seed), decomp_type="BrownianBridge")
+            level_sizes = [len(level) for level in bm._bridge_levels]
+            self.assertEqual(bm._bridge_max_level_size, expected_max_level_size)
+            self.assertGreaterEqual(bm._bridge_max_level_size, 8)  # exercises the vectorized branch
+            self.assertTrue(any(size < 8 for size in level_sizes))  # ...and the per-level fallback
+
+            u = DigitalNetB2(d, seed=self.seed).gen_samples(n)
+            automated = bm._transform(u)
+
+            z = scipy.stats.norm.ppf(u)
+            left, right = bm._bridge_left, bm._bridge_right
+            a, b, w = bm._bridge_a, bm._bridge_b, bm._bridge_w
+            paths = np.empty(z.shape[:-1] + (d,))
+            for j in range(d):
+                paths[..., j] = w[j] * z[..., j]
+                if left[j] >= 0:
+                    paths[..., j] += a[j] * paths[..., left[j]]
+                if right[j] >= 0:
+                    paths[..., j] += b[j] * paths[..., right[j]]
+            expected = paths[..., bm._increasing_order]
+
+            np.testing.assert_array_almost_equal(
+                expected, automated, decimal=10,
+                err_msg=f"level-batched BrownianBridge transform (d={d}) should match the unoptimized reference loop"
+            )
+
+    def test_brownian_bridge_large_d_with_replications_matches_reference_loop(self):
+        """test_brownian_bridge_large_d_matches_reference_loop only ever uses n=4, no
+        replications; test_brownian_bridge_manual_replications_d3/d4 only ever use d=3/4, well
+        under _BRIDGE_LEVEL_BATCH_MIN. Neither combination exercises the level-batched path
+        (Cases 2/3 of _bridge_transform) on a 3-D (replications, n, d) array -- the extra batch
+        axis both _bridge_scalar_step's idx_of and the vectorized reshape/broadcast need to
+        handle correctly. This pins that combination directly."""
+        d, n, reps = 64, 4, 3
+        bm = BrownianMotion(DigitalNetB2(d, seed=self.seed, replications=reps), decomp_type="BrownianBridge")
+        level_sizes = [len(level) for level in bm._bridge_levels]
+        self.assertGreaterEqual(bm._bridge_max_level_size, 8)  # exercises the vectorized branch
+        self.assertTrue(any(size < 8 for size in level_sizes))  # ...and the per-level fallback
+
+        u = DigitalNetB2(d, seed=self.seed, replications=reps).gen_samples(n)
+        self.assertEqual(u.shape, (reps, n, d))
+        automated = bm._transform(u)
+        self.assertEqual(automated.shape, (reps, n, d))
+
+        z = scipy.stats.norm.ppf(u)
+        left, right = bm._bridge_left, bm._bridge_right
+        a, b, w = bm._bridge_a, bm._bridge_b, bm._bridge_w
+        paths = np.empty(z.shape[:-1] + (d,))
+        for j in range(d):
+            paths[..., j] = w[j] * z[..., j]
+            if left[j] >= 0:
+                paths[..., j] += a[j] * paths[..., left[j]]
+            if right[j] >= 0:
+                paths[..., j] += b[j] * paths[..., right[j]]
+        expected = paths[..., bm._increasing_order]
+
+        np.testing.assert_array_almost_equal(
+            expected, automated, decimal=10,
+            err_msg="level-batched BrownianBridge transform with replications should match "
+                    "the unoptimized reference loop"
+        )
+
     def test_brownian_bridge_output_order(self):
         """Test that custom ordered output matches given input and contains same values as increasing output"""
         times = [0.6, 1.0, 0.3, 0.8]
@@ -1194,7 +2274,6 @@ class TestBrownianMotion(unittest.TestCase):
 
     def test_brownian_bridge_warning_for_non_power_of_2(self):
         """BrownianBridge issues ParameterWarning for suboptimal d but still produces valid output."""
-        from qmcpy.util import ParameterWarning
         with self.assertWarns(ParameterWarning):
             bm = BrownianMotion(DigitalNetB2(6, seed=self.seed), decomp_type='BrownianBridge')
         samples = bm.gen_samples(4)
@@ -1392,6 +2471,40 @@ class TestGeometricBrownianMotion(unittest.TestCase):
             err_msg="GBM covariance computation changed unexpectedly",
         )
 
+    def test_gbm_covariance_computation_above_former_loop_threshold(self):
+        """test_gbm_covariance_computation only exercises d=4, the branch that was already
+        vectorized on develop. _compute_gbm_covariance used to switch to a nested Python loop
+        for n>200; this pins the (now sole, for every n) broadcasted implementation at n=252, a
+        trading year and the default throughout demos/GBM/gbm_demo.ipynb, via symmetry plus a
+        closed-form spot check at a few (i, j) pairs."""
+        n = 252
+        gbm = GeometricBrownianMotion(
+            DigitalNetB2(n, seed=self.seed),
+            t_final=1,
+            initial_value=100,
+            drift=0.05,
+            diffusion=0.04,
+        )
+        cov = gbm.covariance_gbm
+        self.assertEqual(cov.shape, (n, n))
+        np.testing.assert_array_almost_equal(
+            cov, cov.T, err_msg="GBM covariance must be symmetric"
+        )
+
+        t = gbm.time_vec
+        S0_sq = gbm.initial_value**2
+        for i, j in [(0, 0), (0, n - 1), (n // 2, n - 1), (n - 1, n - 1)]:
+            t_min = min(t[i], t[j])
+            expected = S0_sq * np.exp(gbm.drift * (t[i] + t[j])) * (
+                np.exp(gbm.diffusion * t_min) - 1
+            )
+            self.assertAlmostEqual(
+                cov[i, j],
+                expected,
+                places=6,
+                msg=f"GBM covariance[{i},{j}] does not match the closed form",
+            )
+
     def test_gbm_weight_specific_values(self):
         """Test that PDF weight computation produces expected values for specific inputs."""
         gbm = GeometricBrownianMotion(
@@ -1529,7 +2642,7 @@ class TestGeometricBrownianMotion(unittest.TestCase):
     def test_legacy_positional_arguments(self):
         """A pre-existing positional call (..., decomp_type, lazy_load,
         lazy_decomp) must land on the same parameters as its keyword
-        equivalent -- monitoring_times was added keyword-only specifically
+        equivalent: monitoring_times was added keyword-only specifically
         so inserting it does not shift any positional argument.
         """
         positional = GeometricBrownianMotion(

@@ -59,10 +59,29 @@ class UniformTriangle(SciPyWrapper):
     Examples:
         >>> tm = UniformTriangle(sampler=DigitalNetB2(2, seed=7))
         >>> x = tm(4)
+        >>> x
+        array([[0.84948429, 0.7772399 ],
+               [0.40429635, 0.17370534],
+               [0.99335923, 0.03413563],
+               [0.65541327, 0.36622096]])
         >>> x.shape
         (4, 2)
         >>> bool(np.all(x[:, 1] <= x[:, 0]))
         True
+
+        With independent replications:
+
+        >>> tm_rep = UniformTriangle(DigitalNetB2(2, seed=7, replications=2))
+        >>> tm_rep(4)
+        array([[[0.78838045, 0.54833346],
+                [0.23777138, 0.04996095],
+                [0.92542139, 0.29275141],
+                [0.53891021, 0.45310118]],
+        <BLANKLINE>
+               [[0.28115996, 0.07354063],
+                [0.88085513, 0.63776346],
+                [0.6527037 , 0.61405078],
+                [0.86506152, 0.03878966]]])
     """
 
     def __init__(self, sampler: Union[AbstractDiscreteDistribution, AbstractTrueMeasure]) -> None:

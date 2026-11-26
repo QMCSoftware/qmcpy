@@ -16,6 +16,7 @@ import argparse
 import copy
 import hashlib
 import json
+import re
 from pathlib import Path
 
 from scripts.check_colab_notebooks import (
@@ -38,7 +39,9 @@ from scripts.check_colab_notebooks import (
     validate_enabled_notebook,
     validate_manifest,
     manifest_sets,
+    source_install_ref,
     validate_strict_enabled_notebook,
+    wants_source_install,
 )
 
 
@@ -177,7 +180,8 @@ def bootstrap_cell_source(notebook_path: Path, manifest: dict, cells: list[dict]
     packages = extra_pip_packages(cells)
     rel_paths = extra_repo_paths(notebook_path, cells)
     latex_setup = needs_latex_setup(cells)
-    needs_repo_clone = bool(local_repo_import_matches(notebook_path, cells))
+    source_install = wants_source_install(cells)
+    needs_repo_clone = bool(local_repo_import_matches(notebook_path, cells)) or source_install
 
     lines = [
         f"{BOOTSTRAP_CELL_MARKER}\n",
@@ -190,6 +194,16 @@ def bootstrap_cell_source(notebook_path: Path, manifest: dict, cells: list[dict]
     ]
 
     if needs_repo_clone:
+        # Clone the same stable ref as the Colab badge unless a source install
+        # explicitly requests branch-only code from another branch or commit.
+        clone_ref = source_install_ref(cells) if source_install else None
+        clone_ref = clone_ref or manifest["git_ref"]
+        commit_ref = bool(
+            re.fullmatch(r"[0-9a-fA-F]{40}|[0-9a-fA-F]{64}", clone_ref or "")
+        )
+        clone_branch_flag = (
+            f" --branch {clone_ref}" if clone_ref and not commit_ref else ""
+        )
         lines.extend(
             [
                 "  import sys\n",
@@ -197,11 +211,20 @@ def bootstrap_cell_source(notebook_path: Path, manifest: dict, cells: list[dict]
                 '  repo_root = "/content/QMCSoftware"\n',
                 f'  notebook_dir = f"{{repo_root}}/{notebook_dir_rel}"\n',
                 "  if not os.path.isdir(repo_root):\n",
-                f"    !git clone -q --depth 1 https://github.com/{manifest['repo']} {{repo_root}}\n",
+                f"    !git clone -q --depth 1{clone_branch_flag} https://github.com/{manifest['repo']} {{repo_root}}\n",
             ]
         )
+        if commit_ref:
+            lines.append(
+                f"  !git -C {{repo_root}} fetch -q --depth 1 origin {clone_ref} && git -C {{repo_root}} checkout -q --detach FETCH_HEAD\n"
+            )
 
-    lines.append("  !pip install -q qmcpy\n")
+    if source_install:
+        # Branch-only code (not yet released to PyPI): install from the clone
+        # made above instead of the public package.
+        lines.append("  !pip install -q -e {repo_root}\n")
+    else:
+        lines.append("  !pip install -q qmcpy\n")
 
     if packages:
         lines.append(f"  !pip install -q {' '.join(packages)}\n")
@@ -319,7 +342,7 @@ def harden_notebook(notebook_path: Path, manifest_path: Path) -> None:
         "source": bootstrap_cell_source(notebook_path, manifest, kept_cells),
     }
 
-    # Build the final cell list purely by concatenation — kept_cells are untouched.
+    # Build the final cell list purely by concatenation: kept_cells are untouched.
     cells = kept_cells[:insert_at] + [badge_cell, bootstrap_cell] + kept_cells[insert_at:]
 
     notebook_payload["cells"] = cells

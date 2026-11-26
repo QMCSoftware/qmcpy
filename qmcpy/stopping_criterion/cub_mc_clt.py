@@ -9,7 +9,7 @@ from ..discrete_distribution.abstract_discrete_distribution import (
 from ..integrand import FinancialOption, Linear0, AbstractIntegrand
 from ..util import MaxSamplesWarning, ParameterError
 import numpy as np
-from scipy.stats import norm
+from scipy.special import ndtri
 from time import time
 import warnings
 
@@ -198,7 +198,7 @@ class CubMCCLT(AbstractStoppingCriterion):
             )):
                 raise AssertionError("Control variate means should have shape (len(control variates),d_indv).")
             self.parameters += ["cv", "cv_mu"]
-        self.z_star = -norm.ppf(self.alpha / 2.0)
+        self.z_star = -ndtri(self.alpha / 2.0)
 
     def _get_main_stage_samples(self, data):
         y = np.array(data.yfull[self.n_init :], copy=False)
@@ -230,7 +230,7 @@ class CubMCCLT(AbstractStoppingCriterion):
         if resume is not None:
             raise ParameterError("CubMCCLT does not support resume.")
         data = Data(parameters=["solution", "bound_low", "bound_high", "bound_diff", "n_total", "time_integrate"])
-        data.xfull = np.empty((0, self.integrand.d))
+        data.xfull = np.empty((0, self.discrete_distrib.d))
         data.yfull = np.empty(0)
         if self.ncv > 0:
             data.ycvfull = np.empty((self.ncv, 0))

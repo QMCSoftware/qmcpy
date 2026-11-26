@@ -82,7 +82,16 @@ class BernoulliCont(AbstractTrueMeasure):
             )
         return tf
 
+    def _map_effective_range(self, input_range):
+        if np.any((self.l <= 0) | (self.l >= 1)):
+            return None
+        bounds = self._broadcast_box(input_range, self.d)
+        if bounds is None:
+            return None
+        return self._transform(bounds.T).T
+
     def _weight(self, x):
+        in_support = np.all((0 <= x) & (x <= 1), axis=-1)
         w = np.zeros(x.shape, dtype=float)
         for j in range(self.d):
             C = (
@@ -91,7 +100,7 @@ class BernoulliCont(AbstractTrueMeasure):
                 else 2 * np.arctanh(1 - 2 * self.l[j]) / (1 - 2 * self.l[j])
             )
             w[..., j] = C * self.l[j] ** x[..., j] * (1 - self.l[j]) ** (1 - x[..., j])
-        return np.prod(w, -1)
+        return np.where(in_support, np.prod(w, -1), 0.0)
 
     def _spawn(self, sampler, dimension):
         if dimension == self.d:  # don't do anything if the dimension doesn't change

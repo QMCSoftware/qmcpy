@@ -70,16 +70,24 @@ nav:
       - Geometric Brownian Motion: demos/GBM/gbm_demo.ipynb
       - GBM Examples: demos/GBM/gbm_examples.ipynb
       - Brownian Bridge: demos/brownian_bridge.ipynb
+      - Portfolio Allocation:
+        - Getting Financial Data: demos/portfolio/data_portfolio_allocation.ipynb
+        - Portfolio Allocation Demo: demos/portfolio/portfolio_allocation_demo.ipynb
       - Control Variates: demos/control_variates.ipynb
+      - Performance Optimizations: demos/performance_optimizations_demo.ipynb
       - Sensitivity Analysis for the Iris Dataset: demos/iris.ipynb
       - Ray Tracing: demos/ray_tracing.ipynb
-      - Importance Sampling with True Measures:
+      - True Measures and Importance Sampling:
         - Statistics for True Measures: demos/statistics_for_TrueMeasure.ipynb
         - Some True Measures: demos/some_true_measures.ipynb
+        - TrueMeasure Domain Inclusion: demos/true_measure_domain_inclusion.ipynb
         - SciPyWrapper dependence and Custom distributions: demos/scipywrapper_dependence_custom/scipywrapper_demo.ipynb
         - ProductMeasure: demos/product_measure.ipynb
+        - Mixed Distributions: demos/mixed_distributions.ipynb
+        - Mixed Distributions Blog Analysis: demos/mixed_distributions_blog_analysis.ipynb
         - Acceptance-Rejection Sampling: demos/acceptance_rejection.ipynb
         - Copula TrueMeasure Examples: demos/copula_examples.ipynb
+        - Cube-to-Simplex Transforms and SimplexUniform: demos/simplex_uniform.ipynb
   - For Developers:
     - Release Manual: RELEASE.md
     - Contribution Good Practices: good_practices.md

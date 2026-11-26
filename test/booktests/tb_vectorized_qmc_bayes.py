@@ -1,7 +1,8 @@
-import unittest
+import unittest, pytest
 from __init__ import BaseNotebookTest
 
 
+@pytest.mark.slow
 class NotebookTests(BaseNotebookTest):
 
     def test_vectorized_qmc_bayes_notebook(self):

@@ -5,6 +5,7 @@ Each tb_*.py file tests a single demo notebook.
 
 import gc
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -115,7 +116,11 @@ class BaseNotebookTest(unittest.TestCase):
         Args:
             notebook_path: Path to the notebook file
             timeout: Execution timeout in seconds
-            replacements: Optional dict of {old_str: new_str} to apply to code cells in memory
+            replacements: Optional dict of {old_str: new_str} to apply to code cells in memory.
+                A key may instead be a compiled regex (re.Pattern), matched with .sub()
+                instead of a literal substring replace: use this for values (sweep
+                bounds, list literals) that drift as the notebook is tuned, so the key
+                keeps matching instead of silently going dead.
             is_overwrite: If True, overwrite the notebook file with modified cells
             stop_at_pattern: Optional string pattern - if provided, uses `testbook` to stop execution
                 at the first cell containing this pattern
@@ -138,7 +143,9 @@ class BaseNotebookTest(unittest.TestCase):
                     if cell.get("cell_type") == "code":
                         src = cell.get("source", "")
                         for old, new in replacements.items():
-                            if old in src:
+                            if isinstance(old, re.Pattern):
+                                src = old.sub(new, src)
+                            elif old in src:
                                 src = src.replace(old, new)
                         cell["source"] = src
 
@@ -188,7 +195,9 @@ class BaseNotebookTest(unittest.TestCase):
                 if cell.get("cell_type") == "code":
                     src = cell.get("source", "")
                     for old, new in replacements.items():
-                        if old in src:
+                        if isinstance(old, re.Pattern):
+                            src = old.sub(new, src)
+                        elif old in src:
                             src = src.replace(old, new)
                     cell["source"] = src
 

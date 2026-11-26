@@ -157,14 +157,24 @@ class Kumaraswamy(AbstractTrueMeasure):
     def _transform(self, x):
         return (1 - (1 - x) ** (1 / self.beta)) ** (1 / self.alpha)
 
+    def _map_effective_range(self, input_range):
+        bounds = self._broadcast_box(input_range, self.d)
+        if bounds is None:
+            return None
+        return self._transform(bounds.T).T
+
     def _weight(self, x):
-        return np.prod(
-            self.alpha
-            * self.beta
-            * x ** (self.alpha - 1)
-            * (1 - x**self.alpha) ** (self.beta - 1),
-            -1,
-        )
+        in_support = np.all((0 <= x) & (x <= 1), axis=-1)
+        x_in_support = np.clip(x, 0, 1)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            weight = np.prod(
+                self.alpha
+                * self.beta
+                * x_in_support ** (self.alpha - 1)
+                * (1 - x_in_support**self.alpha) ** (self.beta - 1),
+                -1,
+            )
+        return np.where(in_support, weight, 0.0)
 
     def _spawn(self, sampler, dimension):
         if dimension == self.d:  # don't do anything if the dimension doesn't change

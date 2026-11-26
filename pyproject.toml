@@ -91,7 +91,7 @@ test = [
     "testbook >= 0.4.2",
     "psutil >= 5.9.5",
     "parsl >= 2026.01.05",
-    "seaborn >= 0.8",
+    "seaborn >= 0.13.0", # older seaborn vendors a `six` shim (seaborn.external.six.moves) that fails to import on Python 3.13
     "scikit-learn >= 1.0.0",
     "scikit-optimize",
     "ipykernel",
@@ -102,6 +102,7 @@ test = [
     "ipywidgets >= 8.1.7, < 9",
     "nbconvert >= 7.2.9",
     "pytest-xdist >= 3.8.0",
+    "pygments >= 2.0.0",
     ]
 # Minimal set for `make unittests_core` (test/test_*.py only). Omits the
 # notebook/booktest stack (parsl, testbook, ...) whose 3.10 floor would
@@ -206,13 +207,14 @@ skip-checking-short-docstrings = true
 skip-checking-raises = true
 
 [tool.pylint.typecheck]
-# Members that live on compiled/C-extension objects (numpy, scipy, matplotlib)
-# which pylint's static inference cannot see, so they should not trigger
-# no-member (E1101) false positives.
+# Members that live on compiled/C-extension objects (numpy, scipy, matplotlib,
+# torch) which pylint's static inference cannot see, so they should not
+# trigger no-member (E1101) false positives.
 generated-members = [
     "numpy.*",
     "scipy.*",
     "matplotlib.cm.*",
+    "torch.*",
 ]
 
 [tool.pdm.build]

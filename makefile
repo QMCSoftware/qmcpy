@@ -81,7 +81,7 @@ check_asserts_changed: check_assert_codemod_dependency
 
 DOCSTRING_PATH ?= qmcpy
 DOCSTRING_BASE ?= origin/develop
-# pydoclint is a `docs` extra, not `test` -- `pip install -e ".[test]"` alone
+# pydoclint is a `docs` extra, not `test`: `pip install -e ".[test]"` alone
 # won't provide it. Prefer PATH (fast, common case); fall back to the same
 # bin/ directory as $(PYTHON) resolved to, which still finds it even when
 # the qmcpy conda env isn't the active shell environment (mirrors how
@@ -98,13 +98,13 @@ PUBLIC_API_TYPE_DIFF_BASE ?= develop
 PUBLIC_API_ANNOTATE_ARGS ?=
 DOCSTRING_SYNC_ARGS ?=
 # Two-part docstring check for public APIs under qmcpy/:
-#  1. scripts/check_docstring.py -- formatting: a one-line summary before the
+#  1. scripts/check_docstring.py, formatting: a one-line summary before the
 #     first section, no NumPy-style "-----" section underlines, a blank line
 #     before every Args:/Returns:/... header, canonical "Name:" headers, and
 #     public objects with no docstring (pass --skip-missing via
 #     CHECK_DOCSTRING_ARGS to check style only). It also prints a second summary
 #     restricted to files changed relative to DOCSTRING_BASE.
-#  2. pydoclint (config in pyproject.toml [tool.pydoclint]) -- content: every
+#  2. pydoclint (config in pyproject.toml [tool.pydoclint]), content: every
 #     parameter and return value is documented and matches the signature, in
 #     Google form.
 # Informational by default; pass --strict (STRICT=--strict make check_docstring)
@@ -129,7 +129,7 @@ check_docstring: check_pydoclint_dependency
 # Also runs a second, independent --diff-scoped check: a whole-repo total
 # can improve while a PR's own changed files pick up a brand-new violation
 # (or trade one pre-existing violation for a different new one, a tie the
-# whole-repo count alone can't see) -- this catches that case even when it
+# whole-repo count alone can't see): this catches that case even when it
 # does.
 BASELINE_DIFF_BASE ?= develop
 
@@ -152,10 +152,17 @@ REFERENCES_STYLE_ARGS ?=
 check_ref_style:
 	@$(PYTHON) scripts/check_ref_style.py $(REFERENCES_STYLE_PATH) $(REFERENCES_STYLE_ARGS) $(STRICT)
 
+# Nudge, not a style check: does each demo notebook changed relative to
+# develop end with a References section at all? Always exits 0: a demo
+# genuinely has nothing to cite is not an error, just a question worth
+# asking the author. See scripts/check_demo_references.py.
+check_demo_references:
+	@$(PYTHON) scripts/check_demo_references.py --diff develop
+
 # Applies only the unambiguous, purely mechanical fixes that
 # check_ref_style flags (a docstring's `**References**` header
 # missing its colon, and `$[N]$` -> `[N]`); everything else it finds is
-# reported but left for a human -- see the script's docstring for why
+# reported but left for a human: see the script's docstring for why
 # auto-rewriting free-text citations is not attempted.
 fix_ref_style:
 	$(PYTHON) scripts/check_ref_style.py $(REFERENCES_STYLE_PATH) --fix $(REFERENCES_STYLE_ARGS)
@@ -174,10 +181,10 @@ LATEX_MATH_DIFF_BASE ?= develop
 
 # Flags a LaTeX math command (\boldsymbol, \int, \alpha, ...) that appears
 # outside a $...$ / $$...$$ / \begin{...}...\end{...} math-mode span in
-# qmcpy/ docstrings, *.md files, and demos/**/*.ipynb notebooks -- such a
+# qmcpy/ docstrings, *.md files, and demos/**/*.ipynb notebooks: such a
 # command renders as literal garbled text in built HTML/notebooks, not math.
 # There is no fix_ target: deciding exactly what span to wrap in $...$ is a
-# judgment call, not a mechanical rewrite -- see
+# judgment call, not a mechanical rewrite: see
 # scripts/check_latex_math.py's module docstring for why this check is
 # deliberately narrow (a bare LaTeX command only, not "does this prose look
 # like it should be math"). Informational by default; pass --strict
@@ -192,7 +199,7 @@ check_latex_math_changed:
 	@$(PYTHON) scripts/check_latex_math.py --diff "$(LATEX_MATH_DIFF_BASE)" $(LATEX_MATH_ARGS) $(STRICT)
 
 # Same fixes as fix_ref_style, but scoped to files changed relative to
-# REFERENCES_STYLE_DIFF_BASE -- the quick one to run before opening a PR.
+# REFERENCES_STYLE_DIFF_BASE: the quick one to run before opening a PR.
 fix_ref_style_changed:
 	$(PYTHON) scripts/check_ref_style.py --diff "$(REFERENCES_STYLE_DIFF_BASE)" --fix $(REFERENCES_STYLE_ARGS)
 
@@ -219,7 +226,7 @@ check_docstring_indent_changed:
 	@$(PYTHON) scripts/check_docstring_indent.py --diff "$(DOCSTRING_INDENT_DIFF_BASE)" $(DOCSTRING_INDENT_ARGS) $(STRICT)
 
 # Shifts a flagged section's body right by a constant number of spaces so its
-# least-indented line sits one level deeper than the header -- this never
+# least-indented line sits one level deeper than the header: this never
 # changes indentation relative to other lines already in the block (a nested
 # doctest continuation or wrapped array repr keeps its own relative offset),
 # and the docstring's closing quote is never touched.
@@ -379,7 +386,7 @@ check_colab_notebooks:  # faster
 check_colab_notebooks_smoke:  # slower; executes bootstrap + a few cells of every enabled notebook
 	$(PYTHON) -m scripts.smoke_test_colab_notebooks --cells-after-bootstrap $(SMOKE_CODE_CELLS)
 
-harden_colab_notebook:  # Add Colab button if necessary
+harden_colab_notebook:  # Add Colab setup using the manifest git_ref by default
 	@if [ -n "$(NOTEBOOK)" ]; then \
 		if [ -n "$(FORCE)" ]; then \
 			$(PYTHON) -m scripts.harden_colab_notebook --notebook "$(NOTEBOOK)" --force; \
@@ -405,20 +412,20 @@ open_colab_notebook:  # Open NOTEBOOK in Colab from the current branch, but only
 	if [ -z "$$slug" ]; then echo "Cannot determine the GitHub owner/repo (manifest 'repo' or 'origin' remote)."; exit 1; fi; \
 	git fetch -q origin "$$base" "$$branch" 2>/dev/null || true; \
 	if ! git rev-parse -q --verify "origin/$$branch" >/dev/null; then \
-		echo "Branch '$$branch' is not on origin -- push it first (Colab loads notebooks from GitHub)."; exit 1; \
+		echo "Branch '$$branch' is not on origin: push it first (Colab loads notebooks from GitHub)."; exit 1; \
 	fi; \
 	if ! git rev-parse -q --verify "origin/$$base" >/dev/null; then \
-		echo "Base '$$base' is not a branch on origin -- set COLAB_BASE to a pushed branch (e.g. develop)."; exit 1; \
+		echo "Base '$$base' is not a branch on origin: set COLAB_BASE to a pushed branch (e.g. develop)."; exit 1; \
 	fi; \
 	if ! git ls-tree -r --name-only "origin/$$branch" | grep -qxF "$$nb"; then \
-		echo "'$$nb' is not committed on origin/$$branch -- commit and push it first."; exit 1; \
+		echo "'$$nb' is not committed on origin/$$branch: commit and push it first."; exit 1; \
 	fi; \
 	git diff --quiet "origin/$$branch" -- "$$nb" || \
 		echo "note: local '$$nb' differs from origin/$$branch; Colab shows the pushed version."; \
 	if [ "$$branch" = "$$base" ]; then \
-		ref="$$base"; echo "On '$$base' -- opening the $$base version."; \
+		ref="$$base"; echo "On '$$base': opening the $$base version."; \
 	elif ! git ls-tree -r --name-only "origin/$$base" | grep -qxF "$$nb"; then \
-		ref="$$branch"; echo "'$$nb' is new (not on origin/$$base) -- opening the '$$branch' version."; \
+		ref="$$branch"; echo "'$$nb' is new (not on origin/$$base): opening the '$$branch' version."; \
 	elif git diff --quiet "origin/$$base" "origin/$$branch" -- "$$nb"; then \
 		ref="$$base"; echo "'$$nb' is unchanged vs origin/$$base -- the standard badge covers it; opening the $$base version."; \
 	else \
@@ -461,6 +468,9 @@ check_booktests:
 		base=$$(basename "$$nb" .ipynb); \
 		test_base=$$(echo "$$base" | sed 's/[-.]/_/g'); \
 		if echo "$$nb" | grep -q "Parslfest_2025"; then \
+			continue; \
+		fi; \
+		if echo "$$base" | grep -q "tmp" || echo "$$base" | grep -q "^sc_"; then \
 			continue; \
 		fi; \
 		if ! ls test/booktests/tb_"$$test_base".py > /dev/null 2>&1; then \
@@ -644,7 +654,16 @@ uml:
 MKDOCS ?= $(shell test -x "$(dir $(PYTHON))mkdocs" && echo "$(dir $(PYTHON))mkdocs" || command -v mkdocs 2>/dev/null || echo mkdocs)
 
 copydocs:  # mkdocs only looks for content in the docs/ folder, so we have to copy it there
-	@rm -rf docs/paper docs/demos
+	@# Retried: a Jupyter/VS Code kernel with a demos/*.ipynb notebook open can
+	@# transiently recreate docs/demos/.ipynb_checkpoints between this rm's own
+	@# scan and its rmdir, which fails as "Directory not empty" (ENOTEMPTY) even
+	@# though nothing is really left moments later. Retrying a few times rides
+	@# out that race instead of failing the whole build on it.
+	@n=0; until rm -rf docs/paper docs/demos; do \
+		n=$$((n + 1)); \
+		[ "$$n" -ge 5 ] && exit 1; \
+		sleep 0.2; \
+	done
 	@cp README.md docs/README.md
 	@cp AGENTS.md docs/AGENTS.md
 	@perl -0pi -e 's!\(docs/good_practices\.md\)!\(good_practices.md\)!g' docs/AGENTS.md
@@ -661,6 +680,9 @@ copydocs:  # mkdocs only looks for content in the docs/ folder, so we have to co
 	@cp community.md docs/community.md
 	@cp -r demos docs
 	@find docs/demos -mindepth 2 -name README.md -delete
+	@# Editor/kernel artifacts, not real demo content -- and the same source of
+	@# the ENOTEMPTY race this target's own rm -rf above retries around.
+	@find docs/demos -name ".ipynb_checkpoints" -type d -exec rm -rf {} +
 	@cp -r paper docs
 	@rm -f docs/paper/README.md
 	@./scripts/render_paper_for_mkdocs.sh
@@ -764,6 +786,9 @@ format:
 	@echo "> trailing_whitespace"
 	@$(MAKE) rm_trailing_whitespace FORMAT_PATH="$(FORMAT_PATH)"
 	@echo
+	@echo "> strip_notebook_execution_metadata"
+	@$(MAKE) strip_notebook_execution_metadata
+	@echo
 	@echo "> harden_colab_notebook"
 	@$(MAKE) harden_colab_notebook
 	@echo
@@ -810,6 +835,9 @@ check:
 	@echo "> check_ref_style"
 	@$(MAKE) check_ref_style
 	@echo
+	@echo "> check_demo_references"
+	@$(MAKE) check_demo_references
+	@echo
 	@echo "> check_latex_math"
 	@$(MAKE) check_latex_math
 	@echo
@@ -827,7 +855,8 @@ check:
 	@echo
 	@echo
 	@echo
-	@echo "make check: every step above is clean"
+	@echo "make check: done -- check_ref_style and check_demo_references are"
+	@echo "informational only and never fail the build; re-read their output above"
 	@echo "$(RULE2)"
 	@echo
 	@# check_links_external deliberately NOT included: its own comment already
@@ -845,3 +874,6 @@ markdown-unwrap:
 
 rm_trailing_whitespace:
 	@$(PYTHON) scripts/remove_trailing_whitespace.py "$(FORMAT_PATH)"
+
+strip_notebook_execution_metadata:
+	@$(PYTHON) scripts/strip_notebook_execution_metadata.py "$(FORMAT_PATH)"

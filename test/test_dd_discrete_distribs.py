@@ -111,7 +111,7 @@ class TestKorobovLattice(unittest.TestCase):
 
     def test_rank1_lattice_structure(self):
         # general invariant of a rank-1 lattice: x_{k+1} - x_k = z/n (mod 1)
-        # is CONSTANT for every k -- checked without depending on the internal values of a
+        # is CONSTANT for every k: checked without depending on the internal values of a
         distribution = KorobovLattice(dimension=4, randomize="FALSE", seed=7)
         x = distribution.gen_samples(16, warn=False)
         diffs = (x[1:] - x[:-1]) % 1.0
@@ -304,7 +304,7 @@ class TestDigitalNetB2(unittest.TestCase):
 
     def test_replication_means_uncorrelated(self):
         # Stronger than "not identical": per-replication means should show no
-        # rank correlation across the replication index. n=8 (not larger) --
+        # rank correlation across the replication index. n=8 (not larger):
         # at bigger n, digital-net stratification concentrates the means so
         # tightly around 0.5 that this statistic loses power.
         m = 40
@@ -317,7 +317,7 @@ class TestDigitalNetB2(unittest.TestCase):
         self.assertLess(abs(rho), 0.5)
 
     def test_ordering_gray_vs_radical_inverse_canonical_small_case(self):
-        # These are tiny, canonical “ordering sanity checks” (stable and intentional).
+        # These are tiny, canonical "ordering sanity checks" (stable and intentional).
         # We keep them small to avoid brittle large golden arrays.
         dnb2_gray = DigitalNetB2(dimension=2, randomize=False, order="GRAY", seed=7)
         x_gray = dnb2_gray.gen_samples(n_min=2, n_max=4, warn=False)
@@ -514,7 +514,7 @@ class TestHammersley(unittest.TestCase):
         self.assertTrue((x[0] == 0).all())
 
     def test_matches_classical_definition(self):
-        # t_i = (i/n, phi_p1(i), ..., phi_p_{d-1}(i)) --
+        # t_i = (i/n, phi_p1(i), ..., phi_p_{d-1}(i)):
         def van_der_corput(i, base):
             f, r, idx = 1.0, 0.0, i
             while idx > 0:
@@ -587,6 +587,10 @@ class TestHalton(unittest.TestCase):
         )
         self.assertTrue((x_ur == x_true).all())
 
+    def test_instances_do_not_share_prime_table(self):
+        Halton(dimension=3).all_primes[0] = 4
+        npt.assert_array_equal(Halton(dimension=3).bases, [[2, 3, 5]])
+
 
 class TestLatinHypercube(unittest.TestCase):
     """Unit tests for LatinHypercube DiscreteDistribution."""
@@ -603,7 +607,7 @@ class TestLatinHypercube(unittest.TestCase):
         self.assertEqual(x2.shape, (5, 3, 2))
 
     def test_gen_samples_shape_not_randomized(self):
-        # Same shape checks as above, but with randomize=False -- this is the
+        # Same shape checks as above, but with randomize=False: this is the
         # exact case that used to be broken: the centered branch previously
         # hardcoded a leading axis of size 1 regardless of `replications`,
         # so replications=5 silently returned shape (1, 3, 2) instead of
@@ -780,7 +784,6 @@ class TestLatinHypercube(unittest.TestCase):
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             distribution.gen_samples(4, warn=False)
-
 
 
 if __name__ == "__main__":

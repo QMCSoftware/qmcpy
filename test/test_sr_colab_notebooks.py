@@ -54,6 +54,12 @@ def code_cell(source: str, cell_id: str = "code") -> dict:
 
 class TestColabNotebooks(unittest.TestCase):
 
+    def test_scratch_notebooks_are_not_discovered(self):
+        for name in ("sc_diag.ipynb", ".tmp_test.ipynb", "._tmp_test.ipynb"):
+            self.assertFalse(check.is_discoverable_notebook(Path("demos/portfolio") / name))
+        self.assertFalse(check.is_discoverable_notebook(Path("demos/.ipynb_checkpoints/demo.ipynb")))
+        self.assertTrue(check.is_discoverable_notebook(Path("demos/portfolio/portfolio_allocation_demo.ipynb")))
+
     def _tmp_path(self) -> Path:
         """Fresh temp directory, removed after the test (pytest ``tmp_path``)."""
         path = Path(tempfile.mkdtemp())
@@ -169,6 +175,110 @@ class TestColabNotebooks(unittest.TestCase):
         self.assertIn("except ImportError:", source)
         self.assertIn("if IN_COLAB:", source)
         self.assertNotIn("except:\n", source)
+        compile(smoke.rewrite_shell_magics(source), "<bootstrap>", "exec")
+
+    def test_source_install_marker(self):
+        plain_cells = [code_cell("import qmcpy as qp\n")]
+        marked_cells = [
+            code_cell(
+                "# colab-install-from-source: _Internal is branch-only, not yet on PyPI.\n"
+                "from qmcpy._internal import _Internal\n"
+            )
+        ]
+        self.assertFalse(check.wants_source_install(plain_cells))
+        self.assertTrue(check.wants_source_install(marked_cells))
+        self.assertTrue(check.wants_source_install([
+            markdown_cell("<!-- # colab-install-from-source -->\n"),
+            code_cell("from qmcpy import SimplexUniform\n"),
+        ]))
+
+        tmp_path = self._tmp_path()
+        self._setattr(harden, "REPO_ROOT", tmp_path)
+        notebook_path = tmp_path / "demos" / "example.ipynb"
+        notebook_path.parent.mkdir()
+        manifest = {
+            "repo": "QMCSoftware/QMCSoftware",
+            "git_ref": "develop",
+        }
+
+        plain_source = "".join(
+            harden.bootstrap_cell_source(notebook_path, manifest, plain_cells)
+        )
+        marked_source = "".join(
+            harden.bootstrap_cell_source(notebook_path, manifest, marked_cells)
+        )
+        markdown_source = "".join(harden.bootstrap_cell_source(
+            notebook_path, manifest,
+            [markdown_cell("<!-- # colab-install-from-source -->\n"), *plain_cells],
+        ))
+        self.assertIn("!pip install -q -e {repo_root}", markdown_source)
+
+        self.assertIn("!pip install -q qmcpy", plain_source)
+        self.assertNotIn("-e {repo_root}", plain_source)
+
+        self.assertIn("!pip install -q -e {repo_root}", marked_source)
+        self.assertNotIn("!pip install -q qmcpy\n", marked_source)
+        self.assertIn("!git clone", marked_source)  # editable install needs the clone
+        self.assertTrue(check.installs_qmcpy(marked_source))
+        self.assertIn("--branch develop", marked_source)
+        compile(smoke.rewrite_shell_magics(marked_source), "<bootstrap>", "exec")
+
+    def test_source_install_ref_pins_branch(self):
+        """A source-only API (e.g. unmerged PR code) needs the clone itself
+        pinned to that branch, not just an editable install from whatever the
+        manifest's own git_ref (used for the Colab badge) happens to be."""
+        self.assertIsNone(check.source_install_ref([code_cell("import qmcpy as qp\n")]))
+
+        code_marked = [code_cell(
+            "# colab-install-from-source: SimplexUniform is branch-only.\n"
+            "# colab-install-from-source-ref: asset_allocation\n"
+            "from qmcpy import SimplexUniform\n"
+        )]
+        self.assertEqual(check.source_install_ref(code_marked), "asset_allocation")
+
+        markdown_marked = [
+            markdown_cell("<!-- # colab-install-from-source-ref: asset_allocation -->\n"),
+            code_cell("from qmcpy import SimplexUniform\n"),
+        ]
+        self.assertEqual(check.source_install_ref(markdown_marked), "asset_allocation")
+
+        tmp_path = self._tmp_path()
+        self._setattr(harden, "REPO_ROOT", tmp_path)
+        notebook_path = tmp_path / "demos" / "example.ipynb"
+        notebook_path.parent.mkdir()
+        manifest = {
+            "repo": "QMCSoftware/QMCSoftware",
+            "git_ref": "develop",
+        }
+
+        pinned_source = "".join(
+            harden.bootstrap_cell_source(notebook_path, manifest, markdown_marked)
+        )
+        self.assertIn("!git clone -q --depth 1 --branch asset_allocation ", pinned_source)
+        compile(smoke.rewrite_shell_magics(pinned_source), "<bootstrap>", "exec")
+
+    def test_source_install_ref_pins_commit(self):
+        commit = "a" * 40
+        cells = [
+            code_cell(
+                "# colab-install-from-source: pinned version.\n"
+                f"# colab-install-from-source-ref: {commit}\n"
+                "import qmcpy\n"
+            )
+        ]
+        tmp_path = self._tmp_path()
+        self._setattr(harden, "REPO_ROOT", tmp_path)
+        notebook_path = tmp_path / "demos" / "example.ipynb"
+        notebook_path.parent.mkdir()
+
+        source = "".join(
+            harden.bootstrap_cell_source(
+                notebook_path, {"repo": "QMCSoftware/QMCSoftware"}, cells
+            )
+        )
+        self.assertNotIn(f"--branch {commit}", source)
+        self.assertIn(f"fetch -q --depth 1 origin {commit}", source)
+        self.assertIn("checkout -q --detach FETCH_HEAD", source)
         compile(smoke.rewrite_shell_magics(source), "<bootstrap>", "exec")
 
     def test_extra_pip_packages_preserves_later_explicit_installs(self):

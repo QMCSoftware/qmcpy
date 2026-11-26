@@ -41,8 +41,10 @@ UMBRIDGE_MARKERS = ("import umbridge", "from umbridge", "UMBridgeWrapper", "HTTP
 EARLY_EXTRA_DEPENDENCY_CODE_CELLS = 3
 REPO_FETCH_FRAGMENTS = ("git clone", "raw.githubusercontent.com", "wget ", "curl ")
 PATH_SETUP_FRAGMENTS = ("sys.path.insert", "os.chdir(", "%cd ", "cd ")
-IGNORED_NOTEBOOK_NAME_PREFIXES = (".tmp", "._tmp")
+IGNORED_NOTEBOOK_NAME_PREFIXES = (".tmp", "._tmp", "sc_")
 EXTRA_DEPS_MARKER = "# colab-deps:"
+SOURCE_INSTALL_MARKER = "# colab-install-from-source"
+SOURCE_INSTALL_REF_MARKER = "# colab-install-from-source-ref:"
 COLAB_URL_HOSTNAME = "colab.research.google.com"
 URL_PATTERN = re.compile(r"https?://[^\s)\]\"']+")
 
@@ -184,6 +186,34 @@ def declared_extra_pip_packages(cells: list[dict]) -> list[str]:
     return packages
 
 
+def wants_source_install(cells: list[dict]) -> bool:
+    """Escape hatch for notebooks that need branch-only qmcpy code not yet on
+    PyPI: a `# colab-install-from-source` marker in any cell's source."""
+    return any(
+        SOURCE_INSTALL_MARKER in line
+        for cell in cells
+        for line in cell_source_text(cell).splitlines()
+    )
+
+
+def source_install_ref(cells: list[dict]) -> str | None:
+    """Pin the source install's git clone to a branch, tag, or full commit hash instead
+    of the manifest's git_ref, for code that only exists on an unmerged PR
+    branch: a `# colab-install-from-source-ref: <ref>` marker in any cell's
+    source (code or, wrapped in an HTML comment, markdown). None (the
+    manifest's own git_ref) if no such marker is present."""
+    for cell in cells:
+        for line in cell_source_text(cell).splitlines():
+            marker_at = line.find(SOURCE_INSTALL_REF_MARKER)
+            if marker_at == -1:
+                continue
+            # Strip a trailing Markdown `-->` close, if the marker is HTML-comment-wrapped.
+            ref = line[marker_at + len(SOURCE_INSTALL_REF_MARKER):].split("-->")[0].strip()
+            if ref:
+                return ref
+    return None
+
+
 def is_bootstrap_cell(cell: dict) -> bool:
     source = cell_source_text(cell)
     return is_any_install_cell(cell) and (
@@ -311,7 +341,7 @@ def validate_strict_enabled_notebook(path: Path) -> list[str]:
             if hit and int(hit.group(1)) >= 20:
                 errors.append(
                     f"{notebook_path}: cell {idx + 1} uses 2**{hit.group(1)} without an "
-                    "`... if IN_COLAB else ...` guard -- likely to OOM/timeout in Colab; "
+                    "`... if IN_COLAB else ...` guard: likely to OOM/timeout in Colab; "
                     "guard the size or Colab-disable the notebook."
                 )
                 break
@@ -390,7 +420,7 @@ def validate_manifest(manifest: dict, allowed_missing: set[str] | None = None) -
         errors.append(
             "Manifest is missing notebook classifications for: "
             + ", ".join(sorted(missing))
-            + " -- run `make harden_colab_notebook` to classify them"
+            + "; run `make harden_colab_notebook` to classify them"
         )
 
     extra = declared - discovered

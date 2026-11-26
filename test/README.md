@@ -231,6 +231,7 @@ Hardens one notebook, or if `NOTEBOOK` is omitted, scans `demos/` for notebooks 
 - **What it does**: Inserts the badge, adds a generated Colab bootstrap cell, infers common extra pip dependencies, and adds repo-local `sys.path` setup when needed
 - **Classification rule**: Existing `disabled` entries are left untouched; unclassified notebooks are added to `enabled` only after hardening validates. Failures remain unclassified for manual review
 - **Force mode**: `make harden_colab_notebook FORCE=1` regenerates the Open in Colab badge and the `# @title Execute this cell to install dependencies` cell for every notebook already listed in `enabled`; `make harden_colab_notebook NOTEBOOK=... FORCE=1` does the same for one notebook
+- **Source installs**: `# colab-install-from-source` clones the manifest's `git_ref`; use `# colab-install-from-source-ref: <ref>` only when a notebook temporarily needs code from another branch, tag, or commit
 - **Cell order**: The generated `import google.colab` bootstrap cell is always inserted after the Open in Colab badge
 - **Validation**: Runs the existing Colab checks after rewriting; if validation fails, the notebook and manifest are restored and the failure is reported
 - **Examples**: `make harden_colab_notebook NOTEBOOK=demos/plot_proj_function.ipynb`, `make harden_colab_notebook`, and `make harden_colab_notebook FORCE=1`
