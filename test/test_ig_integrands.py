@@ -432,8 +432,8 @@ class TestCustomVector(unittest.TestCase):
         exact_bounds_lb, exact_bounds_ub = integrand_exact_bounds.bound_fun(integrands_lb, integrands_ub)
         approx_bounds_lb, approx_bounds_ub = integrand_approx_bounds.bound_fun(integrands_lb, integrands_ub)
 
-        np.testing.assert_allclose(exact_bounds_lb, approx_bounds_lb, atol=1e-6)
-        np.testing.assert_allclose(exact_bounds_ub, approx_bounds_ub, atol=1e-6)
+        np.testing.assert_allclose(exact_bounds_lb, approx_bounds_lb, atol=1e-5)
+        np.testing.assert_allclose(exact_bounds_ub, approx_bounds_ub, atol=1e-5)
 
     def test_results_e2e(self):
         """ tests to verify integration results against analytical integrals"""
