@@ -106,6 +106,7 @@ class CustomFun(AbstractIntegrand):
             g (Callable): A function handle.
             dimension_indv (tuple): Shape of individual solution outputs from
                 `g`.
+            parallel (Union[bool, int]): Parallelization flag.
             dimension_comb (Union[None, tuple]): shapes of outputs from comb_fun. Default is `dimension_indv`.
                 Must be specified if `comb_fun` is used.
             bound_fun (Union[None, Callable[[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]]): function that
@@ -119,7 +120,6 @@ class CustomFun(AbstractIntegrand):
                 into quantities of interest. StoppingCriteria check convergence of this.
                 Default is identity function.
             comb_fun_n_samples (int): Number of samples used when sampling `comb_fun` to derive bounds on itegrands.
-            parallel (Union[bool, int]): Parallelization flag.
 
                 - When `parallel = 0` or `parallel = 1` then function evaluation is done in serial fashion.
                 - `parallel > 1` specifies the number of processes used by `multiprocessing.Pool` or `multiprocessing.pool.ThreadPool`.
