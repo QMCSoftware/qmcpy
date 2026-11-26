@@ -258,7 +258,16 @@ def transformed_conditional_icdf(
         if transform is None:
             icdf_terms[value_var] = temp_icdf_terms[value_var]
         else:
-            icdf_terms[value_var] = transform.forward(temp_icdf_terms[value_var])
+            transform_inputs = replace_vars_in_graphs(
+                graphs=list(rv.owner.inputs),
+                replacements={
+                    parent_rv: temp_icdf_terms[parent_value]
+                    for parent_rv, parent_value in rvs_to_values.items()
+                },
+            )
+            icdf_terms[value_var] = transform.forward(
+                temp_icdf_terms[value_var], *transform_inputs
+            )
 
     icdf_terms_list = list(icdf_terms.values())
 
