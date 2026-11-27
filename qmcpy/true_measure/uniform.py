@@ -1,3 +1,4 @@
+from warnings import warn
 from ..discrete_distribution.abstract_discrete_distribution import (
     AbstractDiscreteDistribution,
 )
@@ -83,7 +84,7 @@ class Uniform(AbstractTrueMeasure):
         if not (np.all(np.isfinite(self.a)) and np.all(np.isfinite(self.b))):
             raise ParameterError("upper bound and lower bound must be finite")
         self.delta = self.b - self.a
-        if np.any(self.delta <= 0):
+        if np.any(self.delta < 0):
             raise ParameterError(
                 "upper bound must be strictly greater than lower bound"
             )
@@ -95,11 +96,11 @@ class Uniform(AbstractTrueMeasure):
             standard_deviation=self.delta / np.sqrt(12),
             covariance=diags(variance, format="dia"),
         )
-        self.inv_delta_prod = 1 / self.delta.prod()
+        self.inv_delta_prod = np.where(np.any(self.delta == 0), np.inf, 1/self.delta.prod())
         self.range = np.hstack(
             (self.a.reshape((self.d, 1)), self.b.reshape((self.d, 1)))
         )
-        super(Uniform, self).__init__()
+        super().__init__()
         if not (self.a.shape == (self.d,) and self.b.shape == (self.d,)):
             raise AssertionError
 
@@ -113,6 +114,10 @@ class Uniform(AbstractTrueMeasure):
         return bounds * self.delta[:, None] + self.a[:, None]
 
     def _weight(self, x):
+        if np.any(self.delta < 0):
+            warn(
+                "Uniform: found equal upper and lower bounds: weight calculation diverges"
+            )
         in_support = np.all((self.a <= x) & (x <= self.b), axis=-1)
         return np.where(in_support, self.inv_delta_prod, 0.0)
 

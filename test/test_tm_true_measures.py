@@ -747,8 +747,8 @@ class TestUniform(unittest.TestCase):
 
         assert_sample_mean_and_covariance(uniform)
 
-    def test_upper_bound_must_exceed_lower_bound(self):
-        for lower_bound, upper_bound in [([1], [0]), ([1], [1])]:
+    def test_flipped_bounds_raise(self):
+        for lower_bound, upper_bound in [([1], [0]),]:
             with self.subTest(
                 lower_bound=lower_bound, upper_bound=upper_bound
             ):
