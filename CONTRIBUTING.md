@@ -20,6 +20,10 @@ All improvements to QMCPy should be connected to an **issue** using a template f
 
 - Do not report security vulnerabilities in public issues. Follow the [security policy](https://github.com/QMCSoftware/qmcpy/security/policy) instead.
 
+### Security Policy
+
+Maintainers can find GitHub's instructions for [adding a security policy](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/configure-vulnerability-reporting/add-security-policy), [configuring private vulnerability reporting](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/configure-vulnerability-reporting/configure-for-a-repository), and [managing privately reported vulnerabilities](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/fix-reported-vulnerabilities/manage-vulnerability-reports) in GitHub Docs. QMCPy's own [security policy](https://github.com/QMCSoftware/qmcpy/security/policy) is kept in `SECURITY.md`.
+
 ### Feature Branches
 
 If you have not yet installed the QMCPy library, see [Installation](#installation) below.
