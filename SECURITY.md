@@ -1,21 +1,16 @@
 # Security Policy
 
-## Supported Versions
+## Version Support
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
-
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+We welcome reports about any [published QMCPy release](https://pypi.org/project/qmcpy/#history).
+QMCPy has no published schedule for backporting security fixes to older releases.
+For a disclosed vulnerability, see the project's
+[security advisories](https://github.com/QMCSoftware/qmcpy/security/advisories)
+for affected versions and available fixes.
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
-
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+Use [Report a vulnerability](https://github.com/QMCSoftware/qmcpy/security/advisories/new)
+to contact the maintainers privately. Include the affected QMCPy version, the
+potential impact, and steps to reproduce the issue. Keep sensitive details in
+the private report. You can follow its status and respond to questions there.
