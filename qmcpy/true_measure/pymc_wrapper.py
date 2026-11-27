@@ -360,9 +360,7 @@ def compile_icdf(
     compile_kwargs.setdefault("on_unused_input", "ignore")
     icdf_graph = icdf(model, vars=vars)
     # use `vectorize_graph` to convert the input shapes to (None,*old_shape) to automatically vectorize the calculations
-    var_shapes = [pt.utils.get_static_shape_from_size_variables([x.size]) for x in model.value_vars]
-    # if right shape is None, it indicates already a batch shape, so delete it
-    var_shapes = [shape[:-1] if shape[-1] is None else shape for shape in var_shapes]
+    var_shapes = [x.type.shape for x in model.value_vars]
     replacements = {var: pt.TensorType(dtype="float64", shape=(None,*size))(var.name) for (var, size) in
                     zip(model.value_vars, var_shapes)}
     icdf_graph = pytensor.graph.vectorize_graph(icdf_graph, replacements)
@@ -587,9 +585,7 @@ class PyMCWrapper(AbstractTrueMeasure):
         self.icdf = compile_icdf(self.model)
         self.logpdf = compile_vectorized_logp(self.model, point_fn=False, jacobian=self.unconstrained_samples)
         # determine shapes of random variables and prepare their indices in a flat vector
-        static_shapes = [pt.utils.get_static_shape_from_size_variables([x.size]) for x in self.model.value_vars]
-        # if right shape is None, it indicates already a batch shape, so delete it.
-        self.shapes = [shape[:-1] if shape[-1] is None else shape for shape in static_shapes]
+        self.shapes = [x.type.shape for x in self.model.value_vars]
         shaped_arrays = [np.atleast_1d(np.ones(shape)) for shape in self.shapes]
         lens_at_least_1d = [np.prod(arr.shape) for arr in shaped_arrays]
         self.array_shapes = [arr.shape for arr in shaped_arrays]
