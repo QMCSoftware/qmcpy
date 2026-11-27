@@ -399,9 +399,7 @@ def compile_vectorized_logp(
         compile_kwargs.setdefault("on_unused_input", "ignore")
         logp_graph = model.logp(vars=model.value_vars, jacobian=jacobian, sum=sum)
         # use `vectorize_graph` to convert the input shapes to (None,*old_shape) to automatically vectorize the calculations
-        var_shapes = [pt.utils.get_static_shape_from_size_variables([x.size]) for x in model.value_vars]
-        # if right shape is None, it indicates already a batch shape, so delete it
-        var_shapes = [shape[:-1] if shape[-1] is None else shape for shape in var_shapes]
+        var_shapes = [x.type.shape for x in model.value_vars]
         replacements = {var: pt.TensorType(dtype="float64", shape=(None,*size))(var.name) for (var, size) in
                     zip(model.value_vars, var_shapes)}
         logp_graph = pytensor.graph.vectorize_graph(logp_graph, replacements)

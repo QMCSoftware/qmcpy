@@ -26,6 +26,13 @@ class TestPyMC(unittest.TestCase):
                             "transform_unconstrained_to_constrained": lambda x: x,
                             "jac_unconstrained_to_constrained": lambda x: 1.0})
 
+        with pymc.Model() as normal_model_with_shape:
+            pymc.Normal("x", mu=0.0, sigma=1.0, shape=(2,3))
+        self.models.append({"model": normal_model_with_shape, "dims":6, "name": "normal_with_shape",
+                            "mean": np.zeros(6), "weight": lambda x: 1/np.prod(stats.norm.pdf(x.reshape(-1, 2,3), loc=np.zeros((2,3)), scale=np.ones((2,3))), (-2,-1)),
+                            "transform_unconstrained_to_constrained": lambda x: x,
+                            "jac_unconstrained_to_constrained": lambda x: 1.0})
+
         nu = 5.0
         with pymc.Model() as t_model:
             s = pymc.ChiSquared("s", nu=nu)
