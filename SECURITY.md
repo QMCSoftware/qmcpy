@@ -14,3 +14,6 @@ Use [Report a vulnerability](https://github.com/QMCSoftware/qmcpy/security/advis
 to contact the maintainers privately. Include the affected QMCPy version, the
 potential impact, and steps to reproduce the issue. Keep sensitive details in
 the private report. You can follow its status and respond to questions there.
+
+The form requires a GitHub account. Without one, open a public issue that asks
+a maintainer to contact you, and leave out any details of the vulnerability.

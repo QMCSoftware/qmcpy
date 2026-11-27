@@ -7,6 +7,8 @@ assignees: ''
 
 ---
 
+<!-- Security vulnerability? Do not open a public issue. See https://github.com/QMCSoftware/qmcpy/security/policy -->
+
 **System information**
  - OS Platform and Distribution (e.g., Linux Ubuntu 16.04): 
  - Are you using google COLAB notebook: (Yes/No)

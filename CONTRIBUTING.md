@@ -18,6 +18,8 @@ All improvements to QMCPy should be connected to an **issue** using a template f
 
 - If you identify an improvement that is not in an issue, you may submit an issue yourself.
 
+- Do not report security vulnerabilities in public issues. Follow the [security policy](https://github.com/QMCSoftware/qmcpy/security/policy) instead.
+
 ### Feature Branches
 
 If you have not yet installed the QMCPy library, see [Installation](#installation) below.
