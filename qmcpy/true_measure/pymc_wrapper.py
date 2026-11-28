@@ -62,6 +62,9 @@ def hide( ## tongue in cheek, opposite of `observe`
 
     """
     model = copy(model)
+    observed = model.observed_RVs
+    model.rvs_to_values = {rv: v for rv, v in model.rvs_to_values.items() if rv not in observed}
+    model.rvs_to_transforms = {rv: t for rv, t in model.rvs_to_transforms.items() if rv not in observed}
     model.observed_RVs = []
     return model
 
