@@ -114,11 +114,16 @@ class CustomFun(AbstractIntegrand):
                 Default is identity functions so that the integrands themselves are the quantities of interest.
                 If `comb_fun` is specified and `bound_fun` is not, `comb_fun` is sampled to get approximate
                 bounds.
+                Inputs to this function has shape [dimension_indv]
+                Outputs should have shape [dimension_comb]
             dependency (Union[None, Callable[[np.ndarray], np.ndarray]]): Function defining how convergence of combined integrands is
                 related to convergence of the underlying integrands. See `AbstractIntegrand.dependency`
             comb_fun (Union[None, Callable[[np.ndarray], np.ndarray]]): A function combining individual solutions from `g`
-                into quantities of interest. StoppingCriteria check convergence of this.
+                into quantities of interest. StoppingCriteria use this to check convergence if `dimension_indv != dimension_comb` and
+                `bound_fun` is not given.
                 Default is identity function.
+                Inputs to this function has shape [num_samples,dimension_indv]
+                Outputs should have shape [num_samples, dimension_comb]
             comb_fun_n_samples (int): Number of samples used when sampling `comb_fun` to derive bounds on itegrands.
 
                 - When `parallel = 0` or `parallel = 1` then function evaluation is done in serial fashion.
@@ -186,9 +191,10 @@ class CustomFun(AbstractIntegrand):
             # sample in the space [bound_low, bound_high]^N to find approximate bounds
             uniform_sampler = Uniform(DigitalNetB2(self.d_indv[0]), bound_low, bound_high)
             uniform_samples: np.ndarray = uniform_sampler(self.comb_fun_n_samples, return_weights=False)
-            comb_samples = self._comb_func(uniform_samples.T) # [d, num_samples]
+            # uniform_samples.shape == [num_samples, dimension_indv]
+            comb_samples = self._comb_func(uniform_samples) # [num_samples, dimension_comb]
             # take min and max
-            approx_min, approx_max = np.min(comb_samples, axis=1), np.max(comb_samples, axis=1)
+            approx_min, approx_max = np.min(comb_samples, axis=0), np.max(comb_samples, axis=0)
             return approx_min, approx_max
         elif self._bound_fun is not None:
             return self._bound_fun(bound_low, bound_high)

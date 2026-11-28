@@ -345,14 +345,14 @@ class TestCustomVector(unittest.TestCase):
                                               ])
         # compute correlation matrix and means
         def comb_func(ys):
-            mean0 = ys[0]
-            mean1 = ys[1]
-            var0 = ys[2] - mean0**2
-            var1 = ys[3] - mean1**2
-            cov = ys[4] - mean0 * mean1
+            mean0 = ys[:,0]
+            mean1 = ys[:,1]
+            var0 = ys[:,2] - mean0**2
+            var1 = ys[:,3] - mean1**2
+            cov = ys[:,4] - mean0 * mean1
             corr = cov / np.sqrt(var0*var1)
-            return np.stack([mean0, var1, corr]) # return subset so that d_indv != d_comb
-        self.comb_func = comb_func
+            return np.stack([mean0, var1, corr], axis=1) # return subset so that d_indv != d_comb
+        self.comb_func = comb_func 
 
         # compute bounds on combinations
         def bound_fun(ymin,ymax):
@@ -390,6 +390,12 @@ class TestCustomVector(unittest.TestCase):
             return lower_bounds, upper_bounds
         self.bound_fun = bound_fun
 
+        def comb_func2(ys):
+            # simple case to test shapes of combined integrals
+            mean0 = ys[:,[0]]
+            return mean0
+        self.comb_func2 = comb_func2
+
     def test_construction(self):
         """ tests for initialization of CustomFunc where comb_func is supplied
         """
@@ -415,7 +421,6 @@ class TestCustomVector(unittest.TestCase):
         """
         integrand_exact_bounds = CustomFun(self.true_measure, self.integrands,
                                     dimension_indv=(5,),
-                                    comb_fun=self.comb_func,
                                     dimension_comb=(3,),
                                     bound_fun=self.bound_fun)
         integrand_approx_bounds = CustomFun(self.true_measure, self.integrands,
@@ -439,12 +444,31 @@ class TestCustomVector(unittest.TestCase):
         """ tests to verify integration results against analytical integrals"""
         integrand = CustomFun(self.true_measure_e2e, self.integrands,
                         dimension_indv=(5,),
-                        comb_fun=self.comb_func,
                         dimension_comb=(3,),
                         bound_fun=self.bound_fun)
         sr = stopping_criterion.CubQMCDigitalNetB2G(integrand, 1e-5, 1e-5)
         results, data = sr.integrate()
         np.testing.assert_allclose(results, np.array([0,1,0]), 1e-4, 1e-4)
+
+        # same with default bound fun
+        integrand = CustomFun(self.true_measure_e2e, self.integrands,
+                        dimension_indv=(5,),
+                        dimension_comb=(3,),
+                        comb_fun=self.comb_func)
+        sr = stopping_criterion.CubQMCDigitalNetB2G(integrand, 1e-5, 1e-5)
+        results, data = sr.integrate()
+        np.testing.assert_allclose(results, np.array([0,1,0]), 1e-4, 1e-4)
+
+        # test case with dimension_comb=()
+        integrand = CustomFun(self.true_measure_e2e, self.integrands,
+                        dimension_indv=(5,),
+                        comb_fun=self.comb_func2,
+                        dimension_comb=(1,),
+                        )
+        sr = stopping_criterion.CubQMCDigitalNetB2G(integrand, 1e-5, 1e-5)
+        results, data = sr.integrate()
+        np.testing.assert_allclose(results, np.array([0]), 1e-4, 1e-4)
+
 
 class TestBayesianLRCoeffs(unittest.TestCase):
     """Tests for BayesianLRCoeffs methods not covered by unit tests."""
