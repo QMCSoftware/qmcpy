@@ -51,6 +51,31 @@ class TestPyMC(unittest.TestCase):
                             "transform_unconstrained_to_constrained": np.exp,
                             "jac_unconstrained_to_constrained": lambda x: np.squeeze(np.exp(x))})
 
+        with pymc.Model() as observed_normal_model:
+            mu = pymc.Normal("mu", shape=2)
+            pymc.MvNormal("y", mu=mu, cov=np.eye(2), observed=np.zeros((3, 2)))
+        self.models.append({"model": observed_normal_model, "dims": 2, "name": "observed_normal_model",
+                            "mean": np.zeros(2), "weight": lambda x: 1/np.prod(stats.norm.pdf(x.reshape(-1, 2), loc=np.zeros(2), scale=np.ones(2)), axis=1),
+                            "transform_unconstrained_to_constrained": lambda x: x,
+                            "jac_unconstrained_to_constrained": lambda x: 1})
+
+        # test named dims
+        with pymc.Model(coords={"asset": ["A", "B"]}) as named_dim_normal:
+            pymc.Normal("x", dims="asset")
+        self.models.append({"model": named_dim_normal, "dims": 2, "name": "named_dim_normal",
+                            "mean": np.zeros(2), "weight": lambda x: 1/np.prod(stats.norm.pdf(x.reshape(-1, 2), loc=np.zeros(2), scale=np.ones(2)), axis=1),
+                            "transform_unconstrained_to_constrained": lambda x: x,
+                            "jac_unconstrained_to_constrained": lambda x: 1})
+
+        # test dims inferred from data object
+        mu = np.array([-1., 2.])
+        with pymc.Model() as data_len_normal:
+            pymc.Normal("x", mu=pymc.Data("mu", mu))
+        self.models.append({"model": data_len_normal, "dims": 2, "name": "data_len_normal",
+                            "mean": mu, "weight": lambda x: 1/np.prod(stats.norm.pdf(x.reshape(-1, 2), loc=mu, scale=np.ones(2)), axis=1),
+                            "transform_unconstrained_to_constrained": lambda x: x,
+                            "jac_unconstrained_to_constrained": lambda x: 1})
+
         # designed to catch wrong reordering in internal qmc model
         with pymc.Model() as model_that_gets_reordered:
             pymc.Normal("x", mu=0.0, sigma=1.0)
