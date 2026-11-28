@@ -73,6 +73,14 @@ pip install -e ".[mpmc]"
 qmcpy-install-mpmc
 ~~~
 
+The `dev` extra also includes QMCPy's `PyMCWrapper` true measure dependencies (`pymc`, `pytensor`), with no extra post-install step. For a PyMC installation without the complete development environment, use:
+
+~~~bash
+pip install -e ".[pymc]"
+~~~
+
+PyMC itself requires Python 3.12+, which is stricter than the general contributor floor below; a `docs` or `dev` install therefore also needs 3.12+.
+
 ### Minimum Python Version by Role
 
 `requires-python` covers a bare install; the optional dependency groups in `pyproject.toml` raise it. Each row shows the strictest floor among that role's pinned dependencies. Rows marked `+` add a capability to the Application-user install; unmarked rows are self-contained role profiles.

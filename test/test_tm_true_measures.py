@@ -2814,6 +2814,5 @@ class TestAcceptanceRejection(unittest.TestCase):
                 upper_bound=2., density_integral=1.
             )
 
-
 if __name__ == "__main__":
     unittest.main()

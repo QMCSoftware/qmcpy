@@ -318,6 +318,12 @@ doctests_botorch: ensure_artifacts
 	$(PYTHON) -m pytest $(PYTEST_XDIST) -x --cov qmcpy/ --cov-report term --cov-report json:$(DOCTEST_COV_DIR)/botorch/coverage.json --no-header --cov-append \
 		--doctest-modules qmcpy/integrand/hartmann6d.py \
 
+doctests_pymc: ensure_artifacts
+	@mkdir -p $(DOCTEST_COV_DIR)/pymc
+	COVERAGE_FILE=$(DOCTEST_COV_DIR)/pymc/.coverage \
+	$(PYTHON) -m pytest $(PYTEST_XDIST) -x --cov qmcpy/ --cov-report term --cov-report json:$(DOCTEST_COV_DIR)/pymc/coverage.json --no-header --cov-append \
+		--doctest-modules qmcpy/true_measure/pymc_wrapper.py \
+
 doctests_mpmc:
 	@mkdir -p $(DOCTEST_COV_DIR)/mpmc
 	COVERAGE_FILE=$(DOCTEST_COV_DIR)/mpmc/.coverage \
