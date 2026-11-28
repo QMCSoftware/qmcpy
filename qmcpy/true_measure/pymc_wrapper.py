@@ -586,7 +586,8 @@ class PyMCWrapper(AbstractTrueMeasure):
         self.icdf = compile_icdf(self.model)
         self.logpdf = compile_vectorized_logp(self.model, point_fn=False, jacobian=self.unconstrained_samples)
         # determine shapes of random variables and prepare their indices in a flat vector
-        self.shapes = [x.type.shape for x in self.model.value_vars]
+        name_to_shape = self.model.eval_rv_shapes()
+        self.shapes = [name_to_shape[x.name] for x in self.model.value_vars]
         shaped_arrays = [np.atleast_1d(np.ones(shape)) for shape in self.shapes]
         lens_at_least_1d = [np.prod(arr.shape) for arr in shaped_arrays]
         self.array_shapes = [arr.shape for arr in shaped_arrays]
