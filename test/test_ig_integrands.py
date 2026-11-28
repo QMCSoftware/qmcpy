@@ -15,6 +15,7 @@ from qmcpy import (
     Linear0,
     Multimodal2d,
     Sin1d,
+    stopping_criterion,
     Uniform,
 )
 from qmcpy.util import ParameterError
@@ -329,6 +330,144 @@ class TestIntegrandExamples(unittest.TestCase):
             option="ASIAN",
             asian_mean_quadrature_rule="BAD",
         )
+
+class TestCustomVector(unittest.TestCase):
+    """Tests CustomFun vector integration."""
+    def setUp(self):
+        self.true_measure = Gaussian(DigitalNetB2(2, seed=7, replications=2**5))
+        self.true_measure_e2e = Gaussian(DigitalNetB2(2, seed=7))
+        # compute covariance matrix integrals
+        self.integrands = lambda x: np.stack([x[..., 0],
+                                              x[..., 1],
+                                              x[...,0]**2,
+                                              x[...,1]**2,
+                                              x[...,0]*x[...,1],
+                                              ])
+        # compute correlation matrix and means
+        def comb_func(ys):
+            mean0 = ys[:,0]
+            mean1 = ys[:,1]
+            var0 = ys[:,2] - mean0**2
+            var1 = ys[:,3] - mean1**2
+            cov = ys[:,4] - mean0 * mean1
+            corr = cov / np.sqrt(var0*var1)
+            return np.stack([mean0, var1, corr], axis=1) # return subset so that d_indv != d_comb
+        self.comb_func = comb_func 
+
+        # compute bounds on combinations
+        def bound_fun(ymin,ymax):
+            mean0_ub = ymax[0]
+            mean0_lb = ymin[0]
+            mean1_ub = ymax[1]
+            mean1_lb = ymin[1]
+            # upper bound explanation
+            # if mean_ub > 0 and mean_lb < 0, then mean = 0 value gives the maximum for variance.
+            # if they are both the same sign, then use the one with minimum magnitude (closest to zero) to get the upper bound
+            # in any case, the variance cannot be negative, so take maximum with 0
+            var0_ub = np.max(ymax[2] - np.minimum(np.square(mean0_lb), np.square(mean0_ub)) * np.where(mean0_ub * mean0_lb < 0, 0, 1), 0)
+            var1_ub = np.max(ymax[3] - np.minimum(np.square(mean1_lb), np.square(mean1_ub)) * np.where(mean1_ub * mean1_lb < 0, 0, 1), 0)
+            # here take the combination with minimum value, giving the upper bound
+            cov_ub = ymax[4] - np.min(np.array([mean0_lb * mean1_lb,
+                                                mean0_lb * mean1_ub,
+                                                mean0_ub * mean1_lb,
+                                                mean0_ub * mean1_ub]))
+
+            # lower bound explanation
+            # use mean in interval with maximum magnitude to get the lower bound
+            # in any case, the variance cannot be negative, so take maximum with 0
+            var0_lb = np.max(ymin[2] - np.maximum(np.square(mean0_lb), np.square(mean0_ub)), 0)
+            var1_lb = np.max(ymin[3] - np.maximum(np.square(mean1_lb), np.square(mean1_ub)), 0)
+            # here take the combination with maximum value, giving the lower bound
+            cov_lb = ymax[4] - np.max(np.array([mean0_lb * mean1_lb,
+                                                mean0_lb * mean1_ub,
+                                                mean0_ub * mean1_lb,
+                                                mean0_ub * mean1_ub]))
+
+            corr_ub = cov_ub/np.sqrt(var0_lb*var1_lb)
+            corr_lb = cov_lb/np.sqrt(var0_ub*var1_ub)
+            lower_bounds = np.stack([mean0_lb, var1_lb, corr_lb]) # return subset to test case of d_indv != d_comb
+            upper_bounds = np.stack([mean0_ub, var1_ub, corr_ub]) # return subset to test case of d_indv != d_comb
+            return lower_bounds, upper_bounds
+        self.bound_fun = bound_fun
+
+        def comb_func2(ys):
+            # simple case to test shapes of combined integrals
+            mean0 = ys[:,[0]]
+            return mean0
+        self.comb_func2 = comb_func2
+
+    def test_construction(self):
+        """ tests for initialization of CustomFunc where comb_func is supplied
+        """
+        with self.assertRaises(ValueError):
+            CustomFun(self.true_measure, self.integrands,
+                    dimension_indv=(5,),
+                    comb_fun=self.comb_func,
+                    dimension_comb=None,
+                    bound_fun=self.bound_fun)
+
+    def test_spawn(self):
+        integrand = CustomFun(self.true_measure, self.integrands,
+                        dimension_indv=(5,),
+                        comb_fun=self.comb_func,
+                        dimension_comb=(3,),
+                        bound_fun=self.bound_fun)
+        spawned = integrand.spawn(np.arange(5))
+        self.assertIsInstance(spawned, list)
+        self.assertEqual(len(spawned), 5)
+
+    def test_default_bounds(self):
+        """ tests to verify expected results of bound_fun
+        """
+        integrand_exact_bounds = CustomFun(self.true_measure, self.integrands,
+                                    dimension_indv=(5,),
+                                    dimension_comb=(3,),
+                                    bound_fun=self.bound_fun)
+        integrand_approx_bounds = CustomFun(self.true_measure, self.integrands,
+                                    dimension_indv=(5,),
+                                    comb_fun=self.comb_func,
+                                    dimension_comb=(3,))
+        integrands = integrand_exact_bounds(2**20)
+        n_replications = integrands.shape[1]
+        means = integrands.mean(-1)
+        mean = means.mean(-1)
+        err = means.std(-1)/np.sqrt(n_replications-1)
+        integrands_lb = mean - err
+        integrands_ub = mean + err
+        exact_bounds_lb, exact_bounds_ub = integrand_exact_bounds.bound_fun(integrands_lb, integrands_ub)
+        approx_bounds_lb, approx_bounds_ub = integrand_approx_bounds.bound_fun(integrands_lb, integrands_ub)
+
+        np.testing.assert_allclose(exact_bounds_lb, approx_bounds_lb, atol=1e-5)
+        np.testing.assert_allclose(exact_bounds_ub, approx_bounds_ub, atol=1e-5)
+
+    def test_results_e2e(self):
+        """ tests to verify integration results against analytical integrals"""
+        integrand = CustomFun(self.true_measure_e2e, self.integrands,
+                        dimension_indv=(5,),
+                        dimension_comb=(3,),
+                        bound_fun=self.bound_fun)
+        sr = stopping_criterion.CubQMCDigitalNetB2G(integrand, 1e-5, 1e-5)
+        results, data = sr.integrate()
+        np.testing.assert_allclose(results, np.array([0,1,0]), 1e-4, 1e-4)
+
+        # same with default bound fun
+        integrand = CustomFun(self.true_measure_e2e, self.integrands,
+                        dimension_indv=(5,),
+                        dimension_comb=(3,),
+                        comb_fun=self.comb_func)
+        sr = stopping_criterion.CubQMCDigitalNetB2G(integrand, 1e-5, 1e-5)
+        results, data = sr.integrate()
+        np.testing.assert_allclose(results, np.array([0,1,0]), 1e-4, 1e-4)
+
+        # test case with dimension_comb=()
+        integrand = CustomFun(self.true_measure_e2e, self.integrands,
+                        dimension_indv=(5,),
+                        comb_fun=self.comb_func2,
+                        dimension_comb=(1,),
+                        )
+        sr = stopping_criterion.CubQMCDigitalNetB2G(integrand, 1e-5, 1e-5)
+        results, data = sr.integrate()
+        np.testing.assert_allclose(results, np.array([0]), 1e-4, 1e-4)
 
 
 class TestBayesianLRCoeffs(unittest.TestCase):

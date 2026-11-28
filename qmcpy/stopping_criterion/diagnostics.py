@@ -25,6 +25,7 @@ _ITERATION_HISTORY_COLUMNS = (
     "bias_estimate",
     "rmse_estimate",
     "rmse_tol",
+    "non_conv_ind",
     "n_min",
     "n_total",
     "m",
@@ -82,6 +83,7 @@ class _IterationHistoryTable(object):
         self._columns["bias_estimate"].append(row.get("bias_estimate"))
         self._columns["rmse_estimate"].append(row.get("rmse_estimate"))
         self._columns["rmse_tol"].append(row.get("rmse_tol"))
+        self._columns["non_conv_ind"].append(row.get("non_conv_ind"))
         self._columns["n_min"].append(row.get("n_min"))
         self._columns["n_total"].append(row.get("n_total"))
         self._columns["m"].append(row.get("m"))
@@ -107,20 +109,29 @@ class _IterationHistoryTable(object):
         return {column: list(values) for column, values in self._columns.items()}
 
 
-def _safe_get_first_element(obj):
+def _get_nonconvergent_index(data) -> int:
+    cond = lambda data, col: hasattr(data, col) and getattr(data, col) is not None
+    some_error = np.stack([getattr(data, err_col) for err_col in ["bound_diff", "comb_bound_diff", "bound_half_width", "rmse_estimate"] if cond(data, err_col)])
+    tols = np.array([getattr(data, tol_col) for tol_col in ["abs_tol", "rmse_tol"] if hasattr(data, tol_col) and getattr(data, tol_col) is not None])
+    max_errors = np.max(some_error, 0) # reduce to flat error vector
+    max_tol = np.max(tols)
+    max_tol = np.where(max_tol == 0, 1e-6, max_tol) # avoid divide by zero
+    return int(np.argmax(max_errors/max_tol)) # get the relevant index to display
+
+def _safe_getindex(obj, i):
     try:
         if isinstance(obj, (list, tuple, np.ndarray)) and obj is not None:
-            if hasattr(obj, "shape") and obj.shape == ():
-                return obj
-            if len(obj) > 0:
-                return obj[0]
+            if isinstance(obj, np.ndarray) and np.prod(obj.shape) > i:
+                return obj.ravel()[i]
+            if len(obj) > i:
+                return obj[i]
         return obj
     except (TypeError, AttributeError):
         return obj
 
 
 def _positive_float(value):
-    value = _safe_get_first_element(value)
+    value = _safe_getindex(value, 0)
     if value is None:
         return None
     try:
@@ -138,50 +149,56 @@ def _extract_diagnostic_row(data):
     iter_count = getattr(data, "_iter_count", None)
     n_min = getattr(data, "n_min", None)
     n_total = getattr(data, "n_total", None)
+    # index of non convergent integral
+    ind = _get_nonconvergent_index(data)
     return {
         "iter": int(iter_count) if iter_count is not None else None,
-        "solution": _safe_get_first_element(getattr(data, "solution", None)),
-        "abs_tol": _safe_get_first_element(getattr(data, "abs_tol", None)),
-        "bound_diff": _safe_get_first_element(getattr(data, "bound_diff", None)),
-        "comb_bound_diff": _safe_get_first_element(
-            getattr(data, "comb_bound_diff", None)
+        "solution": _safe_getindex(getattr(data, "solution", None), ind),
+        "abs_tol": _safe_getindex(getattr(data, "abs_tol", None), ind),
+        "bound_diff": _safe_getindex(getattr(data, "bound_diff", None), ind),
+        "comb_bound_diff": _safe_getindex(
+            getattr(data, "comb_bound_diff", None), ind
         ),
-        "bound_half_width": _safe_get_first_element(
-            getattr(data, "bound_half_width", None)
+        "bound_half_width": _safe_getindex(
+            getattr(data, "bound_half_width", None), ind
         ),
-        "bias_estimate": _safe_get_first_element(
-            getattr(data, "bias_estimate", None)
+        "bias_estimate": _safe_getindex(
+            getattr(data, "bias_estimate", None), ind
         ),
-        "rmse_estimate": _safe_get_first_element(
-            getattr(data, "rmse_estimate", None)
+        "rmse_estimate": _safe_getindex(
+            getattr(data, "rmse_estimate", None), ind
         ),
-        "rmse_tol": _safe_get_first_element(getattr(data, "rmse_tol", None)),
+        "rmse_tol": _safe_getindex(getattr(data, "rmse_tol", None), ind),
+        "non_conv_ind": ind,
         "n_min": int(n_min) if n_min is not None else None,
         "n_total": int(n_total) if n_total is not None else None,
-        "m": int(_safe_get_first_element(m)) if m is not None else None,
+        "m": int(_safe_getindex(m, 0)) if m is not None else None,
         "xfull.shape": getattr(xfull, "shape", None),
-        "elapsed_time": _safe_get_first_element(
-            getattr(data, "elapsed_time", getattr(data, "time_integrate_total", None))
+        "elapsed_time": _safe_getindex(
+            getattr(data, "elapsed_time", getattr(data, "time_integrate_total", None)), ind
         ),
     }
 
 
-def _fill_row_tolerances_from_stopping_criterion(row, stopping_criterion):
+def _fill_data_from_stopping_criterion(data, stopping_criterion):
     if stopping_criterion is None:
-        return row
-    if row.get("abs_tol") is None:
-        row["abs_tol"] = _safe_get_first_element(
-            getattr(stopping_criterion, "abs_tol", None)
+        return data
+    if hasattr(stopping_criterion, "abs_tol"):
+        setattr(data, "abs_tol",
+            getattr(stopping_criterion, "abs_tol")
         )
-    if row.get("rmse_tol") is None:
-        row["rmse_tol"] = _safe_get_first_element(
+    if hasattr(stopping_criterion, "rmse_tol"):
+        setattr(data, "rmse_tol",
             getattr(
                 stopping_criterion,
                 "target_rmse_tol",
-                getattr(stopping_criterion, "rmse_tol", None),
+                getattr(stopping_criterion, "rmse_tol"),
             )
         )
-    return row
+    for attr in ["bound_diff", "comb_bound_diff", "bound_half_width", "rmse_estimate"]:
+        if getattr(data, attr, None) is None and hasattr(stopping_criterion, attr):
+            setattr(data, attr, getattr(stopping_criterion, attr))
+    return data
 
 
 def _visible_columns_from_row(row, include_n_min=False):
@@ -198,6 +215,8 @@ def _visible_columns_from_row(row, include_n_min=False):
         visible_columns.append("rmse_estimate")
     if row["rmse_tol"] is not None:
         visible_columns.append("rmse_tol")
+    if row["non_conv_ind"] is not None:
+        visible_columns.append("non_conv_ind")
     if include_n_min or row["n_min"] is not None:
         visible_columns.append("n_min")
     visible_columns.append("n_total")
@@ -246,6 +265,7 @@ def _build_history_data(history, index, stopping_criterion=None):
         if row["rmse_tol"] is not None
         else context.get("rmse_tol", context.get("target_rmse_tol"))
     )
+    data.non_conv_index = row["non_conv_ind"]
     data.n_min = row["n_min"]
     data.n_total = row["n_total"]
     data.m = row["m"]
@@ -317,6 +337,7 @@ def _format_diagnostic_display_values(label, data, row=None):
         "bias_estimate": _format_bound_text(row["bias_estimate"]),
         "rmse_estimate": _format_bound_text(row["rmse_estimate"]),
         "rmse_tol": _format_bound_text(row["rmse_tol"]),
+        "non_conv_ind": "None" if row["non_conv_ind"] is None else str(int(row["non_conv_ind"])),
         "n_min": "None" if row["n_min"] is None else str(int(row["n_min"])),
         "n_total": "None" if row["n_total"] is None else str(int(row["n_total"])),
         "elapsed_time": _format_bound_text(row.get("elapsed_time")),
@@ -337,6 +358,7 @@ def _diagnostic_column_widths(solution_width):
         "bias_estimate": 15,
         "rmse_estimate": 15,
         "rmse_tol": 15,
+        "non_conv_ind": 15,
         "n_min": 10,
         "n_total": 10,
         "elapsed_time": 15,
@@ -593,6 +615,7 @@ class _IterationTraceLogger(object):
         Returns:
             None
         """
+        data = _fill_data_from_stopping_criterion(data, self.stopping_criterion)
         if not self.enabled:
             return
         self._print_header_once()
@@ -606,9 +629,6 @@ class _IterationTraceLogger(object):
         if step_value is not None:
             data.m = int(step_value)
         row = _extract_diagnostic_row(data)
-        row = _fill_row_tolerances_from_stopping_criterion(
-            row, self.stopping_criterion
-        )
         visible_columns = self._get_visible_columns(data, row=row)
         printed = stage != "ITER" or not self._would_be_throttled(row["iter"])
         history_index = None
